@@ -3,35 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oven X Multan - Order Bot</title>
+    <title>Oven X Multan - Intelligent Order Bot</title>
     <style>
         :root { --primary-red: #8b0000; --accent-orange: #f37021; --light-gray: #f8f9fa; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f0f0; margin: 0; display: flex; justify-content: center; height: 100vh; align-items: center; }
         #chat-container { width: 100%; max-width: 450px; height: 90vh; background: white; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #ddd; }
-        #header { background: var(--primary-red); color: white; padding: 20px; text-align: center; border-bottom: 4px solid var(--accent-orange); }
-        #header h2 { margin: 0; font-size: 1.4em; }
-        #chat-window { flex: 1; padding: 20px; overflow-y: auto; background: var(--light-gray); display: flex; flex-direction: column; gap: 12px; }
-        .msg { padding: 12px 16px; border-radius: 18px; max-width: 85%; font-size: 14px; line-height: 1.5; }
-        .bot { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        #header { background: var(--primary-red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--accent-orange); }
+        #header h2 { margin: 0; font-size: 1.2em; }
+        #chat-window { flex: 1; padding: 15px; overflow-y: auto; background: var(--light-gray); display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; font-size: 14px; line-height: 1.4; }
+        .bot { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .user { background: var(--primary-red); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        #input-area { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        button { background: var(--accent-orange); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        #input-area { padding: 12px; background: white; border-top: 1px solid #eee; display: flex; gap: 8px; }
+        input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { background: var(--accent-orange); color: white; border: none; padding: 8px 18px; border-radius: 25px; cursor: pointer; font-weight: bold; }
         .wa-btn { background: #25D366; color: white; text-decoration: none; padding: 12px; border-radius: 8px; text-align: center; display: block; margin-top: 10px; font-weight: bold; }
+        b { color: var(--primary-red); }
     </style>
 </head>
 <body>
 
 <div id="chat-container">
     <div id="header">
-        <h2>Oven X Multan</h2>
-        <p style="margin:0; font-size:0.8em;">34-A Gulgasht Colony, Multan</p>
+        <h2>Oven X Multan - Order Bot</h2>
+        <p style="margin:0; font-size:0.7em; opacity:0.9;">34-A Gulgasht Colony, Multan</p>
     </div>
     <div id="chat-window" id="chatWindow">
-        <div class="msg bot">Welcome to Oven X! 🍕<br><br>Type <b>'Menu'</b> to start your order!</div>
+        <div class="msg bot">Hello! Welcome to Oven X. 👋<br><br>You can type a <b>Category Name</b> (e.g., Burgers), an <b>Item Name</b>, or just the <b>Item Number</b> to order!</div>
     </div>
     <div id="input-area">
-        <input type="text" id="userInput" placeholder="Type here..." autofocus>
+        <input type="text" id="userInput" placeholder="Type category, name, or number..." autofocus>
         <button onclick="handleSend()">Send</button>
     </div>
 </div>
@@ -39,20 +40,29 @@
 <script>
     const WHATSAPP_NUMBER = "923001450301"; 
     
-    const menuData = {
-        "Starters": {"Plain Fries": 230, "Loaded Fries": 599, "Pizza Fries": 720, "Dragon Shots": 399, "Hot Wings": 399},
-        "Burgers": {"Zinger Burger": 420, "Mighty Burger": 699, "CM Grilled": 499, "Smokey Grilled": 550},
-        "Pizza": {
-            "Chicken Tikka": {S: 499, M: 999, L: 1549},
-            "Chicken Fajita": {S: 499, M: 999, L: 1549}
-        },
-        "Pasta": {"OvenX Flaming Pasta": 650, "Alfardo Pasta": 749}
-    };
+    // Menu with numbers for easy ordering
+    const menuItems = [
+        { id: 1, name: "Plain Fries", price: 230, cat: "Starters" },
+        { id: 2, name: "Loaded Fries", price: 599, cat: "Starters" },
+        { id: 3, name: "Pizza Fries", price: 720, cat: "Starters" },
+        { id: 4, name: "Dragon Shots", price: 399, cat: "Starters" },
+        { id: 5, name: "Hot Wings", price: 399, cat: "Starters" },
+        { id: 6, name: "Zinger Burger", price: 420, cat: "Burgers" },
+        { id: 7, name: "Mighty Burger", price: 699, cat: "Burgers" },
+        { id: 8, name: "CM Grilled", price: 499, cat: "Burgers" },
+        { id: 9, name: "Smokey Grilled", price: 550, cat: "Burgers" },
+        { id: 10, name: "Chicken Tikka Pizza", price: {S:499, M:999, L:1549}, cat: "Pizza" },
+        { id: 11, name: "Chicken Fajita Pizza", price: {S:499, M:999, L:1549}, cat: "Pizza" },
+        { id: 12, name: "OvenX Flaming Pasta", price: 650, cat: "Pasta" },
+        { id: 13, name: "Alfardo Pasta", price: 749, cat: "Pasta" }
+    ];
 
-    let step = "START"; 
-    let order = [];
+    const categories = ["Starters", "Burgers", "Pizza", "Pasta"];
+
+    let step = "ORDERING"; 
+    let cart = [];
     let userAddress = "";
-    let tempPizza = "";
+    let tempPizza = null;
 
     function addMessage(text, sender, isHTML = false) {
         const div = document.createElement('div');
@@ -70,66 +80,86 @@
         
         const clean = val.toLowerCase();
 
-        if (clean === "menu") {
-            let m = "<b>Our Menu:</b><br>";
-            for (let cat in menuData) m += `• ${cat}<br>`;
-            m += "<br>Type the name of the item you want!";
-            addMessage(m, 'bot', true);
-            step = "ORDERING";
-        } 
-        else if (step === "ORDERING") {
-            if (clean === "checkout") {
+        // 1. HELP / MENU COMMAND
+        if (clean === "menu" || clean === "hi" || clean === "hello") {
+            let m = "<b>Our Categories:</b><br>";
+            categories.forEach(c => m += `• ${c}<br>`);
+            m += "<br>Type a category to see items, or type <b>'Checkout'</b> to finish.";
+            return addMessage(m, 'bot', true);
+        }
+
+        if (step === "ORDERING") {
+            if (clean === "checkout" || clean === "done") {
+                if(cart.length === 0) return addMessage("Your cart is empty!", "bot");
                 addMessage("Please enter your <b>Delivery Address</b>:", "bot", true);
                 step = "ADDRESS";
-            } else {
-                let found = false;
-                for (let cat in menuData) {
-                    for (let item in menuData[cat]) {
-                        if (clean.includes(item.toLowerCase())) {
-                            if (cat === "Pizza") {
-                                tempPizza = item;
-                                addMessage(`Select size for ${item}: S, M, or L?`, "bot");
-                                step = "PIZZA_SIZE";
-                            } else {
-                                order.push({name: item, price: menuData[cat][item]});
-                                addMessage(`Added ${item}. Anything else? (or type 'Checkout')`, "bot");
-                            }
-                            found = true; break;
-                        }
-                    }
+                return;
+            }
+
+            // A. Check if user typed a Category
+            const foundCat = categories.find(c => c.toLowerCase().includes(clean));
+            if (foundCat) {
+                let m = `<b>${foundCat} Menu:</b><br>`;
+                menuItems.filter(i => i.cat === foundCat).forEach(i => {
+                    m += `${i.id}. ${i.name} - Rs ${typeof i.price === 'object' ? i.price.M : i.price}<br>`;
+                });
+                m += "<br>Type the <b>Number</b> or <b>Name</b> to add it!";
+                return addMessage(m, 'bot', true);
+            }
+
+            // B. Check if user typed a Number or Item Name
+            const item = menuItems.find(i => i.id == clean || i.name.toLowerCase().includes(clean));
+            
+            if (item) {
+                if (item.cat === "Pizza") {
+                    tempPizza = item;
+                    addMessage(`Select size for ${item.name}: S, M, or L?`, "bot");
+                    step = "PIZZA_SIZE";
+                } else {
+                    cart.push({name: item.name, price: item.price});
+                    addMessage(`Added 1x ${item.name}. Anything else? (or type 'Checkout')`, "bot");
                 }
-                if(!found) addMessage("Item not found. Please type correctly from the menu.", "bot");
+            } else {
+                addMessage("I didn't find that. Try typing a category like 'Burgers' or an item number.", "bot");
             }
         }
         else if (step === "PIZZA_SIZE") {
             const size = val.toUpperCase();
-            if (menuData["Pizza"][tempPizza][size]) {
-                order.push({name: `${tempPizza} (${size})`, price: menuData["Pizza"][tempPizza][size]});
-                addMessage(`Added ${tempPizza} ${size}. Anything else? (or type 'Checkout')`, "bot");
+            if (tempPizza.price[size]) {
+                cart.push({name: `${tempPizza.name} (${size})`, price: tempPizza.price[size]});
+                addMessage(`Added ${tempPizza.name} ${size}. Anything else? (or type 'Checkout')`, "bot");
                 step = "ORDERING";
-            } else { addMessage("Choose S, M, or L.", "bot"); }
+            } else { addMessage("Please type S, M, or L.", "bot"); }
         }
         else if (step === "ADDRESS") {
             userAddress = val;
-            addMessage("How many KM is your address from Gulgasht Colony?", "bot");
+            addMessage("How many Kilometers (KM) is your address from Gulgasht Colony?", "bot");
             step = "DISTANCE";
         }
         else if (step === "DISTANCE") {
             const dist = parseFloat(val);
-            if (isNaN(dist)) return addMessage("Enter a number.", "bot");
+            if (isNaN(dist)) return addMessage("Please enter a number for distance.", "bot");
             
-            const delivery = (dist * 2) * 12; // Round trip formula
-            const total = order.reduce((s, i) => s + i.price, 0);
+            const delivery = (dist * 2) * 12; // Round trip 1km x 12
+            const foodTotal = cart.reduce((s, i) => s + i.price, 0);
             
-            let summary = `<b>Receipt:</b><br>`;
-            order.forEach(i => summary += `- ${i.name}: Rs ${i.price}<br>`);
-            summary += `Delivery: Rs ${delivery}<br><b>Total: Rs ${total + delivery}</b>`;
+            let summary = `<b>Order Summary:</b><br>`;
+            cart.forEach(i => summary += `- ${i.name}: Rs ${i.price}<br>`);
+            summary += `-------------------<br>`;
+            summary += `Food: Rs ${foodTotal}<br>`;
+            summary += `Delivery (Round Trip): Rs ${delivery.toFixed(0)}<br>`;
+            summary += `<b>Total Payable: Rs ${(foodTotal + delivery).toFixed(0)}</b>`;
             addMessage(summary, "bot", true);
 
-            const waMsg = encodeURIComponent(`Order:\n${order.map(i=>i.name).join("\n")}\n\nAddress: ${userAddress}\nDelivery: Rs ${delivery}\nTotal: Rs ${total+delivery}`);
-            addMessage(`<a href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}" class="wa-btn" target="_blank">Order via WhatsApp</a>`, "bot", true);
+            const waMsg = encodeURIComponent(`*New Order from Website*\n\n${cart.map(i=> "• " + i.name).join("\n")}\n\n*Address:* ${userAddress}\n*Distance:* ${dist}km\n*Delivery Fee:* Rs ${delivery.toFixed(0)}\n*Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
+            addMessage(`<a href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}" class="wa-btn" target="_blank">Confirm on WhatsApp</a>`, "bot", true);
+            step = "ORDERING"; // Reset for next order
         }
     }
+    // Handle Enter Key
+    document.getElementById('userInput').addEventListener("keypress", function(e) {
+        if (e.key === "Enter") handleSend();
+    });
 </script>
 </body>
 </html>
