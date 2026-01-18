@@ -3,221 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oven X Multan - Official Order Bot</title>
+    <title>Oven X - Click & Order</title>
     <style>
-        :root { --primary-red: #8b0000; --accent-orange: #f37021; --light-gray: #f8f9fa; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f0f0; margin: 0; display: flex; justify-content: center; height: 100vh; align-items: center; }
-        #chat-container { width: 100%; max-width: 450px; height: 95vh; background: white; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #ddd; }
-        #header { background: var(--primary-red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--accent-orange); }
-        #chat-window { flex: 1; padding: 15px; overflow-y: auto; background: var(--light-gray); display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; font-size: 14px; line-height: 1.4; }
-        .bot { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .user { background: var(--primary-red); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        #input-area { padding: 12px; background: white; border-top: 1px solid #eee; display: flex; gap: 8px; }
-        input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        button { background: var(--accent-orange); color: white; border: none; padding: 8px 18px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        .wa-btn { background: #25D366; color: white; text-decoration: none; padding: 12px; border-radius: 8px; text-align: center; display: block; margin-top: 10px; font-weight: bold; }
+        :root { --red: #8b0000; --orange: #f37021; --gray: #f4f4f4; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--gray); margin: 0; padding-bottom: 80px; }
+        
+        /* Header & Branding */
+        header { background: var(--red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--orange); position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 26px; font-weight: 900; letter-spacing: 1px; margin: 0; }
+        .logo span { color: var(--orange); }
+
+        /* Main Menu Container */
+        .container { max-width: 500px; margin: auto; padding: 15px; }
+        .section-title { font-weight: bold; color: var(--red); border-bottom: 2px solid var(--orange); margin: 20px 0 10px; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; }
+        
+        /* Buttons & Grid */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 60px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn:active { transform: scale(0.95); background: #fff3e0; }
+        .price-tag { color: var(--orange); font-weight: bold; margin-top: 5px; font-size: 12px; }
+
+        /* Dialog / Modal for Quantity */
+        #modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index: 1000; }
+        .modal { background: white; padding: 20px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; }
+        .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+        .qty-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; }
+        .qty-btn.active { background: var(--red); color: white; }
+        textarea { width: 90%; border-radius: 10px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: inherit; }
+
+        /* Floating Cart & Bot */
+        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); font-weight: bold; z-index: 500; }
+        .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; }
+
+        /* Chat Step Overlays */
+        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .chat-bubble { background: #f1f1f1; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #ddd; }
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none; }
+        .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div id="chat-container">
-    <div id="header">
-        <h2 style="margin:0; font-size:1.2em;">Oven X Multan</h2>
-        <p style="margin:0; font-size:0.7em;">34-A Gulgasht Colony</p>
-    </div>
-    <div id="chat-window" id="chatWindow">
-        <div class="msg bot">Welcome to Oven X! 👋<br><br>Please select a <b>Category Number</b> to see the items:</div>
-    </div>
-    <div id="input-area">
-        <input type="text" id="userInput" placeholder="Type here..." autofocus>
-        <button onclick="handleSend()">Send</button>
+<header>
+    <p class="logo">OVEN <span>X</span></p>
+    <p style="margin:0; font-size:10px; opacity:0.8; letter-spacing: 2px;">MULTAN BRANCH</p>
+</header>
+
+<div class="container" id="menu-container">
+    <!-- Menu will be generated here -->
+</div>
+
+<!-- Floating Cart Bar -->
+<div id="cart-bar">
+    <span id="cart-count">Items: 0</span>
+    <span id="cart-total">Rs 0</span>
+    <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
+</div>
+
+<!-- Modal for Quantity & Instructions -->
+<div id="modal-overlay">
+    <div class="modal">
+        <h3 id="modal-item-name">Item Name</h3>
+        <p>Quantity:</p>
+        <div class="qty-btns" id="qty-selector">
+            <button class="qty-btn" onclick="setQty(1)">1</button>
+            <button class="qty-btn" onclick="setQty(2)">2</button>
+            <button class="qty-btn" onclick="setQty(3)">3</button>
+            <button class="qty-btn" onclick="setQty(4)">4</button>
+            <button class="qty-btn active" onclick="setQty(5)">5+</button>
+        </div>
+        <textarea id="special-note" placeholder="Special Instructions (e.g. No mayo)"></textarea>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="closeModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">Cancel</button>
+            <button onclick="addToCartFinal()" style="flex:1; padding:10px; border-radius:10px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button>
+        </div>
     </div>
 </div>
 
-<script>
-    const WHATSAPP_NUMBER = "923001450301"; 
+<!-- Size Selector Modal -->
+<div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;">
+    <div class="modal">
+        <h3>Select Pizza Size</h3>
+        <div class="grid" id="size-grid"></div>
+        <button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button>
+    </div>
+</div>
 
-    const menu = {
+<!-- Checkout Overlay -->
+<div id="overlay-screen">
+    <div id="checkout-content"></div>
+</div>
+
+<script>
+    const menuData = {
         "Starters": [
-            {id: 1, name: "Plain Fries", price: 230},
-            {id: 2, name: "Loaded Fries", price: 599},
-            {id: 3, name: "Pizza Fries", price: 720},
-            {id: 4, name: "Hot Wings", price: 399}
+            {name: "Plain Fries", price: 230}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, 
+            {name: "Hot Wings (R)", price: 399}, {name: "Hot Wings (L)", price: 780}, {name: "Cheese Sticks", price: 449}
         ],
         "Fried Burgers": [
-            {id: 10, name: "Zinger Burger", price: 420},
-            {id: 11, name: "Mighty Burger", price: 699},
-            {id: 12, name: "Crispy Jalapeno", price: 550}
+            {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Crispy Jalapeno", price: 550}
         ],
         "Grilled Burgers": [
-            {id: 20, name: "CM Grilled", price: 499},
-            {id: 21, name: "Smokey Grilled", price: 550},
-            {id: 22, name: "Jalapeno Blaze", price: 749}
+            {name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Jalapeno Blaze", price: 749}
         ],
         "Pan Pizza": [
-            {id: 30, name: "Chicken Tikka", price: {S:499, M:999, L:1549}},
-            {id: 31, name: "Chicken Fajita", price: {S:499, M:999, L:1549}},
-            {id: 32, name: "Chicken Supreme", price: {S:499, M:999, L:1549}}
+            {name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}, {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}
         ],
         "Deep Dish Pizza": [
-            {id: 40, name: "Mild Butter", price: {M:1749, L:2449}},
-            {id: 41, name: "OvenX Special Deep Dish", price: {M:1749, L:2449}}
+            {name: "Mild Butter", price: {M:1749, L:2449}}, {name: "OvenX Special Deep Dish", price: {M:1749, L:2449}}
         ],
-        "Extreme Pizza": [
-            {id: 50, name: "Extreme Peri-Peri", price: {M:1499, L:2049}},
-            {id: 51, name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}
+        "Pasta & Steaks": [
+            {name: "OvenX Flaming Pasta", price: 650}, {name: "Alfredo Pasta", price: 749}, {name: "Mexican Steak", price: 1549}
         ],
-        "Steaks": [
-            {id: 60, name: "Mexican Steak", price: 1549},
-            {id: 61, name: "Mushroom Steak", price: 1549},
-            {id: 62, name: "Peper Steak", price: 1499}
-        ],
-        "Bar Menu (Beverages)": [
-            {id: 70, name: "Next Cola Buddy", price: 130},
-            {id: 71, name: "Coke 1.5L", price: 190},
-            {id: 72, name: "Next Cola 1.5L", price: 190},
-            {id: 73, name: "Coke Tin", price: 210},
-            {id: 74, name: "Mineral Water (S)", price: 99}
+        "Bar Menu (Drinks)": [
+            {name: "Next Cola Buddy", price: 130}, {name: "Next Cola 1.5L", price: 190}, {name: "Coke Buddy", price: 130}, {name: "Coke 1.5L", price: 230}, {name: "Mineral Water (S)", price: 99}
         ]
     };
 
-    let step = "CATEGORY_SELECT";
     let cart = [];
-    let currentCategory = "";
-    let tempItem = null;
-    let tempOrder = {};
+    let selectedItem = null;
+    let selectedQty = 1;
 
-    function addMessage(text, sender, isHTML = false) {
-        const div = document.createElement('div');
-        div.className = `msg ${sender}`;
-        if(isHTML) div.innerHTML = text; else div.innerText = text;
-        document.getElementById('chat-window').appendChild(div);
-        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
-    }
+    // Generate Menu
+    const container = document.getElementById('menu-container');
+    for (let cat in menuData) {
+        let title = document.createElement('div');
+        title.className = 'section-title';
+        title.innerText = cat;
+        container.appendChild(title);
 
-    function showCategories() {
-        let m = "<b>Menu Categories:</b><br>";
-        Object.keys(menu).forEach((cat, index) => {
-            m += `${index + 1}. ${cat}<br>`;
+        let grid = document.createElement('div');
+        grid.className = 'grid';
+        menuData[cat].forEach(item => {
+            let btn = document.createElement('div');
+            btn.className = 'btn';
+            btn.innerHTML = `<div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'Select Size' : 'Rs '+item.price}</div>`;
+            btn.onclick = () => openOrderFlow(item);
+            grid.appendChild(btn);
         });
-        m += "<br>Type the <b>Number</b> of the category.";
-        addMessage(m, "bot", true);
-        step = "CATEGORY_SELECT";
+        container.appendChild(grid);
     }
 
-    showCategories();
-
-    function handleSend() {
-        const val = document.getElementById('userInput').value.trim();
-        if (!val) return;
-        addMessage(val, 'user');
-        document.getElementById('userInput').value = "";
-        const clean = val.toLowerCase();
-
-        if (clean === "menu" || clean === "back") {
-            return showCategories();
-        }
-
-        if (clean === "checkout") {
-            if(cart.length === 0) return addMessage("Cart is empty!", "bot");
-            addMessage("Please enter your <b>Delivery Address</b>:", "bot", true);
-            step = "ADDRESS";
-            return;
-        }
-
-        if (step === "CATEGORY_SELECT") {
-            const index = parseInt(val) - 1;
-            const keys = Object.keys(menu);
-            if (keys[index]) {
-                currentCategory = keys[index];
-                let m = `<b>${currentCategory}:</b><br>`;
-                menu[currentCategory].forEach(item => {
-                    m += `${item.id}. ${item.name} - Rs ${typeof item.price === 'object' ? 'Select Size' : item.price}<br>`;
-                });
-                m += "<br>Type the <b>Item Number</b> to add.";
-                addMessage(m, "bot", true);
-                step = "ITEM_SELECT";
-            } else {
-                addMessage("Invalid selection. Please type a number from the list.", "bot");
+    function openOrderFlow(item) {
+        selectedItem = item;
+        if (typeof item.price === 'object') {
+            const sizeGrid = document.getElementById('size-grid');
+            sizeGrid.innerHTML = '';
+            for (let s in item.price) {
+                let sBtn = document.createElement('div');
+                sBtn.className = 'btn';
+                sBtn.innerHTML = `<div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div>`;
+                sBtn.onclick = () => {
+                    selectedItem = { name: item.name + " (" + s + ")", price: item.price[s] };
+                    document.getElementById('size-overlay').style.display = 'none';
+                    openQtyModal();
+                };
+                sizeGrid.appendChild(sBtn);
             }
+            document.getElementById('size-overlay').style.display = 'flex';
+        } else {
+            openQtyModal();
         }
+    }
 
-        else if (step === "ITEM_SELECT") {
-            const item = menu[currentCategory].find(i => i.id == val);
-            if (item) {
-                tempItem = item;
-                if (typeof item.price === 'object') {
-                    let sizes = Object.keys(item.price).join(", ");
-                    addMessage(`Select Size (${sizes}):`, "bot");
-                    step = "SIZE_SELECT";
-                } else {
-                    tempOrder.price = item.price;
-                    addMessage(`How many ${item.name}?`, "bot");
-                    step = "QUANTITY_SELECT";
-                }
-            } else {
-                addMessage("Invalid item number.", "bot");
-            }
-        }
+    function openQtyModal() {
+        document.getElementById('modal-item-name').innerText = selectedItem.name;
+        document.getElementById('special-note').value = '';
+        setQty(1);
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
 
-        else if (step === "SIZE_SELECT") {
-            const size = val.toUpperCase();
-            if (tempItem.price[size]) {
-                tempOrder.nameSuffix = ` (${size})`;
-                tempOrder.price = tempItem.price[size];
-                addMessage(`How many ${tempItem.name}${tempOrder.nameSuffix}?`, "bot");
-                step = "QUANTITY_SELECT";
-            } else {
-                addMessage("Please select a valid size (S, M, or L).", "bot");
-            }
-        }
+    function setQty(q) {
+        selectedQty = q;
+        document.querySelectorAll('.qty-btn').forEach((b, i) => {
+            b.classList.remove('active');
+            if (i === q-1) b.classList.add('active');
+        });
+    }
 
-        else if (step === "QUANTITY_SELECT") {
-            const qty = parseInt(val);
-            if (qty > 0) {
-                tempOrder.qty = qty;
-                addMessage("Any special instructions? (e.g. No Spicy) or type 'None':", "bot");
-                step = "NOTE_SELECT";
-            } else {
-                addMessage("Please enter a number.", "bot");
-            }
-        }
+    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
 
-        else if (step === "NOTE_SELECT") {
-            const note = (clean === "none") ? "" : val;
-            cart.push({
-                name: tempItem.name + (tempOrder.nameSuffix || ""),
-                price: tempOrder.price,
-                qty: tempOrder.qty,
-                note: note
-            });
-            tempOrder = {};
-            addMessage("Added! Type <b>'Menu'</b> to add more or <b>'Checkout'</b>.", "bot", true);
-            step = "IDLE";
-        }
+    function addToCartFinal() {
+        const note = document.getElementById('special-note').value;
+        cart.push({ ...selectedItem, qty: selectedQty, note: note });
+        updateCartBar();
+        closeModal();
+    }
 
-        else if (step === "ADDRESS") {
-            tempOrder.address = val;
-            addMessage("Distance from Gulgasht Branch in KM?", "bot");
-            step = "DISTANCE";
-        }
+    function updateCartBar() {
+        let count = cart.reduce((s, i) => s + i.qty, 0);
+        let total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        document.getElementById('cart-count').innerText = `Items: ${count}`;
+        document.getElementById('cart-total').innerText = `Rs ${total}`;
+    }
 
-        else if (step === "DISTANCE") {
-            const dist = parseFloat(val);
-            if (isNaN(dist)) return addMessage("Enter distance in numbers.", "bot");
-            
-            const delivery = (dist * 2) * 12;
-            const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            
-            let summary = `<b>Receipt:</b><br>`;
-            cart.forEach(i => summary += `• ${i.qty}x ${i.name} ${i.note ? '['+i.note+']' : ''} = ${i.price * i.qty}<br>`);
-            summary += `<br>Food: Rs ${foodTotal}<br>Delivery (Round Trip): Rs ${delivery.toFixed(0)}<br><b>Total: Rs ${(foodTotal+delivery).toFixed(0)}</b>`;
-            addMessage(summary, "bot", true);
+    function startCheckout() {
+        if(cart.length === 0) return alert("Cart is empty!");
+        const screen = document.getElementById('overlay-screen');
+        screen.style.display = 'block';
+        renderAddressStep();
+    }
 
-            const waMsg = encodeURIComponent(`*New Order - OvenX Multan*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ("+i.note+")" : "")).join("\n")}\n\n*Address:* ${tempOrder.address}\n*Delivery Fee:* Rs ${delivery.toFixed(0)}\n*Grand Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
-            addMessage(`<a href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}" class="wa-btn" target="_blank">Confirm on WhatsApp</a>`, "bot", true);
-        }
+    function renderAddressStep() {
+        const content = document.getElementById('checkout-content');
+        content.innerHTML = `
+            <div class="chat-bubble">Awesome! Please enter your <b>Complete Delivery Address</b> in Multan:</div>
+            <div class="input-group">
+                <input type="text" id="userAddr" placeholder="Street, Colony, House No...">
+                <button onclick="renderDistanceStep()">Next</button>
+            </div>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:40px; border:none; background:none; color:red;">Back to Menu</button>
+        `;
+    }
+
+    function renderDistanceStep() {
+        const addr = document.getElementById('userAddr').value;
+        if(!addr) return alert("Please enter address");
+        selectedItem.address = addr;
+
+        const content = document.getElementById('checkout-content');
+        content.innerHTML = `
+            <div class="chat-bubble">Now, to calculate delivery, please allow location on the page below and type the <b>KM distance</b> shown:</div>
+            <div class="chat-bubble" style="background:#fff3e0; border-color:#f37021;">
+                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:#d35400; font-weight:bold;">📍 Click to Open Delivery Calculator</a>
+            </div>
+            <div class="input-group">
+                <input type="number" id="userDist" placeholder="Enter KM distance...">
+                <button onclick="renderFinalSummary()">Finish</button>
+            </div>
+        `;
+    }
+
+    function renderFinalSummary() {
+        const dist = parseFloat(document.getElementById('userDist').value);
+        if(isNaN(dist)) return alert("Enter a valid number");
+
+        const delivery = (dist * 2) * 12; // Round Trip Logic
+        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        
+        const content = document.getElementById('checkout-content');
+        let summaryHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b><br><br>`;
+        cart.forEach(i => summaryHTML += `• ${i.qty}x ${i.name} ${i.note ? '['+i.note+']' : ''} = ${i.price * i.qty}<br>`);
+        summaryHTML += `<br>Food Total: Rs ${foodTotal}<br>Delivery Fee: Rs ${delivery.toFixed(0)}<br><b>Grand Total: Rs ${(foodTotal+delivery).toFixed(0)}</b><br><br>Address: ${selectedItem.address}</div>`;
+        
+        const waMsg = encodeURIComponent(`*OvenX New Order*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n*Address:* ${selectedItem.address}\n*Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
+        summaryHTML += `<a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm via WhatsApp</a>`;
+        
+        content.innerHTML = summaryHTML;
     }
 </script>
 </body>
