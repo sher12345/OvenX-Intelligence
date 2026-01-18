@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oven X Multan - Order Bot</title>
+    <style>
+        :root { --primary-red: #8b0000; --accent-orange: #f37021; --light-gray: #f8f9fa; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f0f0; margin: 0; display: flex; justify-content: center; height: 100vh; align-items: center; }
+        #chat-container { width: 100%; max-width: 450px; height: 90vh; background: white; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #ddd; }
+        #header { background: var(--primary-red); color: white; padding: 20px; text-align: center; border-bottom: 4px solid var(--accent-orange); }
+        #header h2 { margin: 0; font-size: 1.4em; }
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; background: var(--light-gray); display: flex; flex-direction: column; gap: 12px; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 85%; font-size: 14px; line-height: 1.5; }
+        .bot { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .user { background: var(--primary-red); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        #input-area { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { background: var(--accent-orange); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        .wa-btn { background: #25D366; color: white; text-decoration: none; padding: 12px; border-radius: 8px; text-align: center; display: block; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="header">
+        <h2>Oven X Multan</h2>
+        <p style="margin:0; font-size:0.8em;">34-A Gulgasht Colony, Multan</p>
+    </div>
+    <div id="chat-window" id="chatWindow">
+        <div class="msg bot">Welcome to Oven X! 🍕<br><br>Type <b>'Menu'</b> to start your order!</div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Type here..." autofocus>
+        <button onclick="handleSend()">Send</button>
+    </div>
+</div>
+
+<script>
+    const WHATSAPP_NUMBER = "923001450301"; 
+    
+    const menuData = {
+        "Starters": {"Plain Fries": 230, "Loaded Fries": 599, "Pizza Fries": 720, "Dragon Shots": 399, "Hot Wings": 399},
+        "Burgers": {"Zinger Burger": 420, "Mighty Burger": 699, "CM Grilled": 499, "Smokey Grilled": 550},
+        "Pizza": {
+            "Chicken Tikka": {S: 499, M: 999, L: 1549},
+            "Chicken Fajita": {S: 499, M: 999, L: 1549}
+        },
+        "Pasta": {"OvenX Flaming Pasta": 650, "Alfardo Pasta": 749}
+    };
+
+    let step = "START"; 
+    let order = [];
+    let userAddress = "";
+    let tempPizza = "";
+
+    function addMessage(text, sender, isHTML = false) {
+        const div = document.createElement('div');
+        div.className = `msg ${sender}`;
+        if(isHTML) div.innerHTML = text; else div.innerText = text;
+        document.getElementById('chat-window').appendChild(div);
+        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+    }
+
+    function handleSend() {
+        const val = document.getElementById('userInput').value.trim();
+        if (!val) return;
+        addMessage(val, 'user');
+        document.getElementById('userInput').value = "";
+        
+        const clean = val.toLowerCase();
+
+        if (clean === "menu") {
+            let m = "<b>Our Menu:</b><br>";
+            for (let cat in menuData) m += `• ${cat}<br>`;
+            m += "<br>Type the name of the item you want!";
+            addMessage(m, 'bot', true);
+            step = "ORDERING";
+        } 
+        else if (step === "ORDERING") {
+            if (clean === "checkout") {
+                addMessage("Please enter your <b>Delivery Address</b>:", "bot", true);
+                step = "ADDRESS";
+            } else {
+                let found = false;
+                for (let cat in menuData) {
+                    for (let item in menuData[cat]) {
+                        if (clean.includes(item.toLowerCase())) {
+                            if (cat === "Pizza") {
+                                tempPizza = item;
+                                addMessage(`Select size for ${item}: S, M, or L?`, "bot");
+                                step = "PIZZA_SIZE";
+                            } else {
+                                order.push({name: item, price: menuData[cat][item]});
+                                addMessage(`Added ${item}. Anything else? (or type 'Checkout')`, "bot");
+                            }
+                            found = true; break;
+                        }
+                    }
+                }
+                if(!found) addMessage("Item not found. Please type correctly from the menu.", "bot");
+            }
+        }
+        else if (step === "PIZZA_SIZE") {
+            const size = val.toUpperCase();
+            if (menuData["Pizza"][tempPizza][size]) {
+                order.push({name: `${tempPizza} (${size})`, price: menuData["Pizza"][tempPizza][size]});
+                addMessage(`Added ${tempPizza} ${size}. Anything else? (or type 'Checkout')`, "bot");
+                step = "ORDERING";
+            } else { addMessage("Choose S, M, or L.", "bot"); }
+        }
+        else if (step === "ADDRESS") {
+            userAddress = val;
+            addMessage("How many KM is your address from Gulgasht Colony?", "bot");
+            step = "DISTANCE";
+        }
+        else if (step === "DISTANCE") {
+            const dist = parseFloat(val);
+            if (isNaN(dist)) return addMessage("Enter a number.", "bot");
+            
+            const delivery = (dist * 2) * 12; // Round trip formula
+            const total = order.reduce((s, i) => s + i.price, 0);
+            
+            let summary = `<b>Receipt:</b><br>`;
+            order.forEach(i => summary += `- ${i.name}: Rs ${i.price}<br>`);
+            summary += `Delivery: Rs ${delivery}<br><b>Total: Rs ${total + delivery}</b>`;
+            addMessage(summary, "bot", true);
+
+            const waMsg = encodeURIComponent(`Order:\n${order.map(i=>i.name).join("\n")}\n\nAddress: ${userAddress}\nDelivery: Rs ${delivery}\nTotal: Rs ${total+delivery}`);
+            addMessage(`<a href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}" class="wa-btn" target="_blank">Order via WhatsApp</a>`, "bot", true);
+        }
+    }
+</script>
+</body>
+</html>
