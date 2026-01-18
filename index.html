@@ -3,229 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oven X - Multan Pro</title>
+    <title>Oven X - Multan Order System</title>
     <style>
-        :root {
-            --ue-red: #5e0000;
-            --ue-glow: #ff4d00;
-            --ue-dark: #0a0a0a;
-            --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
-        body {
-            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
-            color: #e0e0e0;
-            margin: 0;
-            padding-bottom: 100px;
-            overflow-x: hidden;
-        }
-
-        /* Unreal Engine Style Header */
-        header {
-            background: linear-gradient(180deg, #222 0%, #000 100%);
-            padding: 25px;
-            text-align: center;
-            border-bottom: 2px solid var(--ue-glow);
-            box-shadow: 0 5px 30px rgba(255, 77, 0, 0.2);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .logo {
-            font-size: 32px;
-            font-weight: 900;
-            letter-spacing: 4px;
-            margin: 0;
-            text-transform: uppercase;
-            text-shadow: 0 0 15px var(--ue-glow);
-            color: white;
-        }
-        .logo span { color: var(--ue-glow); }
-
-        .container { max-width: 600px; margin: auto; padding: 20px; }
-
-        /* Unreal Category Titles */
-        .section-title {
-            font-weight: 800;
-            color: var(--ue-glow);
-            letter-spacing: 2px;
-            margin: 40px 0 15px;
-            text-transform: uppercase;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .section-title::after {
-            content: "";
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, var(--ue-glow), transparent);
-        }
-
-        /* High-Def Item Cards */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .btn {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn:hover {
-            border-color: var(--ue-glow);
-            box-shadow: 0 0 20px rgba(255, 77, 0, 0.3);
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.07);
-        }
-        .btn::before {
-            content: "";
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            transition: 0.5s;
-        }
-        .btn:hover::before { left: 100%; }
-
-        .price-tag { 
-            color: var(--ue-glow); 
-            font-weight: 800; 
-            margin-top: 8px; 
-            font-size: 15px; 
-            font-family: 'Courier New', monospace;
-        }
-
-        /* Unreal Floating UI */
-        #cart-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 450px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--ue-glow);
-            padding: 18px;
-            border-radius: 50px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            z-index: 5000;
-        }
-        .checkout-btn {
-            background: var(--ue-glow);
-            padding: 10px 25px;
-            border-radius: 30px;
-            color: white;
-            font-weight: 900;
-            text-transform: uppercase;
-            cursor: pointer;
-            box-shadow: 0 0 15px var(--ue-glow);
-        }
-
-        /* Unreal Dialogs */
-        .modal {
-            background: #111;
-            border: 2px solid var(--ue-glow);
-            color: white;
-            box-shadow: 0 0 50px rgba(0,0,0,1);
-            border-radius: 20px;
-        }
-        .qty-btn { border: 1px solid var(--ue-glow); color: var(--ue-glow); background: transparent; }
-        .qty-btn.active { background: var(--ue-glow); color: white; box-shadow: 0 0 10px var(--ue-glow); }
-
-        textarea, input {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            color: white;
-            border-radius: 10px;
-        }
-
-        #overlay-screen { background: #050505; color: white; }
-        .chat-bubble { background: #111; border: 1px solid #222; border-radius: 10px; }
-        .highlight-bubble { background: rgba(255, 77, 0, 0.1); border: 1px solid var(--ue-glow); color: #ffa47a; }
-
-        .confirm-btn {
-            background: #25D366;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
-            box-shadow: 0 0 20px rgba(37, 211, 102, 0.4);
-        }
-
-        /* Animations */
-        @keyframes pulse {
-            0% { box-shadow: 0 0 10px var(--ue-glow); }
-            50% { box-shadow: 0 0 25px var(--ue-glow); }
-            100% { box-shadow: 0 0 10px var(--ue-glow); }
-        }
-        .active-glow { animation: pulse 2s infinite; }
+        :root { --red: #8b0000; --orange: #f37021; --gray: #f4f4f4; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--gray); margin: 0; padding-bottom: 80px; }
+        header { background: var(--red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--orange); position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 26px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
+        .logo span { color: var(--orange); }
+        .container { max-width: 500px; margin: auto; padding: 15px; }
+        .section-title { font-weight: bold; color: var(--red); border-bottom: 2px solid var(--orange); margin: 20px 0 10px; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 60px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn:active { transform: scale(0.95); background: #fff3e0; }
+        .price-tag { color: var(--orange); font-weight: bold; margin-top: 5px; font-size: 12px; }
+        #modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index: 1000; }
+        .modal { background: white; padding: 20px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; }
+        .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+        .qty-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; }
+        .qty-btn.active { background: var(--red); color: white; }
+        textarea { width: 90%; border-radius: 10px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: inherit; }
+        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); font-weight: bold; z-index: 500; }
+        .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; cursor:pointer; }
+        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .chat-bubble { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #eee; }
+        .highlight-bubble { background: #fff3e0; border: 1px solid var(--orange); color: #856404; padding: 15px; border-radius: 15px; margin-bottom: 15px; font-size: 14px; }
+        .input-group { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .next-btn { background: var(--red); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
     </style>
 </head>
 <body>
 
 <header>
     <p class="logo">OVEN <span>X</span></p>
-    <p id="table-indicator" style="margin:5px 0 0; font-size:11px; color: #888; letter-spacing: 3px;"></p>
+    <p id="table-indicator" style="margin:0; font-size:10px; opacity:0.8;"></p>
 </header>
 
 <div class="container" id="menu-container"></div>
 
-<div id="cart-bar" class="active-glow">
-    <div style="display:flex; flex-direction:column;">
-        <span id="cart-count" style="font-size:10px; color:#888;">0 ITEMS SELECTED</span>
-        <span id="cart-total" style="font-size:20px; letter-spacing:1px;">RS 0</span>
-    </div>
-    <div class="checkout-btn" onclick="startCheckout()">Initialize Checkout</div>
+<div id="cart-bar">
+    <span id="cart-count">Items: 0</span>
+    <span id="cart-total">Rs 0</span>
+    <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
 </div>
 
-<!-- Modal Overlays (Same logic as before, but restyled) -->
-<div id="modal-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:none; justify-content:center; align-items:center; z-index: 10000;">
-    <div class="modal" style="padding:30px; width:85%; max-width:400px; text-align:center;">
-        <h3 id="modal-item-name" style="margin-top:0; color:var(--ue-glow); text-transform:uppercase;"></h3>
-        <div class="qty-btns" style="margin:25px 0;">
-            <button class="qty-btn" onclick="setQty(1)" style="width:40px; height:40px; margin:0 5px; border-radius:50%;">1</button>
-            <button class="qty-btn" onclick="setQty(2)" style="width:40px; height:40px; margin:0 5px; border-radius:50%;">2</button>
-            <button class="qty-btn" onclick="setQty(3)" style="width:40px; height:40px; margin:0 5px; border-radius:50%;">3</button>
-            <button class="qty-btn" onclick="setQty(4)" style="width:40px; height:40px; margin:0 5px; border-radius:50%;">4</button>
-            <button class="qty-btn active" onclick="setQty(5)" style="width:40px; height:40px; margin:0 5px; border-radius:50%;">5+</button>
-        </div>
-        <textarea id="special-note" rows="3" placeholder="SYSTEM ADDENDUM (Special Instructions)..." style="width:100%; box-sizing:border-box; padding:10px;"></textarea>
-        <div style="margin-top:30px; display:flex; gap:15px;">
-            <button onclick="closeModal()" style="flex:1; background:#222; color:white; border:none; padding:12px; border-radius:10px;">ABORT</button>
-            <button onclick="addToCartFinal()" style="flex:1; background:var(--ue-glow); color:white; border:none; padding:12px; border-radius:10px; font-weight:bold;">CONFIRM</button>
-        </div>
-    </div>
-</div>
+<!-- Modal QTY -->
+<div id="modal-overlay"><div class="modal"><h3 id="modal-item-name"></h3><p>Quantity:</p><div class="qty-btns"><button class="qty-btn" onclick="setQty(1)">1</button><button class="qty-btn" onclick="setQty(2)">2</button><button class="qty-btn" onclick="setQty(3)">3</button><button class="qty-btn" onclick="setQty(4)">4</button><button class="qty-btn active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Instructions"></textarea><div style="margin-top:20px; display:flex; gap:10px;"><button onclick="closeModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">Cancel</button><button onclick="addToCartFinal()" style="flex:1; padding:10px; border-radius:10px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button></div></div></div>
 
-<div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:11000; justify-content:center; align-items:center;">
-    <div class="modal" style="padding:30px; width:85%; max-width:400px; text-align:center;">
-        <h3 style="color:var(--ue-glow);">CALIBRATE SIZE</h3>
-        <div class="grid" id="size-grid" style="margin-top:20px;"></div>
-    </div>
-</div>
+<!-- Size Modal -->
+<div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;"><div class="modal"><h3>Select Pizza Size</h3><div class="grid" id="size-grid"></div><button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button></div></div>
 
-<div id="overlay-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:20000; display:none; padding:30px; box-sizing:border-box; overflow-y:auto;">
-    <div id="checkout-content"></div>
-</div>
+<div id="overlay-screen"><div id="checkout-content"></div></div>
 
 <script>
-    // DATA & LOGIC (Kept exactly as per your operational requirements)
     const menuData = {
         "Starters": [{name: "Plain Fries", price: 230}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Hot Wings (R)", price: 399}, {name: "Cheese Sticks", price: 449}],
         "Burgers": [{name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}],
         "Pizza": [{name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}],
-        "Bar Menu": [{name: "Next Cola Buddy", price: 130}, {name: "Coke 1.5L", price: 230}, {name: "Mineral Water", price: 99}]
+        "Bar Menu": [{name: "Next Cola Buddy", price: 130}, {name: "Coke 1.5L", price: 230}]
     };
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
@@ -233,8 +68,8 @@
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) {
         tableNum = urlParams.get('table');
-        document.getElementById('table-indicator').innerText = "DINE-IN // SECTOR " + tableNum;
-    } else { document.getElementById('table-indicator').innerText = "MULTAN CENTRAL COMMAND"; }
+        document.getElementById('table-indicator').innerText = "DINE-IN: TABLE " + tableNum;
+    } else { document.getElementById('table-indicator').innerText = "MULTAN BRANCH"; }
 
     const container = document.getElementById('menu-container');
     for (let cat in menuData) {
@@ -242,7 +77,7 @@
         let grid = document.createElement('div'); grid.className = 'grid';
         menuData[cat].forEach(item => {
             let btn = document.createElement('div'); btn.className = 'btn';
-            btn.innerHTML = `<div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'CONFIGURE SIZE' : 'RS '+item.price}</div>`;
+            btn.innerHTML = `<div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'Select Size' : 'Rs '+item.price}</div>`;
             btn.onclick = () => openOrderFlow(item); grid.appendChild(btn);
         });
         container.appendChild(grid);
@@ -254,7 +89,7 @@
             const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
             for (let s in item.price) {
                 let sBtn = document.createElement('div'); sBtn.className = 'btn';
-                sBtn.innerHTML = `<div>${s}</div><div class="price-tag">RS ${item.price[s]}</div>`;
+                sBtn.innerHTML = `<div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div>`;
                 sBtn.onclick = () => { selectedItem = { name: item.name + " (" + s + ")", price: item.price[s] }; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); };
                 sizeGrid.appendChild(sBtn);
             }
@@ -266,24 +101,21 @@
     function setQty(q) { selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === q-1) b.classList.add('active'); }); }
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
     function addToCartFinal() { cart.push({ ...selectedItem, qty: selectedQty, note: document.getElementById('special-note').value }); updateCartBar(); closeModal(); }
-    function updateCartBar() { 
-        document.getElementById('cart-count').innerText = `${cart.reduce((s, i) => s + i.qty, 0)} UNITS PREPARED`; 
-        document.getElementById('cart-total').innerText = `RS ${cart.reduce((s, i) => s + (i.price * i.qty), 0)}`; 
-    }
+    function updateCartBar() { document.getElementById('cart-count').innerText = `Items: ${cart.reduce((s, i) => s + i.qty, 0)}`; document.getElementById('cart-total').innerText = `Rs ${cart.reduce((s, i) => s + (i.price * i.qty), 0)}`; }
 
     function startCheckout() {
-        if(cart.length === 0) return alert("NO DATA IN CART");
+        if(cart.length === 0) return alert("Cart is empty!");
         document.getElementById('overlay-screen').style.display = 'block';
         renderServiceTypeStep();
     }
 
     function renderServiceTypeStep() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">SELECT DEPLOYMENT MODE:</div>
+            <div class="chat-bubble">How would you like your order?</div>
             <div class="input-group">
-                <button class="next-btn" style="background:#1e3a8a" onclick="selectService('Dine-In')">DINE-IN (+7% SC)</button>
-                <button class="next-btn" style="background:#333" onclick="selectService('Takeaway')">TAKEAWAY</button>
-                <button class="next-btn" style="background:var(--ue-red)" onclick="selectService('Delivery')">DELIVERY UNIT</button>
+                <button class="next-btn" style="background:#007bff" onclick="selectService('Dine-In')">🍽️ Dine-In (7% S.C)</button>
+                <button class="next-btn" style="background:#6c757d" onclick="selectService('Takeaway')">🥡 Takeaway</button>
+                <button class="next-btn" style="background:var(--red)" onclick="selectService('Delivery')">🚚 Delivery</button>
             </div>
         `;
     }
@@ -291,22 +123,23 @@
     function selectService(type) {
         orderType = type;
         if(type === 'Dine-In') {
-            if(tableNum) renderFinalSummary(0); else renderTableStep();
+            if(tableNum) renderFinalSummary(0); 
+            else renderTableStep();
         } else if(type === 'Takeaway') { renderFinalSummary(0); } 
         else { renderAddressStep(); }
     }
 
     function renderTableStep() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">INPUT SECTOR/TABLE NUMBER:</div>
-            <div class="input-group"><input type="number" id="manualTable" placeholder="00"><button class="next-btn" onclick="saveTable()">ENGAGE</button></div>
+            <div class="chat-bubble">Please enter your <b>Table Number</b>:</div>
+            <div class="input-group"><input type="number" id="manualTable" placeholder="Example: 5"><button class="next-btn" onclick="saveTable()">Next</button></div>
         `;
     }
 
-    function saveTable() { tableNum = document.getElementById('manualTable').value; if(!tableNum) return alert("MISSING TABLE DATA"); renderFinalSummary(0); }
-    function renderAddressStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">INPUT DESTINATION COORDS (ADDRESS):</div><div class="input-group"><input type="text" id="userAddr" placeholder="Street/Zone..."><button class="next-btn" onclick="saveAddress()">NEXT</button></div>`; }
-    function saveAddress() { userAddress = document.getElementById('userAddr').value; if(!userAddress) return alert("MISSING ADDRESS"); renderDistanceStep(); }
-    function renderDistanceStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">INPUT CALCULATED CHARGES:</div><div class="highlight-bubble"><a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:white; font-weight:bold;">[ OPEN NAVIGATOR ]</a></div><div class="input-group"><input type="number" id="delCharges" placeholder="RS..."><button class="next-btn" onclick="renderFinalSummary(document.getElementById('delCharges').value)">EXECUTE ORDER</button></div>`; }
+    function saveTable() { tableNum = document.getElementById('manualTable').value; if(!tableNum) return alert("Enter Table #"); renderFinalSummary(0); }
+    function renderAddressStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter your <b>Address</b>:</div><div class="input-group"><input type="text" id="userAddr" placeholder="Street/Area..."><button class="next-btn" onclick="saveAddress()">Next</button></div>`; }
+    function saveAddress() { userAddress = document.getElementById('userAddr').value; if(!userAddress) return alert("Enter address"); renderDistanceStep(); }
+    function renderDistanceStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter <b>Delivery Charges</b> from calculator:</div><div class="highlight-bubble"><a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold;">📍 Calculator Link</a></div><div class="input-group"><input type="number" id="delCharges" placeholder="Rs..."><button class="next-btn" onclick="renderFinalSummary(document.getElementById('delCharges').value)">Finish</button></div>`; }
 
     function renderFinalSummary(deliveryFee) {
         deliveryFee = parseFloat(deliveryFee) || 0;
@@ -317,18 +150,10 @@
         const waMsg = encodeURIComponent(`*${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n${userAddress ? '*Address:* ' + userAddress + '\n' : ''}Food: Rs ${foodTotal}${serviceCharge > 0 ? '\nService Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}${deliveryFee > 0 ? '\nDelivery: Rs ' + deliveryFee : ''}\n*Grand Total: Rs ${grandTotal.toFixed(0)}*`);
         
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble" style="border: 1px solid var(--ue-glow);">
-                <b style="color:var(--ue-glow)">ORDER TRANSMISSION SUMMARY</b><br><br>
-                ${cart.map(i => `• ${i.qty}x ${i.name} = Rs ${i.price * i.qty}`).join('<br>')}
-                <br><hr style="border:0; border-top:1px solid #333;">
-                Food Total: Rs ${foodTotal}
-                ${serviceCharge > 0 ? '<br>Service Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}
-                ${deliveryFee > 0 ? '<br>Delivery Fee: Rs ' + deliveryFee : ''}
-                <br><span style="font-size:18px; color:var(--ue-glow);">TOTAL: RS ${grandTotal.toFixed(0)}</span>
-                ${tableNum ? '<br>Sector: ' + tableNum : ''}
-            </div>
-            <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn" style="padding:20px; text-decoration:none; display:block; text-align:center; border-radius:10px; font-weight:bold; margin-top:20px;">TRANSMIT TO OVEN X</a>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:25px; border:none; background:none; color:#555; width:100%; cursor:pointer;">RE-CALIBRATE ORDER</button>
+            <div class="chat-bubble"><b>${orderType} SUMMARY</b><br><br>${cart.map(i => `• ${i.qty}x ${i.name} = Rs ${i.price * i.qty}`).join('<br>')}
+            <br><hr>Food Total: Rs ${foodTotal}${serviceCharge > 0 ? '<br>Service Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}${deliveryFee > 0 ? '<br>Delivery: Rs ' + deliveryFee : ''}<br><b>Grand Total: Rs ${grandTotal.toFixed(0)}</b>${tableNum ? '<br>Table: ' + tableNum : ''}</div>
+            <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm via WhatsApp</a>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>
         `;
     }
 </script>
