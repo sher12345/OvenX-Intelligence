@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oven X - Click & Order</title>
+    <title>Oven X - Online Ordering</title>
     <style>
         :root { --red: #8b0000; --orange: #f37021; --gray: #f4f4f4; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--gray); margin: 0; padding-bottom: 80px; }
@@ -198,18 +198,17 @@
     function renderAddressStep() {
         const content = document.getElementById('checkout-content');
         content.innerHTML = `
-            <div class="chat-bubble">Awesome! Please enter your <b>Complete Delivery Address</b> in Multan:</div>
+            <div class="chat-bubble">Great! Please enter your <b>Complete Delivery Address</b>:</div>
             <div class="input-group">
-                <input type="text" id="userAddr" placeholder="House No, Street, Colony Name...">
+                <input type="text" id="userAddr" placeholder="House No, Colony Name...">
                 <button class="next-btn" onclick="saveAddress()">Continue</button>
             </div>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:40px; border:none; background:none; color:red; width:100%;">Cancel & Back to Menu</button>
         `;
     }
 
     function saveAddress() {
         const addr = document.getElementById('userAddr').value;
-        if(!addr) return alert("Please enter your address");
+        if(!addr) return alert("Please enter address");
         userAddress = addr;
         renderDistanceStep();
     }
@@ -217,46 +216,40 @@
     function renderDistanceStep() {
         const content = document.getElementById('checkout-content');
         content.innerHTML = `
-            <div class="chat-bubble">Now, to calculate delivery, please allow location on the page below and type the <b>KM distance</b> shown:</div>
+            <div class="chat-bubble">Now, please click the link below to find your charges. <b>Allow location</b> on that page and type the <b>Delivery Charges</b> you see:</div>
             <div class="highlight-bubble">
-                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold; text-decoration:none;">📍 Open Distance Calculator</a>
+                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold; text-decoration:none;">📍 Open Delivery Calculator</a>
             </div>
             <div class="input-group">
-                <input type="number" id="userDist" placeholder="Enter KM distance (e.g. 5.2)">
-                <button class="next-btn" onclick="renderFinalSummary()">Calculate & Finish</button>
+                <input type="number" id="userCharges" placeholder="Enter Delivery Charges (Rs)">
+                <button class="next-btn" onclick="renderFinalSummary()">Finish Order</button>
             </div>
         `;
     }
 
     function renderFinalSummary() {
-        const dist = parseFloat(document.getElementById('userDist').value);
-        if(isNaN(dist)) return alert("Please enter the KM distance");
+        const deliveryCharge = parseFloat(document.getElementById('userCharges').value);
+        if(isNaN(deliveryCharge)) return alert("Please enter the delivery charges shown on the link");
 
-        const delivery = (dist * 2) * 12; // Round Trip Logic
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        const grandTotal = foodTotal + deliveryCharge;
         
         const content = document.getElementById('checkout-content');
         let summaryHTML = `
-            <div class="highlight-bubble" style="text-align:center;">
-                <b>Delivery Update:</b><br>
-                Based on your distance (${dist} km), your delivery charges are <b>Rs ${delivery.toFixed(0)}</b>.<br>
-                <small>(Calculated for a round trip from Gulgasht)</small>
-            </div>
             <div class="chat-bubble">
                 <b>ORDER SUMMARY:</b><br><br>
                 ${cart.map(i => `• ${i.qty}x ${i.name} ${i.note ? '['+i.note+']' : ''} = Rs ${i.price * i.qty}`).join('<br>')}
                 <br><br>
                 Food Total: Rs ${foodTotal}<br>
-                Delivery: Rs ${delivery.toFixed(0)}<br>
+                <b>Delivery Charges: Rs ${deliveryCharge.toFixed(0)}</b><br>
                 <hr>
-                <b>Grand Total: Rs ${(foodTotal + delivery).toFixed(0)}</b><br><br>
-                <b>Delivery to:</b><br>${userAddress}
+                <b>Grand Total: Rs ${grandTotal.toFixed(0)}</b><br><br>
+                <b>Address:</b><br>${userAddress}
             </div>
         `;
         
-        const waMsg = encodeURIComponent(`*OvenX New Order*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n*Address:* ${userAddress}\n*Distance:* ${dist}km\n*Delivery Fee:* Rs ${delivery.toFixed(0)}\n*Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
-        summaryHTML += `<a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order via WhatsApp</a>`;
-        summaryHTML += `<button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
+        const waMsg = encodeURIComponent(`*OvenX New Order*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n*Address:* ${userAddress}\n*Delivery Charges:* Rs ${deliveryCharge.toFixed(0)}\n*Grand Total:* Rs ${grandTotal.toFixed(0)}`);
+        summaryHTML += `<a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm via WhatsApp</a>`;
         
         content.innerHTML = summaryHTML;
     }
