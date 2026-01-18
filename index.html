@@ -26,7 +26,8 @@
         .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; cursor:pointer; }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .chat-bubble { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #eee; }
-        .highlight-bubble { background: #fff3e0; border: 1px solid var(--orange); color: #856404; padding: 15px; border-radius: 15px; margin-bottom: 15px; font-size: 14px; }
+        .highlight-bubble { background: #fff3e0; border: 1px solid var(--orange); color: #333; padding: 15px; border-radius: 15px; margin-bottom: 15px; font-size: 14px; text-align: center;}
+        .urdu { font-family: 'Urdu', serif; direction: rtl; display: block; margin-top: 8px; font-size: 16px; color: var(--red); font-weight: bold;}
         .input-group { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         .next-btn { background: var(--red); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
@@ -47,7 +48,7 @@
     <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
 </div>
 
-<div id="modal-overlay"><div class="modal"><h3 id="modal-item-name"></h3><p>Quantity:</p><div class="qty-btns"><button class="qty-btn" onclick="setQty(1)">1</button><button class="qty-btn" onclick="setQty(2)">2</button><button class="qty-btn" onclick="setQty(3)">3</button><button class="qty-btn" onclick="setQty(4)">4</button><button class="qty-btn active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Instructions (Spicy, No Mayo, etc)"></textarea><div style="margin-top:20px; display:flex; gap:10px;"><button onclick="closeModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">Cancel</button><button onclick="addToCartFinal()" style="flex:1; padding:10px; border-radius:10px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button></div></div></div>
+<div id="modal-overlay"><div class="modal"><h3 id="modal-item-name"></h3><p>Quantity:</p><div class="qty-btns"><button class="qty-btn" onclick="setQty(1)">1</button><button class="qty-btn" onclick="setQty(2)">2</button><button class="qty-btn" onclick="setQty(3)">3</button><button class="qty-btn" onclick="setQty(4)">4</button><button class="qty-btn active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Instructions"></textarea><div style="margin-top:20px; display:flex; gap:10px;"><button onclick="closeModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">Cancel</button><button onclick="addToCartFinal()" style="flex:1; padding:10px; border-radius:10px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button></div></div></div>
 
 <div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;"><div class="modal"><h3>Select Size</h3><div class="grid" id="size-grid"></div><button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button></div></div>
 
@@ -55,62 +56,11 @@
 
 <script>
     const menuData = {
-        "Starter": [
-            {name: "Plain Fries", price: 230}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720},
-            {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: 399}, {name: "Peri-Peri Wings", price: 399},
-            {name: "Hot Wings", price: 399}, {name: "Honey Chili Wings", price: 449}, {name: "Cheese Sticks", price: 449},
-            {name: "Meat Sticks", price: 449}, {name: "Crispy Rice", price: 350}, {name: "Nuggets", price: 350}
-        ],
-        "Sandwich": [
-            {name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}
-        ],
-        "Fried Burger": [
-            {name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Crispy Jalapeno", price: 550},
-            {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Stuff Jalapeno", price: 649}
-        ],
-        "Grilled Burger": [
-            {name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri-Peri Grilled", price: 749},
-            {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fieesta", price: 749}
-        ],
-        "Wraps & Rolls": [
-            {name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749},
-            {name: "Peri-Peri Wrap", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449},
-            {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}
-        ],
-        "Platters": [
-            {name: "Khameera Sandwich Platter", price: 699}, {name: "Calzone Platter", price: 899}, {name: "Behari Platter", price: 949}
-        ],
-        "Pasta": [
-            {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "Alfredo Pasta", price: 749}, {name: "X-Special Pasta", price: 749}
-        ],
-        "Steak": [
-            {name: "Mexican Steak", price: 1549}, {name: "Moroccan Steak", price: 1549}, {name: "Tarragon Steak", price: 1549},
-            {name: "Mushroom Steak", price: 1549}, {name: "Corden Blue Steak", price: 1549}, {name: "Stuffed Jalapeno Steak", price: 1549},
-            {name: "Peper Steak", price: 1499}
-        ],
-        "Pan Pizza": [
-            {name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}},
-            {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, {name: "Cheese Lover", price: {S:499, M:999, L:1549}},
-            {name: "Veg Lover", price: {S:499, M:999, L:1549}}, {name: "Sicilian", price: {S:499, M:999, L:1549}}
-        ],
-        "Premium Pizza": [
-            {name: "BBQ Pizza", price: {M:1199, L:1699}}, {name: "Creamy Dreamy", price: {M:1199, L:1699}},
-            {name: "OvenX Special", price: {M:1199, L:1699}}, {name: "Bone Fire", price: {M:1199, L:1699}}
-        ],
-        "Deep Dish Pizza": [
-            {name: "Mild Butter", price: {M:1749, L:2449}}, {name: "OvenX Special DD", price: {M:1749, L:2449}}
-        ],
-        "Extreme Pizza": [
-            {name: "Extreme Peri-Peri", price: {M:1499, L:2049}}, {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}, {name: "Crispy Extreme", price: {M:1499, L:2049}}
-        ],
-        "Bar Menu (Beverages)": [
-            {name: "Coke L", price: 190}, {name: "Sprite L", price: 190}, {name: "Fanta L", price: 190},
-            {name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Next Cola Buddy", price: 130},
-            {name: "Coke Tin", price: 210}, {name: "Sprite Tin", price: 210}, {name: "Coke Tin Sugar Free", price: 220},
-            {name: "Mineral Water L", price: 170}, {name: "Mineral Water S", price: 99},
-            {name: "Mint Margarita", price: 249}, {name: "Lemonade", price: 249}, {name: "Pina Colada", price: 349},
-            {name: "Red Rose", price: 220}, {name: "Fresh Lime", price: 220}, {name: "Blue Logon", price: 220}
-        ]
+        "Starter": [{name: "Plain Fries", price: 230}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: 399}, {name: "Peri-Peri Wings", price: 399}, {name: "Hot Wings", price: 399}, {name: "Cheese Sticks", price: 449}, {name: "Nuggets", price: 350}],
+        "Fried Burger": [{name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Stuff Jalapeno", price: 649}],
+        "Grilled Burger": [{name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri-Peri Grilled", price: 749}, {name: "Jalapeno Blaze", price: 749}],
+        "Pizza": [{name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}, {name: "OvenX Special", price: {M:1199, L:1699}}, {name: "Mild Butter Deep Dish", price: {M:1749, L:2449}}],
+        "Bar Menu": [{name: "Next Cola Buddy", price: 130}, {name: "Coke 1.5L", price: 230}, {name: "Mint Margarita", price: 249}, {name: "Fresh Lime", price: 220}]
     };
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
@@ -185,9 +135,25 @@
     }
 
     function saveTable() { tableNum = document.getElementById('manualTable').value; if(!tableNum) return alert("Enter Table #"); renderFinalSummary(0); }
-    function renderAddressStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter <b>Delivery Address</b>:</div><div class="input-group"><input type="text" id="userAddr" placeholder="Street/Colony..."><button class="next-btn" onclick="saveAddress()">Next</button></div>`; }
-    function saveAddress() { userAddress = document.getElementById('userAddr').value; if(!userAddress) return alert("Enter address"); renderDistanceStep(); }
-    function renderDistanceStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Open the link and enter <b>Delivery Charges</b> shown:</div><div class="highlight-bubble"><a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold;">📍 Delivery Calculator</a></div><div class="input-group"><input type="number" id="delCharges" placeholder="Rs..."><button class="next-btn" onclick="renderFinalSummary(document.getElementById('delCharges').value)">Finish</button></div>`; }
+    function renderAddressStep() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter <b>Delivery Address</b>:</div><div class="input-group"><input type="text" id="userAddr" placeholder="House/Street/Colony..."><button class="next-btn" onclick="saveAddress()">Next</button></div>`; }
+    function saveAddress() { userAddress = document.getElementById('userAddr').value; if(!userAddress) return alert("Enter address"); renderCalculatorStep(); }
+
+    function renderCalculatorStep() {
+        document.getElementById('checkout-content').innerHTML = `
+            <div class="chat-bubble">
+                <b>English:</b> Click the button below to calculate delivery charges. Please allow location access. Note the amount and enter it below.<br>
+                <span class="urdu">ڈیلیوری چارجز معلوم کرنے کے لیے نیچے دیے گئے بٹن پر کلک کریں۔ لوکیشن کی اجازت دیں۔ جو چارجز آئیں وہ نوٹ کریں اور نیچے لکھیں۔</span>
+            </div>
+            <div class="highlight-bubble">
+                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold; text-decoration:none; font-size:18px;">📍 Open Delivery Calculator / ڈیلیوری کیلکولیٹر</a>
+            </div>
+            <div class="input-group">
+                <p style="font-size:12px; margin:0; text-align:center;">Enter Delivery Charges below / ڈیلیوری چارجز یہاں لکھیں:</p>
+                <input type="number" id="delCharges" placeholder="Rs...">
+                <button class="next-btn" onclick="renderFinalSummary(document.getElementById('delCharges').value)">Finish / مکمل کریں</button>
+            </div>
+        `;
+    }
 
     function renderFinalSummary(deliveryFee) {
         deliveryFee = parseFloat(deliveryFee) || 0;
@@ -198,10 +164,10 @@
         const waMsg = encodeURIComponent(`*${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n${userAddress ? '*Address:* ' + userAddress + '\n' : ''}Food: Rs ${foodTotal}${serviceCharge > 0 ? '\nService Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}${deliveryFee > 0 ? '\nDelivery: Rs ' + deliveryFee : ''}\n*Grand Total: Rs ${grandTotal.toFixed(0)}*`);
         
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble"><b>SUMMARY</b><br><br>${cart.map(i => `• ${i.qty}x ${i.name} = Rs ${i.price * i.qty}`).join('<br>')}
-            <br><hr>Food Total: Rs ${foodTotal}${serviceCharge > 0 ? '<br>Service Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}${deliveryFee > 0 ? '<br>Delivery: Rs ' + deliveryFee : ''}<br><b>Grand Total: Rs ${grandTotal.toFixed(0)}</b>${tableNum ? '<br>Table: ' + tableNum : ''}</div>
-            <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order</a>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>
+            <div class="chat-bubble"><b>SUMMARY / خلاصہ</b><br><br>${cart.map(i => `• ${i.qty}x ${i.name} = Rs ${i.price * i.qty}`).join('<br>')}
+            <br><hr>Food Total: Rs ${foodTotal}${serviceCharge > 0 ? '<br>Service Charge (7%): Rs ' + serviceCharge.toFixed(0) : ''}${deliveryFee > 0 ? '<br>Delivery Charges: Rs ' + deliveryFee : ''}<br><b>Grand Total: Rs ${grandTotal.toFixed(0)}</b>${tableNum ? '<br>Table: ' + tableNum : ''}</div>
+            <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm via WhatsApp / واٹس ایپ پر آرڈر بھیجیں</a>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu / مینو پر واپس جائیں</button>
         `;
     }
 </script>
