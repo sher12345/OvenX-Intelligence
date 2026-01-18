@@ -8,22 +8,18 @@
         :root { --red: #8b0000; --orange: #f37021; --gray: #f4f4f4; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--gray); margin: 0; padding-bottom: 80px; }
         
-        /* Header & Branding */
         header { background: var(--red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--orange); position: sticky; top: 0; z-index: 100; }
         .logo { font-size: 26px; font-weight: 900; letter-spacing: 1px; margin: 0; }
         .logo span { color: var(--orange); }
 
-        /* Main Menu Container */
         .container { max-width: 500px; margin: auto; padding: 15px; }
         .section-title { font-weight: bold; color: var(--red); border-bottom: 2px solid var(--orange); margin: 20px 0 10px; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; }
         
-        /* Buttons & Grid */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 60px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn:active { transform: scale(0.95); background: #fff3e0; }
         .price-tag { color: var(--orange); font-weight: bold; margin-top: 5px; font-size: 12px; }
 
-        /* Dialog / Modal for Quantity */
         #modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index: 1000; }
         .modal { background: white; padding: 20px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
@@ -31,16 +27,17 @@
         .qty-btn.active { background: var(--red); color: white; }
         textarea { width: 90%; border-radius: 10px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: inherit; }
 
-        /* Floating Cart & Bot */
         #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); font-weight: bold; z-index: 500; }
-        .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; }
+        .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; cursor:pointer; }
 
-        /* Chat Step Overlays */
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .chat-bubble { background: #f1f1f1; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #ddd; }
-        .input-group { display: flex; gap: 10px; margin-top: 10px; }
-        input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none; }
-        .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; }
+        .chat-bubble { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #eee; }
+        .highlight-bubble { background: #fff3e0; border: 1px solid var(--orange); color: #856404; padding: 15px; border-radius: 15px; margin-bottom: 15px; font-size: 14px; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; outline: none; font-size: 16px; }
+        .next-btn { background: var(--red); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -50,18 +47,14 @@
     <p style="margin:0; font-size:10px; opacity:0.8; letter-spacing: 2px;">MULTAN BRANCH</p>
 </header>
 
-<div class="container" id="menu-container">
-    <!-- Menu will be generated here -->
-</div>
+<div class="container" id="menu-container"></div>
 
-<!-- Floating Cart Bar -->
 <div id="cart-bar">
     <span id="cart-count">Items: 0</span>
     <span id="cart-total">Rs 0</span>
     <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
 </div>
 
-<!-- Modal for Quantity & Instructions -->
 <div id="modal-overlay">
     <div class="modal">
         <h3 id="modal-item-name">Item Name</h3>
@@ -81,7 +74,6 @@
     </div>
 </div>
 
-<!-- Size Selector Modal -->
 <div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;">
     <div class="modal">
         <h3>Select Pizza Size</h3>
@@ -90,7 +82,6 @@
     </div>
 </div>
 
-<!-- Checkout Overlay -->
 <div id="overlay-screen">
     <div id="checkout-content"></div>
 </div>
@@ -124,8 +115,8 @@
     let cart = [];
     let selectedItem = null;
     let selectedQty = 1;
+    let userAddress = "";
 
-    // Generate Menu
     const container = document.getElementById('menu-container');
     for (let cat in menuData) {
         let title = document.createElement('div');
@@ -200,8 +191,7 @@
 
     function startCheckout() {
         if(cart.length === 0) return alert("Cart is empty!");
-        const screen = document.getElementById('overlay-screen');
-        screen.style.display = 'block';
+        document.getElementById('overlay-screen').style.display = 'block';
         renderAddressStep();
     }
 
@@ -210,45 +200,63 @@
         content.innerHTML = `
             <div class="chat-bubble">Awesome! Please enter your <b>Complete Delivery Address</b> in Multan:</div>
             <div class="input-group">
-                <input type="text" id="userAddr" placeholder="Street, Colony, House No...">
-                <button onclick="renderDistanceStep()">Next</button>
+                <input type="text" id="userAddr" placeholder="House No, Street, Colony Name...">
+                <button class="next-btn" onclick="saveAddress()">Continue</button>
             </div>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:40px; border:none; background:none; color:red;">Back to Menu</button>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:40px; border:none; background:none; color:red; width:100%;">Cancel & Back to Menu</button>
         `;
     }
 
-    function renderDistanceStep() {
+    function saveAddress() {
         const addr = document.getElementById('userAddr').value;
-        if(!addr) return alert("Please enter address");
-        selectedItem.address = addr;
+        if(!addr) return alert("Please enter your address");
+        userAddress = addr;
+        renderDistanceStep();
+    }
 
+    function renderDistanceStep() {
         const content = document.getElementById('checkout-content');
         content.innerHTML = `
             <div class="chat-bubble">Now, to calculate delivery, please allow location on the page below and type the <b>KM distance</b> shown:</div>
-            <div class="chat-bubble" style="background:#fff3e0; border-color:#f37021;">
-                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:#d35400; font-weight:bold;">📍 Click to Open Delivery Calculator</a>
+            <div class="highlight-bubble">
+                <a href="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" target="_blank" style="color:var(--red); font-weight:bold; text-decoration:none;">📍 Open Distance Calculator</a>
             </div>
             <div class="input-group">
-                <input type="number" id="userDist" placeholder="Enter KM distance...">
-                <button onclick="renderFinalSummary()">Finish</button>
+                <input type="number" id="userDist" placeholder="Enter KM distance (e.g. 5.2)">
+                <button class="next-btn" onclick="renderFinalSummary()">Calculate & Finish</button>
             </div>
         `;
     }
 
     function renderFinalSummary() {
         const dist = parseFloat(document.getElementById('userDist').value);
-        if(isNaN(dist)) return alert("Enter a valid number");
+        if(isNaN(dist)) return alert("Please enter the KM distance");
 
         const delivery = (dist * 2) * 12; // Round Trip Logic
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
         
         const content = document.getElementById('checkout-content');
-        let summaryHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b><br><br>`;
-        cart.forEach(i => summaryHTML += `• ${i.qty}x ${i.name} ${i.note ? '['+i.note+']' : ''} = ${i.price * i.qty}<br>`);
-        summaryHTML += `<br>Food Total: Rs ${foodTotal}<br>Delivery Fee: Rs ${delivery.toFixed(0)}<br><b>Grand Total: Rs ${(foodTotal+delivery).toFixed(0)}</b><br><br>Address: ${selectedItem.address}</div>`;
+        let summaryHTML = `
+            <div class="highlight-bubble" style="text-align:center;">
+                <b>Delivery Update:</b><br>
+                Based on your distance (${dist} km), your delivery charges are <b>Rs ${delivery.toFixed(0)}</b>.<br>
+                <small>(Calculated for a round trip from Gulgasht)</small>
+            </div>
+            <div class="chat-bubble">
+                <b>ORDER SUMMARY:</b><br><br>
+                ${cart.map(i => `• ${i.qty}x ${i.name} ${i.note ? '['+i.note+']' : ''} = Rs ${i.price * i.qty}`).join('<br>')}
+                <br><br>
+                Food Total: Rs ${foodTotal}<br>
+                Delivery: Rs ${delivery.toFixed(0)}<br>
+                <hr>
+                <b>Grand Total: Rs ${(foodTotal + delivery).toFixed(0)}</b><br><br>
+                <b>Delivery to:</b><br>${userAddress}
+            </div>
+        `;
         
-        const waMsg = encodeURIComponent(`*OvenX New Order*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n*Address:* ${selectedItem.address}\n*Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
-        summaryHTML += `<a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm via WhatsApp</a>`;
+        const waMsg = encodeURIComponent(`*OvenX New Order*\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\n*Address:* ${userAddress}\n*Distance:* ${dist}km\n*Delivery Fee:* Rs ${delivery.toFixed(0)}\n*Total:* Rs ${(foodTotal+delivery).toFixed(0)}`);
+        summaryHTML += `<a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order via WhatsApp</a>`;
+        summaryHTML += `<button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
         
         content.innerHTML = summaryHTML;
     }
