@@ -59,10 +59,18 @@
 <script>
     const menuData = {
         "Starter": [
-            {name: "Plain Fries", price: 230}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720},
-            {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: 399}, {name: "Peri-Peri Wings", price: 399},
-            {name: "Hot Wings", price: 399}, {name: "Honey Chili Wings", price: 449}, {name: "Cheese Sticks", price: 449},
-            {name: "Meat Sticks", price: 449}, {name: "Crispy Rice", price: 350}, {name: "Nuggets", price: 350}
+            {name: "Plain Fries", price: {Reg: 230, Large: 300}}, 
+            {name: "Loaded Fries", price: 599}, 
+            {name: "Pizza Fries", price: 720},
+            {name: "Dragon Shots", price: 399}, 
+            {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, 
+            {name: "Peri-Peri Wings", price: {Reg: 399, Large: 780}},
+            {name: "Hot Wings", price: {Reg: 399, Large: 780}}, 
+            {name: "Honey Chili Wings", price: {Reg: 449, Large: 880}}, 
+            {name: "Cheese Sticks", price: 449},
+            {name: "Meat Sticks", price: 449}, 
+            {name: "Crispy Rice", price: 350}, 
+            {name: "Nuggets", price: {Reg: 350, Large: 650}}
         ],
         "Sandwich": [
             {name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}
@@ -99,6 +107,12 @@
         "Premium Pizza": [
             {name: "BBQ Pizza", price: {M:1199, L:1699}}, {name: "Creamy Dreamy", price: {M:1199, L:1699}},
             {name: "OvenX Special", price: {M:1199, L:1699}}, {name: "Bone Fire", price: {M:1199, L:1699}}
+        ],
+        "Craft My Own Pizza": [
+            {name: "Kabab Crust", price: {Med: 1399, Large: 1799}},
+            {name: "Crown Crust", price: {Med: 1399, Large: 1799}},
+            {name: "Cheese Crust", price: {Med: 1399, Large: 1799}},
+            {name: "Crusti Thin", price: {Large: 1699}}
         ],
         "Deep Dish Pizza": [
             {name: "Mild Butter", price: {M:1749, L:2449}}, {name: "OvenX Special", price: {M:1749, L:2449}}
@@ -182,7 +196,6 @@
         `;
     }
 
-    // UPDATED DELIVERY FLOW
     function renderAddressStep() {
         document.getElementById('checkout-content').innerHTML = `
             <div class="chat-bubble"><b>Step 1:</b> Please calculate your delivery charges using our official calculator link below.</div>
