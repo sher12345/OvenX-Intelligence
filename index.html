@@ -35,6 +35,9 @@
         .next-btn { background: var(--red); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
         input[type="number"], textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
+
+        /* Style for the Calculator Iframe */
+        .calc-frame { width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 15px; overflow: hidden; }
     </style>
 </head>
 <body>
@@ -251,7 +254,7 @@
 
             {name: "Chipotle Wrap", price: 699}, 
 
-            {name: "BBQ Wrap", price: 500},
+            {name: "BBQ Wrap", price: 599},
 
             {name: "Donar Kabab", price: 749},
 
@@ -292,7 +295,6 @@
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
 
-    // Table Detection logic remains the same
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) {
         tableNum = urlParams.get('table').toUpperCase();
@@ -377,21 +379,25 @@
             </div>`;
     }
 
+    // RESTORED: This opens your specific Replit calculator link
     function renderAddressStep() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">Enter Delivery Details</div>
-            <div class="input-group">
-                <input type="number" id="delCharges" placeholder="Delivery Charges (Rs)">
-                <textarea id="userAddr" placeholder="Full Address and Contact Number"></textarea>
-                <button class="next-btn" onclick="validateAndFinish()">Proceed to Summary</button>
-            </div>`;
+            <div class="chat-bubble"><b>DELIVERY CALCULATOR</b><br>Please allow location access to calculate charges.</div>
+            <div class="calc-frame">
+                <iframe 
+                    src="https://oven-x-deliverer--ovenxoperations.replit.app/" 
+                    style="width:100%; height:100%; border:none;"
+                    allow="geolocation">
+                </iframe>
+            </div>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Cancel Order</button>`;
     }
 
-    function validateAndFinish() {
-        const charges = document.getElementById('delCharges').value;
-        const addr = document.getElementById('userAddr').value;
+    // Logic to handle the data coming back from the calculator
+    function handleDeliveryCallback(charges, addr) {
         if(!charges || !addr) return alert("Please fill all details.");
-        userAddress = addr; renderFinalSummary(charges);
+        userAddress = addr; 
+        renderFinalSummary(charges);
     }
 
     function renderFinalSummary(deliveryFee) {
@@ -408,6 +414,13 @@
             <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order via WhatsApp</a>
             <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
+
+    // This listens for the message from your Replit app
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.charges) {
+            handleDeliveryCallback(event.data.charges, event.data.addr);
+        }
+    });
 </script>
 </body>
 </html>
