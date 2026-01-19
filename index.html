@@ -82,41 +82,59 @@
             {name: "Pizza Fries", price: 720},
             {name: "Dragon Shots", price: 399}, 
             {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, 
-            {name: "Peri-Peri Wings", price: {Reg: 399, Large: 780}},
-            {name: "Hot Wings", price: {Reg: 399, Large: 780}}, 
-            {name: "Honey Chili Wings", price: {Reg: 449, Large: 880}}, 
-            {name: "Cheese Sticks", price: 449},
-            {name: "Meat Sticks", price: 449}, 
-            {name: "Crispy Rice", price: 350}, 
-            {name: "Nuggets", price: {Reg: 350, Large: 650}}
+            {name: "Honey Chili Wings", price: {Reg: 449, Large: 880}}
         ],
         "Fried Burger": [
-            {name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Crispy Jalapeno", price: 550},
-            {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Stuff Jalapeno", price: 649}
+            {name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, 
+            {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}
         ],
         "Grilled Burger": [
-            {name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri-Peri Grilled", price: 749},
-            {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fiesta", price: 749}
+            {name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, 
+            {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}
         ],
         "Pan Pizza": [
             {name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}},
             {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, {name: "Cheese Lover", price: {S:499, M:999, L:1549}}
         ],
+        "Premium Pizza": [
+            {name: "Creamy Tikka", price: {S:599, M:1149, L:1749}}, {name: "Afghani Feast", price: {S:599, M:1149, L:1749}},
+            {name: "Beef Pepperoni", price: {S:599, M:1149, L:1749}}, {name: "Ranch Delight", price: {S:599, M:1149, L:1749}}
+        ],
+        "Deep Dish Pizza": [
+            {name: "Deep Dish Tikka", price: {M:1349, L:1949}}, 
+            {name: "Deep Dish Supreme", price: {M:1349, L:1949}},
+            {name: "Deep Dish Pepperoni", price: {M:1349, L:1949}}
+        ],
+        "Extreme Pizza": [
+            {name: "Extreme Feast", price: {L:1849, XL:2399}}, 
+            {name: "The Oven X Special", price: {L:1849, XL:2399}}
+        ],
         "Craft My Own Pizza": [
             {name: "Kabab Crust", price: {Med: 1399, Large: 1799}},
             {name: "Crown Crust", price: {Med: 1399, Large: 1799}},
-            {name: "Cheese Crust", price: {Med: 1399, Large: 1799}},
-            {name: "Crusti Thin", price: {Large: 1699}}
+            {name: "Cheese Crust", price: {Med: 1399, Large: 1799}}
+        ],
+        "Pasta": [
+            {name: "Alfredo Pasta", price: 899}, {name: "Penne Pasta", price: 849},
+            {name: "Oven Baked Pasta", price: 949}, {name: "Mac N Cheese", price: 799}
+        ],
+        "Wraps": [
+            {name: "Zinger Wrap", price: 450}, {name: "Grilled Wrap", price: 499},
+            {name: "Tortilla Wrap", price: 550}
+        ],
+        "Rolls": [
+            {name: "Chicken Mayo Roll", price: 320}, {name: "Zinger Roll", price: 350},
+            {name: "Garlic Roll", price: 320}
         ],
         "Steak": [
-            {name: "Mexican Steak", price: 1549}, {name: "Moroccan Steak", price: 1549}, {name: "Tarragon Steak", price: 1549},
-            {name: "Mushroom Steak", price: 1549}, {name: "Corden Blue Steak", price: 1549}
+            {name: "Mexican Steak", price: 1549}, {name: "Moroccan Steak", price: 1549}, 
+            {name: "Tarragon Steak", price: 1549}, {name: "Corden Blue Steak", price: 1549}
         ],
         "Bar Menu (Beverages)": [
-            {name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Large Water 1.5L", price: 170}, {name: "Small Water 500mL", price: 100}
+            {name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, 
+            {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}
         ]
     };
-
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
 
     // INITIALIZATION & TABLE DETECTION
