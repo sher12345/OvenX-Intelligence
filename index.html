@@ -37,6 +37,9 @@
         input[type="number"], textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
 
         .delivery-bar { background: #fff3e0; border: 2px dashed var(--orange); padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; color: var(--red); font-weight: bold; margin-top: 10px; }
+        
+        /* Proceed button style */
+        #proceed-trigger { display: none; background: var(--red); color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px; cursor: pointer; border: none; width: 100%; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -292,7 +295,7 @@
         ]
     };
 
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
+    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryFeeCaptured = 0;
 
     function setInitialService(type) {
         orderType = type;
@@ -373,31 +376,46 @@
 
     function renderAddressStep() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">🚚 <b>Delivery Order</b><br>Click the bar below to calculate your delivery charges based on your location.</div>
+            <div class="chat-bubble">🚚 <b>Delivery Order</b><br>Step 1: Calculate your delivery charges.</div>
             <div class="delivery-bar" onclick="loadDeliverySystem()">
-                📍 CLICK HERE TO GET DELIVERY CHARGES
+                📍 CLICK HERE TO CALCULATE CHARGES
             </div>
             <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
 
     function loadDeliverySystem() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble"><b>OVEN X - DELIVERER</b><br>Calculating location charges...</div>
+            <div class="chat-bubble"><b>OVEN X - DELIVERER</b><br>Please wait for the calculation to finish...</div>
             <iframe 
                 src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" 
                 style="width:100%; height:500px; border:none; border-radius:15px;"
                 allow="geolocation">
-            </iframe>`;
+            </iframe>
+            <!-- The Continue Button -->
+            <button id="proceed-trigger" onclick="renderFinalSummary(deliveryFeeCaptured)">CONTINUE TO GRAND TOTAL →</button>
+            <p style="text-align:center; font-size:12px; color:gray; margin-top:10px;">The button will appear once calculation is done.</p>
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:10px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
 
-    // UPDATED: This now waits 3 seconds before moving to the next page
+    // LISTENER: To catch the charges/address from the Replit link
     window.addEventListener('message', function(e) {
         if (e.data && e.data.charges) {
-            // Wait for 3 seconds so customer sees the thank you / calculation message
+            deliveryFeeCaptured = e.data.charges;
+            userAddress = e.data.addr;
+            
+            // Show the button so customer can click to proceed
+            const trigger = document.getElementById('proceed-trigger');
+            if(trigger) {
+                trigger.style.display = 'block';
+                trigger.innerText = `PROCEED WITH RS ${deliveryFeeCaptured} CHARGES →`;
+            }
+
+            // Also auto-redirect after 5 seconds if they don't click
             setTimeout(function() {
-                userAddress = e.data.addr;
-                renderFinalSummary(e.data.charges);
-            }, 3000); 
+                if(document.getElementById('proceed-trigger')) {
+                    renderFinalSummary(deliveryFeeCaptured);
+                }
+            }, 5000); 
         }
     });
 
