@@ -36,8 +36,9 @@
         .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
         input[type="number"], textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
 
-        /* Style for the Calculator Iframe */
-        .calc-frame { width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 15px; overflow: hidden; }
+        /* Delivery Bar Styling */
+        .delivery-bar { background: #fff3e0; border: 2px dashed var(--orange); padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; color: var(--red); font-weight: bold; margin-top: 10px; }
+        .delivery-bar:hover { background: #ffe0b2; }
     </style>
 </head>
 <body>
@@ -379,25 +380,30 @@
             </div>`;
     }
 
-    // RESTORED: This opens your specific Replit calculator link
+    // MODIFIED: This shows the clickable bar for the calculator
     function renderAddressStep() {
         document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble"><b>DELIVERY CALCULATOR</b><br>Please allow location access to calculate charges.</div>
-            <div class="calc-frame">
-                <iframe 
-                    src="https://oven-x-deliverer--ovenxoperations.replit.app/" 
-                    style="width:100%; height:100%; border:none;"
-                    allow="geolocation">
-                </iframe>
+            <div class="chat-bubble">🚚 <b>Delivery Order</b><br>Click the bar below to calculate your delivery charges based on your location.</div>
+            <div class="delivery-bar" onclick="loadDeliverySystem()">
+                📍 CLICK HERE TO GET DELIVERY CHARGES
             </div>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Cancel Order</button>`;
+            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
 
-    // Logic to handle the data coming back from the calculator
+    // This loads your specific Replit calculator when the bar is clicked
+    function loadDeliverySystem() {
+        document.getElementById('checkout-content').innerHTML = `
+            <div class="chat-bubble"><b>OVEN X - DELIVERER</b><br>Calculating location charges...</div>
+            <iframe 
+                src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" 
+                style="width:100%; height:500px; border:none; border-radius:15px;"
+                allow="geolocation">
+            </iframe>`;
+    }
+
     function handleDeliveryCallback(charges, addr) {
         if(!charges || !addr) return alert("Please fill all details.");
-        userAddress = addr; 
-        renderFinalSummary(charges);
+        userAddress = addr; renderFinalSummary(charges);
     }
 
     function renderFinalSummary(deliveryFee) {
@@ -415,10 +421,10 @@
             <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
 
-    // This listens for the message from your Replit app
-    window.addEventListener('message', function(event) {
-        if (event.data && event.data.charges) {
-            handleDeliveryCallback(event.data.charges, event.data.addr);
+    // LISTENER: To catch the charges/address from the Replit link
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.charges) {
+            handleDeliveryCallback(e.data.charges, e.data.addr);
         }
     });
 </script>
