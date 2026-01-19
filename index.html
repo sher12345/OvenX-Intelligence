@@ -36,9 +36,7 @@
         .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
         input[type="number"], textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
 
-        /* Delivery Bar Styling */
         .delivery-bar { background: #fff3e0; border: 2px dashed var(--orange); padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; color: var(--red); font-weight: bold; margin-top: 10px; }
-        .delivery-bar:hover { background: #ffe0b2; }
     </style>
 </head>
 <body>
@@ -296,13 +294,6 @@
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.has('table')) {
-        tableNum = urlParams.get('table').toUpperCase();
-        document.getElementById('welcome-msg').innerText = "You are at Table " + tableNum;
-        document.getElementById('welcome-overlay').style.display = 'flex';
-    }
-
     function setInitialService(type) {
         orderType = type;
         if(type === 'Takeaway') { tableNum = ""; document.getElementById('table-indicator').innerText = "OVEN X - TAKEAWAY"; }
@@ -380,7 +371,6 @@
             </div>`;
     }
 
-    // MODIFIED: This shows the clickable bar for the calculator
     function renderAddressStep() {
         document.getElementById('checkout-content').innerHTML = `
             <div class="chat-bubble">🚚 <b>Delivery Order</b><br>Click the bar below to calculate your delivery charges based on your location.</div>
@@ -390,7 +380,6 @@
             <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
 
-    // This loads your specific Replit calculator when the bar is clicked
     function loadDeliverySystem() {
         document.getElementById('checkout-content').innerHTML = `
             <div class="chat-bubble"><b>OVEN X - DELIVERER</b><br>Calculating location charges...</div>
@@ -401,10 +390,16 @@
             </iframe>`;
     }
 
-    function handleDeliveryCallback(charges, addr) {
-        if(!charges || !addr) return alert("Please fill all details.");
-        userAddress = addr; renderFinalSummary(charges);
-    }
+    // UPDATED: This now waits 3 seconds before moving to the next page
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.charges) {
+            // Wait for 3 seconds so customer sees the thank you / calculation message
+            setTimeout(function() {
+                userAddress = e.data.addr;
+                renderFinalSummary(e.data.charges);
+            }, 3000); 
+        }
+    });
 
     function renderFinalSummary(deliveryFee) {
         deliveryFee = parseFloat(deliveryFee) || 0;
@@ -420,13 +415,6 @@
             <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order via WhatsApp</a>
             <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
     }
-
-    // LISTENER: To catch the charges/address from the Replit link
-    window.addEventListener('message', function(e) {
-        if (e.data && e.data.charges) {
-            handleDeliveryCallback(e.data.charges, e.data.addr);
-        }
-    });
 </script>
 </body>
 </html>
