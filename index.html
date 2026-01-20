@@ -250,19 +250,20 @@
         { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", img: "deal1.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza"}, {label: "Pizza 2", cat: "Extreme Pizza"}], fixedItems: ["1.5L Soft Drink"] },
         { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", img: "deal2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza"}, {label: "Pizza 2", cat: "Pan Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
         { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", img: "deal3.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza"}, {label: "Pizza 2", cat: "Premium Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", img: "deal4.jpg", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza"}, {label: "Large Pizza", cat: "Extreme Pizza"}], fixedItems: ["1.5L Soft Drink"] },
+        { name: "Midnight Deal 4", desc: "1x any Med Extreme Pizza + 1x any Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", img: "deal4.jpg", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza"}, {label: "Large Pizza", cat: "Extreme Pizza"}], fixedItems: ["1.5L Soft Drink"] },
         { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", img: "deal6.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
         { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", img: "dealbuddy.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] },
-{ name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", img: "delburger1.jpg", 
+        
+        // UPDATED BURGER DEAL 1 WITH FLAVORS
+        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", img: "delburger1.jpg", 
           flavorsNeeded: [{label: "Zinger 1", cat: "Zinger Selection"}, {label: "Zinger 2", cat: "Zinger Selection"}], 
           fixedItems: ["1x Regular Fries", "2x Drinks"] },
+          
         { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", img: "delburger2.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
         { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", img: "delburger3.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
         { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", img: "deldeal1.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", img: "deldeal2.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", img: "deldeal3.jpg", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", img: "deldeal4.jpg", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] }
-        
+        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1449, badge: "DELIVERY", img: "deldeal2.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza"}], fixedItems: ["1L Drink"] },
+        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", img: "deldeal3.jpg", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza"}], fixedItems: ["1L Drink"] }
     ];
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0;
