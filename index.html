@@ -10,9 +10,10 @@
             --orange: #f37021; 
             --gray: #f4f4f4; 
             --white: #ffffff;
+            --dark: #121212;
         }
 
-        /* FORCE WHITE BACKGROUND - Overrides System Dark Mode */
+        /* FORCE WHITE BACKGROUND FOR SITE */
         body { 
             background: var(--white) !important; 
             color: #333 !important; 
@@ -21,31 +22,34 @@
             padding-bottom: 80px; 
         }
 
-        /* GATEWAY SCREEN WITH VIDEO BG */
+        /* DARK GATEWAY SCREEN */
         #gateway-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 3000; text-align: center; color: white; overflow: hidden;
+            z-index: 3000; text-align: center; color: white;
         }
-        #bg-video {
-            position: absolute; top: 50%; left: 50%;
-            min-width: 100%; min-height: 100%;
-            width: auto; height: auto;
-            transform: translate(-50%, -50%);
-            z-index: -2; object-fit: cover;
-        }
-        .video-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.55); z-index: -1;
-        }
-        .gateway-logo { font-size: 50px; font-weight: 900; margin-bottom: 5px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+        .gateway-logo { font-size: 50px; font-weight: 900; margin-bottom: 5px; color: white; }
         .gateway-logo span { color: var(--orange); }
+        
+        /* NEW QR WELCOME BANNER */
+        #gateway-table-note { 
+            background: var(--orange); 
+            color: white; padding: 12px 25px; 
+            border-radius: 10px; font-size: 16px; 
+            font-weight: bold; margin-bottom: 25px; 
+            display: none; 
+            box-shadow: 0 4px 15px rgba(243, 112, 33, 0.4);
+            animation: slideDown 0.5s ease-out;
+        }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         .gateway-options { display: flex; flex-direction: column; gap: 12px; width: 85%; max-width: 350px; }
         .gate-btn { padding: 18px; border-radius: 12px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
         .gate-btn:active { transform: scale(0.95); }
         .btn-red { background: var(--red); color: white; }
         .btn-orange { background: var(--orange); color: white; }
-        .btn-outline { background: transparent; color: white; border: 2px solid white; backdrop-filter: blur(5px); }
+        .btn-outline { background: transparent; color: white; border: 2px solid white; }
 
         /* HEADER & TABS */
         header { 
@@ -59,58 +63,54 @@
         .logo span { color: var(--orange); }
 
         .tab-bar { display: none; background: var(--white); padding: 10px; display: flex; justify-content: center; gap: 8px; position: sticky; top: 58px; z-index: 90; border-bottom: 1px solid #ddd; }
-        .tab-item { background: var(--white); padding: 10px 15px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid #ddd; flex: 1; text-align: center; max-width: 150px; color: #333; transition: 0.2s; }
+        .tab-item { background: var(--white); padding: 10px 15px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid #ddd; flex: 1; text-align: center; max-width: 150px; color: #333; }
         .tab-item.active { background: var(--red); color: white; border-color: var(--red); }
 
-        /* CARDS */
-        .container { max-width: 600px; margin: auto; padding: 15px; background: var(--white); }
-        .deals-container { display: none; padding: 15px; max-width: 600px; margin: auto; background: var(--white); }
+        /* DEALS & MENU */
+        .container, .deals-container { max-width: 600px; margin: auto; padding: 15px; background: var(--white); }
         .deal-card { background: var(--white); border-radius: 15px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; position: relative; color: #333; }
         .deal-img { width: 100%; height: auto; display: block; background: #f9f9f9; }
         .deal-content { padding: 15px; }
         .deal-badge { position: absolute; top: 10px; right: 10px; background: var(--orange); color: white; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; z-index: 5; }
         .deal-title { font-weight: bold; color: var(--red); font-size: 18px; text-transform: uppercase; }
         .deal-desc { font-size: 13px; color: #666; margin: 8px 0; white-space: pre-line; line-height: 1.4; }
-        .deal-price { color: var(--orange); font-weight: 900; font-size: 20px; margin-top: 5px; }
+        .deal-price { color: var(--orange); font-weight: 900; font-size: 20px; }
 
         .section-title { font-weight: bold; color: var(--red); border-bottom: 2px solid var(--orange); margin: 25px 0 10px; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;}
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { background: var(--white); color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 65px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        .btn { background: var(--white); color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 65px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
-        .btn:active { transform: scale(0.96); background: #fdf2f2; }
-        .price-tag { color: var(--orange); font-weight: bold; margin-top: 5px; font-size: 12px; }
-
-        /* VISUAL SELECTION COLOR */
-        .selected-flavor { background: var(--orange) !important; color: white !important; border-color: var(--orange) !important; }
+        /* SELECTED VISUALIZATION */
+        .selected-flavor { background: var(--orange) !important; color: white !important; border-color: var(--orange) !important; transform: scale(0.95); }
 
         /* CART & CHECKOUT */
-        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: none; justify-content: space-between; align-items: center; z-index: 500; box-sizing: border-box; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); }
-        .checkout-btn { background: var(--orange); padding: 8px 22px; border-radius: 20px; color: white; cursor:pointer; font-weight: 900; text-transform: uppercase; font-size: 14px; }
+        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: none; justify-content: space-between; align-items: center; z-index: 500; box-sizing: border-box; }
+        .checkout-btn { background: var(--orange); padding: 8px 22px; border-radius: 20px; color: white; cursor:pointer; font-weight: 900; }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; color: #333; }
-        
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: #fefefe; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
-        .remove-item-btn { color: #ff4444; font-size: 11px; cursor: pointer; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 6px; font-weight: bold; text-transform: uppercase; }
-        
+        .remove-item-btn { color: #ff4444; font-size: 11px; cursor: pointer; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+
         /* MODALS */
         #modal-overlay, #welcome-overlay, #flavor-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index: 1500; }
         .modal { background: var(--white); color: #333; padding: 25px; border-radius: 25px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
-        .qty-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .qty-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; }
         .qty-btn.active { background: var(--red); color: white; }
-        
-        textarea { width: 100%; border-radius: 12px; border: 1px solid #ddd; padding: 12px; margin-top: 10px; font-family: inherit; box-sizing: border-box; font-size: 14px; }
-        .next-btn { background: var(--red); color: white; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; font-size: 15px; }
+        textarea { width: 100%; border-radius: 12px; border: 1px solid #ddd; padding: 12px; margin-top: 10px; font-family: inherit; box-sizing: border-box; }
+        .next-btn { background: var(--red); color: white; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; }
         .confirm-btn { background: #25D366; color: white; padding: 18px; border-radius: 12px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; border: none; cursor: pointer; width: 100%; }
         .chat-bubble { background: #f8f8f8; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee; line-height: 1.5; font-size: 14px; }
     </style>
 </head>
 <body>
 
+<!-- GATEWAY SCREEN -->
 <div id="gateway-screen">
-    <video autoplay muted loop playsinline id="bg-video"><source src="ovenx-video.mp4" type="video/mp4"></video>
-    <div class="video-overlay"></div>
     <p class="gateway-logo">OVEN <span>X</span></p>
-    <p style="margin-bottom: 35px; opacity: 0.95; font-weight: 500;">Freshly Baked, Truly Authentic</p>
+    <!-- Welcome message for QR scans -->
+    <div id="gateway-table-note">WELCOME! YOU ARE AT TABLE <span id="gateway-table-id"></span></div>
+    
+    <p id="tagline" style="margin-bottom: 30px; opacity: 0.8;">Freshly Baked, Truly Authentic</p>
     <div class="gateway-options">
         <button class="gate-btn btn-orange" onclick="enterApp('deals')">🔥 View Hot Deals</button>
         <button class="gate-btn btn-red" onclick="enterApp('menu')">📖 Open Full Menu</button>
@@ -120,7 +120,7 @@
 
 <header id="main-header">
     <button class="header-back-btn" onclick="exitToGateway()">← Home</button>
-    <p class="logo">OVEN <span>X</span></p>
+    <p class="logo">OVEN <span>X</span> <small id="header-table-indicator" style="font-size:10px; opacity:0.7;"></small></p>
     <div style="width:50px;"></div>
 </header>
 
@@ -129,11 +129,7 @@
     <div class="tab-item" id="tab-deals" onclick="switchTab('deals')">SPECIAL DEALS</div>
 </div>
 
-<div id="deals-container" class="deals-container">
-    <div class="section-title">Limited Time Offers</div>
-    <div id="deals-list"></div>
-</div>
-
+<div id="deals-container" class="deals-container"><div id="deals-list"></div></div>
 <div class="container" id="menu-container" style="display:none;"></div>
 
 <div id="cart-bar">
@@ -142,55 +138,14 @@
     <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
 </div>
 
-<!-- FLAVOR MODAL -->
-<div id="flavor-overlay">
-    <div class="modal">
-        <h3 id="flavor-title" style="color:var(--red); margin-top:0;">Pick Flavor</h3>
-        <p id="flavor-step-info" style="font-size: 12px; color: #777; margin-bottom: 15px;"></p>
-        <div class="grid" id="flavor-grid"></div>
-        <button onclick="document.getElementById('flavor-overlay').style.display='none'" style="margin-top:20px; border:none; background:none; color:#999; cursor:pointer;">Cancel</button>
-    </div>
-</div>
-
-<!-- OTHER MODALS -->
-<div id="welcome-overlay">
-    <div class="modal">
-        <h2 style="color:var(--red); margin-top:0;">Welcome!</h2>
-        <p id="welcome-msg">Order Online</p>
-        <div class="input-group">
-            <button class="next-btn" onclick="setInitialService('Dine-In')" style="background:#007bff;">🍽️ Dine-In</button>
-            <button class="next-btn" onclick="setInitialService('Takeaway')" style="background:#6c757d;">🥡 Takeaway</button>
-        </div>
-    </div>
-</div>
-
-<div id="modal-overlay">
-    <div class="modal">
-        <h3 id="modal-item-name"></h3>
-        <p>Quantity:</p>
-        <div class="qty-btns">
-            <button class="qty-btn" onclick="setQty(1)">1</button>
-            <button class="qty-btn" onclick="setQty(2)">2</button>
-            <button class="qty-btn" onclick="setQty(3)">3</button>
-            <button class="qty-btn" onclick="setQty(4)">4</button>
-            <button class="qty-btn active" onclick="setQty(5)">5+</button>
-        </div>
-        <textarea id="special-note" placeholder="Instructions (Spicy, No Mayo, etc)"></textarea>
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="closeModal()" style="flex:1; padding:12px; border-radius:12px; border:1px solid #ddd;">Cancel</button>
-            <button onclick="addToCartFinal()" style="flex:1; padding:12px; border-radius:12px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button>
-        </div>
-    </div>
-</div>
-
-<div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;">
-    <div class="modal"><h3>Select Size</h3><div class="grid" id="size-grid"></div><button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button></div>
-</div>
-
-<div id="overlay-screen">
-    <button class="header-back-btn" id="checkout-back-btn" style="margin-bottom:15px;">← Back</button>
-    <div id="checkout-content"></div>
-</div>
+<!-- OVERLAYS -->
+<div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red);">Pick Flavor</h3><p id="flavor-step-info" style="font-size: 12px; color:#777;"></p><div class="grid" id="flavor-grid"></div><button onclick="document.getElementById('flavor-overlay').style.display='none'" style="margin-top:20px; border:none; background:none; color:#999;">Cancel</button></div></div>
+<div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); margin-top:0;">Welcome!</h2><p id="welcome-msg">Order Online</p><div class="input-group" id="service-options-container">
+    <!-- Buttons generated via JS to filter delivery -->
+</div></div></div>
+<div id="modal-overlay"><div class="modal"><h3 id="modal-item-name"></h3><p>Quantity:</p><div class="qty-btns"><button class="qty-btn" onclick="setQty(1)">1</button><button class="qty-btn" onclick="setQty(2)">2</button><button class="qty-btn" onclick="setQty(3)">3</button><button class="qty-btn" onclick="setQty(4)">4</button><button class="qty-btn active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Instructions..."></textarea><div style="margin-top:20px; display:flex; gap:10px;"><button onclick="closeModal()" style="flex:1; padding:12px; border-radius:12px; border:1px solid #ddd;">Cancel</button><button onclick="addToCartFinal()" style="flex:1; padding:12px; border-radius:12px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button></div></div></div>
+<div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;"><div class="modal"><h3>Select Size</h3><div class="grid" id="size-grid"></div><button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button></div></div>
+<div id="overlay-screen"><button class="header-back-btn" id="checkout-back-btn" style="margin-bottom:15px;">← Back</button><div id="checkout-content"></div></div>
 
 <script>
     // --- DATA ---
@@ -204,52 +159,67 @@
         "Extreme Pizza": [{name: "Extreme Peri Peri", price: {M:1499, L:2049}}, {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}, {name: "Crispy Extreme", price: {M:1499, L:2049}}],
         "Craft My Own Pizza": [{name: "Kabab Crust", price: {Med: 1399, Large: 1799}}, {name: "Crown Crust", price: {Med: 1399, Large: 1799}}, {name: "Cheese Crust", price: {Med: 1399, Large: 1799}}, {name: "Crusti Thin", price: 1699}],
         "Pasta": [{name: "Alfredo Pasta", price: 699}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
-        "Wraps & Rolls": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
-        "Bar Menu": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
+        "Wraps": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Crunch Wrap", price: 449}, {name: "Paratha Roll", price: 449}],
+        "Bar Menu": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Coke 1.5L", price: 230}, {name: "Water Small", price: 99}]
     };
 
     const dealsData = [
-        { name: "Midnight Deal 1", desc: "2x Medium Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", img: "deal1.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza"}, {label: "Pizza 2", cat: "Extreme Pizza"}], fixedItems: ["1.5L Drink"] },
-        { name: "Midnight Deal 2", desc: "1x Large Wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", img: "deal2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza"}, {label: "Pizza 2", cat: "Pan Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Drink"] },
-        { name: "Midnight Deal 3", desc: "1x Large Wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", img: "deal3.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza"}, {label: "Pizza 2", cat: "Premium Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Drink"] },
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", img: "deal4.jpg", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza"}, {label: "Large Pizza", cat: "Extreme Pizza"}], fixedItems: ["1.5L Drink"] },
+        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", img: "deal1.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza"}, {label: "Pizza 2", cat: "Extreme Pizza"}], fixedItems: ["1.5L Soft Drink"] },
+        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", img: "deal2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza"}, {label: "Pizza 2", cat: "Pan Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
+        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", img: "deal3.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza"}, {label: "Pizza 2", cat: "Premium Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
+        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", img: "deal4.jpg", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza"}, {label: "Large Pizza", cat: "Extreme Pizza"}], fixedItems: ["1.5L Soft Drink"] },
+        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", img: "deal6.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
         { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", img: "dealbuddy.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", img: "deal6.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Oven Baked Wings"] },
-        
-        // UPDATED BURGER DEALS
         { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", img: "delburger1.jpg", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
-        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Pcs Wings", price: 990, badge: "DELIVERY", img: "delburger2.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
-        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Pcs Wings", price: 1990, badge: "DELIVERY", img: "delburger3.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
-        
+        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", img: "delburger2.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
+        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", img: "delburger3.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
         { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", img: "deldeal1.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza"}], fixedItems: ["1L Drink"] },
         { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", img: "deldeal2.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", img: "deldeal3.jpg", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", img: "deldeal4.jpg", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] }
+        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", img: "deldeal3.jpg", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza"}], fixedItems: ["1L Drink"] }
     ];
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0;
     let chkStep = 1, dealChoices = [], currentFlavorStep = 0;
 
+    // --- INITIALIZATION ---
     const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.has('table')) tableNum = urlParams.get('table').toUpperCase();
+    if(urlParams.has('table')) {
+        tableNum = urlParams.get('table').toUpperCase();
+        // Set Welcome Banner on Gateway
+        document.getElementById('gateway-table-id').innerText = tableNum;
+        document.getElementById('gateway-table-note').style.display = 'block';
+        document.getElementById('tagline').style.display = 'none'; // Hide tagline to make room
+        document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")";
+    }
 
     function enterApp(target) {
         document.getElementById('gateway-screen').style.display = 'none';
         document.getElementById('main-header').style.display = 'flex';
         document.getElementById('nav-tabs').style.display = 'flex';
         document.getElementById('cart-bar').style.display = 'flex';
-        if(tableNum && orderType === "") document.getElementById('welcome-overlay').style.display = 'flex';
+        
+        // Show QR Scanning Welcome Message immediately after entering
+        if(tableNum && orderType === "") {
+            document.getElementById('welcome-msg').innerText = "WELCOME TO OVEN X! \n You are ordering for Table " + tableNum;
+            renderServiceOptions();
+            document.getElementById('welcome-overlay').style.display = 'flex';
+        }
         if(target === 'deals') switchTab('deals'); else switchTab('menu');
     }
 
-    function exitToGateway() {
-        document.getElementById('gateway-screen').style.display = 'flex';
-        document.getElementById('main-header').style.display = 'none';
-        document.getElementById('nav-tabs').style.display = 'none';
-        document.getElementById('cart-bar').style.display = 'none';
-        document.getElementById('menu-container').style.display = 'none';
-        document.getElementById('deals-container').style.display = 'none';
+    function renderServiceOptions() {
+        const container = document.getElementById('service-options-container');
+        // Hide Delivery if QR Scanned (tableNum present)
+        let html = `<button class="next-btn" onclick="setInitialService('Dine-In')" style="background:#007bff;">🍽️ Dine-In (7% SC)</button>
+                    <button class="next-btn" onclick="setInitialService('Takeaway')" style="background:#6c757d;">🥡 Takeaway</button>`;
+        
+        if (!tableNum) {
+            html += `<button class="next-btn" style="background:var(--red)" onclick="setInitialService('Delivery')">🚚 Delivery</button>`;
+        }
+        container.innerHTML = html;
     }
+
+    function exitToGateway() { document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('main-header').style.display = 'none'; document.getElementById('nav-tabs').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; }
 
     function switchTab(tab) {
         if(tab === 'menu') {
@@ -341,10 +311,27 @@
     function removeItem(idx) { cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) document.getElementById('overlay-screen').style.display = 'none'; else renderFinalSummary(delCharge); }
 
     function startCheckout() { document.getElementById('overlay-screen').style.display = 'block'; renderServiceTypeStep(); }
-    function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Select Service Type:</div><div class="input-group"><button class="next-btn" style="background:#007bff" onclick="selectService('Dine-In')">🍽️ Dine-In (7% SC)</button><button class="next-btn" style="background:#6c757d" onclick="selectService('Takeaway')">🥡 Takeaway</button><button class="next-btn" style="background:var(--red)" onclick="selectService('Delivery')">🚚 Delivery</button></div>`; }
+    
+    function renderServiceTypeStep() { 
+        chkStep = 1; 
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Select Service Type:</div><div class="input-group" id="checkout-options-buttons"></div>`;
+        renderCheckoutServiceButtons();
+    }
+
+    function renderCheckoutServiceButtons() {
+        const container = document.getElementById('checkout-options-buttons');
+        let html = `<button class="next-btn" style="background:#007bff" onclick="selectService('Dine-In')">🍽️ Dine-In (7% SC)</button>
+                    <button class="next-btn" style="background:#6c757d" onclick="selectService('Takeaway')">🥡 Takeaway</button>`;
+        // Only show Delivery if NOT scanned via QR
+        if (!tableNum) {
+            html += `<button class="next-btn" style="background:var(--red)" onclick="selectService('Delivery')">🚚 Delivery</button>`;
+        }
+        container.innerHTML = html;
+    }
+
     function selectService(type) { orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter <b>Table ID</b>:</div><div class="input-group"><input type="text" id="manualTable" placeholder="Table ID (e.g. A1)"><button class="next-btn" onclick="tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">Next</button></div>`; }
-    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Calculate delivery charges.</div><div style="background:#fff3e0; border:2px dashed var(--orange); padding:20px; border-radius:15px; text-align:center; cursor:pointer;" onclick="loadDeliverySystem()">📍 CLICK HERE TO CALCULATE</div>`; }
+    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Calculate delivery charges first.</div><div style="background:#fff3e0; border:2px dashed var(--orange); padding:20px; border-radius:15px; text-align:center; cursor:pointer;" onclick="loadDeliverySystem()">📍 CLICK HERE TO CALCULATE</div>`; }
     function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<iframe src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:450px; border:none; border-radius:15px;" allow="geolocation"></iframe><button class="next-btn" onclick="manualFinish()" style="background:var(--orange); margin-top:10px;">CONTINUE →</button>`; }
     function manualFinish() { const fee = prompt("Enter Charges:"); if(fee===null) return; const addr = prompt("Enter Address:"); if(!addr) return; userAddress = addr; delCharge = fee; renderFinalSummary(fee); }
 
@@ -353,9 +340,13 @@
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
         let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
         const grand = foodTotal + delCharge + sc;
-        const itemsHTML = cart.map((i, idx) => `<div class="summary-item"><div style="width:75%;"><b>${i.qty}x ${i.name}</b><br><small style="color:#666; white-space:pre-line;">${i.note || ''}</small></div><div class="remove-item-btn" onclick="removeItem(${idx})">🗑️ Remove</div></div>`).join('');
-        const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\nTotal: Rs ${grand}\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b></div>${itemsHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="window.open('https://wa.me/923001450301?text=${waMsg}', '_blank')" class="confirm-btn">Confirm via WhatsApp</button>`;
+
+        const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div style="width:75%;"><b>${i.qty}x ${i.name}</b><br><small style="color:#666; white-space:pre-line;">${i.note || ''}</small></div><div class="remove-item-btn" onclick="removeItem(${idx})">🗑️ Remove</div></div>`).join('');
+
+        const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
+        const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
+
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b></div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="window.open('https://wa.me/923001450301?text=${waMsg}', '_blank')" class="confirm-btn">Confirm Order via WhatsApp</button>`;
     }
 
     function setInitialService(type) { orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; }
