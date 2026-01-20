@@ -5,48 +5,136 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oven X - Official Order System</title>
     <style>
-        :root { --red: #8b0000; --orange: #f37021; --gray: #f4f4f4; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--gray); margin: 0; padding-bottom: 80px; }
-        header { background: var(--red); color: white; padding: 15px; text-align: center; border-bottom: 4px solid var(--orange); position: sticky; top: 0; z-index: 100; }
-        .logo { font-size: 26px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
+        :root { 
+            --red: #8b0000; 
+            --orange: #f37021; 
+            --gray: #f4f4f4; 
+            --white: #ffffff;
+        }
+
+        /* FORCE WHITE BACKGROUND - Overrides System Dark Mode */
+        body { 
+            background: var(--white) !important; 
+            color: #333 !important; 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding-bottom: 80px; 
+        }
+
+        /* GATEWAY SCREEN WITH VIDEO BG */
+        #gateway-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 3000; text-align: center; color: white; overflow: hidden;
+        }
+        #bg-video {
+            position: absolute; top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            transform: translate(-50%, -50%);
+            z-index: -2; object-fit: cover;
+        }
+        .video-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55); z-index: -1;
+        }
+        .gateway-logo { font-size: 50px; font-weight: 900; margin-bottom: 5px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+        .gateway-logo span { color: var(--orange); }
+        .gateway-options { display: flex; flex-direction: column; gap: 12px; width: 85%; max-width: 350px; }
+        .gate-btn { padding: 18px; border-radius: 12px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .gate-btn:active { transform: scale(0.95); }
+        .btn-red { background: var(--red); color: white; }
+        .btn-orange { background: var(--orange); color: white; }
+        .btn-outline { background: transparent; color: white; border: 2px solid white; backdrop-filter: blur(5px); }
+
+        /* HEADER & TABS */
+        header { 
+            background: var(--red); color: white; padding: 12px 15px; 
+            text-align: center; border-bottom: 4px solid var(--orange); 
+            position: sticky; top: 0; z-index: 100; 
+            display: none; justify-content: space-between; align-items: center; 
+        }
+        .header-back-btn { background: var(--orange); color: white; border: none; padding: 7px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; text-transform: uppercase; }
+        .logo { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; flex-grow: 1;}
         .logo span { color: var(--orange); }
-        .container { max-width: 600px; margin: auto; padding: 15px; }
+
+        .tab-bar { display: none; background: var(--white); padding: 10px; display: flex; justify-content: center; gap: 8px; position: sticky; top: 58px; z-index: 90; border-bottom: 1px solid #ddd; }
+        .tab-item { background: var(--white); padding: 10px 15px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid #ddd; flex: 1; text-align: center; max-width: 150px; color: #333; transition: 0.2s; }
+        .tab-item.active { background: var(--red); color: white; border-color: var(--red); }
+
+        /* CARDS */
+        .container { max-width: 600px; margin: auto; padding: 15px; background: var(--white); }
+        .deals-container { display: none; padding: 15px; max-width: 600px; margin: auto; background: var(--white); }
+        .deal-card { background: var(--white); border-radius: 15px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; position: relative; color: #333; }
+        .deal-img { width: 100%; height: auto; display: block; background: #f9f9f9; }
+        .deal-content { padding: 15px; }
+        .deal-badge { position: absolute; top: 10px; right: 10px; background: var(--orange); color: white; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; z-index: 5; }
+        .deal-title { font-weight: bold; color: var(--red); font-size: 18px; text-transform: uppercase; }
+        .deal-desc { font-size: 13px; color: #666; margin: 8px 0; white-space: pre-line; line-height: 1.4; }
+        .deal-price { color: var(--orange); font-weight: 900; font-size: 20px; margin-top: 5px; }
+
         .section-title { font-weight: bold; color: var(--red); border-bottom: 2px solid var(--orange); margin: 25px 0 10px; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;}
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .btn { background: white; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 65px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn:active { transform: scale(0.95); background: #fff3e0; }
+        
+        .btn { background: var(--white); color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; min-height: 65px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
+        .btn:active { transform: scale(0.96); background: #fdf2f2; }
         .price-tag { color: var(--orange); font-weight: bold; margin-top: 5px; font-size: 12px; }
+
+        /* VISUAL SELECTION COLOR */
+        .selected-flavor { background: var(--orange) !important; color: white !important; border-color: var(--orange) !important; }
+
+        /* CART & CHECKOUT */
+        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: none; justify-content: space-between; align-items: center; z-index: 500; box-sizing: border-box; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); }
+        .checkout-btn { background: var(--orange); padding: 8px 22px; border-radius: 20px; color: white; cursor:pointer; font-weight: 900; text-transform: uppercase; font-size: 14px; }
+        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; color: #333; }
         
-        #modal-overlay, #welcome-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index: 1500; }
-        .modal { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .summary-item { display: flex; justify-content: space-between; align-items: center; background: #fefefe; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
+        .remove-item-btn { color: #ff4444; font-size: 11px; cursor: pointer; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 6px; font-weight: bold; text-transform: uppercase; }
         
+        /* MODALS */
+        #modal-overlay, #welcome-overlay, #flavor-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index: 1500; }
+        .modal { background: var(--white); color: #333; padding: 25px; border-radius: 25px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
-        .qty-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; }
+        .qty-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--red); background: white; font-weight: bold; cursor: pointer; font-size: 16px; }
         .qty-btn.active { background: var(--red); color: white; }
-        textarea { width: 90%; border-radius: 10px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: inherit; }
         
-        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--red); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); font-weight: bold; z-index: 500; }
-        .checkout-btn { background: var(--orange); padding: 8px 20px; border-radius: 20px; text-decoration: none; color: white; cursor:pointer; }
-        
-        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .chat-bubble { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 15px; line-height: 1.5; font-size: 14px; border: 1px solid #eee; }
-        
-        .input-group { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        .next-btn { background: var(--red); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .confirm-btn { background: #25D366; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; }
-        input[type="number"], textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
-        .delivery-bar { background: #fff3e0; border: 2px dashed var(--orange); padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; color: var(--red); font-weight: bold; margin-top: 10px; }
-        .proceed-btn { background: var(--orange); color: white; padding: 18px; border-radius: 12px; text-align: center; font-weight: bold; margin-top: 15px; cursor: pointer; border: none; width: 100%; font-size: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        textarea { width: 100%; border-radius: 12px; border: 1px solid #ddd; padding: 12px; margin-top: 10px; font-family: inherit; box-sizing: border-box; font-size: 14px; }
+        .next-btn { background: var(--red); color: white; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; font-size: 15px; }
+        .confirm-btn { background: #25D366; color: white; padding: 18px; border-radius: 12px; text-align: center; text-decoration: none; display: block; font-weight: bold; margin-top: 20px; font-size: 18px; border: none; cursor: pointer; width: 100%; }
+        .chat-bubble { background: #f8f8f8; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee; line-height: 1.5; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<header>
+<div id="gateway-screen">
+    <video autoplay muted loop playsinline id="bg-video"><source src="ovenx-video.mp4" type="video/mp4"></video>
+    <div class="video-overlay"></div>
+    <p class="gateway-logo">OVEN <span>X</span></p>
+    <p style="margin-bottom: 35px; opacity: 0.95; font-weight: 500;">Freshly Baked, Truly Authentic</p>
+    <div class="gateway-options">
+        <button class="gate-btn btn-orange" onclick="enterApp('deals')">🔥 View Hot Deals</button>
+        <button class="gate-btn btn-red" onclick="enterApp('menu')">📖 Open Full Menu</button>
+        <button class="gate-btn btn-outline" onclick="enterApp('home')">🏠 Enter Website</button>
+    </div>
+</div>
+
+<header id="main-header">
+    <button class="header-back-btn" onclick="exitToGateway()">← Home</button>
     <p class="logo">OVEN <span>X</span></p>
-    <p id="table-indicator" style="margin:0; font-size:10px; opacity:0.8;">OVEN X MULTAN</p>
+    <div style="width:50px;"></div>
 </header>
 
-<div class="container" id="menu-container"></div>
+<div class="tab-bar" id="nav-tabs">
+    <div class="tab-item active" id="tab-menu" onclick="switchTab('menu')">FULL MENU</div>
+    <div class="tab-item" id="tab-deals" onclick="switchTab('deals')">SPECIAL DEALS</div>
+</div>
+
+<div id="deals-container" class="deals-container">
+    <div class="section-title">Limited Time Offers</div>
+    <div id="deals-list"></div>
+</div>
+
+<div class="container" id="menu-container" style="display:none;"></div>
 
 <div id="cart-bar">
     <span id="cart-count">Items: 0</span>
@@ -54,6 +142,17 @@
     <div class="checkout-btn" onclick="startCheckout()">Checkout</div>
 </div>
 
+<!-- FLAVOR MODAL -->
+<div id="flavor-overlay">
+    <div class="modal">
+        <h3 id="flavor-title" style="color:var(--red); margin-top:0;">Pick Flavor</h3>
+        <p id="flavor-step-info" style="font-size: 12px; color: #777; margin-bottom: 15px;"></p>
+        <div class="grid" id="flavor-grid"></div>
+        <button onclick="document.getElementById('flavor-overlay').style.display='none'" style="margin-top:20px; border:none; background:none; color:#999; cursor:pointer;">Cancel</button>
+    </div>
+</div>
+
+<!-- OTHER MODALS -->
 <div id="welcome-overlay">
     <div class="modal">
         <h2 style="color:var(--red); margin-top:0;">Welcome!</h2>
@@ -78,255 +177,201 @@
         </div>
         <textarea id="special-note" placeholder="Instructions (Spicy, No Mayo, etc)"></textarea>
         <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="closeModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">Cancel</button>
-            <button onclick="addToCartFinal()" style="flex:1; padding:10px; border-radius:10px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button>
+            <button onclick="closeModal()" style="flex:1; padding:12px; border-radius:12px; border:1px solid #ddd;">Cancel</button>
+            <button onclick="addToCartFinal()" style="flex:1; padding:12px; border-radius:12px; background:var(--orange); color:white; border:none; font-weight:bold;">Add to Cart</button>
         </div>
     </div>
 </div>
 
 <div id="size-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1100; justify-content:center; align-items:center;">
-    <div class="modal">
-        <h3>Select Size</h3>
-        <div class="grid" id="size-grid"></div>
-        <button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button>
-    </div>
+    <div class="modal"><h3>Select Size</h3><div class="grid" id="size-grid"></div><button onclick="document.getElementById('size-overlay').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray;">Cancel</button></div>
 </div>
 
-<div id="overlay-screen"><div id="checkout-content"></div></div>
+<div id="overlay-screen">
+    <button class="header-back-btn" id="checkout-back-btn" style="margin-bottom:15px;">← Back</button>
+    <div id="checkout-content"></div>
+</div>
 
 <script>
+    // --- DATA ---
     const menuData = {
-        "Starter": [
-            {name: "Plain Fries", price: {Reg: 230, Large: 300}}, 
-            {name: "Loaded Fries", price: 599}, 
-            {name: "Pizza Fries", price: 720},
-            {name: "Dragon Shots", price: 399}, 
-            {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}},
-            {name: "Peri-Peri Wings", price: {M: 399, L: 780}},
-            {name: "Hot Wings", price: {M: 399, L: 780}},
-            {name: "Honey Chili Wings", price: {M: 449, L: 880}},
-            {name: "Cheese Sticks", price: 449},
-            {name: "Meat Sticks", price: 449},
-            {name: "Nuggets", price: {M: 350, L: 650}}
-        ],
-        "Sandwich": [
-            {name: "Health Harvest", price: 599}, 
-            {name: "Khameera Sandwich", price: 699}, 
-            {name: "Club Sandwich", price: 599}
-        ],
-        "Fried Burger": [
-            {name: "Chicken Patty Burger", price: 299}, 
-            {name: "Zinger Burger", price: 420}, 
-            {name: "Mighty Burger", price: 699}, 
-            {name: "Chipotle Burger", price: 649},
-            {name: "Crispy Jalapeno", price: 549},
-            {name: "Stuff Jalapeno", price: 649}
-        ],
-        "Grilled Burger": [
-            {name: "CM Grilled", price: 499},
-            {name: "Smokey Grilled", price: 550},
-            {name: "Peri Peri Grilled", price: 749},
-            {name: "Drizzler X", price: 749},
-            {name: "Jalapeno Blaze", price: 749},
-            {name: "Mexi Fiesta", price: 749}
-        ],
-        "Pan Pizza": [
-            {name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, 
-            {name: "Chicken Fajita", price: {S:499, M:999, L:1549}},
-            {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, 
-            {name: "Cheese Lover", price: {S:499, M:999, L:1549}},
-            {name: "Veg Lover", price: {S:499, M:999, L:1549}},
-            {name: "Sicilian Pizza", price: {S:499, M:999, L:1549}}
-        ],
-        "Premium Pizza": [
-            {name: "BBQ Pizza", price: {M:1199, L:1699}},
-            {name: "Creamy Dreamy", price: {M:1149, L:1749}},
-            {name: "OvenX Special", price: {M:1149, L:1749}},
-            {name: "Bonfire Pizza", price: {M:1149, L:1749}}
-        ],
-        "Deep Dish Pizza": [
-            {name: "Mild Butter", price: {M:1749, L:2449}}, 
-            {name: "OvenX Special", price: {M:1749, L:2449}}
-        ],
-        "Extreme Pizza": [
-            {name: "Extreme Peri Peri", price: {M:1499, L:2049}}, 
-            {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}},
-            {name: "Crispy Extreme", price: {M:1499, L:2049}}
-        ],
-        "Craft My Own Pizza": [
-            {name: "Kabab Crust", price: {Med: 1399, Large: 1799}},
-            {name: "Crown Crust", price: {Med: 1399, Large: 1799}},
-            {name: "Cheese Crust", price: {Med: 1399, Large: 1799}},
-            {name: "Crusti Thin", price: 1699}
-        ],
-        "Platters": [
-            {name: "Khameera Sandwich Platter", price: 699},
-            {name: "Calzone Platter", price: 899},
-            {name: "Behari Platter", price: 949}
-        ],
-        "Pasta": [
-            {name: "Alfredo Pasta", price: 699}, 
-            {name: "OvenX Flaming Pasta", price: 650},
-            {name: "Fire Kissed Pasta", price: 699}, 
-            {name: "X-Special Pasta", price: 749}
-        ],
-        "Wraps & Rolls": [
-            {name: "Chipotle Wrap", price: 699}, 
-            {name: "BBQ Wrap", price: 599},
-            {name: "Donar Kabab", price: 749},
-            {name: "Crunch Wrap", price: 449},
-            {name: "Zingeratha Roll", price: 449}, 
-            {name: "Paratha Roll", price: 449},
-            {name: "Malai Roll", price: 449}, 
-            {name: "Behari Roll", price: 749},
-            {name: "Peri Peri Wrap", price: 749}
-        ],
-        "Bar Menu (Beverages)": [
-            {name: "Coke Buddy", price: 130}, 
-            {name: "Sprite Buddy", price: 130}, 
-            {name: "Coke 1 Liter", price: 190},
-            {name: "Next Cola 1 Liter", price: 170},
-            {name: "Coke 1.5L", price: 230}, 
-            {name: "Sprite 1.5L", price: 230},
-            {name: "Water Small", price: 99},
-            {name: "Water Large", price: 170}
-        ]
+        "Starter": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
+        "Sandwich": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
+        "Fried Burger": [{name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Crispy Jalapeno", price: 549}, {name: "Stuff Jalapeno", price: 649}],
+        "Grilled Burger": [{name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri Peri Grilled", price: 749}, {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fiesta", price: 749}],
+        "Pan Pizza": [{name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}, {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, {name: "Cheese Lover", price: {S:499, M:999, L:1549}}, {name: "Veg Lover", price: {S:499, M:999, L:1549}}, {name: "Sicilian Pizza", price: {S:499, M:999, L:1549}}],
+        "Premium Pizza": [{name: "BBQ Pizza", price: {M:1199, L:1699}}, {name: "Creamy Dreamy", price: {M:1149, L:1749}}, {name: "OvenX Special", price: {M:1149, L:1749}}, {name: "Bonfire Pizza", price: {M:1149, L:1749}}],
+        "Extreme Pizza": [{name: "Extreme Peri Peri", price: {M:1499, L:2049}}, {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}, {name: "Crispy Extreme", price: {M:1499, L:2049}}],
+        "Craft My Own Pizza": [{name: "Kabab Crust", price: {Med: 1399, Large: 1799}}, {name: "Crown Crust", price: {Med: 1399, Large: 1799}}, {name: "Cheese Crust", price: {Med: 1399, Large: 1799}}, {name: "Crusti Thin", price: 1699}],
+        "Pasta": [{name: "Alfredo Pasta", price: 699}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
+        "Wraps & Rolls": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
+        "Bar Menu": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
 
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "";
+    const dealsData = [
+        { name: "Midnight Deal 1", desc: "2x Medium Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", img: "deal1.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza"}, {label: "Pizza 2", cat: "Extreme Pizza"}], fixedItems: ["1.5L Drink"] },
+        { name: "Midnight Deal 2", desc: "1x Large Wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", img: "deal2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza"}, {label: "Pizza 2", cat: "Pan Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Drink"] },
+        { name: "Midnight Deal 3", desc: "1x Large Wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", img: "deal3.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza"}, {label: "Pizza 2", cat: "Premium Pizza"}], fixedItems: ["1x Large Hot Wings", "1.5L Drink"] },
+        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", img: "deal4.jpg", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza"}, {label: "Large Pizza", cat: "Extreme Pizza"}], fixedItems: ["1.5L Drink"] },
+        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", img: "dealbuddy.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] },
+        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", img: "deal6.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Oven Baked Wings"] },
+        
+        // UPDATED BURGER DEALS
+        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", img: "delburger1.jpg", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
+        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Pcs Wings", price: 990, badge: "DELIVERY", img: "delburger2.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
+        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Pcs Wings", price: 1990, badge: "DELIVERY", img: "delburger3.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
+        
+        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", img: "deldeal1.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza"}], fixedItems: ["1L Drink"] },
+        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", img: "deldeal2.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza"}], fixedItems: ["1L Drink"] },
+        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", img: "deldeal3.jpg", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza"}], fixedItems: ["1L Drink"] },
+        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", img: "deldeal4.jpg", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza"}], fixedItems: ["1L Drink"] }
+    ];
 
-    // INITIALIZATION & TABLE DETECTION
+    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0;
+    let chkStep = 1, dealChoices = [], currentFlavorStep = 0;
+
     const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.has('table')) {
-        tableNum = urlParams.get('table').toUpperCase();
-        document.getElementById('welcome-msg').innerText = "You are at Table " + tableNum;
-        document.getElementById('welcome-overlay').style.display = 'flex';
+    if(urlParams.has('table')) tableNum = urlParams.get('table').toUpperCase();
+
+    function enterApp(target) {
+        document.getElementById('gateway-screen').style.display = 'none';
+        document.getElementById('main-header').style.display = 'flex';
+        document.getElementById('nav-tabs').style.display = 'flex';
+        document.getElementById('cart-bar').style.display = 'flex';
+        if(tableNum && orderType === "") document.getElementById('welcome-overlay').style.display = 'flex';
+        if(target === 'deals') switchTab('deals'); else switchTab('menu');
     }
 
-    function setInitialService(type) {
-        orderType = type;
-        if(type === 'Takeaway') { 
-            tableNum = ""; 
-            document.getElementById('table-indicator').innerText = "OVEN X - TAKEAWAY"; 
-        } else { 
-            document.getElementById('table-indicator').innerText = tableNum ? "DINE-IN: TABLE " + tableNum : "DINE-IN";
+    function exitToGateway() {
+        document.getElementById('gateway-screen').style.display = 'flex';
+        document.getElementById('main-header').style.display = 'none';
+        document.getElementById('nav-tabs').style.display = 'none';
+        document.getElementById('cart-bar').style.display = 'none';
+        document.getElementById('menu-container').style.display = 'none';
+        document.getElementById('deals-container').style.display = 'none';
+    }
+
+    function switchTab(tab) {
+        if(tab === 'menu') {
+            document.getElementById('menu-container').style.display = 'block';
+            document.getElementById('deals-container').style.display = 'none';
+            document.getElementById('tab-menu').classList.add('active');
+            document.getElementById('tab-deals').classList.remove('active');
+        } else {
+            document.getElementById('menu-container').style.display = 'none';
+            document.getElementById('deals-container').style.display = 'block';
+            document.getElementById('tab-deals').classList.add('active');
+            document.getElementById('tab-menu').classList.remove('active');
+            renderDeals();
         }
-        document.getElementById('welcome-overlay').style.display = 'none';
     }
 
-    const container = document.getElementById('menu-container');
-    for (let cat in menuData) {
-        let title = document.createElement('div'); title.className = 'section-title'; title.innerText = cat; container.appendChild(title);
-        let grid = document.createElement('div'); grid.className = 'grid';
-        menuData[cat].forEach(item => {
-            let btn = document.createElement('div'); btn.className = 'btn';
-            btn.innerHTML = `<div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'Select Size' : 'Rs '+item.price}</div>`;
-            btn.onclick = () => openOrderFlow(item); grid.appendChild(btn);
+    function renderDeals() {
+        const list = document.getElementById('deals-list'); list.innerHTML = '';
+        dealsData.forEach(deal => {
+            const card = document.createElement('div'); card.className = 'deal-card';
+            card.innerHTML = `<div class="deal-badge">${deal.badge}</div><img src="${deal.img}" class="deal-img"><div class="deal-content"><div class="deal-title">${deal.name}</div><p class="deal-desc">${deal.desc}</p><div class="deal-price">Rs ${deal.price}</div><button class="next-btn" style="margin-top:10px; background:var(--orange)" onclick='openOrderFlow(${JSON.stringify(deal)})'>Add Deal</button></div>`;
+            list.appendChild(card);
         });
-        container.appendChild(grid);
     }
 
     function openOrderFlow(item) {
-        selectedItem = item;
-        if (typeof item.price === 'object') {
+        selectedItem = JSON.parse(JSON.stringify(item));
+        dealChoices = []; currentFlavorStep = 0;
+        if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
+        else if (item.price && typeof item.price === 'object') {
             const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
             for (let s in item.price) {
                 let sBtn = document.createElement('div'); sBtn.className = 'btn';
                 sBtn.innerHTML = `<div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div>`;
-                sBtn.onclick = () => { selectedItem = { name: item.name + " (" + s + ")", price: item.price[s] }; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); };
+                sBtn.onclick = () => { selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s]; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); };
                 sizeGrid.appendChild(sBtn);
             }
             document.getElementById('size-overlay').style.display = 'flex';
         } else { openQtyModal(); }
     }
 
+    function startFlavorSelection() {
+        const step = selectedItem.flavorsNeeded[currentFlavorStep];
+        document.getElementById('flavor-title').innerText = "Pick " + step.label;
+        document.getElementById('flavor-step-info').innerText = `Choice ${currentFlavorStep + 1} of ${selectedItem.flavorsNeeded.length}`;
+        const grid = document.getElementById('flavor-grid'); grid.innerHTML = '';
+        let flavors = [];
+        if (step.cat === "Pan/Premium") flavors = [...menuData["Pan Pizza"], ...menuData["Premium Pizza"]];
+        else flavors = menuData[step.cat];
+        flavors.forEach(f => {
+            const b = document.createElement('div'); b.className = 'btn'; b.innerText = f.name;
+            b.onclick = function() { selectFlavor(f.name, this); }; grid.appendChild(b);
+        });
+        document.getElementById('flavor-overlay').style.display = 'flex';
+    }
+
+    function selectFlavor(name, el) {
+        el.classList.add('selected-flavor');
+        setTimeout(() => {
+            dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${name}`);
+            currentFlavorStep++;
+            if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection();
+            else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); }
+        }, 300);
+    }
+
     function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; document.getElementById('special-note').value = ''; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; }
     function setQty(q) { selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === q-1) b.classList.add('active'); }); }
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-    function addToCartFinal() { cart.push({ ...selectedItem, qty: selectedQty, note: document.getElementById('special-note').value }); updateCartBar(); closeModal(); }
-    function updateCartBar() { 
+
+    function addToCartFinal() { 
+        const note = document.getElementById('special-note').value;
+        let finalDetail = "";
+        if(selectedItem.flavorNotes) finalDetail += selectedItem.flavorNotes;
+        if(selectedItem.fixedItems) finalDetail += (finalDetail ? "\n" : "") + "Includes: " + selectedItem.fixedItems.join(", ");
+        if(note) finalDetail += (finalDetail ? "\nNote: " : "") + note;
+        cart.push({ ...selectedItem, qty: selectedQty, note: finalDetail }); 
+        updateCartBar(); closeModal(); 
+    }
+
+    function updateCartBar() {
         const totalItems = cart.reduce((s, i) => s + i.qty, 0);
         const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        document.getElementById('cart-count').innerText = `Items: ${totalItems}`; 
-        document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; 
+        document.getElementById('cart-count').innerText = `Items: ${totalItems}`;
+        document.getElementById('cart-total').innerText = `Rs ${totalPrice}`;
+        document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none';
     }
 
-    function startCheckout() {
-        if(cart.length === 0) return alert("Cart is empty!");
-        document.getElementById('overlay-screen').style.display = 'block';
-        if(orderType !== "") selectService(orderType);
-        else renderServiceTypeStep();
-    }
+    function removeItem(idx) { cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) document.getElementById('overlay-screen').style.display = 'none'; else renderFinalSummary(delCharge); }
 
-    function renderServiceTypeStep() {
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">Select Service Type:</div>
-            <div class="input-group">
-                <button class="next-btn" style="background:#007bff" onclick="selectService('Dine-In')">🍽️ Dine-In (7% SC)</button>
-                <button class="next-btn" style="background:#6c757d" onclick="selectService('Takeaway')">🥡 Takeaway</button>
-                <button class="next-btn" style="background:var(--red)" onclick="selectService('Delivery')">🚚 Delivery</button>
-            </div>`;
-    }
+    function startCheckout() { document.getElementById('overlay-screen').style.display = 'block'; renderServiceTypeStep(); }
+    function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Select Service Type:</div><div class="input-group"><button class="next-btn" style="background:#007bff" onclick="selectService('Dine-In')">🍽️ Dine-In (7% SC)</button><button class="next-btn" style="background:#6c757d" onclick="selectService('Takeaway')">🥡 Takeaway</button><button class="next-btn" style="background:var(--red)" onclick="selectService('Delivery')">🚚 Delivery</button></div>`; }
+    function selectService(type) { orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
+    function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Enter <b>Table ID</b>:</div><div class="input-group"><input type="text" id="manualTable" placeholder="Table ID (e.g. A1)"><button class="next-btn" onclick="tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">Next</button></div>`; }
+    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Calculate delivery charges.</div><div style="background:#fff3e0; border:2px dashed var(--orange); padding:20px; border-radius:15px; text-align:center; cursor:pointer;" onclick="loadDeliverySystem()">📍 CLICK HERE TO CALCULATE</div>`; }
+    function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<iframe src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:450px; border:none; border-radius:15px;" allow="geolocation"></iframe><button class="next-btn" onclick="manualFinish()" style="background:var(--orange); margin-top:10px;">CONTINUE →</button>`; }
+    function manualFinish() { const fee = prompt("Enter Charges:"); if(fee===null) return; const addr = prompt("Enter Address:"); if(!addr) return; userAddress = addr; delCharge = fee; renderFinalSummary(fee); }
 
-    function selectService(type) {
-        orderType = type;
-        if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); }
-        else if(type === 'Takeaway') { renderFinalSummary(0); } 
-        else { renderAddressStep(); }
-    }
-
-    function renderTableStep() {
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">Enter <b>Table ID</b>:</div>
-            <div class="input-group">
-                <input type="text" id="manualTable" placeholder="Table ID (e.g. A1)">
-                <button class="next-btn" onclick="tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">Next</button>
-            </div>`;
-    }
-
-    function renderAddressStep() {
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">🚚 <b>Delivery Order</b><br>Calculate your charges first.</div>
-            <div class="delivery-bar" onclick="loadDeliverySystem()">
-                📍 CLICK HERE TO CALCULATE CHARGES
-            </div>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
-    }
-
-    function loadDeliverySystem() {
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble"><b>Step 1:</b> Calculate Delivery Charges<br><b>Step 2:</b> Click the Orange button below.</div>
-            <iframe 
-                src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" 
-                style="width:100%; height:480px; border:none; border-radius:15px;"
-                allow="geolocation">
-            </iframe>
-            <button class="proceed-btn" onclick="manualFinish()">CONTINUE TO SUMMARY →</button>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:15px; border:none; background:none; color:gray; width:100%;">Cancel</button>`;
-    }
-
-    function manualFinish() {
-        const fee = prompt("Enter the Delivery Charges you saw (e.g. 150):");
-        if(fee === null) return;
-        const addr = prompt("Enter your Full House/Street Address:");
-        if(!addr) return alert("Address is required.");
-        userAddress = addr;
-        renderFinalSummary(fee);
-    }
-
-    function renderFinalSummary(deliveryFee) {
-        deliveryFee = parseFloat(deliveryFee) || 0;
+    function renderFinalSummary(fee) {
+        chkStep = 3; delCharge = parseFloat(fee) || 0;
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        let serviceCharge = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-        const grandTotal = foodTotal + deliveryFee + serviceCharge;
+        let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+        const grand = foodTotal + delCharge + sc;
+        const itemsHTML = cart.map((i, idx) => `<div class="summary-item"><div style="width:75%;"><b>${i.qty}x ${i.name}</b><br><small style="color:#666; white-space:pre-line;">${i.note || ''}</small></div><div class="remove-item-btn" onclick="removeItem(${idx})">🗑️ Remove</div></div>`).join('');
+        const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\nTotal: Rs ${grand}\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b></div>${itemsHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="window.open('https://wa.me/923001450301?text=${waMsg}', '_blank')" class="confirm-btn">Confirm via WhatsApp</button>`;
+    }
 
-        const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${cart.map(i=> i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n")}\n\nFood: Rs ${foodTotal}${serviceCharge > 0 ? '\nS.C (7%): Rs ' + serviceCharge : ''}${deliveryFee > 0 ? '\nDelivery: Rs ' + deliveryFee : ''}\n*Grand Total: Rs ${grandTotal}*\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
-        
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble"><b>ORDER SUMMARY</b><br><br>${cart.map(i => `• ${i.qty}x ${i.name}`).join('<br>')}
-            <br><hr>Total: <b>Rs ${grandTotal}</b></div>
-            <a href="https://wa.me/923001450301?text=${waMsg}" class="confirm-btn">Confirm Order via WhatsApp</a>
-            <button onclick="document.getElementById('overlay-screen').style.display='none'" style="margin-top:20px; border:none; background:none; color:gray; width:100%;">Back to Menu</button>`;
+    function setInitialService(type) { orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; }
+    document.getElementById('checkout-back-btn').onclick = function() { if(chkStep === 1) document.getElementById('overlay-screen').style.display = 'none'; else renderServiceTypeStep(); };
+
+    // --- RENDER MENU ---
+    const mContainer = document.getElementById('menu-container');
+    for (let cat in menuData) {
+        let title = document.createElement('div'); title.className = 'section-title'; title.innerText = cat; mContainer.appendChild(title);
+        let grid = document.createElement('div'); grid.className = 'grid';
+        menuData[cat].forEach(item => {
+            let btn = document.createElement('div'); btn.className = 'btn';
+            btn.innerHTML = `<div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'Select Size' : 'Rs '+item.price}</div>`;
+            btn.onclick = () => openOrderFlow(item); grid.appendChild(btn);
+        });
+        mContainer.appendChild(grid);
     }
 </script>
 </body>
