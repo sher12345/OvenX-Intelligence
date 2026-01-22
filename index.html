@@ -17,7 +17,7 @@
             --wa-dark: #1a9648;
         }
 
-        /* FIX: REMOVE BLUE BOX ON MOBILE */
+        /* REMOVE BLUE BOX ON MOBILE */
         * { -webkit-tap-highlight-color: transparent; outline: none; }
 
         body.modal-active { overflow: hidden; height: 100vh; }
@@ -121,6 +121,21 @@
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
+
+        /* --- CENTERED DELIVERY CARD --- */
+        .delivery-center-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .delivery-cta {
+            background: #fff; border: 4px solid var(--orange); padding: 40px 20px; border-radius: 35px;
+            text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); margin: 20px auto;
+            width: 90%; max-width: 320px; box-sizing: border-box;
+        }
+        .delivery-cta:active { transform: translateY(6px); box-shadow: 0 4px 0px var(--dark-orange); }
     </style>
 </head>
 <body>
@@ -157,16 +172,19 @@
     <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
 </div>
 
-<!-- MODALS -->
+<!-- OVERLAYS -->
 <div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">X CANCEL</button></div></div>
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee; font-weight:900; box-shadow:0 4px 0px #ccc;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
 
-<div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
+<div id="overlay-screen">
+    <button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button>
+    <div id="checkout-content"></div>
+</div>
 
 <script>
-    // --- LOCKED DATA (UNCHANGED) ---
+    // --- ORIGINAL DATA RETAINED ---
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
         "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
@@ -203,7 +221,7 @@
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
 
-    // --- LOGIC FUNCTIONS ---
+    // INITIALIZATION
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) {
         tableNum = urlParams.get('table').toUpperCase();
@@ -251,7 +269,7 @@
     function renderDeals() {
         const list = document.getElementById('deals-list'); list.innerHTML = '';
         dealsData.forEach(deal => {
-            let bgUrl = "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?q=80&w=600&auto=format&fit=crop";
+            let bgUrl = "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600&auto=format&fit=crop";
             if(deal.name.toLowerCase().includes('pizza')) bgUrl = "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600&auto=format&fit=crop";
             if(deal.name.toLowerCase().includes('burger')) bgUrl = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop";
             
@@ -342,7 +360,19 @@
     }
     function selectService(type) { orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
-    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-cta btn-3d" onclick="loadDeliverySystem()" style="background:#fff3e0;"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div>`; }
+    
+    function renderAddressStep() { 
+        chkStep = 2; 
+        document.getElementById('checkout-content').innerHTML = `
+            <div class="chat-bubble">🚚 Click the map to see delivery costs!</div>
+            <div class="delivery-center-wrap">
+                <div class="delivery-cta btn-3d" onclick="loadDeliverySystem()" style="background:#fff3e0;">
+                    <span style="font-size:50px;">🗺️💨</span><br>
+                    <span style="font-weight:900;">FIND MY PRICE</span>
+                </div>
+            </div>`; 
+    }
+    
     function loadDeliverySystem() { 
         document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; box-shadow:0 6px 0px #888; cursor:not-allowed; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; 
         setTimeout(() => { if(document.getElementById('unlock-area')) document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow:0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; }, 5000);
