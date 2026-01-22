@@ -17,7 +17,7 @@
             --wa-dark: #1a9648;
         }
 
-        /* REMOVE BLUE BOX ON MOBILE */
+        /* FIX: REMOVE BLUE BOX ON MOBILE */
         * { -webkit-tap-highlight-color: transparent; outline: none; }
 
         body.modal-active { overflow: hidden; height: 100vh; }
@@ -79,6 +79,7 @@
 
         .container, .deals-container { max-width: 600px; margin: auto; padding: 15px 15px 180px 15px; }
         
+        /* --- CATEGORY TITLES --- */
         .section-title { font-weight: 900; color: var(--red); margin: 45px 0 20px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; }
 
         /* --- REDESIGNED DEAL CARDS --- */
@@ -121,21 +122,8 @@
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
-
-        /* --- CENTERED DELIVERY CARD --- */
-        .delivery-center-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-        .delivery-cta {
-            background: #fff; border: 4px solid var(--orange); padding: 40px 20px; border-radius: 35px;
-            text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); margin: 20px auto;
-            width: 90%; max-width: 320px; box-sizing: border-box;
-        }
-        .delivery-cta:active { transform: translateY(6px); box-shadow: 0 4px 0px var(--dark-orange); }
+        .delivery-center-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+        .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 40px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); margin: 20px auto; width: 90%; max-width: 320px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -184,7 +172,26 @@
 </div>
 
 <script>
-    // --- ORIGINAL DATA RETAINED ---
+    // --- PREMIUM SOUND ENGINE ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playClick(type = 'pop') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        if(type === 'pop') {
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+        } else {
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2);
+        }
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // --- DATA ---
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
         "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
@@ -219,9 +226,9 @@
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0;
 
+    // --- LOGIC ---
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
 
-    // INITIALIZATION
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) {
         tableNum = urlParams.get('table').toUpperCase();
@@ -231,6 +238,7 @@
     }
 
     function enterApp(target) {
+        playClick('thud');
         document.getElementById('gateway-screen').style.display = 'none';
         document.getElementById('main-header').style.display = 'flex';
         document.getElementById('nav-tabs').style.display = 'flex';
@@ -249,9 +257,10 @@
         container.innerHTML = html;
     }
 
-    function exitToGateway() { document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('main-header').style.display = 'none'; document.getElementById('nav-tabs').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; setScrollLock(false); }
+    function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('main-header').style.display = 'none'; document.getElementById('nav-tabs').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; setScrollLock(false); }
 
     function switchTab(tab) {
+        playClick('pop');
         if(tab === 'menu') {
             document.getElementById('menu-container').style.display = 'block';
             document.getElementById('deals-container').style.display = 'none';
@@ -270,24 +279,15 @@
         const list = document.getElementById('deals-list'); list.innerHTML = '';
         dealsData.forEach(deal => {
             let bgUrl = "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600&auto=format&fit=crop";
-            if(deal.name.toLowerCase().includes('pizza')) bgUrl = "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600&auto=format&fit=crop";
             if(deal.name.toLowerCase().includes('burger')) bgUrl = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop";
-            
             const card = document.createElement('div'); card.className = 'deal-card';
-            card.innerHTML = `
-                <div class="deal-badge">${deal.badge}</div>
-                <div class="deal-img-top" style="background-image: url('${bgUrl}')"></div>
-                <div class="deal-info-box">
-                    <div class="deal-title">${deal.name}</div>
-                    <span class="deal-desc">${deal.desc}</span>
-                    <span class="deal-price">Rs ${deal.price}</span>
-                    <button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button>
-                </div>`;
+            card.innerHTML = `<div class="deal-badge">${deal.badge}</div><div class="deal-img-top" style="background-image: url('${bgUrl}')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div>`;
             list.appendChild(card);
         });
     }
 
     function openOrderFlow(item) {
+        playClick('pop');
         selectedItem = JSON.parse(JSON.stringify(item));
         dealChoices = []; currentFlavorStep = 0;
         if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
@@ -297,12 +297,13 @@
                 let sBtn = document.createElement('div'); sBtn.className = 'btn btn-3d';
                 sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`;
                 sBtn.onclick = function() {
+                    playClick('pop');
                     sBtn.classList.add('size-feedback');
                     setTimeout(() => {
                         selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s];
                         document.getElementById('size-overlay').style.display = 'none';
                         sBtn.classList.remove('size-feedback'); openQtyModal();
-                    }, 1000);
+                    }, 500);
                 };
                 sizeGrid.appendChild(sBtn);
             }
@@ -319,6 +320,7 @@
             const b = document.createElement('div'); b.className = 'btn btn-3d'; 
             b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
             b.onclick = function() {
+                playClick('pop');
                 b.classList.add('size-feedback');
                 setTimeout(() => {
                     dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`);
@@ -332,9 +334,10 @@
     }
 
     function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; setScrollLock(true); }
-    function setQty(q) { selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
-    function closeModals() { document.getElementById('modal-overlay').style.display = 'none'; document.getElementById('size-overlay').style.display = 'none'; document.getElementById('flavor-overlay').style.display = 'none'; setScrollLock(false); }
+    function setQty(q) { playClick('pop'); selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
+    function closeModals() { playClick('pop'); document.getElementById('modal-overlay').style.display = 'none'; document.getElementById('size-overlay').style.display = 'none'; document.getElementById('flavor-overlay').style.display = 'none'; setScrollLock(false); }
     function addToCartFinal() { 
+        playClick('thud');
         const note = document.getElementById('special-note').value;
         let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : "");
         cart.push({ ...selectedItem, qty: selectedQty, note: finalDetail }); updateCartBar(); closeModals(); 
@@ -348,8 +351,8 @@
         document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none';
     }
 
-    function removeItem(idx) { cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
-    function startCheckout() { document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
+    function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
+    function startCheckout() { playClick('thud'); document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
     function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; renderCheckoutServiceButtons(); }
     function renderCheckoutServiceButtons() {
         const container = document.getElementById('checkout-options-buttons');
@@ -358,28 +361,16 @@
         if (!tableNum) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; }
         container.innerHTML = html;
     }
-    function selectService(type) { orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
-    function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
-    
-    function renderAddressStep() { 
-        chkStep = 2; 
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">🚚 Click the map to see delivery costs!</div>
-            <div class="delivery-center-wrap">
-                <div class="delivery-cta btn-3d" onclick="loadDeliverySystem()" style="background:#fff3e0;">
-                    <span style="font-size:50px;">🗺️💨</span><br>
-                    <span style="font-weight:900;">FIND MY PRICE</span>
-                </div>
-            </div>`; 
-    }
-    
+    function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
+    function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
+    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()" style="background:#fff3e0;"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`; }
     function loadDeliverySystem() { 
         document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; box-shadow:0 6px 0px #888; cursor:not-allowed; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; 
-        setTimeout(() => { if(document.getElementById('unlock-area')) document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow:0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; }, 5000);
+        setTimeout(() => { if(document.getElementById('unlock-area')) { playClick('pop'); document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow:0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000);
     }
-    function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="saveFee()">NEXT</button>`; }
+    function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`; }
     function saveFee() { let f = document.getElementById('manualFee').value; if(!f) return alert("Please enter the price!"); delCharge = f; renderDeliveryAddressInput(); }
-    function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter full address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="saveAddr()">SHOW SUMMARY →</button>`; }
+    function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter full address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
     function saveAddr() { let a = document.getElementById('manualAddr').value; if(!a) return alert("Please enter your address!"); userAddress = a; renderFinalSummary(delCharge); }
 
     function renderFinalSummary(fee) {
@@ -390,11 +381,11 @@
         const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
         const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b></div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="window.open('https://wa.me/923001450301?text=${waMsg}', '_blank')" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble"><b>ORDER SUMMARY</b></div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="playClick('thud'); window.open('https://wa.me/923001450301?text=${waMsg}', '_blank')" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
     }
 
-    function setInitialService(type) { orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); }
-    document.getElementById('checkout-back-btn').onclick = function() { if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
+    function setInitialService(type) { playClick('thud'); orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); }
+    document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
 
     // --- ITEM IMAGES ---
     const imgMap = {
