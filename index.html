@@ -94,8 +94,7 @@
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
         
-        /* High index for admin overlays */
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #admin-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #kitchen-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
@@ -108,21 +107,19 @@
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
 
-        /* --- CENTERED DELIVERY CARD --- */
+        /* --- KITCHEN PANEL STYLES --- */
+        .kitchen-modal { width: 95%; max-width: 700px; height: 90vh; background: var(--bg-body); border-radius: 40px; padding: 25px; box-sizing: border-box; overflow-y: auto; text-align: left;}
+        .kitchen-card { background: white; padding: 20px; border-radius: 25px; margin-bottom: 15px; border-left: 10px solid var(--orange); box-shadow: 0 8px 20px rgba(0,0,0,0.05); position: relative; }
+        .kitchen-card.status-preparing { border-left-color: #007bff; }
+        .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.7; }
+        .kitchen-badge { position: absolute; top: 15px; right: 15px; font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 10px; text-transform: uppercase; }
+        .kb-waiting { background: #fff3e0; color: var(--orange); }
+        .kb-preparing { background: #e3f2fd; color: #007bff; }
+        .kb-ready { background: #e8f5e9; color: var(--wa-green); }
+
         .delivery-center-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 30px 0; }
         .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 40px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); width: 90%; max-width: 320px; box-sizing: border-box; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
-
-        /* --- ADMIN PANEL --- */
-        .admin-modal { width: 95%; max-width: 600px; height: 95vh; background: var(--bg-body); border-radius: 40px; padding: 25px; box-sizing: border-box; overflow-y: auto; text-align: left;}
-        .stat-card { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; border: 2px solid #eee; box-shadow: 0 4px 0px #eee; }
-        .stat-val { font-size: 20px; font-weight: 900; color: var(--red); }
-        .order-log-item { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid var(--orange); font-size: 12px; }
-        .editor-row { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #eee; }
-        .editor-input { padding: 8px; border-radius: 10px; border: 1px solid #ccc; font-weight: bold; }
-        .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .admin-tab-btn { flex: 1; padding: 10px; border-radius: 15px; background: #eee; border: none; font-weight: 800; }
-        .admin-tab-btn.active { background: var(--orange); color: white; }
     </style>
 </head>
 <body>
@@ -133,7 +130,7 @@
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
-        <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">⚙️ Admin Panel</button>
+        <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
     </div>
 </div>
 
@@ -157,10 +154,10 @@
     <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
 </div>
 
-<!-- ADMIN LOGIN -->
+<!-- KITCHEN LOGIN -->
 <div id="admin-login-overlay">
     <div class="modal">
-        <h2 style="color:var(--red); font-weight:900;">Admin Access</h2>
+        <h2 style="color:var(--red); font-weight:900;">Kitchen Access</h2>
         <p>Type the secret code 🍕</p>
         <input type="text" id="adminPassword" placeholder="Secret Code" class="big-input" oninput="handlePassInput(this)" autocomplete="off" style="text-align:center; letter-spacing:4px; font-size:22px;">
         <div style="display:flex; gap:10px; margin-top:20px;">
@@ -170,33 +167,17 @@
     </div>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="admin-panel-overlay">
-    <div class="admin-modal">
+<!-- KITCHEN PANEL -->
+<div id="kitchen-panel-overlay">
+    <div class="kitchen-modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0; color:var(--red); font-weight:900;">ADMIN SUITE</h2>
-            <button class="header-back-btn btn-3d" onclick="closeAdminPanel()">EXIT</button>
+            <h2 style="margin:0; color:var(--red); font-weight:900;">KITCHEN DASHBOARD</h2>
+            <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
         </div>
-        <div class="admin-tabs">
-            <button class="admin-tab-btn active" id="tab-stats" onclick="switchAdmin('stats')">DASHBOARD</button>
-            <button class="admin-tab-btn" id="tab-editor" onclick="switchAdmin('editor')">EDIT MENU</button>
+        <div id="kitchen-orders-list">
+            <!-- Active Orders Inject Here -->
         </div>
-        <div id="admin-stats-view">
-            <div class="grid">
-                <div class="stat-card"><small>SALES</small><div class="stat-val" id="adm-sales">Rs 0</div></div>
-                <div class="stat-card"><small>SC (7%)</small><div class="stat-val" id="adm-sc">Rs 0</div></div>
-                <div class="stat-card"><small>DELIVERY</small><div class="stat-val" id="adm-dc">Rs 0</div></div>
-                <div class="stat-card"><small>COUNT</small><div class="stat-val" id="adm-count">0</div></div>
-            </div>
-            <button class="next-btn btn-3d" style="background:var(--wa-green); box-shadow:0 5px 0px var(--wa-dark); margin-top:15px;" onclick="exportToExcel()">📊 EXCEL EXPORT</button>
-            <h3 style="font-weight:900; margin-top:25px; border-bottom:3px solid var(--orange); display:inline-block;">HISTORY</h3>
-            <div id="admin-order-log" style="margin-top:10px;"></div>
-            <button class="next-btn btn-3d" style="background:#444; margin-top:30px;" onclick="clearLogs()">RESET DATA</button>
-        </div>
-        <div id="admin-editor-view" style="display:none;">
-            <div id="menu-editor-list"></div>
-            <button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:20px;" onclick="saveMenuChanges()">💾 SAVE ALL CHANGES</button>
-        </div>
+        <button class="next-btn btn-3d" style="background:#444; margin-top:30px;" onclick="clearReadyOrders()">CLEAR READY ORDERS</button>
     </div>
 </div>
 
@@ -227,18 +208,58 @@
         "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
-    let dealsData = [{ name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] }, { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }, { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] }, { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] }, { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] }, { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] }, { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] }, { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] }, { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }];
 
-    if(localStorage.getItem('ovenx_menu')) menuData = JSON.parse(localStorage.getItem('ovenx_menu'));
-    if(localStorage.getItem('ovenx_deals')) dealsData = JSON.parse(localStorage.getItem('ovenx_deals'));
+    let dealsData = [{ name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] }, { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }, { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] }, { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] }, { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] }, { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] }, { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] }, { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] }, { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }];
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false;
 
-    // --- UTILITIES ---
-    function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
-    window.addEventListener('popstate', function () { closeAdminPanel(); closeAdminLogin(); closeModals(); exitToGateway(); });
+    // --- KITCHEN LOGIC ---
+    function openKitchenPanel() { renderKitchenOrders(); document.getElementById('kitchen-panel-overlay').style.display = 'flex'; }
+    function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; }
+    
+    function renderKitchenOrders() {
+        const orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        const list = document.getElementById('kitchen-orders-list');
+        list.innerHTML = orders.length === 0 ? "<p style='text-align:center; color:#999; padding:20px;'>NO ACTIVE ORDERS</p>" : "";
+        
+        orders.forEach((o, index) => {
+            const card = document.createElement('div');
+            card.className = `kitchen-card status-${o.status.toLowerCase()}`;
+            card.innerHTML = `
+                <span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span>
+                <div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>
+                <div style="font-size:12px; color:#777; margin-bottom:10px;">Placed: ${o.time}</div>
+                <div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px;">${o.items}</div>
+                <div class="kitchen-actions">
+                    ${o.status === 'WAITING' ? `<button class="next-btn btn-3d" style="background:#007bff; margin-top:15px;" onclick="updateKitchenStatus(${index}, 'PREPARING')">START PREPARING</button>` : ''}
+                    ${o.status === 'PREPARING' ? `<button class="next-btn btn-3d" style="background:var(--wa-green); margin-top:15px;" onclick="updateKitchenStatus(${index}, 'READY')">MARK AS READY ✅</button>` : ''}
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
 
-    // --- INIT ---
+    function updateKitchenStatus(idx, status) {
+        playClick('thud');
+        let orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        orders[idx].status = status;
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(orders));
+        if(status === 'READY') alert("🔔 NOTIFICATION: Order for " + orders[idx].location + " is READY!");
+        renderKitchenOrders();
+    }
+
+    function clearReadyOrders() {
+        if(!confirm("Clear all READY orders?")) return;
+        let orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        orders = orders.filter(o => o.status !== 'READY');
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(orders));
+        renderKitchenOrders();
+    }
+
+    // --- ORIGINAL UTILITIES ---
+    function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
+    window.addEventListener('popstate', function () { closeKitchenPanel(); closeAdminLogin(); closeModals(); exitToGateway(); });
+
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
 
@@ -277,28 +298,29 @@
     function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
     function saveAddr() { let a = document.getElementById('manualAddr').value; if(!a) return alert("Please enter address!"); userAddress = a; renderFinalSummary(delCharge); }
 
-    // --- ADMIN PANEL (FIXED) ---
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); window.history.pushState({open: true}, ""); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
-    function verifyAdmin() { if(adminPassTracker === "asdasd@1237530") { playClick('thud'); closeAdminLogin(); openAdminDashboard(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
-    function openAdminDashboard() { updateAdminStats(); document.getElementById('admin-panel-overlay').style.display = 'flex'; setScrollLock(true); }
-    function closeAdminPanel() { document.getElementById('admin-panel-overlay').style.display = 'none'; setScrollLock(false); }
-    function switchAdmin(tab) { playClick('pop'); document.getElementById('admin-stats-view').style.display = tab === 'stats' ? 'block' : 'none'; document.getElementById('admin-editor-view').style.display = tab === 'editor' ? 'block' : 'none'; document.getElementById('tab-stats').classList.toggle('active', tab === 'stats'); document.getElementById('tab-editor').classList.toggle('active', tab === 'editor'); if(tab === 'editor') renderMenuEditor(); }
-    function recordOrder(food, sc, dc, items) { let orders = JSON.parse(localStorage.getItem('ovenx_orders') || '[]'); orders.push({ time: new Date().toLocaleString(), food: food, sc: sc, dc: dc, items: items, type: orderType }); localStorage.setItem('ovenx_orders', JSON.stringify(orders)); }
-    function updateAdminStats() { let orders = JSON.parse(localStorage.getItem('ovenx_orders') || '[]'); let foodT = 0, scT = 0, dcT = 0; orders.forEach(o => { foodT += parseFloat(o.food || 0); scT += parseFloat(o.sc || 0); dcT += parseFloat(o.dc || 0); }); document.getElementById('adm-sales').innerText = "Rs " + foodT; document.getElementById('adm-sc').innerText = "Rs " + scT; document.getElementById('adm-dc').innerText = "Rs " + dcT; document.getElementById('adm-count').innerText = orders.length; document.getElementById('admin-order-log').innerHTML = [...orders].reverse().map(o => `<div class="order-log-item"><b>${o.time} - ${o.type}</b><br>${o.items.replace(/\n/g,'<br>')}<br><span style="color:var(--orange)">Food: Rs ${o.food} | SC: Rs ${o.sc} | Del: Rs ${o.dc}</span></div>`).join(''); }
-    function clearLogs() { if(confirm("Clear history?")) { localStorage.removeItem('ovenx_orders'); updateAdminStats(); } }
-    function exportToExcel() { let orders = JSON.parse(localStorage.getItem('ovenx_orders') || '[]'); if(orders.length === 0) return alert("No orders!"); let csv = "Time,Type,Items,Food Total,SC,Delivery\n"; orders.forEach(o => { csv += `"${o.time}","${o.type}","${o.items.replace(/\n/g, ' | ')}","${o.food}","${o.sc}","${o.dc}"\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'OvenX_Sales.csv'; a.click(); }
-    function renderMenuEditor() { const container = document.getElementById('menu-editor-list'); container.innerHTML = ""; for (let cat in menuData) { let catDiv = document.createElement('div'); catDiv.innerHTML = `<h4 style="color:var(--red); margin: 20px 0 10px;">${cat}</h4>`; container.appendChild(catDiv); menuData[cat].forEach((item, idx) => { let row = document.createElement('div'); row.className = 'editor-row'; if (typeof item.price === 'object') { let sizesH = ""; for(let s in item.price) { sizesH += `<small>${s}:</small><input type="number" class="editor-input" value="${item.price[s]}" onchange="menuData['${cat}'][${idx}].price['${s}'] = parseFloat(this.value)">`; } row.innerHTML = `<b>${item.name}</b>${sizesH}`; } else { row.innerHTML = `<b>${item.name}</b><input type="number" class="editor-input" value="${item.price}" onchange="menuData['${cat}'][${idx}].price = parseFloat(this.value)">`; } container.appendChild(row); }); } }
-    function saveMenuChanges() { localStorage.setItem('ovenx_menu', JSON.stringify(menuData)); localStorage.setItem('ovenx_deals', JSON.stringify(dealsData)); alert("Menu Updated!"); renderPublicMenu(); }
+    function verifyAdmin() { if(adminPassTracker === "asdasd@1237530") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
 
     function finalSubmitOrder() {
         playClick('thud');
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
         let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
         const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
-        recordOrder(foodTotal, sc, delCharge, itemsListText);
+        
+        // PUSH TO KITCHEN QUEUE
+        let kitchenQueue = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        kitchenQueue.push({
+            time: new Date().toLocaleTimeString(),
+            type: orderType,
+            location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress,
+            items: itemsListText,
+            status: 'WAITING'
+        });
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(kitchenQueue));
+
         const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
         window.open(`https://wa.me/923001450301?text=${waMsg}`, '_blank');
     }
@@ -334,7 +356,8 @@
         }
     }
 
-    loadInitialData();
+    renderPublicMenu();
+    renderPublicDeals();
 </script>
 </body>
 </html>
