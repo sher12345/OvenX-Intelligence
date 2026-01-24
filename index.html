@@ -201,7 +201,7 @@
         "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
-    
+
     // FIX FOR FAMILY FEAST CATEGORY
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
@@ -257,9 +257,13 @@
         flavors.forEach(f => {
             const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
             b.onclick = function() {
-                playClick('pop'); dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++;
-                if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection();
-                else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); }
+                b.classList.add('size-feedback'); // CLICK COLOR FEEDBACK
+                playClick('pop'); 
+                setTimeout(() => {
+                    dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++;
+                    if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection();
+                    else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); }
+                }, 100);
             };
             grid.appendChild(b);
         });
@@ -327,14 +331,16 @@
         
         const waLink = `https://wa.me/923001450301?text=${waMsg}`;
 
-        // RESET UI BEFORE LEAVING
-        cart = []; 
-        updateCartBar(); 
-        document.getElementById('overlay-screen').style.display = 'none'; 
-        setScrollLock(false);
-
-        // DIRECT REDIRECT (Safari/iPhone compatible)
+        // IPHONE COMPATIBLE REDIRECT
         window.location.href = waLink;
+
+        // RESET UI AFTER SENDING
+        setTimeout(() => {
+            cart = []; 
+            updateCartBar(); 
+            document.getElementById('overlay-screen').style.display = 'none'; 
+            setScrollLock(false);
+        }, 1000);
     }
 
     function renderFinalSummary(fee) {
