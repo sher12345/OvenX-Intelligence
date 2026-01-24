@@ -202,7 +202,6 @@
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
 
-    // FIX FOR FAMILY FEAST CATEGORY
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
     const dealsData = [
@@ -257,7 +256,7 @@
         flavors.forEach(f => {
             const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
             b.onclick = function() {
-                b.classList.add('size-feedback'); // CLICK COLOR FEEDBACK
+                b.classList.add('size-feedback'); 
                 playClick('pop'); 
                 setTimeout(() => {
                     dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++;
@@ -293,7 +292,6 @@
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
     
-    // VERIFY ADMIN + NOTIFICATIONS
     function verifyAdmin() { 
         if(adminPassTracker === "123") { 
             playClick('thud'); 
@@ -317,12 +315,10 @@
         const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING' };
         
-        // SAVE TO KITCHEN PANEL FIRST
         try {
             await sb.from('kitchen_orders').insert([orderObj]);
         } catch(e) { console.log(e); }
         
-        // WHATSAPP REDIRECT LOGIC (FIXED FOR IPHONE)
         let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`;
         if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
         if (orderType === 'Delivery' && userAddress) headerInfo += `\n*ADDRESS: ${userAddress}*`;
@@ -331,10 +327,8 @@
         
         const waLink = `https://wa.me/923001450301?text=${waMsg}`;
 
-        // IPHONE COMPATIBLE REDIRECT
         window.location.href = waLink;
 
-        // RESET UI AFTER SENDING
         setTimeout(() => {
             cart = []; 
             updateCartBar(); 
@@ -350,7 +344,6 @@
         const grand = foodTotal + delCharge + sc;
         const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
         
-        // Show Address in summary Chat Bubble for Delivery orders
         let summaryBubbleContent = `<b>ORDER SUMMARY</b>`;
         if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
         
@@ -407,7 +400,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
 
-    // NOTIFICATION LOGIC
     function setupRealtimeNotifications() {
         sb.channel('custom-all-channel')
         .on('postgres_changes', 
@@ -427,7 +419,6 @@
         .subscribe();
     }
 
-    // HIDDEN PWA INSTALL LOGIC
     let deferredPrompt;
     let secretClickCount = 0;
 
@@ -452,7 +443,6 @@
         setTimeout(() => { secretClickCount = 0; }, 2000);
     }
 
-    // Service Worker Registration
     if ('serviceWorker' in navigator) {
         const sw = `self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
         const blob = new Blob([sw], { type: 'text/javascript' });
