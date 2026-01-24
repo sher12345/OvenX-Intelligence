@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Oven X - Official Order System</title>
-    <!-- SUPABASE CLOUD SYNC LIBRARY -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { 
             --red: #8b0000; 
@@ -96,7 +94,7 @@
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
         
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #admin-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #kitchen-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
@@ -110,10 +108,10 @@
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
 
         /* --- KITCHEN PANEL STYLES --- */
-        .admin-modal { width: 95%; max-width: 700px; height: 95vh; background: var(--bg-body); border-radius: 40px; padding: 25px; box-sizing: border-box; overflow-y: auto; text-align: left;}
+        .kitchen-modal { width: 95%; max-width: 700px; height: 90vh; background: var(--bg-body); border-radius: 40px; padding: 25px; box-sizing: border-box; overflow-y: auto; text-align: left;}
         .kitchen-card { background: white; padding: 20px; border-radius: 25px; margin-bottom: 15px; border-left: 10px solid var(--orange); box-shadow: 0 8px 20px rgba(0,0,0,0.05); position: relative; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
-        .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
+        .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.7; }
         .kitchen-badge { position: absolute; top: 15px; right: 15px; font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 10px; text-transform: uppercase; }
         .kb-waiting { background: #fff3e0; color: var(--orange); }
         .kb-preparing { background: #e3f2fd; color: #007bff; }
@@ -169,14 +167,16 @@
     </div>
 </div>
 
-<!-- KITCHEN PANEL (ADMIN PANEL OVERLAY) -->
-<div id="admin-panel-overlay">
-    <div class="admin-modal">
+<!-- KITCHEN PANEL -->
+<div id="kitchen-panel-overlay">
+    <div class="kitchen-modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE ORDERS 👨‍🍳</h2>
-            <button class="header-back-btn btn-3d" onclick="closeAdminPanel()">EXIT</button>
+            <h2 style="margin:0; color:var(--red); font-weight:900;">KITCHEN DASHBOARD</h2>
+            <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
         </div>
-        <div id="kitchen-orders-list"></div>
+        <div id="kitchen-orders-list">
+            <!-- Active Orders Inject Here -->
+        </div>
         <button class="next-btn btn-3d" style="background:#444; margin-top:30px;" onclick="clearReadyOrders()">CLEAR READY ORDERS</button>
     </div>
 </div>
@@ -189,16 +189,10 @@
 <div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
 
 <script>
-    // --- CLOUD CONFIG ---
-    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // --- AUDIO ---
+    // --- AUDIO & DATA ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playClick(type = 'pop') { try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } else { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } catch(e) {} }
 
-    // --- MENU DATA (RE-LOCKED 100%) ---
     let menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
         "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
@@ -215,71 +209,56 @@
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
 
-    // --- DEALS DATA (RE-LOCKED 100% - ALL 13 DEALS) ---
-    let dealsData = [
-        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, 
-        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, 
-        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, 
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, 
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] }, 
-        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }, 
-        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] }, 
-        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] }, 
-        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] }, 
-        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] }, 
-        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] }, 
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] }, 
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
-    ];
+    let dealsData = [{ name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] }, { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] }, { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] }, { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }, { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] }, { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] }, { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] }, { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] }, { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] }, { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] }, { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }];
 
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
+    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false;
 
-    // --- KITCHEN CROSS-DEVICE LOGIC ---
-    async function updateStatus(id, newStatus) {
-        playClick('thud');
-        await supabase.from('kitchen_orders').update({ status: newStatus }).eq('id', id);
-        if(newStatus === 'READY') alert("🛎️ ORDER IS READY!\nNotify the waiter for this order.");
-        renderKitchenOrders();
-    }
-
-    async function clearReadyOrders() {
-        if(!confirm("Clear all finished orders?")) return;
-        const { data: ready } = await supabase.from('kitchen_orders').select('id').eq('status', 'READY');
-        if(ready && ready.length > 0) {
-            await supabase.from('kitchen_orders').delete().in('id', ready.map(o => o.id));
-        }
-        renderKitchenOrders();
-    }
-
-    function openKitchenPanel() { document.getElementById('admin-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); }
-    function closeAdminPanel() { document.getElementById('admin-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } }
-
-    async function renderKitchenOrders() {
-        const { data: orders } = await supabase.from('kitchen_orders').select('*').order('created_at', { ascending: false });
+    // --- KITCHEN LOGIC ---
+    function openKitchenPanel() { renderKitchenOrders(); document.getElementById('kitchen-panel-overlay').style.display = 'flex'; }
+    function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; }
+    
+    function renderKitchenOrders() {
+        const orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
         const list = document.getElementById('kitchen-orders-list');
-        list.innerHTML = (!orders || orders.length === 0) ? "<p style='text-align:center; color:#999; padding:20px;'>NO ACTIVE ORDERS</p>" : "";
+        list.innerHTML = orders.length === 0 ? "<p style='text-align:center; color:#999; padding:20px;'>NO ACTIVE ORDERS</p>" : "";
         
-        if(orders) {
-            orders.forEach((o) => {
-                const card = document.createElement('div');
-                card.className = `kitchen-card status-${o.status.toLowerCase()}`;
-                card.innerHTML = `
-                    <span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span>
-                    <div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>
-                    <div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        ${o.status === 'WAITING' ? `<button class="next-btn btn-3d" style="background:#007bff;" onclick="updateStatus('${o.id}', 'PREPARING')">START PREPARING</button>` : ''}
-                        ${o.status === 'PREPARING' ? `<button class="next-btn btn-3d" style="background:var(--wa-green);" onclick="updateStatus('${o.id}', 'READY')">MARK AS READY ✅</button>` : ''}
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-        }
+        orders.forEach((o, index) => {
+            const card = document.createElement('div');
+            card.className = `kitchen-card status-${o.status.toLowerCase()}`;
+            card.innerHTML = `
+                <span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span>
+                <div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>
+                <div style="font-size:12px; color:#777; margin-bottom:10px;">Placed: ${o.time}</div>
+                <div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px;">${o.items}</div>
+                <div class="kitchen-actions">
+                    ${o.status === 'WAITING' ? `<button class="next-btn btn-3d" style="background:#007bff; margin-top:15px;" onclick="updateKitchenStatus(${index}, 'PREPARING')">START PREPARING</button>` : ''}
+                    ${o.status === 'PREPARING' ? `<button class="next-btn btn-3d" style="background:var(--wa-green); margin-top:15px;" onclick="updateKitchenStatus(${index}, 'READY')">MARK AS READY ✅</button>` : ''}
+                </div>
+            `;
+            list.appendChild(card);
+        });
     }
 
-    // --- CORE UTILITIES ---
+    function updateKitchenStatus(idx, status) {
+        playClick('thud');
+        let orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        orders[idx].status = status;
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(orders));
+        if(status === 'READY') alert("🔔 NOTIFICATION: Order for " + orders[idx].location + " is READY!");
+        renderKitchenOrders();
+    }
+
+    function clearReadyOrders() {
+        if(!confirm("Clear all READY orders?")) return;
+        let orders = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        orders = orders.filter(o => o.status !== 'READY');
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(orders));
+        renderKitchenOrders();
+    }
+
+    // --- ORIGINAL UTILITIES ---
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
-    window.addEventListener('popstate', function () { closeAdminPanel(); closeAdminLogin(); closeModals(); exitToGateway(); });
+    window.addEventListener('popstate', function () { closeKitchenPanel(); closeAdminLogin(); closeModals(); exitToGateway(); });
 
     const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
@@ -300,9 +279,7 @@
     }
 
     function openOrderFlow(item) { playClick('pop'); window.history.pushState({open: true}, ""); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0; if (selectedItem.flavorsNeeded) { startFlavorSelection(); } else if (item.price && typeof item.price === 'object') { const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = ''; for (let s in item.price) { let sBtn = document.createElement('div'); sBtn.className = 'btn btn-3d'; sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`; sBtn.onclick = function() { playClick('pop'); sBtn.classList.add('size-feedback'); setTimeout(() => { selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s]; document.getElementById('size-overlay').style.display = 'none'; sBtn.classList.remove('size-feedback'); openQtyModal(); }, 500); }; sizeGrid.appendChild(sBtn); } document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true); } else { openQtyModal(); } }
-    
-    function startFlavorSelection() { const step = selectedItem.flavorsNeeded[currentFlavorStep]; document.getElementById('flavor-title').innerText = "Pick " + step.label; const grid = document.getElementById('flavor-grid'); grid.innerHTML = ''; let catK = step.cat; let flavors = menuData[catK] || []; flavors.forEach(f => { const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`; b.onclick = function() { playClick('pop'); b.classList.add('size-feedback'); setTimeout(() => { dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++; if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection(); else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); } }, 300); }; grid.appendChild(b); }); document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true); }
-    
+    function startFlavorSelection() { const step = selectedItem.flavorsNeeded[currentFlavorStep]; document.getElementById('flavor-title').innerText = "Pick " + step.label; const grid = document.getElementById('flavor-grid'); grid.innerHTML = ''; let catK = step.cat; if(catK === "Pan/Premium") catK = "Pan Pizza 🍕"; let flavors = menuData[catK] || []; flavors.forEach(f => { const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`; b.onclick = function() { playClick('pop'); b.classList.add('size-feedback'); setTimeout(() => { dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++; if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection(); else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); } }, 300); }; grid.appendChild(b); }); document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true); }
     function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; setScrollLock(true); }
     function setQty(q) { playClick('pop'); selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
     function closeModals() { document.getElementById('modal-overlay').style.display = 'none'; document.getElementById('size-overlay').style.display = 'none'; document.getElementById('flavor-overlay').style.display = 'none'; setScrollLock(false); }
@@ -327,25 +304,25 @@
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
     function verifyAdmin() { if(adminPassTracker === "asdasd@1237530") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
 
-    async function finalSubmitOrder() {
+    function finalSubmitOrder() {
         playClick('thud');
         const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
         let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
         const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         
-        // PUSH TO SUPABASE CLOUD (FOR KITCHEN TABLET)
-        const orderObj = {
+        // PUSH TO KITCHEN QUEUE
+        let kitchenQueue = JSON.parse(localStorage.getItem('ovenx_kitchen_queue') || '[]');
+        kitchenQueue.push({
+            time: new Date().toLocaleTimeString(),
             type: orderType,
             location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress,
             items: itemsListText,
             status: 'WAITING'
-        };
-        await supabase.from('kitchen_orders').insert([orderObj]);
+        });
+        localStorage.setItem('ovenx_kitchen_queue', JSON.stringify(kitchenQueue));
 
         const waMsg = encodeURIComponent(`*OVEN X - ${orderType.toUpperCase()} ORDER*${tableNum ? '\n*TABLE: ' + tableNum + '*' : ''}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*\n\n${userAddress ? '*Address:* ' + userAddress : ''}`);
         window.open(`https://wa.me/923001450301?text=${waMsg}`, '_blank');
-        
-        cart = []; updateCartBar(); document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false);
     }
 
     function renderFinalSummary(fee) {
@@ -361,7 +338,7 @@
     document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
 
     // --- IMAGES ---
-    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150?q=80&w=400&auto=format&fit=crop", "loaded fries": "https://images.unsplash.com/photo-1585109649139-366815a0d713?q=80&w=400&auto=format&fit=crop", "pizza fries": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=400&auto=format&fit=crop", "shots": "https://images.unsplash.com/photo-1562967914-6c8273970a2b?q=80&w=400&auto=format&fit=crop", "wings": "https://images.unsplash.com/photo-1527477396000-e27163b481c2?q=80&w=400&auto=format&fit=crop", "nuggets": "https://images.unsplash.com/photo-1562967914-6c8273970a2b?q=80&w=400&auto=format&fit=crop", "health harvest": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586?q=80&w=400&auto=format&fit=crop", "sandwich": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?q=80&w=400&auto=format&fit=crop", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51?q=80&w=400&auto=format&fit=crop", "burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400&auto=format&fit=crop", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600&auto=format&fit=crop", "pasta": "https://images.unsplash.com/photo-1473093226795-af9932fe5856?q=80&w=400&auto=format&fit=crop", "wrap": "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?q=80&w=400&auto=format&fit=crop", "roll": "https://images.unsplash.com/photo-1610393790034-7577897050e8?q=80&w=400&auto=format&fit=crop", "drink": "https://images.unsplash.com/photo-1581006852262-e4307cf6283a?q=80&w=400&auto=format&fit=crop" };
+    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150?q=80&w=400&auto=format&fit=crop", "loaded fries": "https://images.unsplash.com/photo-1585109649139-366815a0d713?q=80&w=400&auto=format&fit=crop", "pizza fries": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=400&auto=format&fit=crop", "shots": "https://images.unsplash.com/photo-1562967914-6c8273970a2b?q=80&w=400&auto=format&fit=crop", "wings": "https://images.unsplash.com/photo-1527477396000-e27163b481c2?q=80&w=400&auto=format&fit=crop", "nuggets": "https://images.unsplash.com/photo-1562967914-6c8273970a2b?q=80&w=400&auto=format&fit=crop", "health harvest": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586?q=80&w=400&auto=format&fit=crop", "sandwich": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?q=80&w=400&auto=format&fit=crop", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51?q=80&w=400&auto=format&fit=crop", "burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400&auto=format&fit=crop", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400&auto=format&fit=crop", "pasta": "https://images.unsplash.com/photo-1473093226795-af9932fe5856?q=80&w=400&auto=format&fit=crop", "wrap": "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?q=80&w=400&auto=format&fit=crop", "roll": "https://images.unsplash.com/photo-1610393790034-7577897050e8?q=80&w=400&auto=format&fit=crop", "drink": "https://images.unsplash.com/photo-1581006852262-e4307cf6283a?q=80&w=400&auto=format&fit=crop" };
 
     function renderPublicMenu() {
         const mC = document.getElementById('menu-container'); mC.innerHTML = "";
