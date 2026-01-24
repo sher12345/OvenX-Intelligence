@@ -267,7 +267,7 @@
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
-    function verifyAdmin() { if(adminPassTracker === "asdasd@1237530") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
+    function verifyAdmin() { if(adminPassTracker === "123") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
 
     async function finalSubmitOrder() {
         playClick('thud');
