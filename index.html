@@ -201,6 +201,9 @@
         "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
+    
+    // FIX FOR FAMILY FEAST CATEGORY
+    menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
     const dealsData = [
         { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
@@ -310,17 +313,28 @@
         const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING' };
         
-        await sb.from('kitchen_orders').insert([orderObj]);
+        // SAVE TO KITCHEN PANEL FIRST
+        try {
+            await sb.from('kitchen_orders').insert([orderObj]);
+        } catch(e) { console.log(e); }
         
-        // Constructing WhatsApp message with Delivery Address fixed
+        // WHATSAPP REDIRECT LOGIC (FIXED FOR IPHONE)
         let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`;
-        if (tableNum) headerInfo += `\n*TABLE: ${tableNum}*`;
+        if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
         if (orderType === 'Delivery' && userAddress) headerInfo += `\n*ADDRESS: ${userAddress}*`;
 
         const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*`);
         
-        window.open(`https://wa.me/923001450301?text=${waMsg}`, '_blank');
-        cart = []; updateCartBar(); document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false);
+        const waLink = `https://wa.me/923001450301?text=${waMsg}`;
+
+        // RESET UI BEFORE LEAVING
+        cart = []; 
+        updateCartBar(); 
+        document.getElementById('overlay-screen').style.display = 'none'; 
+        setScrollLock(false);
+
+        // DIRECT REDIRECT (Safari/iPhone compatible)
+        window.location.href = waLink;
     }
 
     function renderFinalSummary(fee) {
