@@ -43,6 +43,19 @@
             40% {transform: translateY(-15px);}
             60% {transform: translateY(-7px);}
         }
+        @keyframes aggressive-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
         .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
         .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
@@ -105,9 +118,16 @@
         .confirm-btn { background: var(--wa-green); color: white; padding: 20px; border-radius: 25px; font-weight: 900; width: 100%; margin-top: 20px; font-size: 20px; box-shadow: 0 6px 0px var(--wa-dark); }
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
-        .kitchen-card { background: white; padding: 20px; border-radius: 25px; margin-bottom: 15px; border-left: 10px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .kitchen-card { background: white; padding: 20px; border-radius: 25px; margin-bottom: 15px; border-left: 10px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
         .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
+
+        /* KITCHEN ALERTS */
+        .kitchen-card.warning { box-shadow: 0 0 25px #ffd700; border-left-color: #ffd700 !important; animation: bounce 2s infinite; }
+        .kitchen-card.late { background: #fff1f1; border-left-color: #ff0000 !important; box-shadow: 0 0 35px #ff0000; animation: aggressive-shake 0.2s infinite; border: 2px solid red; }
+        .order-timer { font-size: 22px; font-weight: 900; color: #444; margin-top: 5px; font-family: monospace; }
+        .late .order-timer { color: #ff0000; }
+
         .kitchen-badge { position: absolute; top: 15px; right: 15px; font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 10px; text-transform: uppercase; }
         .kb-waiting { background: #fff3e0; color: var(--orange); }
         .kb-preparing { background: #e3f2fd; color: #007bff; }
@@ -206,9 +226,15 @@
             const gain = audioCtx.createGain(); 
             osc.type = 'sine'; 
             if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } 
-            else { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } 
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); 
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
+            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } 
+            else if(type === 'siren') { 
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime); 
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4);
+            }
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
         } catch(e) { console.log("Audio skipped"); } 
     }
 
@@ -416,7 +442,19 @@
     document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
 
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
-    async function clearReadyOrders() { if(!confirm("Clear READY orders?")) return; if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); } renderKitchenOrders(); }
+    
+    async function clearReadyOrders() { 
+        if(!confirm("Clear READY orders?")) return; 
+        playClick('pop');
+        if(!sb) return; 
+
+        const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY'); 
+        
+        if(ready && ready.length > 0) { 
+            const { error } = await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); 
+            if (!error) renderKitchenOrders(); 
+        } 
+    }
     
     function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); setScrollLock(true); }
     function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
@@ -426,11 +464,42 @@
         const { data: orders } = await sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
         const list = document.getElementById('kitchen-orders-list');
         list.innerHTML = (!orders || orders.length === 0) ? "<p style='text-align:center; color:#999; padding:20px;'>NO ACTIVE ORDERS</p>" : "";
+        
+        const now = new Date();
+        const limitMs = 25 * 60 * 1000;
+        const warningMs = 5 * 60 * 1000;
+        let isAnyOrderLate = false;
+
         if(orders) orders.forEach((o) => {
-            const card = document.createElement('div'); card.className = `kitchen-card status-${o.status.toLowerCase()}`;
-            card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div><div style="display:flex; gap:10px; margin-top:15px;">${o.status === 'WAITING' ? `<button class="next-btn btn-3d" style="background:#007bff;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}${o.status === 'PREPARING' ? `<button class="next-btn btn-3d" style="background:var(--wa-green);" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}</div>`;
+            const createdAt = new Date(o.created_at);
+            const elapsed = now - createdAt;
+            const remaining = limitMs - elapsed;
+            
+            let timeLabel = "";
+            let alertClass = "";
+            
+            if (o.status !== 'READY') {
+                if (remaining <= 0) {
+                    alertClass = "late";
+                    const abs = Math.abs(remaining);
+                    const mins = Math.floor(abs / 60000);
+                    const secs = Math.floor((abs % 60000) / 1000);
+                    timeLabel = `LATE: -${mins}:${secs.toString().padStart(2, '0')}`;
+                    isAnyOrderLate = true;
+                } else {
+                    const mins = Math.floor(remaining / 60000);
+                    const secs = Math.floor((remaining % 60000) / 1000);
+                    timeLabel = `${mins}:${secs.toString().padStart(2, '0')}`;
+                    if (remaining <= warningMs) alertClass = "warning";
+                }
+            }
+
+            const card = document.createElement('div'); card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
+            card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div><div style="display:flex; gap:10px; margin-top:15px;">${o.status === 'WAITING' ? `<button class="next-btn btn-3d" style="background:#007bff;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}${o.status === 'PREPARING' ? `<button class="next-btn btn-3d" style="background:var(--wa-green);" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}</div>`;
             list.appendChild(card);
         });
+
+        if(isAnyOrderLate) playClick('siren');
     }
 
     function renderPublicDeals() {
@@ -442,27 +511,26 @@
         });
     }
 
-    // UPDATED MENU RENDERER WITH SEARCH & CATEGORIES
     function renderPublicMenu(filterText = "") {
         const mC = document.getElementById('menu-container'); 
         mC.innerHTML = "";
         const search = filterText.toLowerCase();
 
         for (let cat in menuData) {
-            // Filter items in this category
+            // FIX: HIDE Pan/Premium from main menu rendering
+            if (cat === "Pan/Premium") continue;
+
             const filteredItems = menuData[cat].filter(item => 
                 item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
             );
 
             if (filteredItems.length > 0) {
-                // Category Title
                 let title = document.createElement('div'); 
                 title.className = 'section-title'; 
                 title.innerText = cat; 
-                title.id = "cat-" + cat.replace(/\s+/g, '-'); // ID for scrolling
+                title.id = "cat-" + cat.replace(/\s+/g, '-'); 
                 mC.appendChild(title);
 
-                // Items Grid
                 let grid = document.createElement('div'); 
                 grid.className = 'grid';
                 filteredItems.forEach(item => {
@@ -481,29 +549,25 @@
             }
         }
         
-        // Show empty message if nothing found
         if (mC.innerHTML === "") {
             mC.innerHTML = "<p style='text-align:center; padding:50px; color:#999; font-weight:900;'>NO ITEMS FOUND 🍕</p>";
         }
     }
 
-    // CATEGORY BAR LOGIC
     function renderCategoryBar() {
         const bar = document.getElementById('category-bar');
         bar.innerHTML = "";
         for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue; // Skip hidden logic category
+            if (cat === "Pan/Premium") continue; 
             const pill = document.createElement('div');
             pill.className = "cat-pill";
             pill.innerText = cat;
             pill.onclick = () => {
                 playClick('pop');
-                // Remove search and re-render full menu
                 document.getElementById('menuSearch').value = "";
                 renderPublicMenu();
-                // Scroll to category
-                document.getElementById("cat-" + cat.replace(/\s+/g, '-')).scrollIntoView();
-                // Active UI
+                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-'));
+                if(target) target.scrollIntoView();
                 document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
             };
@@ -513,7 +577,6 @@
 
     function handleSearch(val) {
         renderPublicMenu(val);
-        // Highlight active pill logic or clear it
         if (val === "") {
             document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
         }
