@@ -24,7 +24,7 @@
             --wa-green: #25D366;
             --wa-dark: #1a9648;
         }
-        * { -webkit-tap-highlight-color: transparent; outline: none; }
+        * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
         body.modal-active { overflow: hidden; height: 100vh; }
         body { 
             background: var(--bg-body) !important; 
@@ -67,8 +67,19 @@
         .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
         .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
         .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
+
+        /* SEARCH & SCROLLER CSS */
+        .menu-controls { background: white; padding: 10px 0; border-bottom: 2px solid #eee; }
+        .search-box-wrap { padding: 0 15px 10px; }
+        .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+        .search-input:focus { border-color: var(--orange); }
+        .category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 10px; padding: 0 15px; scroll-behavior: smooth; }
+        .category-scroller::-webkit-scrollbar { display: none; }
+        .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
+        .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
+
         .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
-        .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; }
+        .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
         .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
         .deal-img-top { height: 180px; background-size: cover; background-position: center; border-bottom: 2px solid #f9f9f9; }
         .deal-info-box { padding: 20px; text-align: center; }
@@ -138,6 +149,13 @@
         <div class="tab-item active" id="tab-menu" onclick="switchTab('menu')">FULL MENU</div>
         <div class="tab-item" id="tab-deals" onclick="switchTab('deals')">HOT DEALS</div>
     </div>
+    <!-- MENU CONTROLS (SEARCH + CATEGORIES) -->
+    <div class="menu-controls" id="menu-controls">
+        <div class="search-box-wrap">
+            <input type="text" id="menuSearch" class="search-input" placeholder="🔍 Search food..." oninput="handleSearch(this.value)">
+        </div>
+        <div class="category-scroller" id="category-bar"></div>
+    </div>
 </div>
 
 <div id="deals-container" class="deals-container"><div id="deals-list"></div></div>
@@ -179,12 +197,40 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // OPPO COMPATIBILITY: Initialize Audio inside function to prevent crash
+    let audioCtx = null;
+    function playClick(type = 'pop') { 
+        try { 
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain(); 
+            osc.type = 'sine'; 
+            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } 
+            else { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } 
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); 
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
+        } catch(e) { console.log("Audio skipped"); } 
+    }
+
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let sb = null;
+    try {
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch(e) { console.error("Supabase load error"); }
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playClick(type = 'pop') { try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } else { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } catch(e) {} }
+    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
+    
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('table')) { 
+            isQRScan = true; 
+            tableNum = urlParams.get('table').toUpperCase(); 
+            document.getElementById('gateway-table-id').innerText = tableNum; 
+            document.getElementById('gateway-table-note').style.display = 'block'; 
+            document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; 
+        }
+    } catch(e) { console.error("URL Parsing failed"); }
 
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
@@ -222,13 +268,29 @@
 
     const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "loaded fries": "https://images.unsplash.com/photo-1585109649139-366815a0d713", "pizza fries": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5", "shots": "https://images.unsplash.com/photo-1562967914-6c8273970a2b", "wings": "https://images.unsplash.com/photo-1527477396000-e27163b481c2", "nuggets": "https://images.unsplash.com/photo-1562967914-6c8273970a2b", "health harvest": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586", "sandwich": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591", "pasta": "https://images.unsplash.com/photo-1473093226795-af9932fe5856", "wrap": "https://images.unsplash.com/photo-1626700051175-6818013e1d4f", "roll": "https://images.unsplash.com/photo-1610393790034-7577897050e8", "drink": "https://images.unsplash.com/photo-1581006852262-e4307cf6283a" };
 
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
-
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     function enterApp(target) { playClick('thud'); document.getElementById('gateway-screen').style.display = 'none'; document.getElementById('top-sticky-container').style.display = 'flex'; if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } if(target === 'deals') switchTab('deals'); else switchTab('menu'); }
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
     function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; setScrollLock(false); }
-    function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); renderPublicDeals(); } }
+    
+    function switchTab(tab) { 
+        playClick('pop'); 
+        if(tab === 'menu') { 
+            document.getElementById('menu-container').style.display = 'block'; 
+            document.getElementById('deals-container').style.display = 'none'; 
+            document.getElementById('tab-menu').classList.add('active'); 
+            document.getElementById('tab-deals').classList.remove('active'); 
+            document.getElementById('menu-controls').style.display = 'block'; // Show Search
+            renderPublicMenu(); 
+        } else { 
+            document.getElementById('menu-container').style.display = 'none'; 
+            document.getElementById('deals-container').style.display = 'block'; 
+            document.getElementById('tab-deals').classList.add('active'); 
+            document.getElementById('tab-menu').classList.remove('active'); 
+            document.getElementById('menu-controls').style.display = 'none'; // Hide Search
+            renderPublicDeals(); 
+        } 
+    }
 
     function openOrderFlow(item) {
         playClick('pop');
@@ -316,7 +378,7 @@
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING' };
         
         try {
-            await sb.from('kitchen_orders').insert([orderObj]);
+            if(sb) await sb.from('kitchen_orders').insert([orderObj]);
         } catch(e) { console.log(e); }
         
         let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`;
@@ -353,13 +415,14 @@
     function setInitialService(type) { playClick('thud'); orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); }
     document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
 
-    async function updateStatus(id, newStatus) { playClick('thud'); await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
-    async function clearReadyOrders() { if(!confirm("Clear READY orders?")) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); } renderKitchenOrders(); }
+    async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
+    async function clearReadyOrders() { if(!confirm("Clear READY orders?")) return; if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); } renderKitchenOrders(); }
     
     function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); setScrollLock(true); }
     function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
     
     async function renderKitchenOrders() {
+        if(!sb) return;
         const { data: orders } = await sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
         const list = document.getElementById('kitchen-orders-list');
         list.innerHTML = (!orders || orders.length === 0) ? "<p style='text-align:center; color:#999; padding:20px;'>NO ACTIVE ORDERS</p>" : "";
@@ -379,28 +442,89 @@
         });
     }
 
-    function renderPublicMenu() {
-        const mC = document.getElementById('menu-container'); mC.innerHTML = "";
+    // UPDATED MENU RENDERER WITH SEARCH & CATEGORIES
+    function renderPublicMenu(filterText = "") {
+        const mC = document.getElementById('menu-container'); 
+        mC.innerHTML = "";
+        const search = filterText.toLowerCase();
+
         for (let cat in menuData) {
-            let title = document.createElement('div'); title.className = 'section-title'; title.innerText = cat; mC.appendChild(title);
-            let grid = document.createElement('div'); grid.className = 'grid';
-            menuData[cat].forEach(item => {
-                const itemName = item.name.toLowerCase(); let fBg = imgMap["pizza"];
-                for (let key in imgMap) if (itemName.includes(key)) fBg = imgMap[key];
-                let b = document.createElement('div'); b.className = 'btn btn-3d'; b.style.backgroundImage = `url('${fBg}?q=80&w=400&auto=format&fit=crop')`;
-                b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
-                b.onclick = () => openOrderFlow(item); grid.appendChild(b);
-            });
-            mC.appendChild(grid);
+            // Filter items in this category
+            const filteredItems = menuData[cat].filter(item => 
+                item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
+            );
+
+            if (filteredItems.length > 0) {
+                // Category Title
+                let title = document.createElement('div'); 
+                title.className = 'section-title'; 
+                title.innerText = cat; 
+                title.id = "cat-" + cat.replace(/\s+/g, '-'); // ID for scrolling
+                mC.appendChild(title);
+
+                // Items Grid
+                let grid = document.createElement('div'); 
+                grid.className = 'grid';
+                filteredItems.forEach(item => {
+                    const itemName = item.name.toLowerCase(); 
+                    let fBg = imgMap["pizza"];
+                    for (let key in imgMap) if (itemName.includes(key)) fBg = imgMap[key];
+                    
+                    let b = document.createElement('div'); 
+                    b.className = 'btn btn-3d'; 
+                    b.style.backgroundImage = `url('${fBg}?q=80&w=400&auto=format&fit=crop')`;
+                    b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
+                    b.onclick = () => openOrderFlow(item); 
+                    grid.appendChild(b);
+                });
+                mC.appendChild(grid);
+            }
+        }
+        
+        // Show empty message if nothing found
+        if (mC.innerHTML === "") {
+            mC.innerHTML = "<p style='text-align:center; padding:50px; color:#999; font-weight:900;'>NO ITEMS FOUND 🍕</p>";
         }
     }
 
-    renderPublicMenu(); renderPublicDeals();
+    // CATEGORY BAR LOGIC
+    function renderCategoryBar() {
+        const bar = document.getElementById('category-bar');
+        bar.innerHTML = "";
+        for (let cat in menuData) {
+            if (cat === "Pan/Premium") continue; // Skip hidden logic category
+            const pill = document.createElement('div');
+            pill.className = "cat-pill";
+            pill.innerText = cat;
+            pill.onclick = () => {
+                playClick('pop');
+                // Remove search and re-render full menu
+                document.getElementById('menuSearch').value = "";
+                renderPublicMenu();
+                // Scroll to category
+                document.getElementById("cat-" + cat.replace(/\s+/g, '-')).scrollIntoView();
+                // Active UI
+                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+            };
+            bar.appendChild(pill);
+        }
+    }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
+    function handleSearch(val) {
+        renderPublicMenu(val);
+        // Highlight active pill logic or clear it
+        if (val === "") {
+            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+        }
+    }
+
+    renderPublicMenu(); 
+    renderPublicDeals();
+    renderCategoryBar();
 
     function setupRealtimeNotifications() {
+        if(!sb) return;
         sb.channel('custom-all-channel')
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, 
