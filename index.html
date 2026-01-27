@@ -1,3 +1,5 @@
+--- START OF FILE Paste January 27, 2026 - 4:33PM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,12 +27,13 @@
             --wa-dark: #1a9648;
         }
         * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
-        body.modal-active { overflow: hidden; height: 100vh; }
+        body.modal-active { overflow: hidden; height: 100vh; position: fixed; width: 100%; } /* iOS FIX: position fixed prevents background scroll */
         body { 
             background: var(--bg-body) !important; 
             color: #333 !important; 
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0; padding-bottom: 0; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
         #top-sticky-container {
             position: sticky; top: 0; z-index: 2000;
@@ -77,7 +80,7 @@
         .header-back-btn { background: var(--orange); color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 900; font-size: 12px; box-shadow: 0 3px 0px var(--dark-orange); }
         .logo { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1;}
         .logo span { color: var(--orange); }
-        .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
+        .tab-bar { background: #fff; padding: 10px; display: flex; justify: center; gap: 10px; border-bottom: 2px solid #eee; }
         .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
         .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
 
@@ -86,12 +89,12 @@
         .search-box-wrap { padding: 0 15px 10px; }
         .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
         .search-input:focus { border-color: var(--orange); }
-        .category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 10px; padding: 0 15px; scroll-behavior: smooth; }
+        .category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 10px; padding: 0 15px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; } /* iOS FIX */
         .category-scroller::-webkit-scrollbar { display: none; }
         .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
         .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
 
-        .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
+        .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; -webkit-overflow-scrolling: touch; }
         .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
         .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
         .deal-img-top { height: 180px; background-size: cover; background-position: center; border-bottom: 2px solid #f9f9f9; }
@@ -101,19 +104,19 @@
         .deal-desc { font-size: 13px; color: #666; font-weight: 600; line-height: 1.3; margin-bottom: 15px; display: block;}
         .deal-price { color: var(--orange); font-weight: 900; font-size: 24px; display: block; margin-bottom: 15px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn { background-color: #eee; background-size: cover; background-position: center; border: 3px solid #fff; border-radius: 25px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 160px; box-shadow: 0 6px 0px #ddd; position: relative; }
+        .btn { background-color: #eee; background-size: cover; background-position: center; border: 3px solid #fff; border-radius: 25px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 160px; box-shadow: 0 6px 0px #ddd; position: relative; transform: translateZ(0); } /* iOS FIX: translateZ forces GPU */
         .item-label-box { background: rgba(255, 255, 255, 0.98); padding: 12px; width: 100%; box-sizing: border-box; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); }
         .price-tag { color: var(--orange); font-weight: 900; font-size: 13px; margin-top: 4px; }
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #kitchen-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
-        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #kitchen-panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); -webkit-overflow-scrolling: touch; }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
         .qty-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; background: white; font-weight: 900; font-size: 16px; }
         .qty-btn.active { background: var(--red); color: white; border-color: var(--red); box-shadow: 0 4px 0px var(--dark-red); }
-        textarea, .big-input { width: 100%; border-radius: 20px; border: 3px solid #f0f0f0; padding: 18px; margin-top: 15px; font-size: 16px; box-sizing: border-box; }
+        textarea, .big-input { width: 100%; border-radius: 20px; border: 3px solid #f0f0f0; padding: 18px; margin-top: 15px; font-size: 16px; box-sizing: border-box; -webkit-appearance: none; }
         .next-btn { padding: 18px; border-radius: 20px; border: none; font-weight: 900; width: 100%; margin-bottom: 12px; color: white; display: block; }
         .confirm-btn { background: var(--wa-green); color: white; padding: 20px; border-radius: 25px; font-weight: 900; width: 100%; margin-top: 20px; font-size: 20px; box-shadow: 0 6px 0px var(--wa-dark); }
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
@@ -146,7 +149,6 @@
 </head>
 <body>
 
-<!-- HIDDEN DOWNLOAD BUTTON -->
 <div id="secret-pwa-button" onclick="handleSecretClick()"></div>
 
 <div id="gateway-screen">
@@ -169,7 +171,6 @@
         <div class="tab-item active" id="tab-menu" onclick="switchTab('menu')">FULL MENU</div>
         <div class="tab-item" id="tab-deals" onclick="switchTab('deals')">HOT DEALS</div>
     </div>
-    <!-- MENU CONTROLS (SEARCH + CATEGORIES) -->
     <div class="menu-controls" id="menu-controls">
         <div class="search-box-wrap">
             <input type="text" id="menuSearch" class="search-input" placeholder="🔍 Search food..." oninput="handleSearch(this.value)">
@@ -217,11 +218,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // OPPO COMPATIBILITY: Initialize Audio inside function to prevent crash
+    // iOS FIX: Initialize context immediately and resume on first click
     let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
     function playClick(type = 'pop') { 
+        initAudio();
         try { 
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator(); 
             const gain = audioCtx.createGain(); 
             osc.type = 'sine'; 
@@ -238,25 +244,28 @@
         } catch(e) { console.log("Audio skipped"); } 
     }
 
+    // iOS FIX: MOVE URL DETECTION TO VERY TOP
+    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('table')) { 
+            isQRScan = true; 
+            tableNum = urlParams.get('table').toUpperCase(); 
+            // Wait for DOM to update IDs
+            window.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('gateway-table-id').innerText = tableNum; 
+                document.getElementById('gateway-table-note').style.display = 'block'; 
+                document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; 
+            });
+        }
+    } catch(e) { console.error("URL Parsing failed"); }
+
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
     let sb = null;
     try {
         sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     } catch(e) { console.error("Supabase load error"); }
-
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
-    
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('table')) { 
-            isQRScan = true; 
-            tableNum = urlParams.get('table').toUpperCase(); 
-            document.getElementById('gateway-table-id').innerText = tableNum; 
-            document.getElementById('gateway-table-note').style.display = 'block'; 
-            document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; 
-        }
-    } catch(e) { console.error("URL Parsing failed"); }
 
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
@@ -306,14 +315,14 @@
             document.getElementById('deals-container').style.display = 'none'; 
             document.getElementById('tab-menu').classList.add('active'); 
             document.getElementById('tab-deals').classList.remove('active'); 
-            document.getElementById('menu-controls').style.display = 'block'; // Show Search
+            document.getElementById('menu-controls').style.display = 'block';
             renderPublicMenu(); 
         } else { 
             document.getElementById('menu-container').style.display = 'none'; 
             document.getElementById('deals-container').style.display = 'block'; 
             document.getElementById('tab-deals').classList.add('active'); 
             document.getElementById('tab-menu').classList.remove('active'); 
-            document.getElementById('menu-controls').style.display = 'none'; // Hide Search
+            document.getElementById('menu-controls').style.display = 'none';
             renderPublicDeals(); 
         } 
     }
@@ -502,12 +511,13 @@
         if(isAnyOrderLate) playClick('siren');
     }
 
+    // iOS FIX: DECREASED IMAGE QUALITY (q=40) FOR SMOOTHER SCROLLING
     function renderPublicDeals() {
         const list = document.getElementById('deals-list'); list.innerHTML = '';
         dealsData.forEach(deal => {
             let bgUrl = imgMap["pizza"];
             if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["burger"];
-            list.innerHTML += `<div class="deal-card"><div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}?q=80&w=600&auto=format&fit=crop')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div></div>`;
+            list.innerHTML += `<div class="deal-card"><div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}?q=40&w=600&auto=format&fit=crop')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div></div>`;
         });
     }
 
@@ -517,7 +527,6 @@
         const search = filterText.toLowerCase();
 
         for (let cat in menuData) {
-            // FIX: HIDE Pan/Premium from main menu rendering
             if (cat === "Pan/Premium") continue;
 
             const filteredItems = menuData[cat].filter(item => 
@@ -540,7 +549,8 @@
                     
                     let b = document.createElement('div'); 
                     b.className = 'btn btn-3d'; 
-                    b.style.backgroundImage = `url('${fBg}?q=80&w=400&auto=format&fit=crop')`;
+                    // iOS FIX: DECREASED IMAGE QUALITY (q=40)
+                    b.style.backgroundImage = `url('${fBg}?q=40&w=400&auto=format&fit=crop')`;
                     b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
                     b.onclick = () => openOrderFlow(item); 
                     grid.appendChild(b);
