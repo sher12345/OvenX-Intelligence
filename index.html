@@ -413,7 +413,7 @@
 
         const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*`);
         
-        const waLink = `https://wa.me/923001450301?text=${waMsg}`;
+        const waLink = `https://api.whatsapp.com/send?phone=923001450301&text=${waMsg}`;
 
         window.location.href = waLink;
 
