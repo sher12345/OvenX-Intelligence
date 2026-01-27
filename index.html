@@ -1,3 +1,8 @@
+
+Folder highlights
+Web files define the 'Oven X - Official Order System' UI, featuring distinct red and orange styling, a gateway entry screen, and modal/cart elements.
+
+Live Kitchen Final.txt
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -292,93 +297,8 @@
         { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
     ];
 
-const imgMap = {
-    // Starters 🍟
-    "Plain Fries": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/plain%20fries.png",
-    "Loaded Fries": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/loaded%20fries.png",
-    "Pizza Fries": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/Pizza%20fries.png",
-    "Dragon Shots": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/Dragon%20shots.png",
-    "Oven Baked Wings": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/oven%20baked%20wings.png",
-    "Peri-Peri Wings": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/oven%20baked%20wings.png",
-    "Hot Wings": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/oven%20baked%20wings.png",
-    "Honey Chili Wings": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/oven%20baked%20wings.png",
-    "Cheese Sticks": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/cheese%20sticks.png",
-    "Meat Sticks": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/meat%20sitcks.png",
-    "Nuggets": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/menu-images/nuggets.png",
+    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "loaded fries": "https://images.unsplash.com/photo-1585109649139-366815a0d713", "pizza fries": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5", "shots": "https://images.unsplash.com/photo-1562967914-6c8273970a2b", "wings": "https://images.unsplash.com/photo-1527477396000-e27163b481c2", "nuggets": "https://images.unsplash.com/photo-1562967914-6c8273970a2b", "health harvest": "https://images.unsplash.com/photo-1539252554453-80ab65ce3586", "sandwich": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591", "pasta": "https://images.unsplash.com/photo-1473093226795-af9932fe5856", "wrap": "https://images.unsplash.com/photo-1626700051175-6818013e1d4f", "roll": "https://images.unsplash.com/photo-1610393790034-7577897050e8", "drink": "https://images.unsplash.com/photo-1581006852262-e4307cf6283a" };
 
-    // Sandwiches 🥪
-    "Health Harvest": "",
-    "Khameera Sandwich": "",
-    "Club Sandwich": "",
-
-    // Fried Burgers 🍔
-    "Chicken Patty Burger": "",
-    "Zinger Burger": "",
-    "Mighty Burger": "",
-    "Chipotle Burger": "",
-    "Crispy Jalapeno": "",
-    "Stuff Jalapeno": "",
-
-    // Grilled Burgers ♨️
-    "CM Grilled": "",
-    "Smokey Grilled": "",
-    "Peri Peri Grilled": "",
-    "Drizzler X": "",
-    "Jalapeno Blaze": "",
-    "Mexi Fiesta": "",
-
-    // Pizzas 🍕 (One image per flavor covers all sizes)
-    "Chicken Tikka": "",
-    "Chicken Fajita": "",
-    "Chicken Supreme": "",
-    "Cheese Lover": "",
-    "Veg Lover": "",
-    "Sicilian Pizza": "",
-    "BBQ Pizza": "",
-    "Creamy Dreamy": "",
-    "OvenX Special Premium": "",
-    "Bonfire Pizza": "",
-    "Mild Butter": "",
-    "OvenX Special Deep Dish": "",
-    "Extreme Peri Peri": "",
-    "Extreme Flaming Kabab": "",
-    "Crispy Extreme": "",
-    "Kabab Crust": "",
-    "Crown Crust": "",
-    "Cheese Crust": "",
-    "Crusti Thin": "",
-
-    // Platters & Pasta 🍝
-    "Khameera Sandwich Platter": "",
-    "Calzone Platter": "",
-    "Behari Platter": "",
-    "Alfredo Pasta": "",
-    "OvenX Flaming Pasta": "",
-    "Fire Kissed Pasta": "",
-    "X-Special Pasta": "",
-
-    // Wraps & Rolls 🌯
-    "Chipotle Wrap": "",
-    "BBQ Wrap": "",
-    "Donar Kabab": "",
-    "Crunch Wrap": "",
-    "Zingeratha Roll": "",
-    "Paratha Roll": "",
-    "Malai Roll": "",
-    "Behari Roll": "",
-    "Peri Peri Wrap": "",
-
-    // Drinks 🥤
-    "Coke Buddy": "",
-    "Sprite Buddy": "",
-    "Coke 1 Liter": "",
-    "Next Cola 1 Liter": "",
-    "Coke 1.5L": "",
-    "Sprite 1.5L": "",
-    "Water Small": "",
-    "Water Large": "",
-    };
-    
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     function enterApp(target) { playClick('thud'); document.getElementById('gateway-screen').style.display = 'none'; document.getElementById('top-sticky-container').style.display = 'flex'; if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } if(target === 'deals') switchTab('deals'); else switchTab('menu'); }
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
