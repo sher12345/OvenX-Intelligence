@@ -1,8 +1,5 @@
+--- START OF FILE Paste January 28, 2026 - 7:20PM ---
 
-Folder highlights
-Web files define the 'Oven X - Official Order System' UI, featuring distinct red and orange styling, a gateway entry screen, and modal/cart elements.
-
-Live Kitchen Final.txt
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -597,6 +594,9 @@ Live Kitchen Final.txt
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, 
             (payload) => {
+                // STRONG SOUND ALERT ON NEW ORDER
+                playClick('siren');
+                
                 if (Notification.permission === "granted") {
                     new Notification("🍕 NEW ORDER RECEIVED!", {
                         body: `New ${payload.new.type} order at ${payload.new.location}`,
@@ -643,5 +643,3 @@ Live Kitchen Final.txt
 </script>
 </body>
 </html>
-
-Mr E
