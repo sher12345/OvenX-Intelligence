@@ -106,7 +106,7 @@
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
@@ -153,10 +153,14 @@
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
         #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
 
-        /* NEW TRACKING OVERLAY UI */
+        /* TRACKER UI */
         .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
         .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
         .tracking-step.active { opacity: 1; color: var(--orange); transform: scale(1.05); }
+
+        /* UPSELL UI GRID */
+        .upsell-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .upsell-flavor-btn { background: #f8f8f8; border: 2px solid #eee; padding: 10px; border-radius: 15px; font-weight: 800; font-size: 12px; }
 
         @media (max-width: 800px) {
             .kitchen-content-wrapper { flex-direction: column; }
@@ -274,6 +278,19 @@
     </div>
 </div>
 
+<!-- SMART UPSELL OVERLAY -->
+<div id="upsell-overlay">
+    <div class="modal" style="border:4px solid var(--orange);">
+        <span id="upsell-icon" style="font-size:60px;">🍟🥤</span>
+        <h2 id="upsell-title" style="color:var(--red); font-weight:900; margin:10px 0;">HUNGRY?</h2>
+        <div id="upsell-body-content">
+            <p id="upsell-desc" style="font-weight:bold; color:#555; margin-bottom:20px;"></p>
+            <button id="upsell-yes-btn" class="confirm-btn btn-3d" style="margin-top:0; background:var(--orange); box-shadow: 0 6px 0px var(--dark-orange);">YES, ADD IT! 🚀</button>
+        </div>
+        <button onclick="document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);" style="margin-top:20px; border:none; background:none; color:#bbb; font-weight:900; width:100%;">NO THANKS, CONTINUE</button>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     let audioCtx = null;
@@ -370,16 +387,14 @@
     /* --- REAL-TIME CUSTOMER TRACKING LOGIC --- */
     function initCustomerTracking(orderId) {
         if(!orderId) return;
-        localStorage.setItem('ovenx_last_order_id', orderId); // PERSISTENCE
+        localStorage.setItem('ovenx_last_order_id', orderId);
         document.getElementById('tracking-overlay').style.display = 'flex';
         setScrollLock(true);
 
-        // Instant fetch current status (if returning to page)
         sb.from('kitchen_orders').select('status').eq('id', orderId).then(({data}) => {
             if(data && data[0]) updateTrackingUI(data[0].status);
         });
         
-        // Listen for live updates
         sb.channel(`track-${orderId}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders', filter: `id=eq.${orderId}` }, (payload) => {
             updateTrackingUI(payload.new.status);
@@ -424,6 +439,64 @@
         setScrollLock(false);
     }
 
+    /* --- SMART UPSELL LOGIC --- */
+    function checkUpsell(item) {
+        const itemName = item.name.toLowerCase();
+        const overlay = document.getElementById('upsell-overlay');
+        const content = document.getElementById('upsell-body-content');
+        const icon = document.getElementById('upsell-icon');
+
+        // Reset
+        overlay.style.display = 'none';
+        content.innerHTML = `<p id="upsell-desc" style="font-weight:bold; color:#555; margin-bottom:20px;"></p><button id="upsell-yes-btn" class="confirm-btn btn-3d" style="margin-top:0; background:var(--orange); box-shadow: 0 6px 0px var(--dark-orange);">YES, ADD IT! 🚀</button>`;
+
+        // LOGIC FOR PIZZA OR STICKLY "PLAIN FRIES"
+        if(itemName.includes('pizza') || itemName.startsWith('plain fries')) {
+            icon.innerText = "🍯";
+            document.getElementById('upsell-desc').innerHTML = "Add a **Dip Sauce** for only **Rs 50**!";
+            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(false);
+            overlay.style.display = 'flex';
+            setScrollLock(true);
+        } 
+        // LOGIC FOR CLUB SANDWICH OR BURGERS
+        else if (itemName.includes('club sandwich') || itemName.includes('burger')) {
+            icon.innerText = "🍟🥤";
+            document.getElementById('upsell-desc').innerHTML = "Make it a **Combo Meal**!<br>Add Regular Fries + Buddy Drink for **Rs 360**.";
+            document.getElementById('upsell-yes-btn').onclick = () => { addUpsellToCart("Combo Meal (Fries + Drink)", 360); overlay.style.display='none'; setScrollLock(false); };
+            overlay.style.display = 'flex';
+            setScrollLock(true);
+        }
+        // LOGIC FOR WINGS (ONE COMBO OPTION)
+        else if (itemName.includes('wings')) {
+            icon.innerText = "🍗🔥";
+            document.getElementById('upsell-desc').innerHTML = "Make it a **Wings Combo**!<br>Add Sauce + Buddy Drink for only **Rs 180**.";
+            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(true); // TRUE means add a drink too
+            overlay.style.display = 'flex';
+            setScrollLock(true);
+        }
+    }
+
+    function showDipFlavorGrid(isWingsCombo) {
+        const flavors = ["BBQ", "Peri Peri", "Bonfire", "Special", "Chipotle", "Creamy Dreamy", "Chili Mayo"];
+        const content = document.getElementById('upsell-body-content');
+        let html = `<p style="font-weight:900; color:var(--red);">PICK YOUR SAUCE:</p><div class="upsell-grid">`;
+        flavors.forEach(f => {
+            if(isWingsCombo) {
+                 html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); addUpsellToCart('Buddy Drink', 130); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
+            } else {
+                 html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
+            }
+        });
+        html += `</div>`;
+        content.innerHTML = html;
+    }
+
+    function addUpsellToCart(name, price) {
+        playClick('thud');
+        cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" });
+        updateCartBar();
+    }
+
     async function finalSubmitOrder() {
         playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
@@ -439,18 +512,25 @@
         let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
         const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*`);
         
-        // 1. CLEAR CART
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
-
-        // 2. SAVE & INIT TRACKING (BEFORE REDIRECT)
         if(orderId) initCustomerTracking(orderId);
-
-        // 3. SEND TO WHATSAPP
         window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
     }
 
-    function addToCartFinal() { playClick('thud'); const note = document.getElementById('special-note').value; let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : ""); cart.push({ ...selectedItem, qty: selectedQty, note: finalDetail }); updateCartBar(); closeModals(); }
+    function addToCartFinal() { 
+        playClick('thud'); 
+        const note = document.getElementById('special-note').value; 
+        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : ""); 
+        
+        const addedItem = { ...selectedItem, qty: selectedQty, note: finalDetail };
+        cart.push(addedItem); 
+        updateCartBar(); 
+        closeModals(); 
+        
+        setTimeout(() => checkUpsell(addedItem), 300);
+    }
+    
     function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
     function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
     
@@ -545,7 +625,6 @@
         });
     }
 
-    /* ORIGINAL RENDER LOGIC */
     function renderPublicDeals() {
         const list = document.getElementById('deals-list'); list.innerHTML = '';
         dealsData.forEach(deal => {
@@ -608,7 +687,6 @@
 
     renderPublicMenu(); renderPublicDeals(); renderCategoryBar();
 
-    // AUTO-RESUME TRACKING ON LOAD
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
 
