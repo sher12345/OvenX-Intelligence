@@ -106,7 +106,7 @@
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); }
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
@@ -152,6 +152,11 @@
         .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 40px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); width: 90%; max-width: 320px; box-sizing: border-box; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
         #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
+
+        /* NEW TRACKING OVERLAY UI */
+        .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
+        .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
+        .tracking-step.active { opacity: 1; color: var(--orange); transform: scale(1.05); }
 
         @media (max-width: 800px) {
             .kitchen-content-wrapper { flex-direction: column; }
@@ -252,6 +257,23 @@
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
 <div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
 
+<!-- LIVE TRACKING OVERLAY -->
+<div id="tracking-overlay">
+    <div class="modal">
+        <span id="track-icon" class="tracking-status-icon">📩</span>
+        <h2 id="track-main-status" style="color:var(--red); font-weight:900; margin-bottom:5px;">Order Sent!</h2>
+        <p id="track-sub-status" style="font-weight:bold; color:#777;">Waiting for confirmation...</p>
+        
+        <div style="margin:30px 0; text-align:left; padding-left:15%;">
+            <div id="step-waiting" class="tracking-step active">✅ Sent to Kitchen</div>
+            <div id="step-preparing" class="tracking-step">🔘 Chef is Preparing</div>
+            <div id="step-ready" class="tracking-step">🔘 Food is Ready!</div>
+        </div>
+
+        <button onclick="clearTracking()" class="btn-3d" style="width:100%; padding:15px; border-radius:20px; background:#eee; font-weight:900;">CLOSE TRACKER</button>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     let audioCtx = null;
@@ -344,6 +366,90 @@
     function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; setScrollLock(true); }
     function setQty(q) { playClick('pop'); selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
     function closeModals() { document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none'); setScrollLock(false); }
+
+    /* --- REAL-TIME CUSTOMER TRACKING LOGIC --- */
+    function initCustomerTracking(orderId) {
+        if(!orderId) return;
+        localStorage.setItem('ovenx_last_order_id', orderId); // PERSISTENCE
+        document.getElementById('tracking-overlay').style.display = 'flex';
+        setScrollLock(true);
+
+        // Instant fetch current status (if returning to page)
+        sb.from('kitchen_orders').select('status').eq('id', orderId).then(({data}) => {
+            if(data && data[0]) updateTrackingUI(data[0].status);
+        });
+        
+        // Listen for live updates
+        sb.channel(`track-${orderId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders', filter: `id=eq.${orderId}` }, (payload) => {
+            updateTrackingUI(payload.new.status);
+        }).subscribe();
+    }
+
+    function updateTrackingUI(status) {
+        const icon = document.getElementById('track-icon');
+        const main = document.getElementById('track-main-status');
+        const sub = document.getElementById('track-sub-status');
+        const sWait = document.getElementById('step-waiting');
+        const sPrep = document.getElementById('step-preparing');
+        const sReady = document.getElementById('step-ready');
+
+        document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
+        sWait.classList.add('active');
+
+        if(status === 'PREPARING') {
+            window.navigator.vibrate([200, 100, 200]);
+            icon.innerText = "👨‍🍳";
+            main.innerText = "Chef is Cooking!";
+            sub.innerText = "Your dough is being tossed right now!";
+            sWait.innerText = "✅ Sent to Kitchen";
+            sPrep.innerText = "✅ Chef is Preparing";
+            sPrep.classList.add('active');
+        } else if(status === 'READY') {
+            window.navigator.vibrate([500, 110, 500]);
+            icon.innerText = "🔥";
+            main.innerText = "Order Ready!";
+            sub.innerText = "Freshly baked and hot!";
+            sWait.innerText = "✅ Sent to Kitchen";
+            sPrep.innerText = "✅ Prepared";
+            sReady.innerText = "✅ Ready for You!";
+            sPrep.classList.add('active');
+            sReady.classList.add('active');
+        }
+    }
+
+    function clearTracking() {
+        localStorage.removeItem('ovenx_last_order_id');
+        document.getElementById('tracking-overlay').style.display = 'none';
+        setScrollLock(false);
+    }
+
+    async function finalSubmitOrder() {
+        playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
+        const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
+        
+        let orderId = null;
+        try { 
+            if(sb) {
+                const { data } = await sb.from('kitchen_orders').insert([orderObj]).select();
+                if(data && data[0]) orderId = data[0].id;
+            }
+        } catch(e) { }
+
+        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
+        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*`);
+        
+        // 1. CLEAR CART
+        cart = []; updateCartBar();
+        document.getElementById('overlay-screen').style.display = 'none';
+
+        // 2. SAVE & INIT TRACKING (BEFORE REDIRECT)
+        if(orderId) initCustomerTracking(orderId);
+
+        // 3. SEND TO WHATSAPP
+        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
+    }
+
     function addToCartFinal() { playClick('thud'); const note = document.getElementById('special-note').value; let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : ""); cart.push({ ...selectedItem, qty: selectedQty, note: finalDetail }); updateCartBar(); closeModals(); }
     function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
     function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
@@ -367,16 +473,6 @@
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
     
     function verifyAdmin() { if(adminPassTracker === "123") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); if ("Notification" in window) Notification.requestPermission(); setupRealtimeNotifications(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
-
-    async function finalSubmitOrder() {
-        playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
-        const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-        try { if(sb) await sb.from('kitchen_orders').insert([orderObj]); } catch(e) { }
-        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*`);
-        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
-        setTimeout(() => { cart = []; updateCartBar(); document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); }, 1000);
-    }
 
     function renderFinalSummary(fee) {
         chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
@@ -462,7 +558,6 @@
         const mC = document.getElementById('menu-container'); mC.innerHTML = ""; const search = filterText.toLowerCase();
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue;
-            // RESTORED: Search looks at category name AND item name
             const filteredItems = menuData[cat].filter(item => 
                 item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
             );
@@ -486,7 +581,6 @@
             const pill = document.createElement('div'); pill.className = "cat-pill"; pill.innerText = cat;
             pill.onclick = () => { 
                 playClick('pop'); 
-                // RESTORED: Clears search bar on pill click
                 document.getElementById('menuSearch').value = ""; 
                 renderPublicMenu(); 
                 const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); if(target) target.scrollIntoView(); 
@@ -502,7 +596,6 @@
         if(!sb) return;
         sb.channel('kitchen').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
             playClick('siren'); 
-            // RESTORED: Browser notification pop-up
             if (Notification.permission === "granted") {
                 new Notification("🍕 NEW ORDER RECEIVED!", {
                     body: `New ${payload.new.type} order at ${payload.new.location}`,
@@ -514,6 +607,10 @@
     }
 
     renderPublicMenu(); renderPublicDeals(); renderCategoryBar();
+
+    // AUTO-RESUME TRACKING ON LOAD
+    const savedOrderId = localStorage.getItem('ovenx_last_order_id');
+    if(savedOrderId) initCustomerTracking(savedOrderId);
 
     let deferredPrompt; let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
