@@ -545,9 +545,24 @@
         const sReady = document.getElementById('step-ready');
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
         sWait.classList.add('active');
-        if(status === 'PREPARING') { window.navigator.vibrate([200, 100, 200]); icon.innerText = "👨‍🍳"; main.innerText = "Chef is Cooking!"; sub.innerText = "Your dough is being tossed right now!"; sPrep.classList.add('active'); } 
-        else if(status === 'READY') { window.navigator.vibrate([500, 110, 500]); icon.innerText = "🔥"; main.innerText = "Order Ready!"; sub.innerText = "Freshly baked and hot!"; sPrep.classList.add('active'); sReady.classList.add('active'); }
-    }
+        if(status === 'PREPARING') { 
+            window.navigator.vibrate([200, 100, 200]); 
+            icon.innerText = "👨‍🍳"; 
+            main.innerText = "Chef is Cooking!"; 
+            sub.innerText = "Your dough is being tossed right now!"; 
+            sPrep.innerHTML = "✅ Chef is Preparing"; // Added Tick
+            sPrep.classList.add('active'); 
+        } 
+        else if(status === 'READY') { 
+            window.navigator.vibrate([500, 110, 500]); 
+            icon.innerText = "🔥"; 
+            main.innerText = "Order Ready!"; 
+            sub.innerText = "Freshly baked and hot!"; 
+            sPrep.innerHTML = "✅ Chef is Preparing"; // Added Tick
+            sReady.innerHTML = "✅ Food is Ready!";    // Added Tick
+            sPrep.classList.add('active'); 
+            sReady.classList.add('active');
+        }
 
     function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
 
