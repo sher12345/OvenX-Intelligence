@@ -1,3 +1,5 @@
+--- START OF FILE Paste January 30, 2026 - 1:25PM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -557,13 +559,11 @@
         const sReady = document.getElementById('step-ready');
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
         
-        // Reset Text and Tick emojis
+        sWait.classList.add('active');
         sWait.innerHTML = "✅ Sent to Kitchen";
         sPrep.innerHTML = "🔘 Chef is Preparing";
         sReady.innerHTML = "🔘 Food is Ready!";
 
-        sWait.classList.add('active');
-        
         if(status === 'PREPARING') { 
             window.navigator.vibrate([200, 100, 200]); 
             icon.innerText = "👨‍🍳"; 
