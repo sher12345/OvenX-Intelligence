@@ -546,7 +546,7 @@
         setScrollLock(true);
         sb.from('kitchen_orders').select('status').eq('id', orderId).then(({data}) => { if(data && data[0]) updateTrackingUI(data[0].status); });
         
-        // FIXED REAL-TIME LISTENER
+        // RE-FIXED REAL-TIME LISTENER
         sb.channel('customer-tracker')
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders' }, (payload) => {
               if (payload.new.id === orderId) {
@@ -578,7 +578,7 @@
             icon.innerText = "👨‍🍳"; 
             main.innerText = "Chef is Cooking!"; 
             sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
+            sPrep.innerHTML = "✅ Chef is Preparing";
             sPrep.classList.add('active'); 
         } 
         else if(status === 'READY') { 
@@ -586,12 +586,12 @@
             icon.innerText = "🔥"; 
             main.innerText = "Order Ready!"; 
             sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
-            sReady.innerHTML = "✅ Food is Ready!";    // TICK ADDED
+            sPrep.innerHTML = "✅ Chef is Preparing";
+            sReady.innerHTML = "✅ Food is Ready!";
             sPrep.classList.add('active'); 
             sReady.classList.add('active');
         }
-    } // FIXED MISSING CLOSING BRACKET
+    }
 
     function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
 
@@ -704,7 +704,26 @@
     /* --- LIVE KITCHEN LOGIC --- */
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
     async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
-    async function clearReadyOrders() { if(!confirm("Clear Ready Dine-In orders?")) return; playClick('pop'); if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY').neq('type', 'Delivery'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); renderKitchenOrders(); } }
+    
+    // STRICT CLEAR READY ORDERS (ONLY DINE-IN/TAKEAWAY)
+    async function clearReadyOrders() { 
+        if(!confirm("Clear only READY Dine-In and Takeaway orders?")) return; 
+        playClick('pop'); 
+        if(!sb) return; 
+        
+        // Only select orders that are READY AND NOT DELIVERY
+        const { data: ready } = await sb.from('kitchen_orders')
+            .select('id')
+            .eq('status', 'READY')
+            .in('type', ['Dine-In', 'Takeaway']); 
+        
+        if(ready && ready.length > 0) { 
+            await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); 
+            renderKitchenOrders(); 
+        } else {
+            alert("No ready Dine-In/Takeaway orders to clear.");
+        }
+    }
 
     async function clearDeliveriesWithPassword() {
         const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
