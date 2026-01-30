@@ -322,6 +322,7 @@
         <div class="kitchen-header">
             <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE KITCHEN</h2>
             <div style="display:flex; gap:10px;">
+                <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
                 <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
             </div>
@@ -482,14 +483,25 @@
     }
 
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
-    function saveClubProfile() {
+    
+    async function saveClubProfile() {
         const n = document.getElementById('clubName').value;
-        if(!n) return alert("Enter your name!");
+        const p = document.getElementById('clubPhone').value;
+        if(!n || !p) return alert("Enter your name and WhatsApp number!");
+        
+        // Save to Database
+        if(sb) {
+            await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
+        }
+
         localStorage.setItem('ovenx_member_name', n);
+        localStorage.setItem('ovenx_member_phone', p);
         localStorage.setItem('ovenx_stamps', 0);
+        
         document.getElementById('loyalty-setup-overlay').style.display = 'none';
         setScrollLock(false);
         renderLoyaltyCard();
+        alert("Welcome to the Club, " + n + "! 👑");
     }
 
     function enterApp(target) { 
@@ -544,13 +556,20 @@
         const sPrep = document.getElementById('step-preparing');
         const sReady = document.getElementById('step-ready');
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
+        
+        // Reset Text and Tick emojis
+        sWait.innerHTML = "✅ Sent to Kitchen";
+        sPrep.innerHTML = "🔘 Chef is Preparing";
+        sReady.innerHTML = "🔘 Food is Ready!";
+
         sWait.classList.add('active');
+        
         if(status === 'PREPARING') { 
             window.navigator.vibrate([200, 100, 200]); 
             icon.innerText = "👨‍🍳"; 
             main.innerText = "Chef is Cooking!"; 
             sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // Added Tick
+            sPrep.innerHTML = "✅ Chef is Preparing";
             sPrep.classList.add('active'); 
         } 
         else if(status === 'READY') { 
@@ -558,11 +577,12 @@
             icon.innerText = "🔥"; 
             main.innerText = "Order Ready!"; 
             sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // Added Tick
-            sReady.innerHTML = "✅ Food is Ready!";    // Added Tick
+            sPrep.innerHTML = "✅ Chef is Preparing";
+            sReady.innerHTML = "✅ Food is Ready!";
             sPrep.classList.add('active'); 
             sReady.classList.add('active');
         }
+    }
 
     function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
 
@@ -696,6 +716,26 @@
     function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); setScrollLock(true); }
     function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
     
+    /* --- CUSTOMER DATABASE EXPORT --- */
+    async function downloadCustomerData() {
+        if(!confirm("Download Customer Database?")) return;
+        const { data, error } = await sb.from('gold_club_members').select('name, phone, created_at');
+        if(error) return alert("Error fetching data");
+        
+        let csvContent = "data:text/csv;charset=utf-8,Name,WhatsApp,Date Joined\n";
+        data.forEach(row => {
+            csvContent += `${row.name},${row.phone},${new Date(row.created_at).toLocaleDateString()}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `OvenX_Club_Members_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     /* --- MANUAL ORDER LOGIC --- */
     function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
     async function saveManualOrder() {
@@ -821,7 +861,7 @@
     renderPublicMenu(); 
     renderPublicDeals(); 
     renderCategoryBar(); 
-    renderLoyaltyCard(); // BUG FIX: Card now renders on first load
+    renderLoyaltyCard();
 
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
