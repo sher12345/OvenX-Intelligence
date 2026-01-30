@@ -144,6 +144,11 @@
         #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay { 
             position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); 
         }
+
+        /* FIXED MANUAL ORDER Z-INDEX (MUST BE HIGHER THAN KITCHEN PANEL) */
+        #manual-order-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px); 
+        }
         
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
@@ -268,6 +273,26 @@
     <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
 </div>
 
+<!-- MANUAL ORDER MODAL -->
+<div id="manual-order-overlay">
+    <div class="modal">
+        <h2 style="color:var(--red); font-weight:900;">Manual Order 📝</h2>
+        <select id="man-type" class="big-input">
+            <option value="Dine-In">Dine-In</option>
+            <option value="Takeaway">Takeaway</option>
+            <option value="Delivery">Delivery</option>
+        </select>
+        <input type="text" id="man-loc" placeholder="Table # or Address" class="big-input">
+        <textarea id="man-items" placeholder="Items List (e.g. 1x Pizza, 2x Zinger)" class="big-input" style="height:100px;"></textarea>
+        <div style="display:flex; gap:10px;">
+           <input type="number" id="man-sub" placeholder="Subtotal" class="big-input">
+           <input type="number" id="man-fee" placeholder="Del. Fee" class="big-input">
+        </div>
+        <button class="confirm-btn btn-3d" style="background:var(--red);" onclick="saveManualOrder()">SAVE TO KITCHEN</button>
+        <button onclick="document.getElementById('manual-order-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold;">CANCEL</button>
+    </div>
+</div>
+
 <!-- CLUB SETUP MODAL -->
 <div id="loyalty-setup-overlay">
     <div class="modal modal-gold">
@@ -296,7 +321,10 @@
     <div class="kitchen-modal">
         <div class="kitchen-header">
             <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE KITCHEN</h2>
-            <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
+            <div style="display:flex; gap:10px;">
+                <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
+                <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
+            </div>
         </div>
         <div style="display:flex; gap:10px; padding:15px; background:white; border-bottom:1px solid #eee;">
             <div class="k-tab active" id="k-tab-all" onclick="setKitchenFilter('ALL')">ALL ORDERS</div>
@@ -653,6 +681,32 @@
     function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); setScrollLock(true); }
     function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
     
+    /* --- MANUAL ORDER LOGIC --- */
+    function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
+    async function saveManualOrder() {
+        const type = document.getElementById('man-type').value;
+        const loc = document.getElementById('man-loc').value;
+        const items = document.getElementById('man-items').value;
+        const sub = parseInt(document.getElementById('man-sub').value || 0);
+        const fee = parseInt(document.getElementById('man-fee').value || 0);
+        if(!loc || !items) return alert("Please fill Table/Address and Items list!");
+        const obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee };
+        if(sb) {
+            playClick('thud');
+            const { error } = await sb.from('kitchen_orders').insert([obj]);
+            if(!error) {
+                document.getElementById('manual-order-overlay').style.display = 'none';
+                setScrollLock(false);
+                renderKitchenOrders();
+                // Clear inputs
+                document.getElementById('man-loc').value = "";
+                document.getElementById('man-items').value = "";
+                document.getElementById('man-sub').value = "";
+                document.getElementById('man-fee').value = "";
+            } else alert("Error saving manual order.");
+        }
+    }
+
     async function renderKitchenOrders() {
         if(!sb) return; let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
         if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
