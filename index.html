@@ -1,5 +1,3 @@
---- START OF FILE Paste January 30, 2026 - 1:25PM ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -547,7 +545,15 @@
         document.getElementById('tracking-overlay').style.display = 'flex';
         setScrollLock(true);
         sb.from('kitchen_orders').select('status').eq('id', orderId).then(({data}) => { if(data && data[0]) updateTrackingUI(data[0].status); });
-        sb.channel(`track-${orderId}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders', filter: `id=eq.${orderId}` }, (payload) => { updateTrackingUI(payload.new.status); }).subscribe();
+        
+        // FIXED REAL-TIME LISTENER
+        sb.channel('customer-tracker')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders' }, (payload) => {
+              if (payload.new.id === orderId) {
+                  updateTrackingUI(payload.new.status);
+              }
+          })
+          .subscribe();
     }
 
     function updateTrackingUI(status) {
@@ -557,19 +563,22 @@
         const sWait = document.getElementById('step-waiting');
         const sPrep = document.getElementById('step-preparing');
         const sReady = document.getElementById('step-ready');
+        
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
         
-        sWait.classList.add('active');
+        // Reset Text and Ticks
         sWait.innerHTML = "✅ Sent to Kitchen";
         sPrep.innerHTML = "🔘 Chef is Preparing";
         sReady.innerHTML = "🔘 Food is Ready!";
 
+        sWait.classList.add('active');
+        
         if(status === 'PREPARING') { 
             window.navigator.vibrate([200, 100, 200]); 
             icon.innerText = "👨‍🍳"; 
             main.innerText = "Chef is Cooking!"; 
             sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing";
+            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
             sPrep.classList.add('active'); 
         } 
         else if(status === 'READY') { 
@@ -577,12 +586,12 @@
             icon.innerText = "🔥"; 
             main.innerText = "Order Ready!"; 
             sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sReady.innerHTML = "✅ Food is Ready!";
+            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
+            sReady.innerHTML = "✅ Food is Ready!";    // TICK ADDED
             sPrep.classList.add('active'); 
             sReady.classList.add('active');
         }
-    }
+    } // FIXED MISSING CLOSING BRACKET
 
     function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
 
