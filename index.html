@@ -1266,11 +1266,7 @@ function toggleAI() {
     if (win.style.display === 'flex') {
         document.getElementById('ai-input').focus();
 
-        // Intro only on first open
-        if (aiChatHistory.length === 0) {
-            const intro = "Assalam-o-Alaikum! 🍕 I'm Oven X Master AI 2.0, your friendly helper! What's your good name so I can make this personal? 😊";
-            appendAIMessage('bot', intro);
-            aiChatHistory.push({ role: "assistant", content: intro });
+        
         }
     }
 }
