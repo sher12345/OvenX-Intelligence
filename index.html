@@ -1252,155 +1252,190 @@
     }
 
     // ────────────────────────────────────────────────────────────────
-    //   AI CHATBOT – FIXED & USING WORKING MODEL
     // ────────────────────────────────────────────────────────────────
-    const AI_API_KEY = "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";
+// AI CHATBOT – FRIENDLY GROQ VERSION (2026 WORKING MODEL)
+// ────────────────────────────────────────────────────────────────
+const AI_API_KEY = "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";
+const menuJson = JSON.stringify(menuData);
+const dealsJson = JSON.stringify(dealsData);
+let aiChatHistory = [];
 
-    let aiChatHistory = [];
+function toggleAI() {
+    const win = document.getElementById('ai-window');
+    win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
+    if (win.style.display === 'flex') {
+        document.getElementById('ai-input').focus();
 
-    function toggleAI() {
-        const win = document.getElementById('ai-window');
-        win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
-        if (win.style.display === 'flex') {
-            document.getElementById('ai-input').focus();
+        // Intro only on first open
+        if (aiChatHistory.length === 0) {
+            const intro = "Assalam-o-Alaikum! 🍕 I'm Oven X Master AI 2.0, your friendly helper! What's your good name so I can make this personal? 😊";
+            appendAIMessage('bot', intro);
+            aiChatHistory.push({ role: "assistant", content: intro });
         }
     }
+}
 
-    function appendAIMessage(role, text, isError = false) {
-        const box = document.getElementById('ai-messages');
-        const div = document.createElement('div');
-        div.className = isError ? "msg-error" : `msg msg-${role}`;
-        div.innerText = text;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    }
+function appendAIMessage(role, text, isError = false) {
+    const box = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = isError ? "msg-error" : `msg msg-${role}`;
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
 
-    async function sendToAI() {
-        const input = document.getElementById('ai-input');
-        const message = input.value.trim();
-        if (!message) return;
+async function sendToAI() {
+    const input = document.getElementById('ai-input');
+    const message = input.value.trim();
+    if (!message) return;
 
-        appendAIMessage('user', message);
-        input.value = "";
+    appendAIMessage('user', message);
+    input.value = "";
 
-        const thinking = document.createElement('div');
-        thinking.className = 'msg msg-bot';
-        thinking.innerText = 'Thinking...';
-        document.getElementById('ai-messages').appendChild(thinking);
-        document.getElementById('ai-messages').scrollTop = document.getElementById('ai-messages').scrollHeight;
+    const thinking = document.createElement('div');
+    thinking.className = 'msg msg-bot';
+    thinking.innerText = 'Thinking...';
+    document.getElementById('ai-messages').appendChild(thinking);
+    document.getElementById('ai-messages').scrollTop = document.getElementById('ai-messages').scrollHeight;
 
-        const menuJson = JSON.stringify(menuData);
+    const systemPrompt = `You are Oven X Master AI 2.0 — the chill, super friendly ordering buddy 🍕😋 
+You talk like a real person: casual, fun, lots of emojis, short messages. 
+Use the customer's language (English, Roman Urdu, Urdu script, or mix) and their name once you know it.
 
-        const systemPrompt = `You are Oven X's intelligent ordering assistant (Claude 3.5 Sonnet powered).
-Current real menu: ${menuJson}
+Full Menu: ${menuJson}
+Hot Deals: ${dealsJson}
 
-Rules:
-- First priority: answer ANY general question (math, jokes, Urdu/English, news, anything)
-- If user wants to order / add item → return ONLY JSON:
-  {"reply": "friendly message", "action": "add_to_cart", "item": "Exact name from menu", "qty": 1}
-- For everything else return: {"reply": "...", "action": "none"}
-- Be short, friendly. Use Urdu when user speaks Urdu.
-- Never invent menu items.`;
+Golden Rules:
+- Be warm, patient, and helpful. Make them smile 😊
+- Chat naturally first — answer questions, joke, recommend gently.
+- ONLY when the customer clearly says "add", "dal do", "order karo", etc., THEN output JSON for action.
+- NEVER force an add — always confirm first with normal text.
+- For misunderstandings (wrong item name): politely clarify + suggest 1-2 close matches, then ask "Yeh chahiye tha? 😊"
+- Normal replies: pure friendly text, no JSON at all.
+- Only these JSON actions (nothing else):
+  {"action":"add_to_cart","item":"Exact name from menu/deals","qty":number,"reply":"short fun confirmation"}
+  {"action":"remove_from_cart","item":"Exact name","qty":number or "all","reply":"short confirmation"}
+  {"action":"trigger_checkout","reply":"excited message guiding to checkout"}
+- If they say done/bill/order place etc.: trigger checkout.
+- For delivery: casually say "Delivery hai? Checkout mein Delivery select karo, phir map 🗺️ pe click karke fee dekho aur address dal do!"
+- Keep everything short, sweet, and conversational. No long explanations!`;
 
+    try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${AI_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",  // Confirmed working production model
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    ...aiChatHistory,
+                    { role: "user", content: message }
+                ],
+                temperature: 0.8,
+                max_tokens: 512
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status} - ${data.error?.message || 'Unknown error'}`);
+        }
+
+        if (thinking && thinking.parentNode) thinking.remove();
+
+        let content = data.choices[0].message.content.trim();
+        content = content.replace(/```json\n?|```/g, '').trim();
+
+        let parsed = { reply: content, action: "none" };
         try {
-            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${AI_API_KEY}`,
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://github.com",
-                    "X-Title": "Oven X App"
-                },
-                body: JSON.stringify({
-                    model: "anthropic/claude-3-5-sonnet-20240620",  // ← Real, working, powerful model on OpenRouter
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        ...aiChatHistory,
-                        { role: "user", content: message }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 350
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status} - ${data.error?.message || 'Unknown error'}`);
-            }
-
-            if (data.error) {
-                throw new Error(data.error.message);
-            }
-
-            if (thinking && thinking.parentNode) thinking.remove();
-
-            let content = data.choices[0].message.content.trim();
-            let parsed;
-            try {
-                content = content.replace(/```json|```/g, '').trim();
-                parsed = JSON.parse(content);
-            } catch {
-                parsed = { reply: content, action: "none" };
-            }
-
-            appendAIMessage('bot', parsed.reply || content);
-
-            if (parsed.action === "add_to_cart" && parsed.item) {
-                let found = null;
-                for (let cat in menuData) {
-                    found = menuData[cat].find(i => i.name.toLowerCase() === parsed.item.toLowerCase());
-                    if (found) break;
-                }
-                if (found) {
-                    selectedItem = { ...found };
-                    selectedQty = parsed.qty || 1;
-                    addToCartFinal();
-                    appendAIMessage('bot', `Added ${selectedQty}x ${found.name} ✓`);
-                } else {
-                    appendAIMessage('bot', `Sorry, couldn't find "${parsed.item}". Try asking me to list items.`);
-                }
-            }
-
-            aiChatHistory.push({ role: "user", content: message });
-            aiChatHistory.push({ role: "assistant", content });
-
-        } catch (err) {
-            console.error("AI request failed:", err);
-            if (thinking && thinking.parentNode) thinking.remove();
-
-            let userMsg = "Sorry — AI connection problem.";
-            if (err.message.includes("401")) {
-                userMsg = "Invalid or unauthorized API key on OpenRouter.";
-            } else if (err.message.includes("402")) {
-                userMsg = "No credits left on OpenRouter. Add funds at openrouter.ai/credits";
-            } else if (err.message.includes("429")) {
-                userMsg = "Rate limit reached — wait 30–60 seconds.";
-            } else if (err.message.includes("Failed to fetch")) {
-                userMsg = "Network issue — check internet / try mobile data / disable VPN.";
-            } else {
-                userMsg += "\n(" + err.message + ")";
-            }
-
-            appendAIMessage('bot', userMsg, true);
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // Normal text reply
         }
+
+        appendAIMessage('bot', parsed.reply);
+
+        // Handle actions
+        if (parsed.action === "add_to_cart" && parsed.item) {
+            let found = null;
+            // Search menu
+            for (let cat in menuData) {
+                found = menuData[cat].find(i => i.name.toLowerCase() === parsed.item.toLowerCase());
+                if (found) break;
+            }
+            // Search deals if not found
+            if (!found) {
+                found = dealsData.find(d => d.name.toLowerCase() === parsed.item.toLowerCase());
+            }
+
+            if (found) {
+                // Open the full order flow (handles size/flavor/qty for both items & deals)
+                openOrderFlow(JSON.parse(JSON.stringify(found)));
+                appendAIMessage('bot', `Awesome choice${parsed.qty > 1 ? ` (${parsed.qty}x)` : ''}! Opening the screen to customize your ${found.name} 😋`);
+            } else {
+                appendAIMessage('bot', `Sorry, I couldn't find "${parsed.item}". Can you check the spelling or ask me to list the menu?`);
+            }
+        }
+
+        if (parsed.action === "remove_from_cart" && parsed.item) {
+            const idx = cart.findIndex(i => i.name.toLowerCase() === parsed.item.toLowerCase());
+            if (idx !== -1) {
+                if (parsed.qty === "all" || cart[idx].qty <= parsed.qty) {
+                    cart.splice(idx, 1);
+                } else {
+                    cart[idx].qty -= parsed.qty;
+                }
+                updateCartBar();
+                appendAIMessage('bot', parsed.reply || `Removed from cart ✓`);
+                if (cart.length === 0) appendAIMessage('bot', "Cart is empty now!");
+            } else {
+                appendAIMessage('bot', `Couldn't find "${parsed.item}" in your cart.`);
+            }
+        }
+
+        if (parsed.action === "trigger_checkout") {
+            startCheckout();  // Directly opens checkout overlay
+        }
+
+        aiChatHistory.push({ role: "user", content: message });
+        aiChatHistory.push({ role: "assistant", content: content });
+
+    } catch (err) {
+        console.error("Groq error:", err);
+        if (thinking && thinking.parentNode) thinking.remove();
+
+        let userMsg = "Sorry yaar — thori si network issue ho gayi 😅";
+
+        if (err.message.includes("429")) {
+            // Fun, on-brand rate limit message — no technical details shown to customer
+            userMsg = "Aray yaar, aaj bohot orders aa rahe hain! Main thak sa gaya hoon 😴💦\nEk minute ruk jao na, phir fresh ho kar aapki madad karunga! 🚀🍕";
+        } else if (err.message.includes("401")) {
+            userMsg = "API key mein kuch issue hai — developer se check karwa lo 😬";
+        } else if (err.message.includes("Failed to fetch")) {
+            userMsg = "Internet thora slow hai — ek baar refresh kar ke try karo!";
+        }
+
+        // Never show raw error details to customer
+        appendAIMessage('bot', userMsg, true);
     }
+}
 
     // ────────────────────────────────────────────────────────────────
-    //   APP INITIALIZATION
+    // APP INITIALIZATION (unchanged)
     // ────────────────────────────────────────────────────────────────
     renderPublicMenu();
     renderPublicDeals();
     renderCategoryBar();
     renderLoyaltyCard();
-
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
-
     let deferredPrompt;
     let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-
     function handleSecretClick() {
         secretClickCount++;
         if(secretClickCount === 5) {
