@@ -1,106 +1,96 @@
 /* ==========================================
-   OVEN X - MASTER AI WAITER ENGINE (GEMINI 2.0)
+   OVEN X - MASTER AI ENGINE (GEMINI 2.0)
    ========================================== */
 
-const AI_CONFIG = {
-    key: "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",
-    model: "google/gemini-2.0-flash-001"
-};
+const API_KEY = "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";
 
-// Toggle Chat Window
-function toggleAIChat() {
-    const win = document.getElementById('ai-chat-window');
+// These variables will connect to the ones in your index.html
+let chatHistory = [];
+
+function toggleAI() {
+    const win = document.getElementById('ai-window');
     if(win) {
-        win.style.display = (win.style.display === 'flex' ? 'none' : 'flex');
-        if(typeof playClick === "function") playClick('pop');
+        win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
     }
 }
 
-// Add messages to bubble
-function appendAIMsg(role, text) {
-    const box = document.getElementById('ai-msg-container');
+function appendMsg(role, text, isError = false) {
+    const box = document.getElementById('ai-messages');
     if(!box) return;
     const div = document.createElement('div');
-    div.className = `ai-msg ai-msg-${role}`;
-    // Applying Multan Theme Styles directly via JS to ensure UI consistency
-    div.style.cssText = role === 'user' 
-        ? "background: var(--orange); color: white; align-self: flex-end; padding: 12px 16px; border-radius: 20px; border-bottom-right-radius: 2px; max-width: 85%; font-size: 14px; font-weight: 600; margin-bottom: 8px;" 
-        : "background: #f0f0f0; color: #333; align-self: flex-start; padding: 12px 16px; border-radius: 20px; border-bottom-left-radius: 2px; max-width: 85%; font-size: 14px; font-weight: 600; margin-bottom: 8px;";
+    div.className = isError ? "msg-error" : `msg msg-${role}`;
     div.innerText = text;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
+    return div;
 }
 
-// The Brain Function
 async function sendToAI() {
-    const input = document.getElementById('ai-input-box');
-    const userVal = input.value.trim();
-    if(!userVal) return;
+    const input = document.getElementById('ai-input');
+    const val = input.value.trim();
+    if(!val) return;
 
-    appendAIMsg('user', userVal);
+    appendMsg('user', val);
     input.value = "";
+    const thinking = appendMsg('bot', "Thinking...");
 
-    // System instructions for the AI
-    const systemPrompt = `You are the human Waiter for Oven X Multan. 
-    MENU: ${JSON.stringify(window.menuData || {})}. 
-    CURRENT CART: ${JSON.stringify(window.cart || [])}.
-    
-    RULES:
-    1. Speak like a friendly Multani waiter (mix Urdu/English).
-    2. NEVER show JSON or code brackets [[ ]] to the customer.
-    3. To ADD item: End your reply with hidden tag [[{"action":"add","item":"Name","price":0}]]
-    4. To CHECKOUT/WHATSAPP: End with [[{"action":"checkout"}]]
-    5. DUPLICATES: Only add if not already in CURRENT CART.
-    6. DELIVERY: Explain that location access is needed to calculate the real fee (no fixed charge).`;
+    // Accessing MENU from the global window (index.html)
+    const currentMenu = window.MENU ? JSON.stringify(window.MENU) : "[]";
+
+    const systemPrompt = `You are a Master AI Waiter for Oven X. Brain: Gemini 2.0.
+    Menu: ${currentMenu}. 
+    - You are highly intelligent. Answer ANY general human question (math, physics, code, history) as the priority.
+    - If the user wants to order, return ONLY JSON: {"reply": "...", "action": "add", "item": "Exact Name", "price": 0}.
+    - For normal chat, return JSON: {"reply": "...", "action": "none"}.
+    - Speak the user's language (Urdu, English, etc).`;
 
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
-            headers: { 
-                "Authorization": `Bearer ${AI_CONFIG.key}`,
-                "Content-Type": "application/json" 
+            headers: {
+                "Authorization": `Bearer ${API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": window.location.href, 
+                "X-Title": "Oven X Official"
             },
             body: JSON.stringify({
-                "model": AI_CONFIG.model,
+                "model": "google/gemini-2.0-flash-001",
                 "messages": [
                     { "role": "system", "content": systemPrompt },
-                    ...(window.aiChatHistory || []),
-                    { "role": "user", "content": userVal }
+                    ...chatHistory,
+                    { "role": "user", "content": val }
                 ]
             })
         });
 
         const data = await response.json();
-        const aiRaw = data.choices[0].message.content;
+        thinking.remove();
 
-        // Cleaning the response for the user
-        const parts = aiRaw.split('[[');
-        const humanText = parts[0].trim();
-        appendAIMsg('bot', humanText);
-
-        // Execute hidden instructions
-        if(parts[1]) {
-            try {
-                const actionData = JSON.parse(parts[1].split(']]')[0]);
-                
-                if(actionData.action === "add") {
-                    // This calls your ORIGINAL function in index.html
-                    if(typeof window.updateCartBar === "function") {
-                        window.cart.push({ name: actionData.item, price: actionData.price, qty: 1, note: "AI Order" });
-                        window.updateCartBar();
-                    }
-                } else if(actionData.action === "checkout") {
-                    toggleAIChat();
-                    // This opens your ORIGINAL summary screen and WhatsApp link
-                    if(typeof window.startCheckout === "function") window.startCheckout();
-                }
-            } catch(e) { console.error("Action error", e); }
+        if (data.error) {
+            appendMsg('bot', "Error: " + data.error.message, true);
+            return;
         }
 
-        if(!window.aiChatHistory) window.aiChatHistory = [];
-        window.aiChatHistory.push({ "role": "user", "content": userVal }, { "role": "assistant", "content": aiRaw });
+        const aiRaw = data.choices[0].message.content;
+        
+        try {
+            // This part handles the JSON cleaning logic you had
+            const clean = aiRaw.replace(/```json|```/g, "").trim();
+            const result = JSON.parse(clean);
+            appendMsg('bot', result.reply);
+            
+            // This calls the 'add' function located in your index.html
+            if(result.action === "add" && typeof window.add === "function") {
+                window.add(result.item, result.price);
+            }
+            
+            chatHistory.push({ "role": "user", "content": val }, { "role": "assistant", "content": aiRaw });
+        } catch (e) {
+            appendMsg('bot', aiRaw);
+            chatHistory.push({ "role": "user", "content": val }, { "role": "assistant", "content": aiRaw });
+        }
 
-    } catch(err) {
-        appendAIMsg('bot', "Bhai, connection slow hai. Please try again.");
+    } catch(e) {
+        thinking.innerText = "Check your internet or API balance.";
     }
 }
