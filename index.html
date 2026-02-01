@@ -898,5 +898,32 @@
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
     function handleSecretClick() { secretClickCount++; if(secretClickCount === 5) { secretClickCount = 0; if (deferredPrompt) deferredPrompt.prompt(); else alert("Ready."); } setTimeout(() => { secretClickCount = 0; }, 2000); }
 </script>
+<script src="ai-waiter.js"></script>
+    <!-- AI Waiter Floating Button -->
+<div id="ai-waiter-btn" onclick="toggleAIChat()" style="position: fixed; bottom: 80px; right: 20px; z-index: 1000; background: var(--orange, #ff6600); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; border: 2px solid white;">
+    <span style="font-size: 30px;">🤖</span>
+</div>
+
+<!-- AI Chat Window -->
+<div id="ai-chat-window" style="display: none; position: fixed; bottom: 150px; right: 20px; width: 320px; height: 450px; background: white; z-index: 1001; border-radius: 15px; flex-direction: column; box-shadow: 0 5px 25px rgba(0,0,0,0.2); overflow: hidden; font-family: sans-serif;">
+    <!-- Header -->
+    <div style="background: var(--orange, #ff6600); color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <span>Oven X - AI Waiter</span>
+        <span onclick="toggleAIChat()" style="cursor: pointer; font-size: 20px;">×</span>
+    </div>
+    
+    <!-- Message Area -->
+    <div id="ai-msg-container" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background: #f9f9f9;">
+        <div class="ai-msg" style="background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 14px;">
+            Assalam o Alaikum! Main Oven X ka waiter hoon. Kya order karon ap k liye?
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div style="padding: 10px; border-top: 1px solid #eee; display: flex; gap: 5px;">
+        <input type="text" id="ai-input-box" placeholder="Ask anything..." style="flex: 1; border: 1px solid #ddd; padding: 8px; border-radius: 20px; outline: none;">
+        <button onclick="sendToAI()" style="background: var(--orange, #ff6600); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;">➔</button>
+    </div>
+</div>
 </body>
 </html>
