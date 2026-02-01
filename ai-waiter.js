@@ -1,32 +1,52 @@
 /* ==========================================
-   OVEN X - MASTER AI ENGINE (GEMINI 2.0)
+   OVEN X - DEBUG ENGINE
    ========================================== */
 
 const API_KEY = "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";
 
-// These variables will connect to the ones in your index.html
-let chatHistory = [];
+// Ensure these are global so HTML can see them
+window.chatHistory = window.chatHistory || [];
 
-function toggleAI() {
+window.toggleAI = function() {
     const win = document.getElementById('ai-window');
-    if(win) {
-        win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
-    }
-}
+    if(win) win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
+};
 
 function appendMsg(role, text, isError = false) {
     const box = document.getElementById('ai-messages');
     if(!box) return;
     const div = document.createElement('div');
     div.className = isError ? "msg-error" : `msg msg-${role}`;
+    
+    // Applying styles manually to ensure they show up
+    div.style.padding = "12px";
+    div.style.borderRadius = "15px";
+    div.style.marginBottom = "10px";
+    div.style.fontSize = "14px";
+    
+    if(role === 'user') {
+        div.style.background = "#f37021";
+        div.style.color = "white";
+        div.style.alignSelf = "flex-end";
+    } else if(isError) {
+        div.style.background = "#ffcccc";
+        div.style.color = "red";
+        div.style.border = "1px solid red";
+    } else {
+        div.style.background = "#eeeeee";
+        div.style.color = "#333";
+        div.style.alignSelf = "flex-start";
+    }
+
     div.innerText = text;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;
 }
 
-async function sendToAI() {
+window.sendToAI = async function() {
     const input = document.getElementById('ai-input');
+    if(!input) return;
     const val = input.value.trim();
     if(!val) return;
 
@@ -34,15 +54,8 @@ async function sendToAI() {
     input.value = "";
     const thinking = appendMsg('bot', "Thinking...");
 
-    // Accessing MENU from the global window (index.html)
-    const currentMenu = window.MENU ? JSON.stringify(window.MENU) : "[]";
-
-    const systemPrompt = `You are a Master AI Waiter for Oven X. Brain: Gemini 2.0.
-    Menu: ${currentMenu}. 
-    - You are highly intelligent. Answer ANY general human question (math, physics, code, history) as the priority.
-    - If the user wants to order, return ONLY JSON: {"reply": "...", "action": "add", "item": "Exact Name", "price": 0}.
-    - For normal chat, return JSON: {"reply": "...", "action": "none"}.
-    - Speak the user's language (Urdu, English, etc).`;
+    // Grab Menu from HTML window
+    const menuData = window.MENU ? JSON.stringify(window.MENU) : "[]";
 
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -50,14 +63,14 @@ async function sendToAI() {
             headers: {
                 "Authorization": `Bearer ${API_KEY}`,
                 "Content-Type": "application/json",
-                "HTTP-Referer": window.location.href, 
-                "X-Title": "Oven X Official"
+                "HTTP-Referer": window.location.origin, 
+                "X-Title": "Oven X AI"
             },
             body: JSON.stringify({
                 "model": "google/gemini-2.0-flash-001",
                 "messages": [
-                    { "role": "system", "content": systemPrompt },
-                    ...chatHistory,
+                    { "role": "system", "content": `You are Oven X Waiter. Menu: ${menuData}. If ordering, return JSON: {"reply":"..","action":"add","item":"..","price":0}. Else return JSON: {"reply":"..","action":"none"}.` },
+                    ...window.chatHistory,
                     { "role": "user", "content": val }
                 ]
             })
@@ -67,30 +80,30 @@ async function sendToAI() {
         thinking.remove();
 
         if (data.error) {
-            appendMsg('bot', "Error: " + data.error.message, true);
+            // THIS WILL TELL US THE REAL ERROR
+            appendMsg('bot', "API ERROR: " + data.error.message, true);
+            console.error("Full Error:", data.error);
             return;
         }
 
         const aiRaw = data.choices[0].message.content;
         
         try {
-            // This part handles the JSON cleaning logic you had
             const clean = aiRaw.replace(/```json|```/g, "").trim();
             const result = JSON.parse(clean);
             appendMsg('bot', result.reply);
             
-            // This calls the 'add' function located in your index.html
             if(result.action === "add" && typeof window.add === "function") {
                 window.add(result.item, result.price);
             }
             
-            chatHistory.push({ "role": "user", "content": val }, { "role": "assistant", "content": aiRaw });
+            window.chatHistory.push({ "role": "user", "content": val }, { "role": "assistant", "content": aiRaw });
         } catch (e) {
             appendMsg('bot', aiRaw);
-            chatHistory.push({ "role": "user", "content": val }, { "role": "assistant", "content": aiRaw });
         }
 
-    } catch(e) {
-        thinking.innerText = "Check your internet or API balance.";
+    } catch(err) {
+        thinking.innerText = "Network Error: " + err.message;
+        console.error("Fetch Error:", err);
     }
-}
+};
