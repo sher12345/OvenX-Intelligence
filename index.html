@@ -523,12 +523,32 @@
     }
    
     function openQtyModal() { 
-        document.getElementById('modal-item-name').innerText = selectedItem.name; 
-        document.getElementById('special-note').value = ""; // ADD THIS LINE TO CLEAR OLD NOTES
-        setQty(1); 
-        document.getElementById('modal-overlay').style.display = 'flex'; 
-        setScrollLock(true); 
-    }
+    document.getElementById('modal-item-name').innerText = selectedItem.name; 
+    document.getElementById('special-note').value = ""; // Fix: Clears note for next item
+    setQty(1); 
+    document.getElementById('modal-overlay').style.display = 'flex'; 
+    setScrollLock(true); 
+}
+
+function setQty(q) { 
+    playClick('pop'); 
+    selectedQty = q; 
+    document.querySelectorAll('.qty-btn').forEach((b, i) => { 
+        b.classList.remove('active'); 
+        if (i === (q===5?4:q-1)) b.classList.add('active'); 
+    }); 
+}
+
+function closeModals() { 
+    document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none'); 
+    setScrollLock(false); 
+}
+
+function initCustomerTracking(orderId) {
+    if(!orderId) return;
+    localStorage.setItem('ovenx_last_order_id', orderId);
+    document.getElementById('tracking-overlay').style.display = 'flex';
+    setScrollLock(true);
 
     // Initial check for current status
     sb.from('kitchen_orders').select('status').eq('id', orderId).single()
@@ -541,10 +561,9 @@
             event: 'UPDATE', 
             schema: 'public', 
             table: 'kitchen_orders', 
-            filter: `id=eq.${orderId}` // This ensures a fast, direct update
+            filter: `id=eq.${orderId}` 
           }, 
           (payload) => {
-              console.log("Chef updated status to:", payload.new.status);
               updateTrackingUI(payload.new.status);
           })
       .subscribe();
