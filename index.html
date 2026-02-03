@@ -1,22 +1,30 @@
+
+Folder highlights
+HTML/CSS code defines the styling for the Oven X Official Order System, featuring a red and orange theme with elements like loyalty cards and menu tiles.
+
+A Perfect System.txt
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA META TAGS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#8b0000">
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
-    <title>Oven X - Official Order System</title>
 
+    <title>Oven X - Official Order System</title>
     <style>
-        :root {
-            --red: #8b0000;
+        :root { 
+            --red: #8b0000; 
             --dark-red: #5e0000;
-            --orange: #f37021;
+            --orange: #f37021; 
             --dark-orange: #b34e12;
             --white: #ffffff;
-            --bg-body: #fff9f5;
+            --bg-body: #fff9f5; 
             --radius-bubble: 25px;
             --wa-green: #25D366;
             --wa-dark: #1a9648;
@@ -25,128 +33,12 @@
         }
         * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
         body.modal-active { overflow: hidden; height: 100vh; }
-        body {
-            background: var(--bg-body) !important;
-            color: #333 !important;
+        body { 
+            background: var(--bg-body) !important; 
+            color: #333 !important; 
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0; padding-bottom: 0; overflow-x: hidden;
         }
-
-        #ai-bubble {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 64px;
-            height: 64px;
-            background: var(--orange);
-            color: white;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            box-shadow: 0 8px 20px rgba(243,112,33,0.5);
-            z-index: 3000;
-            border: 3px solid white;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        #ai-bubble:active { transform: scale(0.92); }
-
-        #ai-window {
-            position: fixed;
-            bottom: 170px;
-            right: 16px;
-            width: 340px;
-            height: 480px;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.45);
-            z-index: 3001;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-        }
-
-        .ai-header {
-            background: var(--red);
-            color: white;
-            padding: 14px 18px;
-            font-weight: 900;
-            font-size: 17px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #ai-messages {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: #fffefb;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .msg {
-            padding: 11px 15px;
-            border-radius: 18px;
-            max-width: 82%;
-            font-size: 14.5px;
-            line-height: 1.38;
-        }
-        .msg-bot {
-            background: #f0f0f0;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-user {
-            background: var(--orange);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-error {
-            align-self: center;
-            background: #ffebee;
-            color: #c62828;
-            font-size: 12px;
-            border: 1px solid #ef9a9a;
-            padding: 8px 12px;
-            border-radius: 8px;
-        }
-
-        .ai-input-area {
-            padding: 12px;
-            border-top: 1px solid #e8e8e8;
-            display: flex;
-            gap: 10px;
-            background: white;
-        }
-        .ai-input-area input {
-            flex: 1;
-            border: 2px solid #ddd;
-            border-radius: 30px;
-            padding: 12px 18px;
-            font-size: 15px;
-            outline: none;
-        }
-        .ai-input-area input:focus {
-            border-color: var(--orange);
-        }
-        .ai-input-area button {
-            background: var(--orange);
-            color: white;
-            border: none;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
         #top-sticky-container {
             position: sticky; top: 0; z-index: 2000;
             display: none; flex-direction: column;
@@ -174,40 +66,43 @@
         .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
         .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
-
+        
         #gateway-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #2c0000, #000000);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 4000; text-align: center; color: white; overflow-y: auto; padding: 20px 0;
         }
-        .loyalty-card {
-            background: rgba(10, 10, 10, 0.95);
-            border-radius: 35px; padding: 25px 15px; margin: 0 0 25px;
+
+        /* --- LOYALTY CARD CSS --- */
+        .loyalty-card { 
+            background: rgba(10, 10, 10, 0.95); 
+            border-radius: 35px; padding: 25px 15px; margin: 0 0 25px; 
             border: 2px solid var(--gold); width: 90%; max-width: 380px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212,175,55,0.1);
             position: relative;
         }
         .loyalty-header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 15px; }
-        .gold-label {
+        .gold-label { 
             background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 15px;
         }
         .stamp-grid-container { display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; }
         .stamp-row { display: flex; justify-content: center; gap: 8px; width: 100%; }
-        .stamp-circle {
-            width: 42px; height: 42px; border-radius: 50%;
-            border: 2px dashed rgba(212, 175, 55, 0.4);
+        .stamp-circle { 
+            width: 42px; height: 42px; border-radius: 50%; 
+            border: 2px dashed rgba(212, 175, 55, 0.4); 
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; font-weight: 900; color: rgba(212, 175, 55, 0.3);
             background: rgba(255,255,255,0.02); transition: 0.4s;
         }
-        .stamp-circle.filled {
+        .stamp-circle.filled { 
             background: var(--gold-gradient); border: 2px solid #fff; color: #000;
             box-shadow: 0 0 20px rgba(212, 175, 55, 0.8); transform: scale(1.1); border-style: solid;
         }
         .loyalty-footer { color: #ccc; font-size: 11px; margin-top: 20px; font-weight: 700; line-height: 1.4; padding: 0 10px; }
         .btn-gold { background: var(--gold-gradient); color: #000; font-weight: 900; box-shadow: 0 6px 0px #866619; margin-bottom: 25px; width: 85%; max-width: 340px; }
+
         .gateway-logo { font-size: 60px; font-weight: 900; margin-bottom: 5px; letter-spacing: -2px; }
         .gateway-logo span { color: var(--orange); }
         #gateway-table-note { background: var(--orange); color: white; padding: 12px 25px; border-radius: 50px; font-size: 16px; font-weight: bold; margin-bottom: 20px; display: none; box-shadow: 0 8px 20px rgba(243, 112, 33, 0.4); }
@@ -216,7 +111,7 @@
         .btn-red { background: var(--red); color: white; box-shadow: 0 6px 0px var(--dark-red); }
         .btn-orange { background: var(--orange); color: white; box-shadow: 0 6px 0px var(--dark-orange); }
         .btn-outline { background: transparent; color: white; border: 3px solid white; box-shadow: 0 6px 0px rgba(255,255,255,0.2); }
-
+        
         header { background: var(--red); color: white; padding: 12px 15px; text-align: center; border-bottom: 6px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
         .header-back-btn { background: var(--orange); color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 900; font-size: 12px; box-shadow: 0 3px 0px var(--dark-orange); }
         .logo { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1;}
@@ -224,6 +119,7 @@
         .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
         .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
         .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
+
         .menu-controls { background: white; padding: 10px 0; border-bottom: 2px solid #eee; }
         .search-box-wrap { padding: 0 15px 10px; }
         .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
@@ -232,6 +128,7 @@
         .category-scroller::-webkit-scrollbar { display: none; }
         .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
         .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
+
         .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
         .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
         .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
@@ -248,19 +145,23 @@
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px);
-        }
-        #manual-order-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px);
+        
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); 
         }
 
+        /* FIXED MANUAL ORDER Z-INDEX (MUST BE HIGHER THAN KITCHEN PANEL) */
+        #manual-order-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px); 
+        }
+        
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-
+        
+        /* Gold Club Specific Modals */
         .modal-gold { background: #0a0a0a; border: 2px solid var(--gold); color: white; overflow: hidden !important; }
         .premium-input { width: 100%; padding: 16px; border-radius: 15px; background: #1a1a1a; border: 1.5px solid rgba(212,175,55,0.3); color: white; margin-top: 12px; font-size: 16px; }
+
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
         .qty-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; background: white; font-weight: 900; font-size: 16px; }
         .qty-btn.active { background: var(--red); color: white; border-color: var(--red); box-shadow: 0 4px 0px var(--dark-red); }
@@ -270,6 +171,7 @@
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
 
+        /* KITCHEN PANEL MODAL CSS */
         #kitchen-panel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9500; backdrop-filter: blur(10px); }
         .kitchen-modal { background: var(--white); border-radius: 35px; width: 98%; max-width: 1200px; height: 95vh; display: flex; flex-direction: column; overflow: hidden; }
         .kitchen-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -279,6 +181,7 @@
         .audit-card { background: var(--red); color: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(139,0,0,0.2); }
         .audit-stat { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
         .audit-stat b { font-size: 18px; }
+
         .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
         .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
@@ -289,22 +192,29 @@
         .kb-waiting { background: #fff3e0; color: var(--orange); }
         .kb-preparing { background: #e3f2fd; color: #007bff; }
         .kb-ready { background: #e8f5e9; color: var(--wa-green); }
+
         .price-box { background: #fff9e6; padding: 15px; border-radius: 18px; margin-top: 15px; display: flex; justify-content: space-between; font-weight: 900; border: 1px solid #ffe082; }
         .rider-box { margin-top: 15px; padding: 15px; background: #fdfdfd; border: 2px dashed #ddd; border-radius: 20px; }
         .rider-btn { padding: 10px 15px; border-radius: 12px; border: 2px solid #eee; background: white; font-size: 12px; font-weight: 800; cursor: pointer; margin: 3px; }
         .rider-btn.selected { background: var(--wa-green) !important; color: white !important; border-color: var(--wa-dark) !important; box-shadow: 0 4px 0px var(--wa-dark); }
-
+        
         .k-tab { flex: 1; padding: 15px; border-radius: 15px; background: #eee; font-weight: 900; text-align: center; cursor: pointer; }
         .k-tab.active { background: var(--red); color: white; box-shadow: 0 4px 10px rgba(139,0,0,0.3); }
+
         .delivery-center-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 20px 0; }
         .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 30px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); width: 92%; max-width: 340px; box-sizing: border-box; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
         #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
+
+        /* TRACKER UI */
         .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
         .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
         .tracking-step.active { opacity: 1; color: var(--orange); transform: scale(1.05); }
+
+        /* UPSELL UI GRID */
         .upsell-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .upsell-flavor-btn { background: #f8f8f8; border: 2px solid #eee; padding: 10px; border-radius: 15px; font-weight: 800; font-size: 12px; }
+
         @media (max-width: 800px) {
             .kitchen-content-wrapper { flex-direction: column; }
             #rider-audit-sidebar { border-left: none; border-bottom: 4px solid #eee; flex: none; height: auto; }
@@ -317,9 +227,10 @@
 
 <div id="gateway-screen">
     <div class="bouncing-logo"><p class="gateway-logo">OVEN <span>X</span></p></div>
-
+    
     <div id="gateway-table-note">🎉 WELCOME! TABLE <span id="gateway-table-id"></span> 🎉</div>
 
+    <!-- OVEN X CLUB CARD -->
     <div id="loyalty-display" style="display:none;" class="loyalty-card">
         <div class="loyalty-header">
             <span class="gold-label">OVEN X CLUB</span>
@@ -331,7 +242,7 @@
         </div>
         <p id="loyalty-msg" class="loyalty-footer"></p>
     </div>
-
+    
     <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
 
     <div class="gateway-options">
@@ -365,22 +276,6 @@
 <div id="cart-bar">
     <div><span id="cart-count" style="font-size:11px; font-weight:900; color:var(--orange);">ITEMS: 0</span><br><span id="cart-total" style="font-size:20px; font-weight:900;">Rs 0</span></div>
     <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
-</div>
-
-<!-- AI CHAT COMPONENTS -->
-<div id="ai-bubble" onclick="toggleAI()">🤖</div>
-<div id="ai-window">
-    <div class="ai-header">
-        <span>OVEN X MASTER AI 2.0</span>
-        <span onclick="toggleAI()" style="cursor:pointer; font-size:22px;">×</span>
-    </div>
-    <div id="ai-messages">
-        <div class="msg msg-bot">Assalam-o-Alaikum! 🍕<br>I'm your Oven X smart assistant.<br>Ask me about menu, deals, prices, or anything 😊</div>
-    </div>
-    <div class="ai-input-area">
-        <input type="text" id="ai-input" placeholder="Ask anything..." autocomplete="off" onkeypress="if(event.key==='Enter') sendToAI()"/>
-        <button onclick="sendToAI()">➤</button>
-    </div>
 </div>
 
 <!-- MANUAL ORDER MODAL -->
@@ -470,6 +365,8 @@
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
 <div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
+
+<!-- LIVE TRACKING OVERLAY -->
 <div id="tracking-overlay">
     <div class="modal">
         <span id="track-icon" class="tracking-status-icon">📩</span>
@@ -483,6 +380,8 @@
         <button onclick="clearTracking()" class="btn-3d" style="width:100%; padding:15px; border-radius:20px; background:#eee; font-weight:900;">CLOSE TRACKER</button>
     </div>
 </div>
+
+<!-- SMART UPSELL OVERLAY -->
 <div id="upsell-overlay">
     <div class="modal" style="border:4px solid var(--orange);">
         <span id="upsell-icon" style="font-size:60px;">🍟🥤</span>
@@ -498,16 +397,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     let audioCtx = null;
-    function playClick(type = 'pop') {
-        try {
+    function playClick(type = 'pop') { 
+        try { 
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine';
-            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); }
-            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); }
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; 
+            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } 
+            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } 
             else if(type === 'siren') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4); }
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
-        } catch(e) { }
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
+        } catch(e) { } 
     }
 
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
@@ -561,7 +460,8 @@
     const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591" };
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
-
+    
+    /* --- LOYALTY LOGIC --- */
     function renderLoyaltyCard() {
         const name = localStorage.getItem('ovenx_member_name');
         const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
@@ -573,7 +473,7 @@
         document.getElementById('join-club-btn').style.display = 'none';
         document.getElementById('loyalty-display').style.display = 'block';
         document.getElementById('club-member-name').innerText = name.toUpperCase();
-        const row1 = document.getElementById('stamp-row-1');
+        const row1 = document.getElementById('stamp-row-1'); 
         const row2 = document.getElementById('stamp-row-2');
         row1.innerHTML = ""; row2.innerHTML = "";
         for(let i=1; i<=10; i++) {
@@ -588,863 +488,61 @@
     }
 
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
-
+    
     async function saveClubProfile() {
         const n = document.getElementById('clubName').value;
         const p = document.getElementById('clubPhone').value;
         if(!n || !p) return alert("Enter your name and WhatsApp number!");
-
+        
+        // Save to Database
         if(sb) {
             await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
         }
+
         localStorage.setItem('ovenx_member_name', n);
         localStorage.setItem('ovenx_member_phone', p);
         localStorage.setItem('ovenx_stamps', 0);
-
+        
         document.getElementById('loyalty-setup-overlay').style.display = 'none';
         setScrollLock(false);
         renderLoyaltyCard();
         alert("Welcome to the Club, " + n + "! 👑");
     }
 
-    function enterApp(target) {
-        playClick('thud');
-        document.getElementById('gateway-screen').style.display = 'none';
-        document.getElementById('top-sticky-container').style.display = 'flex';
-        document.getElementById('ai-bubble').style.display = 'flex';
-
-        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); }
-        if(target === 'deals') switchTab('deals'); else switchTab('menu');
+    function enterApp(target) { 
+        playClick('thud'); 
+        document.getElementById('gateway-screen').style.display = 'none'; 
+        document.getElementById('top-sticky-container').style.display = 'flex'; 
+        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
+        if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
     }
-
-    function renderServiceOptions() {
-        const container = document.getElementById('service-options-container');
-        let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`;
-        if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; }
-        container.innerHTML = html;
-    }
-
-    function exitToGateway() {
-        playClick('pop');
-        document.getElementById('gateway-screen').style.display = 'flex';
-        document.getElementById('top-sticky-container').style.display = 'none';
-        document.getElementById('cart-bar').style.display = 'none';
-        document.getElementById('ai-bubble').style.display = 'none';
-        renderLoyaltyCard();
-        setScrollLock(false);
-    }
-
-    function switchTab(tab) {
-        playClick('pop');
-        if(tab === 'menu') {
-            document.getElementById('menu-container').style.display = 'block';
-            document.getElementById('deals-container').style.display = 'none';
-            document.getElementById('tab-menu').classList.add('active');
-            document.getElementById('tab-deals').classList.remove('active');
-            document.getElementById('menu-controls').style.display = 'block';
-            renderPublicMenu();
-        } else {
-            document.getElementById('menu-container').style.display = 'none';
-            document.getElementById('deals-container').style.display = 'block';
-            document.getElementById('tab-deals').classList.add('active');
-            document.getElementById('tab-menu').classList.remove('active');
-            document.getElementById('menu-controls').style.display = 'none';
-            renderPublicDeals();
-        }
-    }
+    
+    function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
+    function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; renderLoyaltyCard(); setScrollLock(false); }
+    function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); document.getElementById('menu-controls').style.display = 'block'; renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); document.getElementById('menu-controls').style.display = 'none'; renderPublicDeals(); } }
 
     function openOrderFlow(item) {
         playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
-        if (selectedItem.flavorsNeeded) { startFlavorSelection(); }
+        if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
         else if (item.price && typeof item.price === 'object') {
             const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
-            for (let s in item.price) {
-                let sBtn = document.createElement('div');
-                sBtn.className = 'btn btn-3d';
-                sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`;
-                sBtn.onclick = function() {
-                    playClick('pop');
-                    selectedItem.name += " (" + s + ")";
-                    selectedItem.price = item.price[s];
-                    document.getElementById('size-overlay').style.display = 'none';
-                    openQtyModal();
-                };
-                sizeGrid.appendChild(sBtn);
-            }
+            for (let s in item.price) { let sBtn = document.createElement('div'); sBtn.className = 'btn btn-3d'; sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`; sBtn.onclick = function() { playClick('pop'); selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s]; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); }; sizeGrid.appendChild(sBtn); }
             document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
         } else { openQtyModal(); }
     }
-
+    
     function startFlavorSelection() {
-        const step = selectedItem.flavorsNeeded[currentFlavorStep];
-        document.getElementById('flavor-title').innerText = "Pick " + step.label;
-        const grid = document.getElementById('flavor-grid'); grid.innerHTML = '';
-        let flavors = menuData[step.cat] || [];
+        const step = selectedItem.flavorsNeeded[currentFlavorStep]; document.getElementById('flavor-title').innerText = "Pick " + step.label; const grid = document.getElementById('flavor-grid'); grid.innerHTML = ''; let flavors = menuData[step.cat] || [];
         flavors.forEach(f => {
             const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
-            b.onclick = function() {
-                b.classList.add('size-feedback');
-                playClick('pop');
-                setTimeout(() => {
-                    dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`);
-                    currentFlavorStep++;
-                    if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection();
-                    else {
-                        document.getElementById('flavor-overlay').style.display = 'none';
-                        selectedItem.flavorNotes = dealChoices.join(", ");
-                        openQtyModal();
-                    }
-                }, 100);
-            };
-            grid.appendChild(b);
+            b.onclick = function() { b.classList.add('size-feedback'); playClick('pop'); setTimeout(() => { dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++; if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection(); else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); } }, 100); }; grid.appendChild(b);
         });
         document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true);
     }
-
-    function openQtyModal() {
-        document.getElementById('modal-item-name').innerText = selectedItem.name;
-        setQty(1);
-        document.getElementById('modal-overlay').style.display = 'flex';
-        setScrollLock(true);
-    }
-
-    function setQty(q) {
-        playClick('pop');
-        selectedQty = q;
-        document.querySelectorAll('.qty-btn').forEach((b, i) => {
-            b.classList.remove('active');
-            if (i === (q===5?4:q-1)) b.classList.add('active');
-        });
-    }
-
-    function closeModals() {
-        document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none');
-        setScrollLock(false);
-    }
-
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#8b0000">
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
-    <title>Oven X - Official Order System</title>
-
-    <style>
-        :root {
-            --red: #8b0000;
-            --dark-red: #5e0000;
-            --orange: #f37021;
-            --dark-orange: #b34e12;
-            --white: #ffffff;
-            --bg-body: #fff9f5;
-            --radius-bubble: 25px;
-            --wa-green: #25D366;
-            --wa-dark: #1a9648;
-            --gold: #d4af37;
-            --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
-        }
-        * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
-        body.modal-active { overflow: hidden; height: 100vh; }
-        body {
-            background: var(--bg-body) !important;
-            color: #333 !important;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0; padding-bottom: 0; overflow-x: hidden;
-        }
-
-        #ai-bubble {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 64px;
-            height: 64px;
-            background: var(--orange);
-            color: white;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            box-shadow: 0 8px 20px rgba(243,112,33,0.5);
-            z-index: 3000;
-            border: 3px solid white;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        #ai-bubble:active { transform: scale(0.92); }
-
-        #ai-window {
-            position: fixed;
-            bottom: 170px;
-            right: 16px;
-            width: 340px;
-            height: 480px;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.45);
-            z-index: 3001;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-        }
-
-        .ai-header {
-            background: var(--red);
-            color: white;
-            padding: 14px 18px;
-            font-weight: 900;
-            font-size: 17px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #ai-messages {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: #fffefb;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .msg {
-            padding: 11px 15px;
-            border-radius: 18px;
-            max-width: 82%;
-            font-size: 14.5px;
-            line-height: 1.38;
-        }
-        .msg-bot {
-            background: #f0f0f0;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-user {
-            background: var(--orange);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-error {
-            align-self: center;
-            background: #ffebee;
-            color: #c62828;
-            font-size: 12px;
-            border: 1px solid #ef9a9a;
-            padding: 8px 12px;
-            border-radius: 8px;
-        }
-
-        .ai-input-area {
-            padding: 12px;
-            border-top: 1px solid #e8e8e8;
-            display: flex;
-            gap: 10px;
-            background: white;
-        }
-        .ai-input-area input {
-            flex: 1;
-            border: 2px solid #ddd;
-            border-radius: 30px;
-            padding: 12px 18px;
-            font-size: 15px;
-            outline: none;
-        }
-        .ai-input-area input:focus {
-            border-color: var(--orange);
-        }
-        .ai-input-area button {
-            background: var(--orange);
-            color: white;
-            border: none;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
-        #top-sticky-container {
-            position: sticky; top: 0; z-index: 2000;
-            display: none; flex-direction: column;
-            background: var(--bg-body);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-            40% {transform: translateY(-15px);}
-            60% {transform: translateY(-7px);}
-        }
-        @keyframes aggressive-shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-        .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
-        .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
-        .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
-
-        #gateway-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #2c0000, #000000);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 4000; text-align: center; color: white; overflow-y: auto; padding: 20px 0;
-        }
-        .loyalty-card {
-            background: rgba(10, 10, 10, 0.95);
-            border-radius: 35px; padding: 25px 15px; margin: 0 0 25px;
-            border: 2px solid var(--gold); width: 90%; max-width: 380px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212,175,55,0.1);
-            position: relative;
-        }
-        .loyalty-header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 15px; }
-        .gold-label {
-            background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 15px;
-        }
-        .stamp-grid-container { display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; }
-        .stamp-row { display: flex; justify-content: center; gap: 8px; width: 100%; }
-        .stamp-circle {
-            width: 42px; height: 42px; border-radius: 50%;
-            border: 2px dashed rgba(212, 175, 55, 0.4);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 900; color: rgba(212, 175, 55, 0.3);
-            background: rgba(255,255,255,0.02); transition: 0.4s;
-        }
-        .stamp-circle.filled {
-            background: var(--gold-gradient); border: 2px solid #fff; color: #000;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.8); transform: scale(1.1); border-style: solid;
-        }
-        .loyalty-footer { color: #ccc; font-size: 11px; margin-top: 20px; font-weight: 700; line-height: 1.4; padding: 0 10px; }
-        .btn-gold { background: var(--gold-gradient); color: #000; font-weight: 900; box-shadow: 0 6px 0px #866619; margin-bottom: 25px; width: 85%; max-width: 340px; }
-        .gateway-logo { font-size: 60px; font-weight: 900; margin-bottom: 5px; letter-spacing: -2px; }
-        .gateway-logo span { color: var(--orange); }
-        #gateway-table-note { background: var(--orange); color: white; padding: 12px 25px; border-radius: 50px; font-size: 16px; font-weight: bold; margin-bottom: 20px; display: none; box-shadow: 0 8px 20px rgba(243, 112, 33, 0.4); }
-        .gateway-options { display: flex; flex-direction: column; gap: 15px; width: 85%; max-width: 340px; }
-        .gate-btn { padding: 20px; border-radius: var(--radius-bubble); font-size: 16px; font-weight: 800; text-transform: uppercase; }
-        .btn-red { background: var(--red); color: white; box-shadow: 0 6px 0px var(--dark-red); }
-        .btn-orange { background: var(--orange); color: white; box-shadow: 0 6px 0px var(--dark-orange); }
-        .btn-outline { background: transparent; color: white; border: 3px solid white; box-shadow: 0 6px 0px rgba(255,255,255,0.2); }
-
-        header { background: var(--red); color: white; padding: 12px 15px; text-align: center; border-bottom: 6px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
-        .header-back-btn { background: var(--orange); color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 900; font-size: 12px; box-shadow: 0 3px 0px var(--dark-orange); }
-        .logo { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1;}
-        .logo span { color: var(--orange); }
-        .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
-        .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
-        .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
-        .menu-controls { background: white; padding: 10px 0; border-bottom: 2px solid #eee; }
-        .search-box-wrap { padding: 0 15px 10px; }
-        .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
-        .search-input:focus { border-color: var(--orange); }
-        .category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 10px; padding: 0 15px; scroll-behavior: smooth; }
-        .category-scroller::-webkit-scrollbar { display: none; }
-        .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
-        .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
-        .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
-        .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
-        .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
-        .deal-img-top { height: 180px; background-size: cover; background-position: center; border-bottom: 2px solid #f9f9f9; }
-        .deal-info-box { padding: 20px; text-align: center; }
-        .deal-badge { position: absolute; top: 12px; left: 12px; background: var(--orange); color: white; padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; box-shadow: 0 4px 0px var(--dark-orange); z-index: 5; }
-        .deal-title { font-weight: 900; color: var(--red); font-size: 22px; text-transform: uppercase; margin-bottom: 5px; }
-        .deal-desc { font-size: 13px; color: #666; font-weight: 600; line-height: 1.3; margin-bottom: 15px; display: block;}
-        .deal-price { color: var(--orange); font-weight: 900; font-size: 24px; display: block; margin-bottom: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn { background-color: #eee; background-size: cover; background-position: center; border: 3px solid #fff; border-radius: 25px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 160px; box-shadow: 0 6px 0px #ddd; position: relative; }
-        .item-label-box { background: rgba(255, 255, 255, 0.98); padding: 12px; width: 100%; box-sizing: border-box; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); }
-        .price-tag { color: var(--orange); font-weight: 900; font-size: 13px; margin-top: 4px; }
-        .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
-        #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
-        .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px);
-        }
-        #manual-order-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px);
-        }
-
-        #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-
-        .modal-gold { background: #0a0a0a; border: 2px solid var(--gold); color: white; overflow: hidden !important; }
-        .premium-input { width: 100%; padding: 16px; border-radius: 15px; background: #1a1a1a; border: 1.5px solid rgba(212,175,55,0.3); color: white; margin-top: 12px; font-size: 16px; }
-        .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-        .qty-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; background: white; font-weight: 900; font-size: 16px; }
-        .qty-btn.active { background: var(--red); color: white; border-color: var(--red); box-shadow: 0 4px 0px var(--dark-red); }
-        textarea, .big-input { width: 100%; border-radius: 20px; border: 3px solid #f0f0f0; padding: 18px; margin-top: 15px; font-size: 16px; box-sizing: border-box; }
-        .next-btn { padding: 18px; border-radius: 20px; border: none; font-weight: 900; width: 100%; margin-bottom: 12px; color: white; display: block; cursor: pointer; }
-        .confirm-btn { background: var(--wa-green); color: white; padding: 20px; border-radius: 25px; font-weight: 900; width: 100%; margin-top: 20px; font-size: 20px; box-shadow: 0 6px 0px var(--wa-dark); }
-        .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
-        .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
-
-        #kitchen-panel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9500; backdrop-filter: blur(10px); }
-        .kitchen-modal { background: var(--white); border-radius: 35px; width: 98%; max-width: 1200px; height: 95vh; display: flex; flex-direction: column; overflow: hidden; }
-        .kitchen-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .kitchen-content-wrapper { display: flex; flex: 1; overflow: hidden; }
-        #kitchen-orders-list { flex: 2; overflow-y: auto; padding: 20px; background: #f9f9f9; }
-        #rider-audit-sidebar { flex: 1; background: white; border-left: 4px solid #eee; padding: 20px; display: none; flex-direction: column; overflow-y: auto; }
-        .audit-card { background: var(--red); color: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(139,0,0,0.2); }
-        .audit-stat { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
-        .audit-stat b { font-size: 18px; }
-        .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .kitchen-card.status-preparing { border-left-color: #007bff; }
-        .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
-        .kitchen-card.warning { box-shadow: 0 0 25px #ffd700; border-left-color: #ffd700 !important; animation: bounce 2s infinite; }
-        .kitchen-card.late { background: #fff1f1; border-left-color: #ff0000 !important; box-shadow: 0 0 35px #ff0000; animation: aggressive-shake 0.2s infinite; border: 2px solid red; }
-        .order-timer { font-size: 22px; font-weight: 900; color: #444; margin-top: 5px; font-family: monospace; }
-        .kitchen-badge { position: absolute; top: 15px; right: 15px; font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 10px; text-transform: uppercase; }
-        .kb-waiting { background: #fff3e0; color: var(--orange); }
-        .kb-preparing { background: #e3f2fd; color: #007bff; }
-        .kb-ready { background: #e8f5e9; color: var(--wa-green); }
-        .price-box { background: #fff9e6; padding: 15px; border-radius: 18px; margin-top: 15px; display: flex; justify-content: space-between; font-weight: 900; border: 1px solid #ffe082; }
-        .rider-box { margin-top: 15px; padding: 15px; background: #fdfdfd; border: 2px dashed #ddd; border-radius: 20px; }
-        .rider-btn { padding: 10px 15px; border-radius: 12px; border: 2px solid #eee; background: white; font-size: 12px; font-weight: 800; cursor: pointer; margin: 3px; }
-        .rider-btn.selected { background: var(--wa-green) !important; color: white !important; border-color: var(--wa-dark) !important; box-shadow: 0 4px 0px var(--wa-dark); }
-
-        .k-tab { flex: 1; padding: 15px; border-radius: 15px; background: #eee; font-weight: 900; text-align: center; cursor: pointer; }
-        .k-tab.active { background: var(--red); color: white; box-shadow: 0 4px 10px rgba(139,0,0,0.3); }
-        .delivery-center-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 20px 0; }
-        .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 30px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); width: 92%; max-width: 340px; box-sizing: border-box; }
-        .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
-        #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
-        .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
-        .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
-        .tracking-step.active { opacity: 1; color: var(--orange); transform: scale(1.05); }
-        .upsell-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .upsell-flavor-btn { background: #f8f8f8; border: 2px solid #eee; padding: 10px; border-radius: 15px; font-weight: 800; font-size: 12px; }
-        @media (max-width: 800px) {
-            .kitchen-content-wrapper { flex-direction: column; }
-            #rider-audit-sidebar { border-left: none; border-bottom: 4px solid #eee; flex: none; height: auto; }
-        }
-    </style>
-</head>
-<body>
-
-<div id="secret-pwa-button" onclick="handleSecretClick()"></div>
-
-<div id="gateway-screen">
-    <div class="bouncing-logo"><p class="gateway-logo">OVEN <span>X</span></p></div>
-
-    <div id="gateway-table-note">🎉 WELCOME! TABLE <span id="gateway-table-id"></span> 🎉</div>
-
-    <div id="loyalty-display" style="display:none;" class="loyalty-card">
-        <div class="loyalty-header">
-            <span class="gold-label">OVEN X CLUB</span>
-            <span id="club-member-name" style="color:white; font-weight:900;"></span>
-        </div>
-        <div class="stamp-grid-container">
-            <div class="stamp-row" id="stamp-row-1"></div>
-            <div class="stamp-row" id="stamp-row-2"></div>
-        </div>
-        <p id="loyalty-msg" class="loyalty-footer"></p>
-    </div>
-
-    <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
-
-    <div class="gateway-options">
-        <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
-        <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
-        <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
-    </div>
-</div>
-
-<div id="top-sticky-container">
-    <header id="main-header">
-        <button class="header-back-btn btn-3d" onclick="exitToGateway()">← HOME</button>
-        <p class="logo">OVEN <span>X</span> <br><small id="header-table-indicator" style="font-size:10px; font-weight:bold;"></small></p>
-        <div style="width:60px;"></div>
-    </header>
-    <div class="tab-bar" id="nav-tabs">
-        <div class="tab-item active" id="tab-menu" onclick="switchTab('menu')">FULL MENU</div>
-        <div class="tab-item" id="tab-deals" onclick="switchTab('deals')">HOT DEALS</div>
-    </div>
-    <div class="menu-controls" id="menu-controls">
-        <div class="search-box-wrap">
-            <input type="text" id="menuSearch" class="search-input" placeholder="🔍 Search food..." oninput="handleSearch(this.value)">
-        </div>
-        <div class="category-scroller" id="category-bar"></div>
-    </div>
-</div>
-
-<div id="deals-container" class="deals-container"><div id="deals-list"></div></div>
-<div class="container" id="menu-container" style="display:none;"></div>
-
-<div id="cart-bar">
-    <div><span id="cart-count" style="font-size:11px; font-weight:900; color:var(--orange);">ITEMS: 0</span><br><span id="cart-total" style="font-size:20px; font-weight:900;">Rs 0</span></div>
-    <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
-</div>
-
-<!-- AI CHAT COMPONENTS -->
-<div id="ai-bubble" onclick="toggleAI()">🤖</div>
-<div id="ai-window">
-    <div class="ai-header">
-        <span>OVEN X MASTER AI 2.0</span>
-        <span onclick="toggleAI()" style="cursor:pointer; font-size:22px;">×</span>
-    </div>
-    <div id="ai-messages">
-        <div class="msg msg-bot">Assalam-o-Alaikum! 🍕<br>I'm your Oven X smart assistant.<br>Ask me about menu, deals, prices, or anything 😊</div>
-    </div>
-    <div class="ai-input-area">
-        <input type="text" id="ai-input" placeholder="Ask anything..." autocomplete="off" onkeypress="if(event.key==='Enter') sendToAI()"/>
-        <button onclick="sendToAI()">➤</button>
-    </div>
-</div>
-
-<!-- MANUAL ORDER MODAL -->
-<div id="manual-order-overlay">
-    <div class="modal">
-        <h2 style="color:var(--red); font-weight:900;">Manual Order 📝</h2>
-        <select id="man-type" class="big-input">
-            <option value="Dine-In">Dine-In</option>
-            <option value="Takeaway">Takeaway</option>
-            <option value="Delivery">Delivery</option>
-        </select>
-        <input type="text" id="man-loc" placeholder="Table # or Address" class="big-input">
-        <textarea id="man-items" placeholder="Items List (e.g. 1x Pizza, 2x Zinger)" class="big-input" style="height:100px;"></textarea>
-        <div style="display:flex; gap:10px;">
-           <input type="number" id="man-sub" placeholder="Subtotal" class="big-input">
-           <input type="number" id="man-fee" placeholder="Del. Fee" class="big-input">
-        </div>
-        <button class="confirm-btn btn-3d" style="background:var(--red);" onclick="saveManualOrder()">SAVE TO KITCHEN</button>
-        <button onclick="document.getElementById('manual-order-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold;">CANCEL</button>
-    </div>
-</div>
-
-<!-- CLUB SETUP MODAL -->
-<div id="loyalty-setup-overlay">
-    <div class="modal modal-gold">
-        <h2 class="gold-label">ACTIVATE CLUB CARD 👑</h2>
-        <p style="color:#aaa; font-size:13px; margin:15px 0;">Collect 10 stamps (Order Rs 1000+) to win a mystery free meal!</p>
-        <input type="text" id="clubName" placeholder="Full Name" class="premium-input">
-        <input type="number" id="clubPhone" placeholder="WhatsApp Number" class="premium-input">
-        <button class="gate-btn btn-gold btn-3d" style="width:100%; margin-top:20px;" onclick="saveClubProfile()">ACTIVATE NOW 🚀</button>
-        <button onclick="document.getElementById('loyalty-setup-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; color:#666; font-weight:bold; background:none; border:none;">CANCEL</button>
-    </div>
-</div>
-
-<div id="admin-login-overlay">
-    <div class="modal">
-        <h2 style="color:var(--red); font-weight:900;">Kitchen Access</h2>
-        <input type="text" id="adminPassword" placeholder="Secret Code" class="big-input" oninput="handlePassInput(this)" style="text-align:center; letter-spacing:4px; font-size:22px;">
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="next-btn btn-3d" style="background:#888;" onclick="closeAdminLogin()">BACK</button>
-            <button class="next-btn btn-3d" style="background:var(--red);" onclick="verifyAdmin()">UNLOCK</button>
-        </div>
-    </div>
-</div>
-
-<!-- KITCHEN PANEL MODAL -->
-<div id="kitchen-panel-overlay">
-    <div class="kitchen-modal">
-        <div class="kitchen-header">
-            <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE KITCHEN</h2>
-            <div style="display:flex; gap:10px;">
-                <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
-                <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
-                <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
-            </div>
-        </div>
-        <div style="display:flex; gap:10px; padding:15px; background:white; border-bottom:1px solid #eee;">
-            <div class="k-tab active" id="k-tab-all" onclick="setKitchenFilter('ALL')">ALL ORDERS</div>
-            <div class="k-tab" id="k-tab-del" onclick="setKitchenFilter('DELIVERY')">DELIVERY ONLY 🚚</div>
-        </div>
-        <div class="kitchen-content-wrapper">
-            <div id="kitchen-orders-list"></div>
-            <div id="rider-audit-sidebar">
-                <h3 style="margin-top:0; color:var(--red);">Rider Audit</h3>
-                <div id="rider-audit-selection" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:20px;"></div>
-                <div id="audit-result-box" style="display:none;">
-                    <div class="audit-card">
-                        <div id="audit-rider-name" style="font-size:22px; font-weight:900; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:5px;">-</div>
-                        <div class="audit-stat"><span>Orders Completed:</span> <b id="audit-count">0</b></div>
-                        <div class="audit-stat"><span>Cash Collected:</span> <b id="audit-cash">Rs 0</b></div>
-                        <div class="audit-stat"><span>Rider Fees:</span> <b id="audit-fees">Rs 0</b></div>
-                        <hr style="opacity:0.2;">
-                        <div class="audit-stat"><span>Net to Shop:</span> <b id="audit-net">Rs 0</b></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div style="padding:15px; border-top:1px solid #eee; display:flex; gap:10px;">
-            <button class="next-btn btn-3d" style="background:#444; flex:1;" onclick="clearReadyOrders()">CLEAR READY (DINE-IN)</button>
-            <button id="clear-del-btn" class="next-btn btn-3d" style="background:var(--red); display:none; flex:1;" onclick="clearDeliveriesWithPassword()">CLEAR ALL DELIVERIES</button>
-        </div>
-    </div>
-</div>
-
-<div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
-<div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
-<div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
-<div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
-<div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
-<div id="tracking-overlay">
-    <div class="modal">
-        <span id="track-icon" class="tracking-status-icon">📩</span>
-        <h2 id="track-main-status" style="color:var(--red); font-weight:900; margin-bottom:5px;">Order Sent!</h2>
-        <p id="track-sub-status" style="font-weight:bold; color:#777;">Waiting for confirmation...</p>
-        <div style="margin:30px 0; text-align:left; padding-left:15%;">
-            <div id="step-waiting" class="tracking-step active">✅ Sent to Kitchen</div>
-            <div id="step-preparing" class="tracking-step">🔘 Chef is Preparing</div>
-            <div id="step-ready" class="tracking-step">🔘 Food is Ready!</div>
-        </div>
-        <button onclick="clearTracking()" class="btn-3d" style="width:100%; padding:15px; border-radius:20px; background:#eee; font-weight:900;">CLOSE TRACKER</button>
-    </div>
-</div>
-<div id="upsell-overlay">
-    <div class="modal" style="border:4px solid var(--orange);">
-        <span id="upsell-icon" style="font-size:60px;">🍟🥤</span>
-        <h2 id="upsell-title" style="color:var(--red); font-weight:900; margin:10px 0;">HUNGRY?</h2>
-        <div id="upsell-body-content">
-            <p id="upsell-desc" style="font-weight:bold; color:#555; margin-bottom:20px;"></p>
-            <button id="upsell-yes-btn" class="confirm-btn btn-3d" style="margin-top:0; background:var(--orange); box-shadow: 0 6px 0px var(--dark-orange);">YES, ADD IT! 🚀</button>
-        </div>
-        <button onclick="document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);" style="margin-top:20px; border:none; background:none; color:#bbb; font-weight:900; width:100%;">NO THANKS, CONTINUE</button>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    let audioCtx = null;
-    function playClick(type = 'pop') {
-        try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine';
-            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); }
-            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); }
-            else if(type === 'siren') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4); }
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
-        } catch(e) { }
-    }
-
-    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
-    let sb = null;
-    try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
-
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
-    let currentKitchenFilter = 'ALL';
-    const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
-    const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
-
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
-    } catch(e) { }
-
-    const menuData = {
-        "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
-        "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
-        "Fried Burger 🍔": [{name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Crispy Jalapeno", price: 549}, {name: "Stuff Jalapeno", price: 649}],
-        "Grilled Burger ♨️": [{name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri Peri Grilled", price: 749}, {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fiesta", price: 749}],
-        "Pan Pizza 🍕": [{name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}, {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, {name: "Cheese Lover", price: {S:499, M:999, L:1549}}, {name: "Veg Lover", price: {S:499, M:999, L:1549}}, {name: "Sicilian Pizza", price: {S:499, M:999, L:1549}}],
-        "Premium Pizza 🌟": [{name: "BBQ Pizza", price: {M:1199, L:1699}}, {name: "Creamy Dreamy", price: {M:1199, L:1699}}, {name: "OvenX Special Premium", price: {M:1199, L:1699}}, {name: "Bonfire Pizza", price: {M:1199, L:1699}}],
-        "Deep Dish Pizza 🍲": [{name: "Mild Butter", price: {M:1749, L:2449}}, {name: "OvenX Special Deep Dish", price: {M:1749, L:2449}}],
-        "Extreme Pizza 🌶️": [{name: "Extreme Peri Peri", price: {M:1499, L:2049}}, {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}, {name: "Crispy Extreme", price: {M:1499, L:2049}}],
-        "Craft My Own Pizza 🎨": [{name: "Kabab Crust", price: {Med: 1399, Large: 1799}}, {name: "Crown Crust", price: {Med: 1399, Large: 1799}}, {name: "Cheese Crust", price: {Med: 1399, Large: 1799}}, {name: "Crusti Thin", price: 1699}],
-        "Platters 🍱": [{name: "Khameera Sandwich Platter", price: 699}, {name: "Calzone Platter", price: 899}, {name: "Behari Platter", price: 949}],
-        "Pasta 🍝": [{name: "Alfredo Pasta", price: 699}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
-        "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
-        "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
-    };
-    menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
-
-    const dealsData = [
-        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
-        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
-        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
-        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
-        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
-        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
-        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
-    ];
-
-    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591" };
-
-    function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
-
-    function renderLoyaltyCard() {
-        const name = localStorage.getItem('ovenx_member_name');
-        const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
-        if(!name) {
-            document.getElementById('join-club-btn').style.display = 'block';
-            document.getElementById('loyalty-display').style.display = 'none';
-            return;
-        }
-        document.getElementById('join-club-btn').style.display = 'none';
-        document.getElementById('loyalty-display').style.display = 'block';
-        document.getElementById('club-member-name').innerText = name.toUpperCase();
-        const row1 = document.getElementById('stamp-row-1');
-        const row2 = document.getElementById('stamp-row-2');
-        row1.innerHTML = ""; row2.innerHTML = "";
-        for(let i=1; i<=10; i++) {
-            const circle = document.createElement('div');
-            circle.className = "stamp-circle" + (i <= stamps ? " filled" : "");
-            circle.innerHTML = i <= stamps ? "🔥" : i;
-            if(i <= 6) row1.appendChild(circle); else row2.appendChild(circle);
-        }
-        const msg = document.getElementById('loyalty-msg');
-        if(stamps >= 10) msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
-        else msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
-    }
-
-    function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
-
-    async function saveClubProfile() {
-        const n = document.getElementById('clubName').value;
-        const p = document.getElementById('clubPhone').value;
-        if(!n || !p) return alert("Enter your name and WhatsApp number!");
-
-        if(sb) {
-            await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
-        }
-        localStorage.setItem('ovenx_member_name', n);
-        localStorage.setItem('ovenx_member_phone', p);
-        localStorage.setItem('ovenx_stamps', 0);
-
-        document.getElementById('loyalty-setup-overlay').style.display = 'none';
-        setScrollLock(false);
-        renderLoyaltyCard();
-        alert("Welcome to the Club, " + n + "! 👑");
-    }
-
-    function enterApp(target) {
-        playClick('thud');
-        document.getElementById('gateway-screen').style.display = 'none';
-        document.getElementById('top-sticky-container').style.display = 'flex';
-        document.getElementById('ai-bubble').style.display = 'flex';
-
-        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); }
-        if(target === 'deals') switchTab('deals'); else switchTab('menu');
-    }
-
-    function renderServiceOptions() {
-        const container = document.getElementById('service-options-container');
-        let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`;
-        if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; }
-        container.innerHTML = html;
-    }
-
-    function exitToGateway() {
-        playClick('pop');
-        document.getElementById('gateway-screen').style.display = 'flex';
-        document.getElementById('top-sticky-container').style.display = 'none';
-        document.getElementById('cart-bar').style.display = 'none';
-        document.getElementById('ai-bubble').style.display = 'none';
-        renderLoyaltyCard();
-        setScrollLock(false);
-    }
-
-    function switchTab(tab) {
-        playClick('pop');
-        if(tab === 'menu') {
-            document.getElementById('menu-container').style.display = 'block';
-            document.getElementById('deals-container').style.display = 'none';
-            document.getElementById('tab-menu').classList.add('active');
-            document.getElementById('tab-deals').classList.remove('active');
-            document.getElementById('menu-controls').style.display = 'block';
-            renderPublicMenu();
-        } else {
-            document.getElementById('menu-container').style.display = 'none';
-            document.getElementById('deals-container').style.display = 'block';
-            document.getElementById('tab-deals').classList.add('active');
-            document.getElementById('tab-menu').classList.remove('active');
-            document.getElementById('menu-controls').style.display = 'none';
-            renderPublicDeals();
-        }
-    }
-
-    function openOrderFlow(item) {
-        playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
-        if (selectedItem.flavorsNeeded) { startFlavorSelection(); }
-        else if (item.price && typeof item.price === 'object') {
-            const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
-            for (let s in item.price) {
-                let sBtn = document.createElement('div');
-                sBtn.className = 'btn btn-3d';
-                sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`;
-                sBtn.onclick = function() {
-                    playClick('pop');
-                    selectedItem.name += " (" + s + ")";
-                    selectedItem.price = item.price[s];
-                    document.getElementById('size-overlay').style.display = 'none';
-                    openQtyModal();
-                };
-                sizeGrid.appendChild(sBtn);
-            }
-            document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
-        } else { openQtyModal(); }
-    }
-
-    function startFlavorSelection() {
-        const step = selectedItem.flavorsNeeded[currentFlavorStep];
-        document.getElementById('flavor-title').innerText = "Pick " + step.label;
-        const grid = document.getElementById('flavor-grid'); grid.innerHTML = '';
-        let flavors = menuData[step.cat] || [];
-        flavors.forEach(f => {
-            const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
-            b.onclick = function() {
-                b.classList.add('size-feedback');
-                playClick('pop');
-                setTimeout(() => {
-                    dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`);
-                    currentFlavorStep++;
-                    if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection();
-                    else {
-                        document.getElementById('flavor-overlay').style.display = 'none';
-                        selectedItem.flavorNotes = dealChoices.join(", ");
-                        openQtyModal();
-                    }
-                }, 100);
-            };
-            grid.appendChild(b);
-        });
-        document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true);
-    }
-
-    function openQtyModal() {
-        document.getElementById('modal-item-name').innerText = selectedItem.name;
-        setQty(1);
-        document.getElementById('modal-overlay').style.display = 'flex';
-        setScrollLock(true);
-    }
-
-    function setQty(q) {
-        playClick('pop');
-        selectedQty = q;
-        document.querySelectorAll('.qty-btn').forEach((b, i) => {
-            b.classList.remove('active');
-            if (i === (q===5?4:q-1)) b.classList.add('active');
-        });
-    }
-
-    function closeModals() {
-        document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none');
-        setScrollLock(false);
-    }
+    
+    function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; setScrollLock(true); }
+    function setQty(q) { playClick('pop'); selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
+    function closeModals() { document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none'); setScrollLock(false); }
 
     function initCustomerTracking(orderId) {
         if(!orderId) return;
@@ -1470,39 +568,37 @@
         const sWait = document.getElementById('step-waiting');
         const sPrep = document.getElementById('step-preparing');
         const sReady = document.getElementById('step-ready');
-
+        
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
-
+        
+        // Reset Text and Ticks
         sWait.innerHTML = "✅ Sent to Kitchen";
         sPrep.innerHTML = "🔘 Chef is Preparing";
         sReady.innerHTML = "🔘 Food is Ready!";
-        sWait.classList.add('active');
 
-        if(status === 'PREPARING') {
-            window.navigator.vibrate([200, 100, 200]);
-            icon.innerText = "👨‍🍳";
-            main.innerText = "Chef is Cooking!";
-            sub.innerText = "Your dough is being tossed right now!";
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sPrep.classList.add('active');
-        }
-        else if(status === 'READY') {
-            window.navigator.vibrate([500, 110, 500]);
-            icon.innerText = "🔥";
-            main.innerText = "Order Ready!";
-            sub.innerText = "Freshly baked and hot!";
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sReady.innerHTML = "✅ Food is Ready!";
-            sPrep.classList.add('active');
+        sWait.classList.add('active');
+        
+        if(status === 'PREPARING') { 
+            window.navigator.vibrate([200, 100, 200]); 
+            icon.innerText = "👨‍🍳"; 
+            main.innerText = "Chef is Cooking!"; 
+            sub.innerText = "Your dough is being tossed right now!"; 
+            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
+            sPrep.classList.add('active'); 
+        } 
+        else if(status === 'READY') { 
+            window.navigator.vibrate([500, 110, 500]); 
+            icon.innerText = "🔥"; 
+            main.innerText = "Order Ready!"; 
+            sub.innerText = "Freshly baked and hot!"; 
+            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
+            sReady.innerHTML = "✅ Food is Ready!";    // TICK ADDED
+            sPrep.classList.add('active'); 
             sReady.classList.add('active');
         }
-    }
+    } // FIXED MISSING CLOSING BRACKET
 
-    function clearTracking() {
-        localStorage.removeItem('ovenx_last_order_id');
-        document.getElementById('tracking-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
+    function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
 
     function checkUpsell(item) {
         const itemName = item.name.toLowerCase();
@@ -1537,27 +633,16 @@
         html += `</div>`; content.innerHTML = html;
     }
 
-    function addUpsellToCart(name, price) {
-        playClick('thud');
-        cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" });
-        updateCartBar();
-    }
+    function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
 
     async function finalSubmitOrder() {
-        playClick('thud');
-        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-        const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
+        playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-
+        
         let orderId = null;
-        try {
-            if(sb) {
-                const { data } = await sb.from('kitchen_orders').insert([orderObj]).select();
-                if(data && data[0]) orderId = data[0].id;
-            }
-        } catch(e) { }
+        try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
+        // Loyalty Stamp Processing
         let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
         let bonus = "";
         if(localStorage.getItem('ovenx_member_name')) {
@@ -1569,207 +654,62 @@
                 localStorage.setItem('ovenx_stamps', stamps + 1);
             }
         }
-        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`;
-        if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*${bonus}`);
 
+        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
+        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*${bonus}`);
+        
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
         if(orderId) initCustomerTracking(orderId);
         window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
     }
 
-    function addToCartFinal() {
-        playClick('thud');
-        const note = document.getElementById('special-note').value;
-        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : "");
+    function addToCartFinal() { 
+        playClick('thud'); 
+        const note = document.getElementById('special-note').value; 
+        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : ""); 
         const addedItem = { ...selectedItem, qty: selectedQty, note: finalDetail };
-        cart.push(addedItem); updateCartBar(); closeModals();
+        cart.push(addedItem); updateCartBar(); closeModals(); 
         setTimeout(() => checkUpsell(addedItem), 300);
     }
-
-    function updateCartBar() {
-        const totalItems = cart.reduce((s, i) => s + i.qty, 0);
-        const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`;
-        document.getElementById('cart-total').innerText = `Rs ${totalPrice}`;
-        document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none';
-    }
-
-    function removeItem(idx) {
-        playClick('pop');
-        cart.splice(idx, 1);
-        updateCartBar();
-        if(cart.length === 0) {
-            document.getElementById('overlay-screen').style.display = 'none';
-            setScrollLock(false);
-        } else renderFinalSummary(delCharge);
-    }
-
-    function startCheckout() {
-        playClick('thud');
-        document.getElementById('overlay-screen').style.display = 'block';
-        setScrollLock(true);
-        renderServiceTypeStep();
-    }
-
-    function renderServiceTypeStep() {
-        chkStep = 1;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`;
-        renderCheckoutServiceButtons();
-    }
-
-    function renderCheckoutServiceButtons() {
-        const container = document.getElementById('checkout-options-buttons');
-        let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`;
-        if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; }
-        container.innerHTML = html;
-    }
-
-    function selectService(type) {
-        playClick('pop');
-        orderType = type;
-        if(type === 'Dine-In') {
-            if(tableNum) renderFinalSummary(0);
-            else renderTableStep();
-        } else if(type === 'Takeaway') renderFinalSummary(0);
-        else renderAddressStep();
-    }
-
-    function renderTableStep() {
-        chkStep = 2;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`;
-    }
-
-    function renderAddressStep() {
-        chkStep = 2;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`;
-    }
-
-    function loadDeliverySystem() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`;
-        setTimeout(() => {
-            if(document.getElementById('unlock-area')) {
-                document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`;
-            }
-        }, 5000);
-    }
-
-    function renderDeliveryFeeInput() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`;
-    }
-
-    function saveFee() {
-        let f = document.getElementById('manualFee').value;
-        if(!f) return alert("Please enter price!");
-        delCharge = parseInt(f);
-        renderDeliveryAddressInput();
-    }
-
-    function renderDeliveryAddressInput() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`;
-    }
-
-    function saveAddr() {
-        let a = document.getElementById('manualAddr').value;
-        if(!a) return alert("Please enter address!");
-        userAddress = a;
-        renderFinalSummary(delCharge);
-    }
+    
+    function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
+    function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
+    
+    function startCheckout() { playClick('thud'); document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
+    function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; renderCheckoutServiceButtons(); }
+    function renderCheckoutServiceButtons() { const container = document.getElementById('checkout-options-buttons'); let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
+    function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
+    function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
+    
+    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`; }
+    function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; setTimeout(() => { if(document.getElementById('unlock-area')) { document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000); }
+    function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`; }
+    function saveFee() { let f = document.getElementById('manualFee').value; if(!f) return alert("Please enter price!"); delCharge = parseInt(f); renderDeliveryAddressInput(); }
+    function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
+    function saveAddr() { let a = document.getElementById('manualAddr').value; if(!a) return alert("Please enter address!"); userAddress = a; renderFinalSummary(delCharge); }
 
     let adminPassTracker = "";
-    function openAdminLogin() {
-        playClick('pop');
-        adminPassTracker = "";
-        document.getElementById('adminPassword').value = "";
-        document.getElementById('admin-login-overlay').style.display = 'flex';
-        setScrollLock(true);
-    }
-
-    function closeAdminLogin() {
-        document.getElementById('admin-login-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
-
-    function handlePassInput(el) {
-        let cur = el.value;
-        if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length);
-        else {
-            let last = cur.substring(cur.length-1);
-            if(last !== "🍕") adminPassTracker += last;
-        }
-        el.value = "🍕".repeat(adminPassTracker.length);
-    }
-
-    function verifyAdmin() {
-        if(adminPassTracker === "123") {
-            playClick('thud');
-            closeAdminLogin();
-            openKitchenPanel();
-            if ("Notification" in window) Notification.requestPermission();
-            setupRealtimeNotifications();
-        } else {
-            alert("Denied!");
-            adminPassTracker = "";
-            document.getElementById('adminPassword').value = "";
-        }
-    }
+    function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
+    function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
+    function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
+    
+    function verifyAdmin() { if(adminPassTracker === "123") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); if ("Notification" in window) Notification.requestPermission(); setupRealtimeNotifications(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
 
     function renderFinalSummary(fee) {
-        chkStep = 3; delCharge = parseFloat(fee) || 0;
-        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-        const grand = foodTotal + delCharge + sc;
+        chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
         const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
-        let summaryBubbleContent = `<b>ORDER SUMMARY</b>`;
-        if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
+        let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
         document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
     }
 
-    function setInitialService(type) {
-        playClick('thud');
-        orderType = type;
-        document.getElementById('welcome-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
+    function setInitialService(type) { playClick('thud'); orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); }
+    document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
 
-    document.getElementById('checkout-back-btn').onclick = function() {
-        playClick('pop');
-        if(chkStep === 1) {
-            document.getElementById('overlay-screen').style.display = 'none';
-            setScrollLock(false);
-        } else renderServiceTypeStep();
-    };
-
-    async function updateStatus(id, newStatus) {
-        playClick('thud');
-        if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id);
-        renderKitchenOrders();
-    }
-
-    async function assignRider(id, rider) {
-        playClick('pop');
-        if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id);
-        renderKitchenOrders();
-    }
-
-    async function clearReadyOrders() {
-        if(!confirm("Clear only READY Dine-In and Takeaway orders?")) return;
-        playClick('pop');
-        if(!sb) return;
-
-        const { data: ready } = await sb.from('kitchen_orders')
-            .select('id')
-            .eq('status', 'READY')
-            .in('type', ['Dine-In', 'Takeaway']);
-
-        if(ready && ready.length > 0) {
-            await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id));
-            renderKitchenOrders();
-        } else {
-            alert("No ready Dine-In/Takeaway orders to clear.");
-        }
-    }
+    /* --- LIVE KITCHEN LOGIC --- */
+    async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
+    async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
+    async function clearReadyOrders() { if(!confirm("Clear Ready Dine-In orders?")) return; playClick('pop'); if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY').neq('type', 'Delivery'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); renderKitchenOrders(); } }
 
     async function clearDeliveriesWithPassword() {
         const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
@@ -1779,36 +719,28 @@
             if(!error) { alert("Delivery Audit Cleared!"); renderKitchenOrders(); } else alert("Error clearing database.");
         } else if (p !== null) { alert("Denied! Wrong Password."); }
     }
-
+    
     function setKitchenFilter(f) {
         currentKitchenFilter = f; playClick('pop'); document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
-        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; }
+        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; } 
         else { document.getElementById('k-tab-del').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'flex'; document.getElementById('clear-del-btn').style.display = 'block'; }
         renderKitchenOrders();
     }
 
-    function openKitchenPanel() {
-        document.getElementById('kitchen-panel-overlay').style.display = 'flex';
-        renderKitchenOrders();
-        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000);
-        setScrollLock(true);
-    }
-
-    function closeKitchenPanel() {
-        document.getElementById('kitchen-panel-overlay').style.display = 'none';
-        if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; }
-        setScrollLock(false);
-    }
-
+    function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); setScrollLock(true); }
+    function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
+    
+    /* --- CUSTOMER DATABASE EXPORT --- */
     async function downloadCustomerData() {
         if(!confirm("Download Customer Database?")) return;
         const { data, error } = await sb.from('gold_club_members').select('name, phone, created_at');
         if(error) return alert("Error fetching data");
-
+        
         let csvContent = "data:text/csv;charset=utf-8,Name,WhatsApp,Date Joined\n";
         data.forEach(row => {
             csvContent += `${row.name},${row.phone},${new Date(row.created_at).toLocaleDateString()}\n`;
         });
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -1818,8 +750,8 @@
         document.body.removeChild(link);
     }
 
+    /* --- MANUAL ORDER LOGIC --- */
     function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
-
     async function saveManualOrder() {
         const type = document.getElementById('man-type').value;
         const loc = document.getElementById('man-loc').value;
@@ -1835,6 +767,7 @@
                 document.getElementById('manual-order-overlay').style.display = 'none';
                 setScrollLock(false);
                 renderKitchenOrders();
+                // Clear inputs
                 document.getElementById('man-loc').value = "";
                 document.getElementById('man-items').value = "";
                 document.getElementById('man-sub').value = "";
@@ -1844,33 +777,18 @@
     }
 
     async function renderKitchenOrders() {
-        if(!sb) return;
-        let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
+        if(!sb) return; let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
         if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-        const { data: orders } = await query;
-        const list = document.getElementById('kitchen-orders-list');
+        const { data: orders } = await query; const list = document.getElementById('kitchen-orders-list');
         list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
         const now = new Date(); let isAnyOrderLate = false;
         orders && orders.forEach((o) => {
-            const createdAt = new Date(o.created_at);
-            const remaining = (25 * 60000) - (now - createdAt);
+            const createdAt = new Date(o.created_at); const remaining = (25 * 60000) - (now - createdAt);
             let timeLabel = ""; let alertClass = "";
-            if (o.status !== 'READY') {
-                if (remaining <= 0) {
-                    alertClass = "late";
-                    timeLabel = "LATE";
-                    isAnyOrderLate = true;
-                } else {
-                    timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0');
-                    if (remaining <= 5 * 60000) alertClass = "warning";
-                }
-            }
-            let priceHtml = "";
-            if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
-            let riderHtml = "";
-            if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
-            const card = document.createElement('div');
-            card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
+            if (o.status !== 'READY') { if (remaining <= 0) { alertClass = "late"; timeLabel = "LATE"; isAnyOrderLate = true; } else { timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); if (remaining <= 5 * 60000) alertClass = "warning"; } }
+            let priceHtml = ""; if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
+            let riderHtml = ""; if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+            const card = document.createElement('div'); card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
             card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>${priceHtml}${riderHtml}<div style="display:flex; gap:10px; margin-top:15px;">${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}</div>`;
             list.appendChild(card);
         });
@@ -1886,12 +804,9 @@
                 const rOrders = orders.filter(o => o.rider === r);
                 const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
                 const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
-                document.getElementById('audit-result-box').style.display = 'block';
-                document.getElementById('audit-rider-name').innerText = r;
-                document.getElementById('audit-count').innerText = rOrders.length;
-                document.getElementById('audit-cash').innerText = "Rs " + cash;
-                document.getElementById('audit-fees').innerText = "Rs " + fees;
-                document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
+                document.getElementById('audit-result-box').style.display = 'block'; document.getElementById('audit-rider-name').innerText = r;
+                document.getElementById('audit-count').innerText = rOrders.length; document.getElementById('audit-cash').innerText = "Rs " + cash;
+                document.getElementById('audit-fees').innerText = "Rs " + fees; document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
                 playClick('pop');
             };
             div.appendChild(b);
@@ -1901,38 +816,27 @@
     function renderPublicDeals() {
         const list = document.getElementById('deals-list'); list.innerHTML = '';
         dealsData.forEach(deal => {
-            let bgUrl = imgMap["pizza"];
-            if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
+            let bgUrl = imgMap["pizza"]; if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
             list.innerHTML += `<div class="deal-card"><div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div></div>`;
         });
     }
 
     function renderPublicMenu(filterText = "") {
-        const mC = document.getElementById('menu-container'); mC.innerHTML = "";
-        const search = filterText.toLowerCase();
+        const mC = document.getElementById('menu-container'); mC.innerHTML = ""; const search = filterText.toLowerCase();
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue;
-            const filteredItems = menuData[cat].filter(item =>
+            const filteredItems = menuData[cat].filter(item => 
                 item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
             );
             if (filteredItems.length > 0) {
-                let title = document.createElement('div');
-                title.className = 'section-title';
-                title.innerText = cat;
-                title.id = "cat-" + cat.replace(/\s+/g, '-');
-                mC.appendChild(title);
+                let title = document.createElement('div'); title.className = 'section-title'; title.innerText = cat; title.id = "cat-" + cat.replace(/\s+/g, '-'); mC.appendChild(title);
                 let grid = document.createElement('div'); grid.className = 'grid';
                 filteredItems.forEach(item => {
-                    let fBg = imgMap["pizza"];
-                    for (let key in imgMap) if (item.name.toLowerCase().includes(key)) fBg = imgMap[key];
-                    let b = document.createElement('div');
-                    b.className = 'btn btn-3d';
-                    b.style.backgroundImage = `url('${fBg}')`;
+                    let fBg = imgMap["pizza"]; for (let key in imgMap) if (item.name.toLowerCase().includes(key)) fBg = imgMap[key];
+                    let b = document.createElement('div'); b.className = 'btn btn-3d'; b.style.backgroundImage = `url('${fBg}')`;
                     b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
-                    b.onclick = () => openOrderFlow(item);
-                    grid.appendChild(b);
-                });
-                mC.appendChild(grid);
+                    b.onclick = () => openOrderFlow(item); grid.appendChild(b);
+                }); mC.appendChild(grid);
             }
         }
     }
@@ -1940,32 +844,23 @@
     function renderCategoryBar() {
         const bar = document.getElementById('category-bar'); bar.innerHTML = "";
         for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue;
-            const pill = document.createElement('div');
-            pill.className = "cat-pill";
-            pill.innerText = cat;
-            pill.onclick = () => {
-                playClick('pop');
-                document.getElementById('menuSearch').value = "";
-                renderPublicMenu();
-                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-'));
-                if(target) target.scrollIntoView();
-                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
+            if (cat === "Pan/Premium") continue; 
+            const pill = document.createElement('div'); pill.className = "cat-pill"; pill.innerText = cat;
+            pill.onclick = () => { 
+                playClick('pop'); document.getElementById('menuSearch').value = ""; renderPublicMenu(); 
+                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); if(target) target.scrollIntoView(); 
+                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); pill.classList.add('active'); 
             };
             bar.appendChild(pill);
         }
     }
 
-    function handleSearch(val) {
-        renderPublicMenu(val);
-        if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-    }
+    function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
 
     function setupRealtimeNotifications() {
         if(!sb) return;
         sb.channel('kitchen').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-            playClick('siren');
+            playClick('siren'); 
             if (Notification.permission === "granted") {
                 new Notification("🍕 NEW ORDER RECEIVED!", {
                     body: `New ${payload.new.type} order at ${payload.new.location}`,
@@ -1976,898 +871,18 @@
         }).subscribe();
     }
 
-    // ────────────────────────────────────────────────────────────────
-    // ────────────────────────────────────────────────────────────────
-// AI CHATBOT – FRIENDLY GROQ VERSION (2026 WORKING MODEL)
-// ────────────────────────────────────────────────────────────────
-const AI_API_KEY = "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";
-const menuJson = JSON.stringify(menuData);
-const dealsJson = JSON.stringify(dealsData);
-let aiChatHistory = [];
-
-function toggleAI() {
-    const win = document.getElementById('ai-window');
-    win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
-    if (win.style.display === 'flex') {
-        document.getElementById('ai-input').focus();
-    }
-}
-
-function appendAIMessage(role, text, isError = false) {
-    const box = document.getElementById('ai-messages');
-    const div = document.createElement('div');
-    div.className = isError ? "msg-error" : `msg msg-${role}`;
-    div.innerText = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-async function sendToAI() {
-    const input = document.getElementById('ai-input');
-    const message = input.value.trim();
-    if (!message) return;
-
-    appendAIMessage('user', message);
-    input.value = "";
-
-    const thinking = document.createElement('div');
-    thinking.className = 'msg msg-bot';
-    thinking.innerText = 'Thinking...';
-    document.getElementById('ai-messages').appendChild(thinking);
-    document.getElementById('ai-messages').scrollTop = document.getElementById('ai-messages').scrollHeight;
-
-    const systemPrompt = `You are Oven X Master AI 2.0 — the chill, super friendly ordering buddy 🍕😋 
-You talk like a real person: casual, fun, lots of emojis, short messages. 
-Use the customer's language (English, Roman Urdu, Urdu script, or mix) and their name once you know it.
-
-Full Menu: ${menuJson}
-Hot Deals: ${dealsJson}
-
-Golden Rules:
-- Be warm, patient, and helpful. Make them smile 😊
-- Chat naturally first — answer questions, joke, recommend gently.
-- ONLY when the customer clearly says "add", "dal do", "order karo", etc., THEN output JSON for action.
-- NEVER force an add — always confirm first with normal text.
-- For misunderstandings (wrong item name): politely clarify + suggest 1-2 close matches, then ask "Yeh chahiye tha? 😊"
-- Normal replies: pure friendly text, no JSON at all.
-- Only these JSON actions (nothing else):
-  {"action":"add_to_cart","item":"Exact name from menu/deals","qty":number,"reply":"short fun confirmation"}
-  {"action":"remove_from_cart","item":"Exact name","qty":number or "all","reply":"short confirmation"}
-  {"action":"trigger_checkout","reply":"excited message guiding to checkout"}
-- If they say done/bill/order place etc.: trigger checkout.
-- For delivery: casually say "Delivery hai? Checkout mein Delivery select karo, phir map 🗺️ pe click karke fee dekho aur address dal do!"
-- Keep everything short, sweet, and conversational. No long explanations!`;
-
-    try {
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${AI_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",  // Confirmed working production model
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    ...aiChatHistory,
-                    { role: "user", content: message }
-                ],
-                temperature: 0.8,
-                max_tokens: 512
-            })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status} - ${data.error?.message || 'Unknown error'}`);
-        }
-
-        if (thinking && thinking.parentNode) thinking.remove();
-
-        let content = data.choices[0].message.content.trim();
-        content = content.replace(/```json\n?|```/g, '').trim();
-
-        let parsed = { reply: content, action: "none" };
-        try {
-            parsed = JSON.parse(content);
-        } catch (e) {
-            // Normal text reply
-        }
-
-        appendAIMessage('bot', parsed.reply);
-
-        // Handle actions
-        if (parsed.action === "add_to_cart" && parsed.item) {
-            let found = null;
-            // Search menu
-            for (let cat in menuData) {
-                found = menuData[cat].find(i => i.name.toLowerCase() === parsed.item.toLowerCase());
-                if (found) break;
-            }
-            // Search deals if not found
-            if (!found) {
-                found = dealsData.find(d => d.name.toLowerCase() === parsed.item.toLowerCase());
-            }
-
-            if (found) {
-                // Open the full order flow (handles size/flavor/qty for both items & deals)
-                openOrderFlow(JSON.parse(JSON.stringify(found)));
-                appendAIMessage('bot', `Awesome choice${parsed.qty > 1 ? ` (${parsed.qty}x)` : ''}! Opening the screen to customize your ${found.name} 😋`);
-            } else {
-                appendAIMessage('bot', `Sorry, I couldn't find "${parsed.item}". Can you check the spelling or ask me to list the menu?`);
-            }
-        }
-
-        if (parsed.action === "remove_from_cart" && parsed.item) {
-            const idx = cart.findIndex(i => i.name.toLowerCase() === parsed.item.toLowerCase());
-            if (idx !== -1) {
-                if (parsed.qty === "all" || cart[idx].qty <= parsed.qty) {
-                    cart.splice(idx, 1);
-                } else {
-                    cart[idx].qty -= parsed.qty;
-                }
-                updateCartBar();
-                appendAIMessage('bot', parsed.reply || `Removed from cart ✓`);
-                if (cart.length === 0) appendAIMessage('bot', "Cart is empty now!");
-            } else {
-                appendAIMessage('bot', `Couldn't find "${parsed.item}" in your cart.`);
-            }
-        }
-
-        if (parsed.action === "trigger_checkout") {
-            startCheckout();  // Directly opens checkout overlay
-        }
-
-        aiChatHistory.push({ role: "user", content: message });
-        aiChatHistory.push({ role: "assistant", content: content });
-
-    } catch (err) {
-        console.error("Groq error:", err);
-        if (thinking && thinking.parentNode) thinking.remove();
-
-        let userMsg = "Sorry yaar — thori si network issue ho gayi 😅";
-
-        if (err.message.includes("429")) {
-            // Fun, on-brand rate limit message — no technical details shown to customer
-            userMsg = "Aray yaar, aaj bohot orders aa rahe hain! Main thak sa gaya hoon 😴💦\nEk minute ruk jao na, phir fresh ho kar aapki madad karunga! 🚀🍕";
-        } else if (err.message.includes("401")) {
-            userMsg = "API key mein kuch issue hai — developer se check karwa lo 😬";
-        } else if (err.message.includes("Failed to fetch")) {
-            userMsg = "Internet thora slow hai — ek baar refresh kar ke try karo!";
-        }
-
-        // Never show raw error details to customer
-        appendAIMessage('bot', userMsg, true);
-    }
-}
-
-    // ────────────────────────────────────────────────────────────────
-    // APP INITIALIZATION (unchanged)
-    // ────────────────────────────────────────────────────────────────
-    renderPublicMenu();
-    renderPublicDeals();
-    renderCategoryBar();
+    // Global Initialization
+    renderPublicMenu(); 
+    renderPublicDeals(); 
+    renderCategoryBar(); 
     renderLoyaltyCard();
+
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
-    let deferredPrompt;
-    let secretClickCount = 0;
+
+    let deferredPrompt; let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-    function handleSecretClick() {
-        secretClickCount++;
-        if(secretClickCount === 5) {
-            secretClickCount = 0;
-            if (deferredPrompt) deferredPrompt.prompt();
-            else alert("Ready.");
-        }
-        setTimeout(() => { secretClickCount = 0; }, 2000);
-    }
-</script>
-</body>
-</html>
-
-
-    function updateTrackingUI(status) {
-        const icon = document.getElementById('track-icon');
-        const main = document.getElementById('track-main-status');
-        const sub = document.getElementById('track-sub-status');
-        const sWait = document.getElementById('step-waiting');
-        const sPrep = document.getElementById('step-preparing');
-        const sReady = document.getElementById('step-ready');
-
-        document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
-
-        sWait.innerHTML = "✅ Sent to Kitchen";
-        sPrep.innerHTML = "🔘 Chef is Preparing";
-        sReady.innerHTML = "🔘 Food is Ready!";
-        sWait.classList.add('active');
-
-        if(status === 'PREPARING') {
-            window.navigator.vibrate([200, 100, 200]);
-            icon.innerText = "👨‍🍳";
-            main.innerText = "Chef is Cooking!";
-            sub.innerText = "Your dough is being tossed right now!";
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sPrep.classList.add('active');
-        }
-        else if(status === 'READY') {
-            window.navigator.vibrate([500, 110, 500]);
-            icon.innerText = "🔥";
-            main.innerText = "Order Ready!";
-            sub.innerText = "Freshly baked and hot!";
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sReady.innerHTML = "✅ Food is Ready!";
-            sPrep.classList.add('active');
-            sReady.classList.add('active');
-        }
-    }
-
-    function clearTracking() {
-        localStorage.removeItem('ovenx_last_order_id');
-        document.getElementById('tracking-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
-
-    function checkUpsell(item) {
-        const itemName = item.name.toLowerCase();
-        const overlay = document.getElementById('upsell-overlay');
-        const content = document.getElementById('upsell-body-content');
-        const icon = document.getElementById('upsell-icon');
-        overlay.style.display = 'none';
-        content.innerHTML = `<p id="upsell-desc" style="font-weight:bold; color:#555; margin-bottom:20px;"></p><button id="upsell-yes-btn" class="confirm-btn btn-3d" style="margin-top:0; background:var(--orange); box-shadow: 0 6px 0px var(--dark-orange);">YES, ADD IT! 🚀</button>`;
-        if(itemName.includes('pizza') || itemName.startsWith('plain fries')) {
-            icon.innerText = "🍯"; document.getElementById('upsell-desc').innerHTML = "Add a **Dip Sauce** for only **Rs 50**!";
-            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(false);
-            overlay.style.display = 'flex'; setScrollLock(true);
-        } else if (itemName.includes('club sandwich') || itemName.includes('burger')) {
-            icon.innerText = "🍟🥤"; document.getElementById('upsell-desc').innerHTML = "Make it a **Combo Meal**!<br>Add Regular Fries + Buddy Drink for **Rs 360**.";
-            document.getElementById('upsell-yes-btn').onclick = () => { addUpsellToCart("Combo Meal (Fries + Drink)", 360); overlay.style.display='none'; setScrollLock(false); };
-            overlay.style.display = 'flex'; setScrollLock(true);
-        } else if (itemName.includes('wings')) {
-            icon.innerText = "🍗🔥"; document.getElementById('upsell-desc').innerHTML = "Make it a **Wings Combo**!<br>Add Sauce + Buddy Drink for only **Rs 180**.";
-            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(true);
-            overlay.style.display = 'flex'; setScrollLock(true);
-        }
-    }
-
-    function showDipFlavorGrid(isWingsCombo) {
-        const flavors = ["BBQ", "Peri Peri", "Bonfire", "Special", "Chipotle", "Creamy Dreamy", "Chili Mayo"];
-        const content = document.getElementById('upsell-body-content');
-        let html = `<p style="font-weight:900; color:var(--red);">PICK YOUR SAUCE:</p><div class="upsell-grid">`;
-        flavors.forEach(f => {
-            if(isWingsCombo) html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); addUpsellToCart('Buddy Drink', 130); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
-            else html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
-        });
-        html += `</div>`; content.innerHTML = html;
-    }
-
-    function addUpsellToCart(name, price) {
-        playClick('thud');
-        cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" });
-        updateCartBar();
-    }
-
-    async function finalSubmitOrder() {
-        playClick('thud');
-        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-        const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
-        const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-
-        let orderId = null;
-        try {
-            if(sb) {
-                const { data } = await sb.from('kitchen_orders').insert([orderObj]).select();
-                if(data && data[0]) orderId = data[0].id;
-            }
-        } catch(e) { }
-
-        let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
-        let bonus = "";
-        if(localStorage.getItem('ovenx_member_name')) {
-            if(stamps >= 10) {
-                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-                localStorage.setItem('ovenx_stamps', 0);
-            } else if(foodTotal >= 1000) {
-                localStorage.setItem('ovenx_stamps', stamps + 1);
-            }
-        }
-        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`;
-        if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*${bonus}`);
-
-        cart = []; updateCartBar();
-        document.getElementById('overlay-screen').style.display = 'none';
-        if(orderId) initCustomerTracking(orderId);
-        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
-    }
-
-    function addToCartFinal() {
-        playClick('thud');
-        const note = document.getElementById('special-note').value;
-        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : "");
-        const addedItem = { ...selectedItem, qty: selectedQty, note: finalDetail };
-        cart.push(addedItem); updateCartBar(); closeModals();
-        setTimeout(() => checkUpsell(addedItem), 300);
-    }
-
-    function updateCartBar() {
-        const totalItems = cart.reduce((s, i) => s + i.qty, 0);
-        const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`;
-        document.getElementById('cart-total').innerText = `Rs ${totalPrice}`;
-        document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none';
-    }
-
-    function removeItem(idx) {
-        playClick('pop');
-        cart.splice(idx, 1);
-        updateCartBar();
-        if(cart.length === 0) {
-            document.getElementById('overlay-screen').style.display = 'none';
-            setScrollLock(false);
-        } else renderFinalSummary(delCharge);
-    }
-
-    function startCheckout() {
-        playClick('thud');
-        document.getElementById('overlay-screen').style.display = 'block';
-        setScrollLock(true);
-        renderServiceTypeStep();
-    }
-
-    function renderServiceTypeStep() {
-        chkStep = 1;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`;
-        renderCheckoutServiceButtons();
-    }
-
-    function renderCheckoutServiceButtons() {
-        const container = document.getElementById('checkout-options-buttons');
-        let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`;
-        if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; }
-        container.innerHTML = html;
-    }
-
-    function selectService(type) {
-        playClick('pop');
-        orderType = type;
-        if(type === 'Dine-In') {
-            if(tableNum) renderFinalSummary(0);
-            else renderTableStep();
-        } else if(type === 'Takeaway') renderFinalSummary(0);
-        else renderAddressStep();
-    }
-
-    function renderTableStep() {
-        chkStep = 2;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`;
-    }
-
-    function renderAddressStep() {
-        chkStep = 2;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`;
-    }
-
-    function loadDeliverySystem() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`;
-        setTimeout(() => {
-            if(document.getElementById('unlock-area')) {
-                document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`;
-            }
-        }, 5000);
-    }
-
-    function renderDeliveryFeeInput() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`;
-    }
-
-    function saveFee() {
-        let f = document.getElementById('manualFee').value;
-        if(!f) return alert("Please enter price!");
-        delCharge = parseInt(f);
-        renderDeliveryAddressInput();
-    }
-
-    function renderDeliveryAddressInput() {
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`;
-    }
-
-    function saveAddr() {
-        let a = document.getElementById('manualAddr').value;
-        if(!a) return alert("Please enter address!");
-        userAddress = a;
-        renderFinalSummary(delCharge);
-    }
-
-    let adminPassTracker = "";
-    function openAdminLogin() {
-        playClick('pop');
-        adminPassTracker = "";
-        document.getElementById('adminPassword').value = "";
-        document.getElementById('admin-login-overlay').style.display = 'flex';
-        setScrollLock(true);
-    }
-
-    function closeAdminLogin() {
-        document.getElementById('admin-login-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
-
-    function handlePassInput(el) {
-        let cur = el.value;
-        if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length);
-        else {
-            let last = cur.substring(cur.length-1);
-            if(last !== "🍕") adminPassTracker += last;
-        }
-        el.value = "🍕".repeat(adminPassTracker.length);
-    }
-
-    function verifyAdmin() {
-        if(adminPassTracker === "123") {
-            playClick('thud');
-            closeAdminLogin();
-            openKitchenPanel();
-            if ("Notification" in window) Notification.requestPermission();
-            setupRealtimeNotifications();
-        } else {
-            alert("Denied!");
-            adminPassTracker = "";
-            document.getElementById('adminPassword').value = "";
-        }
-    }
-
-    function renderFinalSummary(fee) {
-        chkStep = 3; delCharge = parseFloat(fee) || 0;
-        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-        const grand = foodTotal + delCharge + sc;
-        const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
-        let summaryBubbleContent = `<b>ORDER SUMMARY</b>`;
-        if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
-    }
-
-    function setInitialService(type) {
-        playClick('thud');
-        orderType = type;
-        document.getElementById('welcome-overlay').style.display = 'none';
-        setScrollLock(false);
-    }
-
-    document.getElementById('checkout-back-btn').onclick = function() {
-        playClick('pop');
-        if(chkStep === 1) {
-            document.getElementById('overlay-screen').style.display = 'none';
-            setScrollLock(false);
-        } else renderServiceTypeStep();
-    };
-
-    async function updateStatus(id, newStatus) {
-        playClick('thud');
-        if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id);
-        renderKitchenOrders();
-    }
-
-    async function assignRider(id, rider) {
-        playClick('pop');
-        if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id);
-        renderKitchenOrders();
-    }
-
-    async function clearReadyOrders() {
-        if(!confirm("Clear only READY Dine-In and Takeaway orders?")) return;
-        playClick('pop');
-        if(!sb) return;
-
-        const { data: ready } = await sb.from('kitchen_orders')
-            .select('id')
-            .eq('status', 'READY')
-            .in('type', ['Dine-In', 'Takeaway']);
-
-        if(ready && ready.length > 0) {
-            await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id));
-            renderKitchenOrders();
-        } else {
-            alert("No ready Dine-In/Takeaway orders to clear.");
-        }
-    }
-
-    async function clearDeliveriesWithPassword() {
-        const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
-        if(p === "7530") {
-            playClick('thud'); if(!sb) return;
-            const { error } = await sb.from('kitchen_orders').delete().eq('type', 'Delivery');
-            if(!error) { alert("Delivery Audit Cleared!"); renderKitchenOrders(); } else alert("Error clearing database.");
-        } else if (p !== null) { alert("Denied! Wrong Password."); }
-    }
-
-    function setKitchenFilter(f) {
-        currentKitchenFilter = f; playClick('pop'); document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
-        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; }
-        else { document.getElementById('k-tab-del').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'flex'; document.getElementById('clear-del-btn').style.display = 'block'; }
-        renderKitchenOrders();
-    }
-
-    function openKitchenPanel() {
-        document.getElementById('kitchen-panel-overlay').style.display = 'flex';
-        renderKitchenOrders();
-        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000);
-        setScrollLock(true);
-    }
-
-    function closeKitchenPanel() {
-        document.getElementById('kitchen-panel-overlay').style.display = 'none';
-        if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; }
-        setScrollLock(false);
-    }
-
-    async function downloadCustomerData() {
-        if(!confirm("Download Customer Database?")) return;
-        const { data, error } = await sb.from('gold_club_members').select('name, phone, created_at');
-        if(error) return alert("Error fetching data");
-
-        let csvContent = "data:text/csv;charset=utf-8,Name,WhatsApp,Date Joined\n";
-        data.forEach(row => {
-            csvContent += `${row.name},${row.phone},${new Date(row.created_at).toLocaleDateString()}\n`;
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `OvenX_Club_Members_${new Date().toLocaleDateString()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
-
-    async function saveManualOrder() {
-        const type = document.getElementById('man-type').value;
-        const loc = document.getElementById('man-loc').value;
-        const items = document.getElementById('man-items').value;
-        const sub = parseInt(document.getElementById('man-sub').value || 0);
-        const fee = parseInt(document.getElementById('man-fee').value || 0);
-        if(!loc || !items) return alert("Please fill Table/Address and Items list!");
-        const obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee };
-        if(sb) {
-            playClick('thud');
-            const { error } = await sb.from('kitchen_orders').insert([obj]);
-            if(!error) {
-                document.getElementById('manual-order-overlay').style.display = 'none';
-                setScrollLock(false);
-                renderKitchenOrders();
-                document.getElementById('man-loc').value = "";
-                document.getElementById('man-items').value = "";
-                document.getElementById('man-sub').value = "";
-                document.getElementById('man-fee').value = "";
-            } else alert("Error saving manual order.");
-        }
-    }
-
-    async function renderKitchenOrders() {
-        if(!sb) return;
-        let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
-        if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-        const { data: orders } = await query;
-        const list = document.getElementById('kitchen-orders-list');
-        list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
-        const now = new Date(); let isAnyOrderLate = false;
-        orders && orders.forEach((o) => {
-            const createdAt = new Date(o.created_at);
-            const remaining = (25 * 60000) - (now - createdAt);
-            let timeLabel = ""; let alertClass = "";
-            if (o.status !== 'READY') {
-                if (remaining <= 0) {
-                    alertClass = "late";
-                    timeLabel = "LATE";
-                    isAnyOrderLate = true;
-                } else {
-                    timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0');
-                    if (remaining <= 5 * 60000) alertClass = "warning";
-                }
-            }
-            let priceHtml = "";
-            if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
-            let riderHtml = "";
-            if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
-            const card = document.createElement('div');
-            card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-            card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>${priceHtml}${riderHtml}<div style="display:flex; gap:10px; margin-top:15px;">${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}</div>`;
-            list.appendChild(card);
-        });
-        if(isAnyOrderLate) playClick('siren');
-        if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
-    }
-
-    function renderAuditUI(orders) {
-        const div = document.getElementById('rider-audit-selection'); div.innerHTML = "";
-        RIDERS.forEach(r => {
-            const b = document.createElement('button'); b.className = "rider-btn"; b.innerText = r;
-            b.onclick = () => {
-                const rOrders = orders.filter(o => o.rider === r);
-                const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
-                const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
-                document.getElementById('audit-result-box').style.display = 'block';
-                document.getElementById('audit-rider-name').innerText = r;
-                document.getElementById('audit-count').innerText = rOrders.length;
-                document.getElementById('audit-cash').innerText = "Rs " + cash;
-                document.getElementById('audit-fees').innerText = "Rs " + fees;
-                document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
-                playClick('pop');
-            };
-            div.appendChild(b);
-        });
-    }
-
-    function renderPublicDeals() {
-        const list = document.getElementById('deals-list'); list.innerHTML = '';
-        dealsData.forEach(deal => {
-            let bgUrl = imgMap["pizza"];
-            if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
-            list.innerHTML += `<div class="deal-card"><div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div></div>`;
-        });
-    }
-
-    function renderPublicMenu(filterText = "") {
-        const mC = document.getElementById('menu-container'); mC.innerHTML = "";
-        const search = filterText.toLowerCase();
-        for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue;
-            const filteredItems = menuData[cat].filter(item =>
-                item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
-            );
-            if (filteredItems.length > 0) {
-                let title = document.createElement('div');
-                title.className = 'section-title';
-                title.innerText = cat;
-                title.id = "cat-" + cat.replace(/\s+/g, '-');
-                mC.appendChild(title);
-                let grid = document.createElement('div'); grid.className = 'grid';
-                filteredItems.forEach(item => {
-                    let fBg = imgMap["pizza"];
-                    for (let key in imgMap) if (item.name.toLowerCase().includes(key)) fBg = imgMap[key];
-                    let b = document.createElement('div');
-                    b.className = 'btn btn-3d';
-                    b.style.backgroundImage = `url('${fBg}')`;
-                    b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
-                    b.onclick = () => openOrderFlow(item);
-                    grid.appendChild(b);
-                });
-                mC.appendChild(grid);
-            }
-        }
-    }
-
-    function renderCategoryBar() {
-        const bar = document.getElementById('category-bar'); bar.innerHTML = "";
-        for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue;
-            const pill = document.createElement('div');
-            pill.className = "cat-pill";
-            pill.innerText = cat;
-            pill.onclick = () => {
-                playClick('pop');
-                document.getElementById('menuSearch').value = "";
-                renderPublicMenu();
-                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-'));
-                if(target) target.scrollIntoView();
-                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-            };
-            bar.appendChild(pill);
-        }
-    }
-
-    function handleSearch(val) {
-        renderPublicMenu(val);
-        if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-    }
-
-    function setupRealtimeNotifications() {
-        if(!sb) return;
-        sb.channel('kitchen').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-            playClick('siren');
-            if (Notification.permission === "granted") {
-                new Notification("🍕 NEW ORDER RECEIVED!", {
-                    body: `New ${payload.new.type} order at ${payload.new.location}`,
-                    icon: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png"
-                });
-            }
-            if(document.getElementById('kitchen-panel-overlay').style.display === 'flex') renderKitchenOrders();
-        }).subscribe();
-    }
-
-    // ────────────────────────────────────────────────────────────────
-    // ────────────────────────────────────────────────────────────────
-// AI CHATBOT – FRIENDLY GROQ VERSION (2026 WORKING MODEL)
-// ────────────────────────────────────────────────────────────────
-const AI_API_KEY = "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";
-const menuJson = JSON.stringify(menuData);
-const dealsJson = JSON.stringify(dealsData);
-let aiChatHistory = [];
-
-function toggleAI() {
-    const win = document.getElementById('ai-window');
-    win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
-    if (win.style.display === 'flex') {
-        document.getElementById('ai-input').focus();
-    }
-}
-
-function appendAIMessage(role, text, isError = false) {
-    const box = document.getElementById('ai-messages');
-    const div = document.createElement('div');
-    div.className = isError ? "msg-error" : `msg msg-${role}`;
-    div.innerText = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-async function sendToAI() {
-    const input = document.getElementById('ai-input');
-    const message = input.value.trim();
-    if (!message) return;
-
-    appendAIMessage('user', message);
-    input.value = "";
-
-    const thinking = document.createElement('div');
-    thinking.className = 'msg msg-bot';
-    thinking.innerText = 'Thinking...';
-    document.getElementById('ai-messages').appendChild(thinking);
-    document.getElementById('ai-messages').scrollTop = document.getElementById('ai-messages').scrollHeight;
-
-    const systemPrompt = `You are Oven X Master AI 2.0 — the chill, super friendly ordering buddy 🍕😋 
-You talk like a real person: casual, fun, lots of emojis, short messages. 
-Use the customer's language (English, Roman Urdu, Urdu script, or mix) and their name once you know it.
-
-Full Menu: ${menuJson}
-Hot Deals: ${dealsJson}
-
-Golden Rules:
-- Be warm, patient, and helpful. Make them smile 😊
-- Chat naturally first — answer questions, joke, recommend gently.
-- ONLY when the customer clearly says "add", "dal do", "order karo", etc., THEN output JSON for action.
-- NEVER force an add — always confirm first with normal text.
-- For misunderstandings (wrong item name): politely clarify + suggest 1-2 close matches, then ask "Yeh chahiye tha? 😊"
-- Normal replies: pure friendly text, no JSON at all.
-- Only these JSON actions (nothing else):
-  {"action":"add_to_cart","item":"Exact name from menu/deals","qty":number,"reply":"short fun confirmation"}
-  {"action":"remove_from_cart","item":"Exact name","qty":number or "all","reply":"short confirmation"}
-  {"action":"trigger_checkout","reply":"excited message guiding to checkout"}
-- If they say done/bill/order place etc.: trigger checkout.
-- For delivery: casually say "Delivery hai? Checkout mein Delivery select karo, phir map 🗺️ pe click karke fee dekho aur address dal do!"
-- Keep everything short, sweet, and conversational. No long explanations!`;
-
-    try {
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${AI_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",  // Confirmed working production model
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    ...aiChatHistory,
-                    { role: "user", content: message }
-                ],
-                temperature: 0.8,
-                max_tokens: 512
-            })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status} - ${data.error?.message || 'Unknown error'}`);
-        }
-
-        if (thinking && thinking.parentNode) thinking.remove();
-
-        let content = data.choices[0].message.content.trim();
-        content = content.replace(/```json\n?|```/g, '').trim();
-
-        let parsed = { reply: content, action: "none" };
-        try {
-            parsed = JSON.parse(content);
-        } catch (e) {
-            // Normal text reply
-        }
-
-        appendAIMessage('bot', parsed.reply);
-
-        // Handle actions
-        if (parsed.action === "add_to_cart" && parsed.item) {
-            let found = null;
-            // Search menu
-            for (let cat in menuData) {
-                found = menuData[cat].find(i => i.name.toLowerCase() === parsed.item.toLowerCase());
-                if (found) break;
-            }
-            // Search deals if not found
-            if (!found) {
-                found = dealsData.find(d => d.name.toLowerCase() === parsed.item.toLowerCase());
-            }
-
-            if (found) {
-                // Open the full order flow (handles size/flavor/qty for both items & deals)
-                openOrderFlow(JSON.parse(JSON.stringify(found)));
-                appendAIMessage('bot', `Awesome choice${parsed.qty > 1 ? ` (${parsed.qty}x)` : ''}! Opening the screen to customize your ${found.name} 😋`);
-            } else {
-                appendAIMessage('bot', `Sorry, I couldn't find "${parsed.item}". Can you check the spelling or ask me to list the menu?`);
-            }
-        }
-
-        if (parsed.action === "remove_from_cart" && parsed.item) {
-            const idx = cart.findIndex(i => i.name.toLowerCase() === parsed.item.toLowerCase());
-            if (idx !== -1) {
-                if (parsed.qty === "all" || cart[idx].qty <= parsed.qty) {
-                    cart.splice(idx, 1);
-                } else {
-                    cart[idx].qty -= parsed.qty;
-                }
-                updateCartBar();
-                appendAIMessage('bot', parsed.reply || `Removed from cart ✓`);
-                if (cart.length === 0) appendAIMessage('bot', "Cart is empty now!");
-            } else {
-                appendAIMessage('bot', `Couldn't find "${parsed.item}" in your cart.`);
-            }
-        }
-
-        if (parsed.action === "trigger_checkout") {
-            startCheckout();  // Directly opens checkout overlay
-        }
-
-        aiChatHistory.push({ role: "user", content: message });
-        aiChatHistory.push({ role: "assistant", content: content });
-
-    } catch (err) {
-        console.error("Groq error:", err);
-        if (thinking && thinking.parentNode) thinking.remove();
-
-        let userMsg = "Sorry yaar — thori si network issue ho gayi 😅";
-
-        if (err.message.includes("429")) {
-            // Fun, on-brand rate limit message — no technical details shown to customer
-            userMsg = "Aray yaar, aaj bohot orders aa rahe hain! Main thak sa gaya hoon 😴💦\nEk minute ruk jao na, phir fresh ho kar aapki madad karunga! 🚀🍕";
-        } else if (err.message.includes("401")) {
-            userMsg = "API key mein kuch issue hai — developer se check karwa lo 😬";
-        } else if (err.message.includes("Failed to fetch")) {
-            userMsg = "Internet thora slow hai — ek baar refresh kar ke try karo!";
-        }
-
-        // Never show raw error details to customer
-        appendAIMessage('bot', userMsg, true);
-    }
-}
-
-    // ────────────────────────────────────────────────────────────────
-    // APP INITIALIZATION (unchanged)
-    // ────────────────────────────────────────────────────────────────
-    renderPublicMenu();
-    renderPublicDeals();
-    renderCategoryBar();
-    renderLoyaltyCard();
-    const savedOrderId = localStorage.getItem('ovenx_last_order_id');
-    if(savedOrderId) initCustomerTracking(savedOrderId);
-    let deferredPrompt;
-    let secretClickCount = 0;
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-    function handleSecretClick() {
-        secretClickCount++;
-        if(secretClickCount === 5) {
-            secretClickCount = 0;
-            if (deferredPrompt) deferredPrompt.prompt();
-            else alert("Ready.");
-        }
-        setTimeout(() => { secretClickCount = 0; }, 2000);
-    }
+    function handleSecretClick() { secretClickCount++; if(secretClickCount === 5) { secretClickCount = 0; if (deferredPrompt) deferredPrompt.prompt(); else alert("Ready."); } setTimeout(() => { secretClickCount = 0; }, 2000); }
 </script>
 </body>
 </html>
