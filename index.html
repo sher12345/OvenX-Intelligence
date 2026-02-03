@@ -7,19 +7,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#8b0000">
-    
+   
     <!-- PWA Manifest -->
     <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
-
     <title>Oven X - Official Order System</title>
     <style>
-        :root { 
-            --red: #8b0000; 
+        :root {
+            --red: #8b0000;
             --dark-red: #5e0000;
-            --orange: #f37021; 
+            --orange: #f37021;
             --dark-orange: #b34e12;
             --white: #ffffff;
-            --bg-body: #fff9f5; 
+            --bg-body: #fff9f5;
             --radius-bubble: 25px;
             --wa-green: #25D366;
             --wa-dark: #1a9648;
@@ -28,9 +27,9 @@
         }
         * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
         body.modal-active { overflow: hidden; height: 100vh; }
-        body { 
-            background: var(--bg-body) !important; 
-            color: #333 !important; 
+        body {
+            background: var(--bg-body) !important;
+            color: #333 !important;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0; padding-bottom: 0; overflow-x: hidden;
         }
@@ -61,43 +60,41 @@
         .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
         .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
-        
+       
         #gateway-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #2c0000, #000000);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 4000; text-align: center; color: white; overflow-y: auto; padding: 20px 0;
         }
-
         /* --- LOYALTY CARD CSS --- */
-        .loyalty-card { 
-            background: rgba(10, 10, 10, 0.95); 
-            border-radius: 35px; padding: 25px 15px; margin: 0 0 25px; 
+        .loyalty-card {
+            background: rgba(10, 10, 10, 0.95);
+            border-radius: 35px; padding: 25px 15px; margin: 0 0 25px;
             border: 2px solid var(--gold); width: 90%; max-width: 380px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212,175,55,0.1);
             position: relative;
         }
         .loyalty-header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 15px; }
-        .gold-label { 
+        .gold-label {
             background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 15px;
         }
         .stamp-grid-container { display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; }
         .stamp-row { display: flex; justify-content: center; gap: 8px; width: 100%; }
-        .stamp-circle { 
-            width: 42px; height: 42px; border-radius: 50%; 
-            border: 2px dashed rgba(212, 175, 55, 0.4); 
+        .stamp-circle {
+            width: 42px; height: 42px; border-radius: 50%;
+            border: 2px dashed rgba(212, 175, 55, 0.4);
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; font-weight: 900; color: rgba(212, 175, 55, 0.3);
             background: rgba(255,255,255,0.02); transition: 0.4s;
         }
-        .stamp-circle.filled { 
+        .stamp-circle.filled {
             background: var(--gold-gradient); border: 2px solid #fff; color: #000;
             box-shadow: 0 0 20px rgba(212, 175, 55, 0.8); transform: scale(1.1); border-style: solid;
         }
         .loyalty-footer { color: #ccc; font-size: 11px; margin-top: 20px; font-weight: 700; line-height: 1.4; padding: 0 10px; }
         .btn-gold { background: var(--gold-gradient); color: #000; font-weight: 900; box-shadow: 0 6px 0px #866619; margin-bottom: 25px; width: 85%; max-width: 340px; }
-
         .gateway-logo { font-size: 60px; font-weight: 900; margin-bottom: 5px; letter-spacing: -2px; }
         .gateway-logo span { color: var(--orange); }
         #gateway-table-note { background: var(--orange); color: white; padding: 12px 25px; border-radius: 50px; font-size: 16px; font-weight: bold; margin-bottom: 20px; display: none; box-shadow: 0 8px 20px rgba(243, 112, 33, 0.4); }
@@ -106,7 +103,7 @@
         .btn-red { background: var(--red); color: white; box-shadow: 0 6px 0px var(--dark-red); }
         .btn-orange { background: var(--orange); color: white; box-shadow: 0 6px 0px var(--dark-orange); }
         .btn-outline { background: transparent; color: white; border: 3px solid white; box-shadow: 0 6px 0px rgba(255,255,255,0.2); }
-        
+       
         header { background: var(--red); color: white; padding: 12px 15px; text-align: center; border-bottom: 6px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
         .header-back-btn { background: var(--orange); color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 900; font-size: 12px; box-shadow: 0 3px 0px var(--dark-orange); }
         .logo { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1;}
@@ -114,7 +111,6 @@
         .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
         .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
         .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
-
         .menu-controls { background: white; padding: 10px 0; border-bottom: 2px solid #eee; }
         .search-box-wrap { padding: 0 15px 10px; }
         .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
@@ -123,7 +119,6 @@
         .category-scroller::-webkit-scrollbar { display: none; }
         .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
         .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
-
         .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
         .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
         .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
@@ -140,23 +135,21 @@
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
         #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
-        
-        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay { 
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); 
+       
+        #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px);
         }
-
         /* FIXED MANUAL ORDER Z-INDEX (MUST BE HIGHER THAN KITCHEN PANEL) */
-        #manual-order-overlay { 
-            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px); 
+        #manual-order-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px);
         }
-        
+       
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        
+       
         /* Gold Club Specific Modals */
         .modal-gold { background: #0a0a0a; border: 2px solid var(--gold); color: white; overflow: hidden !important; }
         .premium-input { width: 100%; padding: 16px; border-radius: 15px; background: #1a1a1a; border: 1.5px solid rgba(212,175,55,0.3); color: white; margin-top: 12px; font-size: 16px; }
-
         .qty-btns { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
         .qty-btn { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; background: white; font-weight: 900; font-size: 16px; }
         .qty-btn.active { background: var(--red); color: white; border-color: var(--red); box-shadow: 0 4px 0px var(--dark-red); }
@@ -165,7 +158,6 @@
         .confirm-btn { background: var(--wa-green); color: white; padding: 20px; border-radius: 25px; font-weight: 900; width: 100%; margin-top: 20px; font-size: 20px; box-shadow: 0 6px 0px var(--wa-dark); }
         .summary-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 25px; margin-bottom: 12px; border: 1px solid #eee; text-align: left; }
         .remove-item-btn { background: #ff4444; color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 18px; box-shadow: 0 4px 0px #900; margin-left: 15px; }
-
         /* KITCHEN PANEL MODAL CSS */
         #kitchen-panel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9500; backdrop-filter: blur(10px); }
         .kitchen-modal { background: var(--white); border-radius: 35px; width: 98%; max-width: 1200px; height: 95vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -176,7 +168,6 @@
         .audit-card { background: var(--red); color: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(139,0,0,0.2); }
         .audit-stat { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
         .audit-stat b { font-size: 18px; }
-
         .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
         .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
@@ -187,29 +178,52 @@
         .kb-waiting { background: #fff3e0; color: var(--orange); }
         .kb-preparing { background: #e3f2fd; color: #007bff; }
         .kb-ready { background: #e8f5e9; color: var(--wa-green); }
-
         .price-box { background: #fff9e6; padding: 15px; border-radius: 18px; margin-top: 15px; display: flex; justify-content: space-between; font-weight: 900; border: 1px solid #ffe082; }
         .rider-box { margin-top: 15px; padding: 15px; background: #fdfdfd; border: 2px dashed #ddd; border-radius: 20px; }
         .rider-btn { padding: 10px 15px; border-radius: 12px; border: 2px solid #eee; background: white; font-size: 12px; font-weight: 800; cursor: pointer; margin: 3px; }
         .rider-btn.selected { background: var(--wa-green) !important; color: white !important; border-color: var(--wa-dark) !important; box-shadow: 0 4px 0px var(--wa-dark); }
-        
+       
         .k-tab { flex: 1; padding: 15px; border-radius: 15px; background: #eee; font-weight: 900; text-align: center; cursor: pointer; }
         .k-tab.active { background: var(--red); color: white; box-shadow: 0 4px 10px rgba(139,0,0,0.3); }
-
         .delivery-center-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 20px 0; }
         .delivery-cta { background: #fff; border: 4px solid var(--orange); padding: 30px 20px; border-radius: 35px; text-align: center; cursor: pointer; box-shadow: 0 10px 0px var(--dark-orange); width: 92%; max-width: 340px; box-sizing: border-box; }
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
         #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
 
+        /* ────────────────────────────────────────────────
+           NEW ADMIN ACTION BUTTONS STYLING
+        ──────────────────────────────────────────────── */
+        .admin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0 8px;
+            font-size: 11px;
+        }
+        .btn-action {
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 11px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            flex: 1;
+            min-width: 70px;
+            text-align: center;
+        }
+        .btn-void-item   { background: #6c757d; }
+        .btn-recall      { background: #0d6efd; }
+        .btn-table       { background: #fd7e14; }
+        .btn-void-order  { background: #dc3545; }
+
         /* TRACKER UI */
         .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
         .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
         .tracking-step.active { opacity: 1; color: var(--orange); transform: scale(1.05); }
-
         /* UPSELL UI GRID */
         .upsell-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .upsell-flavor-btn { background: #f8f8f8; border: 2px solid #eee; padding: 10px; border-radius: 15px; font-weight: 800; font-size: 12px; }
-
         @media (max-width: 800px) {
             .kitchen-content-wrapper { flex-direction: column; }
             #rider-audit-sidebar { border-left: none; border-bottom: 4px solid #eee; flex: none; height: auto; }
@@ -217,14 +231,11 @@
     </style>
 </head>
 <body>
-
 <div id="secret-pwa-button" onclick="handleSecretClick()"></div>
-
 <div id="gateway-screen">
     <div class="bouncing-logo"><p class="gateway-logo">OVEN <span>X</span></p></div>
-    
+   
     <div id="gateway-table-note">🎉 WELCOME! TABLE <span id="gateway-table-id"></span> 🎉</div>
-
     <!-- OVEN X CLUB CARD -->
     <div id="loyalty-display" style="display:none;" class="loyalty-card">
         <div class="loyalty-header">
@@ -237,16 +248,14 @@
         </div>
         <p id="loyalty-msg" class="loyalty-footer"></p>
     </div>
-    
+   
     <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
-
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
         <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
     </div>
 </div>
-
 <div id="top-sticky-container">
     <header id="main-header">
         <button class="header-back-btn btn-3d" onclick="exitToGateway()">← HOME</button>
@@ -264,15 +273,12 @@
         <div class="category-scroller" id="category-bar"></div>
     </div>
 </div>
-
 <div id="deals-container" class="deals-container"><div id="deals-list"></div></div>
 <div class="container" id="menu-container" style="display:none;"></div>
-
 <div id="cart-bar">
     <div><span id="cart-count" style="font-size:11px; font-weight:900; color:var(--orange);">ITEMS: 0</span><br><span id="cart-total" style="font-size:20px; font-weight:900;">Rs 0</span></div>
     <div class="checkout-btn btn-3d" onclick="startCheckout()">CHECKOUT →</div>
 </div>
-
 <!-- MANUAL ORDER MODAL -->
 <div id="manual-order-overlay">
     <div class="modal">
@@ -292,7 +298,6 @@
         <button onclick="document.getElementById('manual-order-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold;">CANCEL</button>
     </div>
 </div>
-
 <!-- CLUB SETUP MODAL -->
 <div id="loyalty-setup-overlay">
     <div class="modal modal-gold">
@@ -304,7 +309,6 @@
         <button onclick="document.getElementById('loyalty-setup-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; color:#666; font-weight:bold; background:none; border:none;">CANCEL</button>
     </div>
 </div>
-
 <div id="admin-login-overlay">
     <div class="modal">
         <h2 style="color:var(--red); font-weight:900;">Kitchen Access</h2>
@@ -315,7 +319,6 @@
         </div>
     </div>
 </div>
-
 <!-- KITCHEN PANEL MODAL -->
 <div id="kitchen-panel-overlay">
     <div class="kitchen-modal">
@@ -354,13 +357,11 @@
         </div>
     </div>
 </div>
-
 <div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
 <div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
-
 <!-- LIVE TRACKING OVERLAY -->
 <div id="tracking-overlay">
     <div class="modal">
@@ -375,7 +376,6 @@
         <button onclick="clearTracking()" class="btn-3d" style="width:100%; padding:15px; border-radius:20px; background:#eee; font-weight:900;">CLOSE TRACKER</button>
     </div>
 </div>
-
 <!-- SMART UPSELL OVERLAY -->
 <div id="upsell-overlay">
     <div class="modal" style="border:4px solid var(--orange);">
@@ -388,37 +388,32 @@
         <button onclick="document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);" style="margin-top:20px; border:none; background:none; color:#bbb; font-weight:900; width:100%;">NO THANKS, CONTINUE</button>
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     let audioCtx = null;
-    function playClick(type = 'pop') { 
-        try { 
+    function playClick(type = 'pop') {
+        try {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; 
-            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); } 
-            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); } 
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine';
+            if(type === 'pop') { osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); }
+            else if(type === 'thud') { osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.2); }
             else if(type === 'siren') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4); }
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1)); 
-        } catch(e) { } 
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type === 'siren' ? 0.4 : 0.1));
+        } catch(e) { }
     }
-
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
-
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
     let currentKitchenFilter = 'ALL';
     const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
-
     try {
         const urlParams = new URLSearchParams(window.location.search);
         if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
     } catch(e) { }
-
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
         "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
@@ -435,7 +430,6 @@
         "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
-
     const dealsData = [
         { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
         { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
@@ -451,11 +445,9 @@
         { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
         { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
     ];
-
     const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591" };
-
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
-    
+   
     /* --- LOYALTY LOGIC --- */
     function renderLoyaltyCard() {
         const name = localStorage.getItem('ovenx_member_name');
@@ -468,7 +460,7 @@
         document.getElementById('join-club-btn').style.display = 'none';
         document.getElementById('loyalty-display').style.display = 'block';
         document.getElementById('club-member-name').innerText = name.toUpperCase();
-        const row1 = document.getElementById('stamp-row-1'); 
+        const row1 = document.getElementById('stamp-row-1');
         const row2 = document.getElementById('stamp-row-2');
         row1.innerHTML = ""; row2.innerHTML = "";
         for(let i=1; i<=10; i++) {
@@ -481,51 +473,46 @@
         if(stamps >= 10) msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
         else msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
     }
-
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
-    
+   
     async function saveClubProfile() {
         const n = document.getElementById('clubName').value;
         const p = document.getElementById('clubPhone').value;
         if(!n || !p) return alert("Enter your name and WhatsApp number!");
-        
-        // Save to Database
+       
         if(sb) {
             await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
         }
-
         localStorage.setItem('ovenx_member_name', n);
         localStorage.setItem('ovenx_member_phone', p);
         localStorage.setItem('ovenx_stamps', 0);
-        
+       
         document.getElementById('loyalty-setup-overlay').style.display = 'none';
         setScrollLock(false);
         renderLoyaltyCard();
         alert("Welcome to the Club, " + n + "! 👑");
     }
-
-    function enterApp(target) { 
-        playClick('thud'); 
-        document.getElementById('gateway-screen').style.display = 'none'; 
-        document.getElementById('top-sticky-container').style.display = 'flex'; 
-        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
-        if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
+    function enterApp(target) {
+        playClick('thud');
+        document.getElementById('gateway-screen').style.display = 'none';
+        document.getElementById('top-sticky-container').style.display = 'flex';
+        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); }
+        if(target === 'deals') switchTab('deals'); else switchTab('menu');
     }
-    
+   
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
     function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; renderLoyaltyCard(); setScrollLock(false); }
     function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); document.getElementById('menu-controls').style.display = 'block'; renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); document.getElementById('menu-controls').style.display = 'none'; renderPublicDeals(); } }
-
     function openOrderFlow(item) {
         playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
-        if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
+        if (selectedItem.flavorsNeeded) { startFlavorSelection(); }
         else if (item.price && typeof item.price === 'object') {
             const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
             for (let s in item.price) { let sBtn = document.createElement('div'); sBtn.className = 'btn btn-3d'; sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`; sBtn.onclick = function() { playClick('pop'); selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s]; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); }; sizeGrid.appendChild(sBtn); }
             document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
         } else { openQtyModal(); }
     }
-    
+   
     function startFlavorSelection() {
         const step = selectedItem.flavorsNeeded[currentFlavorStep]; document.getElementById('flavor-title').innerText = "Pick " + step.label; const grid = document.getElementById('flavor-grid'); grid.innerHTML = ''; let flavors = menuData[step.cat] || [];
         flavors.forEach(f => {
@@ -534,28 +521,35 @@
         });
         document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true);
     }
-    
+   
     function openQtyModal() { document.getElementById('modal-item-name').innerText = selectedItem.name; setQty(1); document.getElementById('modal-overlay').style.display = 'flex'; setScrollLock(true); }
     function setQty(q) { playClick('pop'); selectedQty = q; document.querySelectorAll('.qty-btn').forEach((b, i) => { b.classList.remove('active'); if (i === (q===5?4:q-1)) b.classList.add('active'); }); }
     function closeModals() { document.querySelectorAll('#modal-overlay, #flavor-overlay, #size-overlay').forEach(el => el.style.display='none'); setScrollLock(false); }
-
     function initCustomerTracking(orderId) {
-        if(!orderId) return;
-        localStorage.setItem('ovenx_last_order_id', orderId);
-        document.getElementById('tracking-overlay').style.display = 'flex';
-        setScrollLock(true);
-        sb.from('kitchen_orders').select('status').eq('id', orderId).then(({data}) => { if(data && data[0]) updateTrackingUI(data[0].status); });
-        
-        // FIXED REAL-TIME LISTENER
-        sb.channel('customer-tracker')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-              if (payload.new.id === orderId) {
-                  updateTrackingUI(payload.new.status);
-              }
-          })
-          .subscribe();
-    }
+    if(!orderId) return;
+    localStorage.setItem('ovenx_last_order_id', orderId);
+    document.getElementById('tracking-overlay').style.display = 'flex';
+    setScrollLock(true);
 
+    // Initial check for current status
+    sb.from('kitchen_orders').select('status').eq('id', orderId).single()
+      .then(({data}) => { if(data) updateTrackingUI(data.status); });
+
+    // FIXED: Listen ONLY to this specific order ID
+    sb.channel(`track-${orderId}`)
+      .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'kitchen_orders', 
+            filter: `id=eq.${orderId}` // This ensures a fast, direct update
+          }, 
+          (payload) => {
+              console.log("Chef updated status to:", payload.new.status);
+              updateTrackingUI(payload.new.status);
+          })
+      .subscribe();
+}
     function updateTrackingUI(status) {
         const icon = document.getElementById('track-icon');
         const main = document.getElementById('track-main-status');
@@ -563,38 +557,34 @@
         const sWait = document.getElementById('step-waiting');
         const sPrep = document.getElementById('step-preparing');
         const sReady = document.getElementById('step-ready');
-        
+       
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
-        
-        // Reset Text and Ticks
+       
         sWait.innerHTML = "✅ Sent to Kitchen";
         sPrep.innerHTML = "🔘 Chef is Preparing";
         sReady.innerHTML = "🔘 Food is Ready!";
-
         sWait.classList.add('active');
-        
-        if(status === 'PREPARING') { 
-            window.navigator.vibrate([200, 100, 200]); 
-            icon.innerText = "👨‍🍳"; 
-            main.innerText = "Chef is Cooking!"; 
-            sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
-            sPrep.classList.add('active'); 
-        } 
-        else if(status === 'READY') { 
-            window.navigator.vibrate([500, 110, 500]); 
-            icon.innerText = "🔥"; 
-            main.innerText = "Order Ready!"; 
-            sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
-            sReady.innerHTML = "✅ Food is Ready!";    // TICK ADDED
-            sPrep.classList.add('active'); 
+       
+        if(status === 'PREPARING') {
+            window.navigator.vibrate([200, 100, 200]);
+            icon.innerText = "👨‍🍳";
+            main.innerText = "Chef is Cooking!";
+            sub.innerText = "Your dough is being tossed right now!";
+            sPrep.innerHTML = "✅ Chef is Preparing";
+            sPrep.classList.add('active');
+        }
+        else if(status === 'READY') {
+            window.navigator.vibrate([500, 110, 500]);
+            icon.innerText = "🔥";
+            main.innerText = "Order Ready!";
+            sub.innerText = "Freshly baked and hot!";
+            sPrep.innerHTML = "✅ Chef is Preparing";
+            sReady.innerHTML = "✅ Food is Ready!";
+            sPrep.classList.add('active');
             sReady.classList.add('active');
         }
-    } // FIXED MISSING CLOSING BRACKET
-
+    }
     function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
-
     function checkUpsell(item) {
         const itemName = item.name.toLowerCase();
         const overlay = document.getElementById('upsell-overlay');
@@ -616,7 +606,6 @@
             overlay.style.display = 'flex'; setScrollLock(true);
         }
     }
-
     function showDipFlavorGrid(isWingsCombo) {
         const flavors = ["BBQ", "Peri Peri", "Bonfire", "Special", "Chipotle", "Creamy Dreamy", "Chili Mayo"];
         const content = document.getElementById('upsell-body-content');
@@ -627,17 +616,13 @@
         });
         html += `</div>`; content.innerHTML = html;
     }
-
     function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
-
     async function finalSubmitOrder() {
         playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const itemsListText = cart.map(i => i.qty + "x " + i.name + (i.note ? " ["+i.note+"]" : "")).join("\n");
         const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsListText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-        
+       
         let orderId = null;
         try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
-
-        // Loyalty Stamp Processing
         let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
         let bonus = "";
         if(localStorage.getItem('ovenx_member_name')) {
@@ -649,63 +634,56 @@
                 localStorage.setItem('ovenx_stamps', stamps + 1);
             }
         }
-
         let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
         const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsListText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${foodTotal + parseFloat(delCharge) + sc}*${bonus}`);
-        
+       
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
         if(orderId) initCustomerTracking(orderId);
         window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
     }
-
-    function addToCartFinal() { 
-        playClick('thud'); 
-        const note = document.getElementById('special-note').value; 
-        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : ""); 
+    function addToCartFinal() {
+        playClick('thud');
+        const note = document.getElementById('special-note').value;
+        let finalDetail = (selectedItem.flavorNotes || "") + (selectedItem.fixedItems ? "\nIncludes: " + selectedItem.fixedItems.join(", ") : "") + (note ? "\nNote: " + note : "");
         const addedItem = { ...selectedItem, qty: selectedQty, note: finalDetail };
-        cart.push(addedItem); updateCartBar(); closeModals(); 
+        cart.push(addedItem); updateCartBar(); closeModals();
         setTimeout(() => checkUpsell(addedItem), 300);
     }
-    
+   
     function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
     function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
-    
+   
     function startCheckout() { playClick('thud'); document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
     function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; renderCheckoutServiceButtons(); }
     function renderCheckoutServiceButtons() { const container = document.getElementById('checkout-options-buttons'); let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
     function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
-    
+   
     function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`; }
     function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; setTimeout(() => { if(document.getElementById('unlock-area')) { document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000); }
     function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`; }
     function saveFee() { let f = document.getElementById('manualFee').value; if(!f) return alert("Please enter price!"); delCharge = parseInt(f); renderDeliveryAddressInput(); }
     function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
     function saveAddr() { let a = document.getElementById('manualAddr').value; if(!a) return alert("Please enter address!"); userAddress = a; renderFinalSummary(delCharge); }
-
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
-    
+   
     function verifyAdmin() { if(adminPassTracker === "123") { playClick('thud'); closeAdminLogin(); openKitchenPanel(); if ("Notification" in window) Notification.requestPermission(); setupRealtimeNotifications(); } else { alert("Denied!"); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; } }
-
     function renderFinalSummary(fee) {
         chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
         const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
         let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
         document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
     }
-
     function setInitialService(type) { playClick('thud'); orderType = type; document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); }
     document.getElementById('checkout-back-btn').onclick = function() { playClick('pop'); if(chkStep === 1) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderServiceTypeStep(); };
-
     /* --- LIVE KITCHEN LOGIC --- */
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
     async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
     async function clearReadyOrders() { if(!confirm("Clear Ready Dine-In orders?")) return; playClick('pop'); if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY').neq('type', 'Delivery'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); renderKitchenOrders(); } }
-
     async function clearDeliveriesWithPassword() {
         const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
         if(p === "7530") {
@@ -714,28 +692,26 @@
             if(!error) { alert("Delivery Audit Cleared!"); renderKitchenOrders(); } else alert("Error clearing database.");
         } else if (p !== null) { alert("Denied! Wrong Password."); }
     }
-    
+   
     function setKitchenFilter(f) {
         currentKitchenFilter = f; playClick('pop'); document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
-        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; } 
+        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; }
         else { document.getElementById('k-tab-del').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'flex'; document.getElementById('clear-del-btn').style.display = 'block'; }
         renderKitchenOrders();
     }
-
     function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); setScrollLock(true); }
     function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
-    
+   
     /* --- CUSTOMER DATABASE EXPORT --- */
     async function downloadCustomerData() {
         if(!confirm("Download Customer Database?")) return;
         const { data, error } = await sb.from('gold_club_members').select('name, phone, created_at');
         if(error) return alert("Error fetching data");
-        
+       
         let csvContent = "data:text/csv;charset=utf-8,Name,WhatsApp,Date Joined\n";
         data.forEach(row => {
             csvContent += `${row.name},${row.phone},${new Date(row.created_at).toLocaleDateString()}\n`;
         });
-
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -744,7 +720,6 @@
         link.click();
         document.body.removeChild(link);
     }
-
     /* --- MANUAL ORDER LOGIC --- */
     function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
     async function saveManualOrder() {
@@ -762,7 +737,6 @@
                 document.getElementById('manual-order-overlay').style.display = 'none';
                 setScrollLock(false);
                 renderKitchenOrders();
-                // Clear inputs
                 document.getElementById('man-loc').value = "";
                 document.getElementById('man-items').value = "";
                 document.getElementById('man-sub').value = "";
@@ -770,7 +744,6 @@
             } else alert("Error saving manual order.");
         }
     }
-
     async function renderKitchenOrders() {
         if(!sb) return; let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
         if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
@@ -783,14 +756,35 @@
             if (o.status !== 'READY') { if (remaining <= 0) { alertClass = "late"; timeLabel = "LATE"; isAnyOrderLate = true; } else { timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); if (remaining <= 5 * 60000) alertClass = "warning"; } }
             let priceHtml = ""; if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
             let riderHtml = ""; if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
-            const card = document.createElement('div'); card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-            card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>${priceHtml}${riderHtml}<div style="display:flex; gap:10px; margin-top:15px;">${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}</div>`;
+
+            const card = document.createElement('div'); 
+            card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
+
+            card.innerHTML = `
+                <span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span>
+                <div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>
+                <div class='order-timer'>${timeLabel}</div>
+                <div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
+                ${priceHtml}
+
+                <div class="admin-actions">
+                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
+                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
+                    <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
+                    <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ORDER</button>
+                </div>
+
+                ${riderHtml}
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARE</button>` : ''}
+                    ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">READY ✅</button>` : ''}
+                </div>`;
+
             list.appendChild(card);
         });
         if(isAnyOrderLate) playClick('siren');
         if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
     }
-
     function renderAuditUI(orders) {
         const div = document.getElementById('rider-audit-selection'); div.innerHTML = "";
         RIDERS.forEach(r => {
@@ -808,11 +802,35 @@
         });
     }
 
+    // ────────────────────────────────────────────────
+    // FIXED VERSION – no more JSON.stringify in HTML
+    // ────────────────────────────────────────────────
     function renderPublicDeals() {
-        const list = document.getElementById('deals-list'); list.innerHTML = '';
+        const list = document.getElementById('deals-list'); 
+        list.innerHTML = '';
         dealsData.forEach(deal => {
-            let bgUrl = imgMap["pizza"]; if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
-            list.innerHTML += `<div class="deal-card"><div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;" onclick='openOrderFlow(${JSON.stringify(deal)})'>ADD TO BAG</button></div></div>`;
+            let bgUrl = imgMap["pizza"]; 
+            if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
+            
+            const card = document.createElement('div');
+            card.className = "deal-card";
+            card.innerHTML = `
+                <div class="deal-badge">${deal.badge || 'HOT'}</div>
+                <div class="deal-img-top" style="background-image: url('${bgUrl}')"></div>
+                <div class="deal-info-box">
+                    <div class="deal-title">${deal.name}</div>
+                    <span class="deal-desc">${deal.desc || ''}</span>
+                    <span class="deal-price">Rs ${deal.price}</span>
+                </div>`;
+            
+            const btn = document.createElement('button');
+            btn.className = "next-btn btn-3d";
+            btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;";
+            btn.innerText = "ADD TO BAG";
+            btn.onclick = () => openOrderFlow(deal); // safe object reference
+            
+            card.querySelector('.deal-info-box').appendChild(btn);
+            list.appendChild(card);
         });
     }
 
@@ -820,7 +838,7 @@
         const mC = document.getElementById('menu-container'); mC.innerHTML = ""; const search = filterText.toLowerCase();
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue;
-            const filteredItems = menuData[cat].filter(item => 
+            const filteredItems = menuData[cat].filter(item =>
                 item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search)
             );
             if (filteredItems.length > 0) {
@@ -835,27 +853,24 @@
             }
         }
     }
-
     function renderCategoryBar() {
         const bar = document.getElementById('category-bar'); bar.innerHTML = "";
         for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue; 
+            if (cat === "Pan/Premium") continue;
             const pill = document.createElement('div'); pill.className = "cat-pill"; pill.innerText = cat;
-            pill.onclick = () => { 
-                playClick('pop'); document.getElementById('menuSearch').value = ""; renderPublicMenu(); 
-                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); if(target) target.scrollIntoView(); 
-                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); pill.classList.add('active'); 
+            pill.onclick = () => {
+                playClick('pop'); document.getElementById('menuSearch').value = ""; renderPublicMenu();
+                const target = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); if(target) target.scrollIntoView();
+                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); pill.classList.add('active');
             };
             bar.appendChild(pill);
         }
     }
-
     function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
-
     function setupRealtimeNotifications() {
         if(!sb) return;
         sb.channel('kitchen').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-            playClick('siren'); 
+            playClick('siren');
             if (Notification.permission === "granted") {
                 new Notification("🍕 NEW ORDER RECEIVED!", {
                     body: `New ${payload.new.type} order at ${payload.new.location}`,
@@ -866,15 +881,70 @@
         }).subscribe();
     }
 
-    // Global Initialization
-    renderPublicMenu(); 
-    renderPublicDeals(); 
-    renderCategoryBar(); 
-    renderLoyaltyCard();
+    /* ────────────────────────────────────────────────
+       ADMIN ACTION FUNCTIONS
+    ──────────────────────────────────────────────── */
 
+    async function adminVoidOrder(id) {
+        if(!confirm("⚠️ Delete this order entirely? This cannot be undone.")) return;
+        playClick('thud');
+        await sb.from('kitchen_orders').delete().eq('id', id);
+        renderKitchenOrders();
+    }
+
+    async function adminChangeTable(id, currentLoc) {
+        const newLoc = prompt("Enter new Table # or Address:", currentLoc);
+        if(newLoc && newLoc !== currentLoc) {
+            playClick('pop');
+            await sb.from('kitchen_orders').update({ location: newLoc }).eq('id', id);
+            renderKitchenOrders();
+        }
+    }
+
+    async function adminRecallItem(id, items, sub) {
+        const ni = prompt("Enter item to ADD (e.g. 1x Pepsi):");
+        const pr = prompt("Price (Rs):", "0");
+        if(ni && pr) {
+            playClick('thud');
+            const updatedItems = items + "\n" + ni + " [RECALL]";
+            const updatedSub = parseInt(sub || 0) + parseInt(pr || 0);
+            await sb.from('kitchen_orders').update({ items: updatedItems, subtotal: updatedSub }).eq('id', id);
+            renderKitchenOrders();
+        }
+    }
+
+    async function adminVoidItem(id, items, sub) { 
+        const arr = items.split('\n').filter(line => line.trim()); 
+        if (arr.length === 0) return alert("No items to void");
+
+        let msg = "Select Line # to Void:\n\n"; 
+        arr.forEach((it, i) => msg += `${i+1}. ${it.trim()}\n`);
+        const ch = prompt(msg); 
+        const idx = parseInt(ch) - 1;
+        if(isNaN(idx) || idx < 0 || idx >= arr.length) return alert("Invalid choice");
+        
+        const ps = prompt(`Subtract price for: "${arr[idx].trim()}"?`, "0");
+        const priceToSubtract = parseInt(ps || 0);
+        
+        playClick('thud'); 
+        arr.splice(idx, 1); 
+        const updatedSub = Math.max(0, parseInt(sub || 0) - priceToSubtract);
+        
+        await sb.from('kitchen_orders').update({ 
+            items: arr.join('\n'), 
+            subtotal: updatedSub 
+        }).eq('id', id); 
+        
+        renderKitchenOrders();
+    }
+
+    // Global Initialization
+    renderPublicMenu();
+    renderPublicDeals();
+    renderCategoryBar();
+    renderLoyaltyCard();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
-
     let deferredPrompt; let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
     function handleSecretClick() { secretClickCount++; if(secretClickCount === 5) { secretClickCount = 0; if (deferredPrompt) deferredPrompt.prompt(); else alert("Ready."); } setTimeout(() => { secretClickCount = 0; }, 2000); }
