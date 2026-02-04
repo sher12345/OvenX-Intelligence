@@ -750,7 +750,24 @@
     
     function startCheckout() { playClick('thud'); document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
     function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; renderCheckoutServiceButtons(); }
-    function renderCheckoutServiceButtons() { const container = document.getElementById('checkout-options-buttons'); let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
+    function renderCheckoutServiceButtons() { const container = document.getElementById('checkout-options-buttons'); let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }function setInitialService(type) {
+    playClick('pop');
+    orderType = type;
+    document.getElementById('welcome-overlay').style.display = 'none';
+    setScrollLock(false);
+
+    if (type === 'Dine-In') {
+        if (tableNum) {
+            renderFinalSummary(0);
+        } else {
+            renderTableStep();
+        }
+    } else if (type === 'Takeaway') {
+        renderFinalSummary(0);
+    } else if (type === 'Delivery') {
+        renderAddressStep();
+    }
+}
     function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
     
