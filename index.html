@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#8b0000">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png ","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
 
     <title>Oven X - Official Order System</title>
     <style>
@@ -403,7 +403,7 @@
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
-<div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
+<div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" onclick="closeCheckout()" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
 
 <!-- LIVE TRACKING OVERLAY -->
 <div id="tracking-overlay">
@@ -433,7 +433,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 "></script>
 <script>
     let audioCtx = null;
     function playClick(type = 'pop') { 
@@ -448,7 +448,7 @@
         } catch(e) { } 
     }
 
-    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
+    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co ";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
@@ -496,7 +496,7 @@
         { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
     ];
 
-    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591" };
+    const imgMap = { "plain fries": "https://images.unsplash.com/photo-1630384066272-117519576150 ", "zinger": "https://images.unsplash.com/photo-1513185158878-8d8c19671f51 ", "pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591 " };
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     
@@ -733,7 +733,7 @@
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
         if(orderId) initCustomerTracking(orderId);
-        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
+        window.location.href = `https://wa.me/923001450301?text= ${waMsg}`;
     }
 
     function addToCartFinal() { 
@@ -748,9 +748,33 @@
     function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
     function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
     
-    function startCheckout() { playClick('thud'); document.getElementById('overlay-screen').style.display = 'block'; setScrollLock(true); renderServiceTypeStep(); }
-    function renderServiceTypeStep() { chkStep = 1; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; renderCheckoutServiceButtons(); }
-    function renderCheckoutServiceButtons() { const container = document.getElementById('checkout-options-buttons'); let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }function setInitialService(type) {
+    function startCheckout() { 
+    playClick('thud'); 
+    document.getElementById('overlay-screen').style.display = 'block'; 
+    setScrollLock(true); 
+    renderServiceTypeStep(); 
+}
+
+function closeCheckout() {
+    playClick('pop');
+    document.getElementById('overlay-screen').style.display = 'none';
+    setScrollLock(false);
+    chkStep = 1;
+}
+    function renderServiceTypeStep() { 
+    chkStep = 1; 
+    document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; 
+    renderCheckoutServiceButtons(); 
+}
+    function renderCheckoutServiceButtons() { 
+    const container = document.getElementById('checkout-options-buttons'); 
+    let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; 
+    if (!isQRScan) { 
+        html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; 
+    } 
+    container.innerHTML = html; 
+}
+    function setInitialService(type) {
     playClick('pop');
     orderType = type;
     document.getElementById('welcome-overlay').style.display = 'none';
@@ -772,7 +796,7 @@
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
     
     function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`; }
-    function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer" style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; setTimeout(() => { if(document.getElementById('unlock-area')) { document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000); }
+    function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer " style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; setTimeout(() => { if(document.getElementById('unlock-area')) { document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000); }
     function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`; }
     function saveFee() { let f = document.getElementById('manualFee').value; if(!f) return alert("Please enter price!"); delCharge = parseInt(f); renderDeliveryAddressInput(); }
     function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
@@ -1141,6 +1165,35 @@
     let deferredPrompt; let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
     function handleSecretClick() { secretClickCount++; if(secretClickCount === 5) { secretClickCount = 0; if (deferredPrompt) deferredPrompt.prompt(); else alert("Ready."); } setTimeout(() => { secretClickCount = 0; }, 2000); }
+    // Handle phone's physical back button
+window.addEventListener('popstate', function(event) {
+    const overlays = [
+        { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
+        { id: 'admin-login-overlay', close: closeAdminLogin },
+        { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
+        { id: 'flavor-overlay', close: closeModals },
+        { id: 'size-overlay', close: closeModals },
+        { id: 'modal-overlay', close: closeModals },
+        { id: 'welcome-overlay', close: () => { document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); } },
+        { id: 'tracking-overlay', close: clearTracking },
+        { id: 'upsell-overlay', close: () => { document.getElementById('upsell-overlay').style.display = 'none'; setScrollLock(false); } },
+        { id: 'manual-order-overlay', close: () => { document.getElementById('manual-order-overlay').style.display = 'none'; setScrollLock(false); } },
+        { id: 'overlay-screen', close: closeCheckout }
+    ];
+    
+    for (let overlay of overlays) {
+        const el = document.getElementById(overlay.id);
+        if (el && (el.style.display === 'flex' || el.style.display === 'block')) {
+            event.preventDefault();
+            overlay.close();
+            history.pushState(null, null, window.location.pathname);
+            return;
+        }
+    }
+});
+
+// Initialize history state
+history.pushState(null, null, window.location.pathname);
 </script>
 </body>
 </html>
