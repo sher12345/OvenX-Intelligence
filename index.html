@@ -525,7 +525,15 @@
         if(stamps >= 10) msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
         else msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
     }
-
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        if (Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                console.log("Notification permission:", permission);
+            });
+        }
+    }
+}
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
     
     async function saveClubProfile() {
@@ -549,12 +557,13 @@
     }
 
     function enterApp(target) { 
-        playClick('thud'); 
-        document.getElementById('gateway-screen').style.display = 'none'; 
-        document.getElementById('top-sticky-container').style.display = 'flex'; 
-        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
-        if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
-    }
+    playClick('thud'); 
+    requestNotificationPermission(); // ADD THIS LINE
+    document.getElementById('gateway-screen').style.display = 'none'; 
+    document.getElementById('top-sticky-container').style.display = 'flex'; 
+    if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
+    if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
+}
     
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
     function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; renderLoyaltyCard(); setScrollLock(false); }
@@ -1148,12 +1157,33 @@ function closeCheckout() {
 
     function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
     function setupRealtimeNotifications() {
-        if(!sb) return;
-        sb.channel('kitchen-dashboard').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-            playClick('siren');
-            if(document.getElementById('kitchen-panel-overlay').style.display === 'flex') renderKitchenOrders();
-        }).subscribe();
+    if(!sb) return;
+    
+    // Request permission immediately if not already set
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
     }
+    
+    sb.channel('kitchen-dashboard')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
+        playClick('siren');
+        
+        // Show browser notification
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("🔥 NEW ORDER RECEIVED!", {
+                body: `Type: ${payload.new.type}\nLocation: ${payload.new.location}`,
+                icon: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png",
+                badge: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png",
+                tag: 'new-order',
+                requireInteraction: true
+            });
+        }
+        
+        if(document.getElementById('kitchen-panel-overlay').style.display === 'flex') {
+            renderKitchenOrders();
+        }
+    }).subscribe();
+}
 
     // Global Initialization
     renderPublicMenu(); 
