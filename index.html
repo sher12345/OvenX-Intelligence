@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -482,20 +481,122 @@
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
     const dealsData = [
-        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
-        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
-        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
-        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
-        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
-        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
-        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
-    ];
+    { 
+        name: "Midnight Deal 1", 
+        desc: "2x Med Extreme Pizzas + 1.5L Drink", 
+        price: 2699, 
+        badge: "HOT DEAL", 
+        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/1899hanoiFinal_1025.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
+        flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], 
+        fixedItems: ["1.5L Soft Drink"] 
+    },
+    { 
+        name: "Midnight Deal 2", 
+        desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", 
+        price: 3249, 
+        badge: "SAVER", 
+        image: "https://www.citysouthpizzakitchenerwaterloo.ca/cdn/shop/files/pizza-with-3-toppings-chicken-wings-and-3-cokes.png?v=1759010649&width=533",
+        flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], 
+        fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] 
+    },
+    { 
+        name: "Midnight Deal 3", 
+        desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", 
+        price: 3649, 
+        badge: "PREMIUM", 
+        image: "https://assets3.thrillist.com/v1/image/2826030/792x528/scale;webp=auto;jpeg_quality=60;progressive.jpg",
+        flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], 
+        fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] 
+    },
+    { 
+        name: "Midnight Deal 4", 
+        desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", 
+        price: 3149, 
+        badge: "MIX DEAL", 
+        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
+        flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], 
+        fixedItems: ["1.5L Soft Drink"] 
+    },
+    { 
+        name: "Family Feast", 
+        desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", 
+        price: 2299, 
+        badge: "FAMILY", 
+        image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg",
+        flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], 
+        fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] 
+    },
+    { 
+        name: "Extreme Buddy", 
+        desc: "1 Medium Extreme Pizza + Free 1L Drink", 
+        price: 1449, 
+        badge: "BEST SELLER", 
+        image: "https://media.sodagift.com/img/image/1877697001877199.jpg", // Medium spicy pizza with Coke 1.25L
+        flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], 
+        fixedItems: ["1L Drink"] 
+    },
+    
+    { 
+        name: "Burger Deal 1", 
+        desc: "2 Zingers + 1 Reg Fries + 2 Drinks", 
+        price: 999, 
+        badge: "DELIVERY", 
+image: "https://www.shutterstock.com/image-photo/crispy-chicken-burger-served-french-600nw-2647455697.jpg",        fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] 
+    },
+    
+    { 
+        name: "Burger Deal 2", 
+        desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", 
+        price: 990, 
+        badge: "DELIVERY", 
+        image: "https://d1w7312wesee68.cloudfront.net/papYm9QPXbu985kLHmECoETz9chauwF12d0PGs2MVKY/resize:fit:720:720/plain/s3://toasttab/restaurants/restaurant-255618000000000000/menu/items/7/item-5740050945299277_1766103306.jpg", // Zinger burger with wings in background
+        fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] 
+    },
+    { 
+        name: "Burger Deal 3", 
+        desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", 
+        price: 1990, 
+        badge: "DELIVERY", 
+        image: "https://www.corriecooks.com/wp-content/uploads/2025/05/Zinger-Burger-500x500.jpg",
+        fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] 
+    },
+    { 
+        name: "01 PIZZA DEAL", 
+        desc: "1 Large Pizza (Pan) + 1L Drink", 
+        price: 1299, 
+        badge: "DELIVERY", 
+        image: "https://media.sodagift.com/img/image/678369644447129.jpg",
+        flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], 
+        fixedItems: ["1L Drink"] 
+    },
+    { 
+        name: "02 PIZZA DEAL", 
+        desc: "1 Large Pizza (Premium) + 1L Drink", 
+        price: 1499, 
+        badge: "DELIVERY", 
+        image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg",
+        flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], 
+        fixedItems: ["1L Drink"] 
+    },
+    { 
+        name: "03 PIZZA DEAL", 
+        desc: "1 Large Crown Pizza + 1L Drink", 
+        price: 1599, 
+        badge: "DELIVERY", 
+        image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp",
+        flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], 
+        fixedItems: ["1L Drink"] 
+    },
+    { 
+        name: "04 PIZZA DEAL", 
+        desc: "1 Large Extreme Pizza + 1L Drink", 
+        price: 1999, 
+        badge: "DELIVERY", 
+        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
+        flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], 
+        fixedItems: ["1L Drink"] 
+    }
+];
 
 const imgMap = {
     // Starters - CORRECTED
@@ -520,8 +621,7 @@ const imgMap = {
     "chicken patty": "https://www.themediterraneandish.com/wp-content/uploads/2024/05/Chicken-Burger-16.jpg",
     "zinger": "https://fantabulosity.com/wp-content/uploads/2021/10/Crispy-Chicken-Burger-34.jpg",
     "mighty": "https://halaladdict.com/wp-content/uploads/2023/05/Mighty-Zinger-Burger.png",
-    "chipotle": "https://lisagcooks.com/wp-content/uploads/2016/07/Spicy-Chipotle-Burger-1.jpg",
-    "crispy jalapeno": "https://bjsrestaurants.scene7.com/is/image/bjsrestaurants/loaded-burgers-crispyjalapenoburger-5366r-bjs",
+    "chipotle": "https://lisagcooks.com/wp-content/uploads/2016/07/Spicy-Chipotle-Burger-1.jpg",    "crispy jalapeno": "https://bjsrestaurants.scene7.com/is/image/bjsrestaurants/loaded-burgers-crispyjalapenoburger-5366r-bjs",
     "stuff jalapeno": "https://www.babaganosh.org/wp-content/uploads/2022/12/jalapeno-popper-burgers-44.jpg",
     
     // Grilled Burgers
@@ -1199,16 +1299,29 @@ function closeCheckout() {
     }
 
     function renderPublicDeals() {
-        const list = document.getElementById('deals-list'); list.innerHTML = '';
-        dealsData.forEach(deal => {
-            let bgUrl = imgMap["pizza"]; if(deal.name.toLowerCase().includes('burger')) bgUrl = imgMap["zinger"];
-            const card = document.createElement('div'); card.className = "deal-card";
-            card.innerHTML = `<div class="deal-badge">${deal.badge || 'HOT'}</div><div class="deal-img-top" style="background-image: url('${bgUrl}')"></div><div class="deal-info-box"><div class="deal-title">${deal.name}</div><span class="deal-desc">${deal.desc || ''}</span><span class="deal-price">Rs ${deal.price}</span></div>`;
-            const btn = document.createElement('button'); btn.className = "next-btn btn-3d"; btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; btn.innerText = "ADD TO BAG";
-            btn.onclick = () => openOrderFlow(deal); card.querySelector('.deal-info-box').appendChild(btn);
-            list.appendChild(card);
-        });
-    }
+    const list = document.getElementById('deals-list'); 
+    list.innerHTML = '';
+    dealsData.forEach(deal => {
+        const card = document.createElement('div'); 
+        card.className = "deal-card";
+        card.innerHTML = `
+            <div class="deal-badge">${deal.badge || 'HOT'}</div>
+            <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+            <div class="deal-info-box">
+                <div class="deal-title">${deal.name}</div>
+                <span class="deal-desc">${deal.desc || ''}</span>
+                <span class="deal-price">Rs ${deal.price}</span>
+            </div>
+        `;
+        const btn = document.createElement('button'); 
+        btn.className = "next-btn btn-3d"; 
+        btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
+        btn.innerText = "ADD TO BAG";
+        btn.onclick = () => openOrderFlow(deal); 
+        card.querySelector('.deal-info-box').appendChild(btn);
+        list.appendChild(card);
+    });
+}
 
     function renderPublicMenu(filterText = "") {
         const mC = document.getElementById('menu-container'); mC.innerHTML = ""; const search = filterText.toLowerCase();
