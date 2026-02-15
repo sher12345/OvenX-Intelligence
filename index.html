@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#8b0000">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png  ","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
 
     <title>Oven X - Official Order System</title>
     <style>
@@ -150,6 +150,17 @@
             position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(8px); 
         }
         
+        /* DELIVERY CALCULATOR OVERLAY */
+        #delivery-calc-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); display:none; justify-content:center; align-items:center; z-index: 10000; backdrop-filter: blur(10px);
+        }
+        .delivery-calc-modal {
+            background: white; border-radius: 35px; width: 95%; max-width: 500px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative;
+        }
+        .calc-header { padding: 20px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; background: var(--red); color: white; }
+        .calc-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .calc-footer { padding: 20px; border-top: 2px solid #eee; background: #f9f9f9; }
+        
         #overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 3000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .modal { background: var(--white); padding: 30px; border-radius: 35px; width: 85%; max-width: 380px; text-align: center; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
         
@@ -168,14 +179,44 @@
 
         /* KITCHEN PANEL MODAL CSS */
         #kitchen-panel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9500; backdrop-filter: blur(10px); }
-        .kitchen-modal { background: var(--white); border-radius: 35px; width: 98%; max-width: 1200px; height: 95vh; display: flex; flex-direction: column; overflow: hidden; }
+        .kitchen-modal { background: var(--white); border-radius: 35px; width: 98%; max-width: 1400px; height: 95vh; display: flex; flex-direction: column; overflow: hidden; }
         .kitchen-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .kitchen-content-wrapper { display: flex; flex: 1; overflow: hidden; }
         #kitchen-orders-list { flex: 2; overflow-y: auto; padding: 20px; background: #f9f9f9; }
         #rider-audit-sidebar { flex: 1; background: white; border-left: 4px solid #eee; padding: 20px; display: none; flex-direction: column; overflow-y: auto; }
-        .audit-card { background: var(--red); color: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(139,0,0,0.2); }
-        .audit-stat { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
-        .audit-stat b { font-size: 18px; }
+        
+        /* DELIVERY HISTORY SIDEBAR */
+        #delivery-history-sidebar { 
+            flex: 1; background: white; border-left: 4px solid var(--orange); padding: 20px; display: none; flex-direction: column; overflow-y: auto; 
+        }
+        .delivery-history-card {
+            background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+            border: 2px solid var(--orange);
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(243, 112, 33, 0.1);
+        }
+        .delivery-history-card .distance-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--red); color: white;
+            padding: 5px 12px; border-radius: 15px;
+            font-size: 11px; font-weight: 900;
+        }
+        .delivery-history-card .loc-text {
+            font-size: 13px; font-weight: 700; color: #333;
+            margin-bottom: 8px; padding-right: 60px;
+        }
+        .delivery-history-card .meta-row {
+            display: flex; justify-content: space-between;
+            font-size: 11px; color: #666;
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px dashed #ddd;
+        }
+        .delivery-history-card .cost-highlight {
+            color: var(--red); font-weight: 900; font-size: 16px;
+        }
 
         .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
@@ -211,6 +252,64 @@
         .chat-bubble { background: white; padding: 20px; border-radius: 25px; margin-bottom: 20px; border: 2px solid #eee; text-align: left; }
         #secret-pwa-button { position: fixed; bottom: 0; right: 0; width: 45px; height: 45px; z-index: 9999; background: transparent; }
 
+        /* DELIVERY CALCULATOR STYLES */
+        .calc-location-card {
+            background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+            border: 3px dashed var(--orange);
+            border-radius: 25px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .calc-pulse-ring {
+            width: 80px; height: 80px;
+            background: rgba(243, 112, 33, 0.1);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        .calc-pulse-ring::before {
+            content: ''; position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: rgba(243, 112, 33, 0.3);
+            animation: pulse-ring 2s infinite;
+        }
+        .calc-result-box {
+            background: linear-gradient(135deg, var(--red) 0%, var(--dark-red) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 25px;
+            margin-top: 20px;
+            display: none;
+        }
+        .calc-distance-visual {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 20px;
+            margin: 20px 0;
+            position: relative;
+            height: 100px;
+            display: flex; align-items: center;
+        }
+        .calc-line {
+            height: 4px;
+            background: linear-gradient(90deg, var(--red) 0%, var(--orange) 100%);
+            flex: 1;
+            position: relative;
+            border-radius: 2px;
+        }
+        .calc-dot {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            position: relative; z-index: 2;
+        }
+        .calc-dot.start { background: var(--red); }
+        .calc-dot.end { background: var(--orange); }
+        
         /* TRACKER UI */
         .tracking-status-icon { font-size: 80px; margin-bottom: 20px; display: block; animation: bounce 2s infinite; }
         .tracking-step { opacity: 0.3; margin: 15px 0; font-weight: 900; font-size: 18px; transition: 0.5s; display: flex; align-items: center; gap: 10px; }
@@ -337,6 +436,116 @@
     </div>
 </div>
 
+<!-- DELIVERY CALCULATOR OVERLAY -->
+<div id="delivery-calc-overlay">
+    <div class="delivery-calc-modal">
+        <div class="calc-header">
+            <h2 style="margin:0; font-weight:900;">🚚 Delivery Calculator</h2>
+            <button onclick="closeDeliveryCalc()" style="background:white; color:var(--red); border:none; padding:8px 15px; border-radius:10px; font-weight:900;">✕</button>
+        </div>
+        <div class="calc-content" id="calc-content-area">
+            <!-- Location Permission State -->
+            <div id="calc-permission-state">
+                <div class="calc-location-card">
+                    <div class="calc-pulse-ring">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f37021" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                    </div>
+                    <h3 style="color:var(--red); margin-bottom:10px;">Allow Location Access</h3>
+                    <p style="color:#666; font-size:14px; margin-bottom:20px;">We need your location to calculate accurate delivery charges from OvenX Kitchen.</p>
+                    <button onclick="requestCalcLocation()" class="btn-3d" style="background:var(--red); color:white; padding:15px 30px; border-radius:15px; font-weight:900; width:100%; box-shadow:0 6px 0px var(--dark-red);">
+                        ALLOW LOCATION
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="calc-loading-state" style="display:none; text-align:center; padding:40px;">
+                <div style="width:50px; height:50px; border:4px solid #f0f0f0; border-top-color:var(--red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div>
+                <p style="font-weight:900; color:var(--red);">Calculating road distance...</p>
+                <p style="font-size:12px; color:#999;">Getting precise GPS coordinates</p>
+            </div>
+            
+            <!-- Result State -->
+            <div id="calc-result-state" style="display:none;">
+                <div class="calc-distance-visual">
+                    <div class="calc-dot start"></div>
+                    <div class="calc-line"></div>
+                    <div class="calc-dot end"></div>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <div style="text-align:left;">
+                        <p style="font-size:11px; color:#999; font-weight:900; margin:0;">FROM</p>
+                        <p style="font-weight:900; color:var(--red); margin:5px 0;">OvenX Kitchen</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="font-size:11px; color:#999; font-weight:900; margin:0;">TO</p>
+                        <p style="font-weight:900; color:var(--orange); margin:5px 0;">Your Location</p>
+                    </div>
+                </div>
+                
+                <div class="calc-result-box" id="calc-result-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div>
+                            <p style="font-size:11px; opacity:0.8; margin:0;">ROUND TRIP DELIVERY</p>
+                            <div style="display:flex; align-items:baseline; gap:10px;">
+                                <span id="calc-total-cost" style="font-size:48px; font-weight:900;">0</span>
+                                <span style="font-size:20px; opacity:0.8;">PKR</span>
+                            </div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.2); padding:8px 15px; border-radius:10px;">
+                            <p style="font-size:11px; margin:0;">Rs. 12/km</p>
+                        </div>
+                    </div>
+                    
+                    <div style="border-top:1px solid rgba(255,255,255,0.2); padding-top:15px; font-size:13px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span style="opacity:0.8;">One Way Distance</span>
+                            <span id="calc-one-way" style="font-weight:900;">0.0 km</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span style="opacity:0.8;">Round Trip</span>
+                            <span id="calc-round-trip" style="font-weight:900;">0.0 km</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:11px; opacity:0.6;">
+                            <span>Straight-line distance</span>
+                            <span id="calc-straight-line">0.0 km</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background:#e8f5e9; border:2px solid #4caf50; border-radius:15px; padding:15px; margin-top:20px; display:flex; align-items:center; gap:10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <div>
+                        <p style="font-weight:900; color:#2e7d32; margin:0;">Price Confirmed!</p>
+                        <p style="font-size:12px; color:#555; margin:5px 0 0;">Adding to your order automatically...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error State -->
+            <div id="calc-error-state" style="display:none; text-align:center; padding:30px;">
+                <div style="width:60px; height:60px; background:#ffebee; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" x2="9" y1="9" y2="15"></line>
+                        <line x1="9" x2="15" y1="9" y2="15"></line>
+                    </svg>
+                </div>
+                <h3 style="color:#c62828; margin-bottom:10px;">Location Error</h3>
+                <p id="calc-error-msg" style="color:#666; font-size:14px; margin-bottom:20px;">Unable to get your location.</p>
+                <button onclick="requestCalcLocation()" class="btn-3d" style="background:var(--red); color:white; padding:12px 25px; border-radius:12px; font-weight:900;">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- CLUB SETUP MODAL -->
 <div id="loyalty-setup-overlay">
     <div class="modal modal-gold">
@@ -374,6 +583,7 @@
         <div style="display:flex; gap:10px; padding:15px; background:white; border-bottom:1px solid #eee;">
             <div class="k-tab active" id="k-tab-all" onclick="setKitchenFilter('ALL')">ALL ORDERS</div>
             <div class="k-tab" id="k-tab-del" onclick="setKitchenFilter('DELIVERY')">DELIVERY ONLY 🚚</div>
+            <div class="k-tab" id="k-tab-calc" onclick="setKitchenFilter('CALC_HISTORY')" style="background:var(--orange); color:white;">📍 DELIVERY CALCS</div>
         </div>
         <div class="kitchen-content-wrapper">
             <div id="kitchen-orders-list"></div>
@@ -390,6 +600,21 @@
                         <div class="audit-stat"><span>Net to Shop:</span> <b id="audit-net">Rs 0</b></div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- DELIVERY HISTORY SIDEBAR -->
+            <div id="delivery-history-sidebar">
+                <h3 style="margin-top:0; color:var(--red); display:flex; align-items:center; gap:10px;">
+                    <span>📍 Delivery Checks</span>
+                    <span style="background:var(--orange); color:white; padding:3px 10px; border-radius:10px; font-size:11px;" id="calc-history-count">0</span>
+                </h3>
+                <p style="font-size:12px; color:#666; margin-bottom:15px;">Recent delivery charge calculations with locations</p>
+                <div id="delivery-history-list" style="flex:1; overflow-y:auto;">
+                    <p style="text-align:center; color:#999; padding:20px;">Loading...</p>
+                </div>
+                <button onclick="clearDeliveryHistory()" style="width:100%; padding:12px; background:#ffebee; color:#c62828; border:2px dashed #c62828; border-radius:12px; font-weight:900; margin-top:10px; cursor:pointer;">
+                    CLEAR HISTORY
+                </button>
             </div>
         </div>
         <div style="padding:15px; border-top:1px solid #eee; display:flex; gap:10px;">
@@ -433,7 +658,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2  "></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     let audioCtx = null;
     function playClick(type = 'pop') { 
@@ -448,15 +673,20 @@
         } catch(e) { } 
     }
 
-    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co  ";
+    const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
     let currentKitchenFilter = 'ALL';
+    let currentCalcData = null; // Store calculation data
     const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
+    
+    // OvenX Coordinates
+    const OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
+    const PRICE_PER_KM = 12;
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -481,207 +711,91 @@
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
     const dealsData = [
-    { 
-        name: "Midnight Deal 1", 
-        desc: "2x Med Extreme Pizzas + 1.5L Drink", 
-        price: 2699, 
-        badge: "HOT DEAL", 
-        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/1899hanoiFinal_1025.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-        flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], 
-        fixedItems: ["1.5L Soft Drink"] 
-    },
-    { 
-        name: "Midnight Deal 2", 
-        desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", 
-        price: 3249, 
-        badge: "SAVER", 
-        image: "https://www.citysouthpizzakitchenerwaterloo.ca/cdn/shop/files/pizza-with-3-toppings-chicken-wings-and-3-cokes.png?v=1759010649&width=533",
-        flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], 
-        fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] 
-    },
-    { 
-        name: "Midnight Deal 3", 
-        desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", 
-        price: 3649, 
-        badge: "PREMIUM", 
-        image: "https://assets3.thrillist.com/v1/image/2826030/792x528/scale;webp=auto;jpeg_quality=60;progressive.jpg",
-        flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], 
-        fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] 
-    },
-    { 
-        name: "Midnight Deal 4", 
-        desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", 
-        price: 3149, 
-        badge: "MIX DEAL", 
-        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-        flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], 
-        fixedItems: ["1.5L Soft Drink"] 
-    },
-    { 
-        name: "Family Feast", 
-        desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", 
-        price: 2299, 
-        badge: "FAMILY", 
-        image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg",
-        flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], 
-        fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] 
-    },
-    { 
-        name: "Extreme Buddy", 
-        desc: "1 Medium Extreme Pizza + Free 1L Drink", 
-        price: 1449, 
-        badge: "BEST SELLER", 
-        image: "https://media.sodagift.com/img/image/1877697001877199.jpg", // Medium spicy pizza with Coke 1.25L
-        flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], 
-        fixedItems: ["1L Drink"] 
-    },
-    
-    { 
-        name: "Burger Deal 1", 
-        desc: "2 Zingers + 1 Reg Fries + 2 Drinks", 
-        price: 999, 
-        badge: "DELIVERY", 
-image: "https://www.shutterstock.com/image-photo/crispy-chicken-burger-served-french-600nw-2647455697.jpg",        fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] 
-    },
-    
-    { 
-        name: "Burger Deal 2", 
-        desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", 
-        price: 990, 
-        badge: "DELIVERY", 
-        image: "https://d1w7312wesee68.cloudfront.net/papYm9QPXbu985kLHmECoETz9chauwF12d0PGs2MVKY/resize:fit:720:720/plain/s3://toasttab/restaurants/restaurant-255618000000000000/menu/items/7/item-5740050945299277_1766103306.jpg", // Zinger burger with wings in background
-        fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] 
-    },
-    { 
-        name: "Burger Deal 3", 
-        desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", 
-        price: 1990, 
-        badge: "DELIVERY", 
-        image: "https://www.corriecooks.com/wp-content/uploads/2025/05/Zinger-Burger-500x500.jpg",
-        fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] 
-    },
-    { 
-        name: "01 PIZZA DEAL", 
-        desc: "1 Large Pizza (Pan) + 1L Drink", 
-        price: 1299, 
-        badge: "DELIVERY", 
-        image: "https://media.sodagift.com/img/image/678369644447129.jpg",
-        flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], 
-        fixedItems: ["1L Drink"] 
-    },
-    { 
-        name: "02 PIZZA DEAL", 
-        desc: "1 Large Pizza (Premium) + 1L Drink", 
-        price: 1499, 
-        badge: "DELIVERY", 
-        image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg",
-        flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], 
-        fixedItems: ["1L Drink"] 
-    },
-    { 
-        name: "03 PIZZA DEAL", 
-        desc: "1 Large Crown Pizza + 1L Drink", 
-        price: 1599, 
-        badge: "DELIVERY", 
-        image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp",
-        flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], 
-        fixedItems: ["1L Drink"] 
-    },
-    { 
-        name: "04 PIZZA DEAL", 
-        desc: "1 Large Extreme Pizza + 1L Drink", 
-        price: 1999, 
-        badge: "DELIVERY", 
-        image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-        flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], 
-        fixedItems: ["1L Drink"] 
-    }
-];
+        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/1899hanoiFinal_1025.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
+        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", image: "https://www.citysouthpizzakitchenerwaterloo.ca/cdn/shop/files/pizza-with-3-toppings-chicken-wings-and-3-cokes.png?v=1759010649&width=533", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
+        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", image: "https://assets3.thrillist.com/v1/image/2826030/792x528/scale;webp=auto;jpeg_quality=60;progressive.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
+        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
+        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
+        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", image: "https://media.sodagift.com/img/image/1877697001877199.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
+        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", image: "https://www.shutterstock.com/image-photo/crispy-chicken-burger-served-french-600nw-2647455697.jpg", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
+        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", image: "https://d1w7312wesee68.cloudfront.net/papYm9QPXbu985kLHmECoETz9chauwF12d0PGs2MVKY/resize:fit:720:720/plain/s3://toasttab/restaurants/restaurant-255618000000000000/menu/items/7/item-5740050945299277_1766103306.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
+        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", image: "https://www.corriecooks.com/wp-content/uploads/2025/05/Zinger-Burger-500x500.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
+        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", image: "https://media.sodagift.com/img/image/678369644447129.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
+        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
+        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
+        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
+    ];
 
-const imgMap = {
-    // Starters - CORRECTED
-    "plain fries": "https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
-    "loaded fries": "https://www.carolynscooking.com/wp-content/uploads/2024/01/Loaded-Bacon-Cheese-Fries-3.jpg",
-    "pizza fries": "https://lh3.googleusercontent.com/-ntf8I5R_xC4/Vffe9Jy-I6I/AAAAAAAFKz8/NxqHy-TAfbo/s800-Ic42/pizza-dough-fries-75a.jpg",
-    "dragon shots": "https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/chicken-lollipop.jpg",
-    "oven baked wings": "https://tastesbetterfromscratch.com/wp-content/uploads/2014/09/Baked-Chicken-Wings-3.jpg",
-    "peri-peri wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
-    "hot wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
-    "honey chili wings": "https://www.chilitochoc.com/wp-content/uploads/2025/01/hot-honey-chicken-wings-with-sauce-and-chili-flakes.jpg",
-    "cheese sticks": "https://www.spendwithpennies.com/wp-content/uploads/2013/10/Cheese-Sticks-SpendWithPennies-2-22.jpg",
-    "meat sticks": "https://www.teaforturmeric.com/wp-content/uploads/2018/10/Seekh-Kebab-4.jpg",
-    "nuggets": "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipe%20Ramp%20Up%2F2022-02-Baked-Chicken-Wings%2FIMG_6923_f6aa7e_landscape",
-    
-    // Sandwiches
-    "health harvest": "https://www.themediterraneandish.com/wp-content/uploads/2024/03/TMD-Vegetable-Sandwich-Leads-02-Horizontal.jpg",
-    "khameera": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
-    "club sandwich": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
-    
-    // Fried Burgers
-    "chicken patty": "https://www.themediterraneandish.com/wp-content/uploads/2024/05/Chicken-Burger-16.jpg",
-    "zinger": "https://fantabulosity.com/wp-content/uploads/2021/10/Crispy-Chicken-Burger-34.jpg",
-    "mighty": "https://halaladdict.com/wp-content/uploads/2023/05/Mighty-Zinger-Burger.png",
-    "chipotle": "https://lisagcooks.com/wp-content/uploads/2016/07/Spicy-Chipotle-Burger-1.jpg",    "crispy jalapeno": "https://bjsrestaurants.scene7.com/is/image/bjsrestaurants/loaded-burgers-crispyjalapenoburger-5366r-bjs",
-    "stuff jalapeno": "https://www.babaganosh.org/wp-content/uploads/2022/12/jalapeno-popper-burgers-44.jpg",
-    
-    // Grilled Burgers
-    "cm grilled": "https://www.kimscravings.com/wp-content/uploads/2022/06/Chicken-Burgers-5.jpg",
-    "smokey grilled": "https://www.grocery.coop/wp-content/uploads/2015/12/Smoky_Grilled_Burgers_0.jpg",
-    "peri peri grilled": "https://www.recipetineats.com/uploads/2015/11/Nandos-Peri-Peri-Chicken-Burger_9.jpg",
-    "drizzler": "https://www.campchef.com/dw/image/v2/BDBJ_PRD/on/demandware.static/-/Sites-CampChef-Library/default/dw5b9d74ec/Recipe-Heros/Smoked-Burger.png",
-    "jalapeno blaze": "https://amazingribs.com/wp-content/uploads/2023/02/jalapeno-bacon-cheeseburger.jpg",
-    "mexi fiesta": "https://images.contentstack.io/v3/assets/blt9039451385f46c16/blt0d4471c6a90418b1/64a64affee0ad3ed47beaadd/VegieDelightsMay-June2023-2-2_(1).jpg",
-    
-    // Pizzas
-    "chicken tikka": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
-    "chicken fajita": "https://boboli.com/sites/default/files/2022-06/chicken_fajita_LR_0.jpg",
-    "chicken supreme": "https://thegingeredwhisk.com/wp-content/uploads/2020/10/Chicken-Supreme-Pizza-17.jpg",
-    "cheese lover": "https://nmgprod.s3.amazonaws.com/media/files/16/e9/16e9f32596537b9563af50d1d0a2dbad/cover_image.jpg.960x540_q85_crop_upscale.jpg",
-    "veg lover": "https://www.orchidsandsweettea.com/wp-content/uploads/2019/05/Veggie-Pizza-2-of-5-e1691215701129.jpg",
-    "sicilian": "https://www.chewoutloud.com/wp-content/uploads/2013/02/deep-dish-pizza-3.jpg",
-    "bbq": "https://bluebowlrecipes.com/wp-content/uploads/2019/05/barbecue-chicken-pizza-0917.jpg",
-    "creamy dreamy": "https://i.shgcdn.com/c4d973d8-3799-4122-a601-0d51c1d73bd1/-/format/auto/-/preview/3000x3000/-/quality/lighter/",
-    "ovenx special": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-    "bonfire": "https://kristineskitchenblog.com/wp-content/uploads/2025/05/bbq-chicken-pizza-09-2.jpg",
-    "mild butter": "https://colavitarecipes.com/wp-content/uploads/2020/06/chicago-11-F-1200x1800.jpg",
-    "extreme peri": "https://www.thecandidcooks.com/wp-content/uploads/2022/08/spicy-sausage-pepper-pizza-feature.jpg",
-    "flaming kabab": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
-    "crispy extreme": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-    "kabab crust": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
-    "crown crust": "https://d3ed0bx5qudxt4.cloudfront.net/912136134",
-    "cheese crust": "https://sallysbakingaddiction.com/wp-content/uploads/2017/03/stuffed-crust-pizza-3.jpg",
-    "crusti thin": "https://www.washingtonpost.com/wp-apps/imrs.php?src=https://arc-anglerfish-washpost-prod-washpost.s3.amazonaws.com/public/KFHFXR3G3YSLKJETDTO24K5SCM.jpg&w=1800&h=1800",
-    
-    // Platters & Pasta
-    "khameera platter": "https://cdnimg.webstaurantstore.com/images/products/large/661056/2284466.jpg",
-    "calzone": "https://res.cloudinary.com/hksqkdlah/image/upload/c_fill,dpr_2.0,f_auto,fl_lossy.progressive.strip_profile,g_faces:auto,q_auto:low/SFS_chicago_deep_dish_pizza-16_cehf9d",
-    "behari": "https://www.seriouseats.com/thmb/6zN8jRJEFn1rU3It2_rSU2pxZpE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__20160801-seekh-kebab-recipe-41-1fdc2ebd109b4bbd8d4c00455b505379.jpg",
-    "alfredo": "https://www.gimmesomeoven.com/wp-content/uploads/2020/04/Alfredo-Sauce-9.jpg",
-    "flaming pasta": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
-    "fire kissed": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
-    "x-special": "https://cookingwithcassandra.com/wp-content/uploads/2022/10/Copy-of-Copy-of-DSC03750-2-scaled.jpg",
-    
-    // Wraps & Rolls
-    "chipotle wrap": "https://www.dontgobaconmyheart.co.uk/wp-content/uploads/2019/06/bbq-chicken-wrap.jpg",
-    "bbq wrap": "https://www.everyday-delicious.com/wp-content/uploads/2022/04/bbq-chicken-wrap-everyday-delicious-1.jpg",
-    "donar": "https://silkroadrecipes.com/wp-content/uploads/2024/06/Turkish-Doner-Kebabs-Beef-or-Lamb-square.jpg",
-    "crunch wrap": "https://www.valyastasteofhome.com/wp-content/uploads/2022/08/The-BEST-Crunchwrap-Supreme-5.jpg",
-    "zingeratha": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
-    "paratha": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
-    "malai": "https://thespicemess.com/wp-content/uploads/2021/07/Malai-Boti-Rolls-14.jpg",
-    "behari": "https://kfoods.com/images1/newrecipeicon/behari-paratha-rolls_4941.jpg",    
-    "peri wrap": "https://img-global.cpcdn.com/recipes/bf130e2c7e935656/680x781cq80/nandos-style-peri-peri-chicken-wrap-recipe-main-photo.jpg",
-    
-    // Drinks (fallback)
-    "coke buddy": "https://dialacoke.com/media/catalog/product/cache/ea9fd91bf69f7931ab0fc6320db4b8ac/c/o/coke-pet-350ml.jpg",
-    "sprite buddy": "https://grandmall.grandhyper.com/image/cache/catalog/products/1/40822099-500x500.jpg",
-    "coke 1 liter": "https://www.melandrose.com/prodimages/2184-DEFAULT-l.jpg",
-    "next cola": "https://www.melandrose.com/prodimages/2184-DEFAULT-l.jpg",
-    "coke 1.5l": "https://i5.walmartimages.com/asr/4271ee10-c8d4-49ad-b24d-2a37e9f6e8a4.17444fb4917300d9fcdf16709c0253a7.jpeg",
-    "sprite 1.5l": "https://m.media-amazon.com/images/I/51HQiqPnFWL._AC_UF894,1000_QL80_.jpg",
-    "water small": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
-    "water large": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
-};
+    const imgMap = {
+        "plain fries": "https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
+        "loaded fries": "https://www.carolynscooking.com/wp-content/uploads/2024/01/Loaded-Bacon-Cheese-Fries-3.jpg",
+        "pizza fries": "https://lh3.googleusercontent.com/-ntf8I5R_xC4/Vffe9Jy-I6I/AAAAAAAFKz8/NxqHy-TAfbo/s800-Ic42/pizza-dough-fries-75a.jpg",
+        "dragon shots": "https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/chicken-lollipop.jpg",
+        "oven baked wings": "https://tastesbetterfromscratch.com/wp-content/uploads/2014/09/Baked-Chicken-Wings-3.jpg",
+        "peri-peri wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
+        "hot wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
+        "honey chili wings": "https://www.chilitochoc.com/wp-content/uploads/2025/01/hot-honey-chicken-wings-with-sauce-and-chili-flakes.jpg",
+        "cheese sticks": "https://www.spendwithpennies.com/wp-content/uploads/2013/10/Cheese-Sticks-SpendWithPennies-2-22.jpg",
+        "meat sticks": "https://www.teaforturmeric.com/wp-content/uploads/2018/10/Seekh-Kebab-4.jpg",
+        "nuggets": "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipe%20Ramp%20Up%2F2022-02-Baked-Chicken-Wings%2FIMG_6923_f6aa7e_landscape",
+        "health harvest": "https://www.themediterraneandish.com/wp-content/uploads/2024/03/TMD-Vegetable-Sandwich-Leads-02-Horizontal.jpg",
+        "khameera": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
+        "club sandwich": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
+        "chicken patty": "https://www.themediterraneandish.com/wp-content/uploads/2024/05/Chicken-Burger-16.jpg",
+        "zinger": "https://fantabulosity.com/wp-content/uploads/2021/10/Crispy-Chicken-Burger-34.jpg",
+        "mighty": "https://halaladdict.com/wp-content/uploads/2023/05/Mighty-Zinger-Burger.png",
+        "chipotle": "https://lisagcooks.com/wp-content/uploads/2016/07/Spicy-Chipotle-Burger-1.jpg",
+        "crispy jalapeno": "https://bjsrestaurants.scene7.com/is/image/bjsrestaurants/loaded-burgers-crispyjalapenoburger-5366r-bjs",
+        "stuff jalapeno": "https://www.babaganosh.org/wp-content/uploads/2022/12/jalapeno-popper-burgers-44.jpg",
+        "cm grilled": "https://www.kimscravings.com/wp-content/uploads/2022/06/Chicken-Burgers-5.jpg",
+        "smokey grilled": "https://www.grocery.coop/wp-content/uploads/2015/12/Smoky_Grilled_Burgers_0.jpg",
+        "peri peri grilled": "https://www.recipetineats.com/uploads/2015/11/Nandos-Peri-Peri-Chicken-Burger_9.jpg",
+        "drizzler": "https://www.campchef.com/dw/image/v2/BDBJ_PRD/on/demandware.static/-/Sites-CampChef-Library/default/dw5b9d74ec/Recipe-Heros/Smoked-Burger.png",
+        "jalapeno blaze": "https://amazingribs.com/wp-content/uploads/2023/02/jalapeno-bacon-cheeseburger.jpg",
+        "mexi fiesta": "https://images.contentstack.io/v3/assets/blt9039451385f46c16/blt0d4471c6a90418b1/64a64affee0ad3ed47beaadd/VegieDelightsMay-June2023-2-2_(1).jpg",
+        "chicken tikka": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
+        "chicken fajita": "https://boboli.com/sites/default/files/2022-06/chicken_fajita_LR_0.jpg",
+        "chicken supreme": "https://thegingeredwhisk.com/wp-content/uploads/2020/10/Chicken-Supreme-Pizza-17.jpg",
+        "cheese lover": "https://nmgprod.s3.amazonaws.com/media/files/16/e9/16e9f32596537b9563af50d1d0a2dbad/cover_image.jpg.960x540_q85_crop_upscale.jpg",
+        "veg lover": "https://www.orchidsandsweettea.com/wp-content/uploads/2019/05/Veggie-Pizza-2-of-5-e1691215701129.jpg",
+        "sicilian": "https://www.chewoutloud.com/wp-content/uploads/2013/02/deep-dish-pizza-3.jpg",
+        "bbq": "https://bluebowlrecipes.com/wp-content/uploads/2019/05/barbecue-chicken-pizza-0917.jpg",
+        "creamy dreamy": "https://i.shgcdn.com/c4d973d8-3799-4122-a601-0d51c1d73bd1/-/format/auto/-/preview/3000x3000/-/quality/lighter/",
+        "ovenx special": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
+        "bonfire": "https://kristineskitchenblog.com/wp-content/uploads/2025/05/bbq-chicken-pizza-09-2.jpg",
+        "mild butter": "https://colavitarecipes.com/wp-content/uploads/2020/06/chicago-11-F-1200x1800.jpg",
+        "extreme peri": "https://www.thecandidcooks.com/wp-content/uploads/2022/08/spicy-sausage-pepper-pizza-feature.jpg",
+        "flaming kabab": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
+        "crispy extreme": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
+        "kabab crust": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
+        "crown crust": "https://d3ed0bx5qudxt4.cloudfront.net/912136134",
+        "cheese crust": "https://sallysbakingaddiction.com/wp-content/uploads/2017/03/stuffed-crust-pizza-3.jpg",
+        "crusti thin": "https://www.washingtonpost.com/wp-apps/imrs.php?src=https://arc-anglerfish-washpost-prod-washpost.s3.amazonaws.com/public/KFHFXR3G3YSLKJETDTO24K5SCM.jpg&w=1800&h=1800",
+        "khameera platter": "https://cdnimg.webstaurantstore.com/images/products/large/661056/2284466.jpg",
+        "calzone": "https://res.cloudinary.com/hksqkdlah/image/upload/c_fill,dpr_2.0,f_auto,fl_lossy.progressive.strip_profile,g_faces:auto,q_auto:low/SFS_chicago_deep_dish_pizza-16_cehf9d",
+        "behari": "https://www.seriouseats.com/thmb/6zN8jRJEFn1rU3It2_rSU2pxZpE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__20160801-seekh-kebab-recipe-41-1fdc2ebd109b4bbd8d4c00455b505379.jpg",
+        "alfredo": "https://www.gimmesomeoven.com/wp-content/uploads/2020/04/Alfredo-Sauce-9.jpg",
+        "flaming pasta": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
+        "fire kissed": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
+        "x-special": "https://cookingwithcassandra.com/wp-content/uploads/2022/10/Copy-of-Copy-of-DSC03750-2-scaled.jpg",
+        "chipotle wrap": "https://www.dontgobaconmyheart.co.uk/wp-content/uploads/2019/06/bbq-chicken-wrap.jpg",
+        "bbq wrap": "https://www.everyday-delicious.com/wp-content/uploads/2022/04/bbq-chicken-wrap-everyday-delicious-1.jpg",
+        "doner": "https://silkroadrecipes.com/wp-content/uploads/2024/06/Turkish-Doner-Kebabs-Beef-or-Lamb-square.jpg",
+        "crunch wrap": "https://www.valyastasteofhome.com/wp-content/uploads/2022/08/The-BEST-Crunchwrap-Supreme-5.jpg",
+        "zingeratha": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
+        "paratha": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
+        "malai": "https://thespicemess.com/wp-content/uploads/2021/07/Malai-Boti-Rolls-14.jpg",
+        "peri wrap": "https://img-global.cpcdn.com/recipes/bf130e2c7e935656/680x781cq80/nandos-style-peri-peri-chicken-wrap-recipe-main-photo.jpg",
+        "coke buddy": "https://dialacoke.com/media/catalog/product/cache/ea9fd91bf69f7931ab0fc6320db4b8ac/c/o/coke-pet-350ml.jpg",
+        "sprite buddy": "https://grandmall.grandhyper.com/image/cache/catalog/products/1/40822099-500x500.jpg",
+        "coke 1 liter": "https://www.melandrose.com/prodimages/2184-DEFAULT-l.jpg",
+        "next cola": "https://www.melandrose.com/prodimages/2184-DEFAULT-l.jpg",
+        "coke 1.5l": "https://i5.walmartimages.com/asr/4271ee10-c8d4-49ad-b24d-2a37e9f6e8a4.17444fb4917300d9fcdf16709c0253a7.jpeg",
+        "sprite 1.5l": "https://m.media-amazon.com/images/I/51HQiqPnFWL._AC_UF894,1000_QL80_.jpg",
+        "water small": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
+        "water large": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
+    };
+
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     
     /* --- LOYALTY LOGIC --- */
@@ -709,15 +823,17 @@ const imgMap = {
         if(stamps >= 10) msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
         else msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
     }
-function requestNotificationPermission() {
-    if ("Notification" in window) {
-        if (Notification.permission === "default") {
-            Notification.requestPermission().then(permission => {
-                console.log("Notification permission:", permission);
-            });
+
+    function requestNotificationPermission() {
+        if ("Notification" in window) {
+            if (Notification.permission === "default") {
+                Notification.requestPermission().then(permission => {
+                    console.log("Notification permission:", permission);
+                });
+            }
         }
     }
-}
+
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
     
     async function saveClubProfile() {
@@ -725,7 +841,6 @@ function requestNotificationPermission() {
         const p = document.getElementById('clubPhone').value;
         if(!n || !p) return alert("Enter your name and WhatsApp number!");
         
-        // Save to Database
         if(sb) {
             await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
         }
@@ -741,13 +856,13 @@ function requestNotificationPermission() {
     }
 
     function enterApp(target) { 
-    playClick('thud'); 
-    requestNotificationPermission(); // ADD THIS LINE
-    document.getElementById('gateway-screen').style.display = 'none'; 
-    document.getElementById('top-sticky-container').style.display = 'flex'; 
-    if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
-    if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
-}
+        playClick('thud'); 
+        requestNotificationPermission();
+        document.getElementById('gateway-screen').style.display = 'none'; 
+        document.getElementById('top-sticky-container').style.display = 'flex'; 
+        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
+        if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
+    }
     
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
     function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; renderLoyaltyCard(); setScrollLock(false); }
@@ -774,7 +889,7 @@ function requestNotificationPermission() {
     
     function openQtyModal() { 
         document.getElementById('modal-item-name').innerText = selectedItem.name; 
-        document.getElementById('special-note').value = ""; // Fix: Clears note for next item
+        document.getElementById('special-note').value = "";
         setQty(1); 
         document.getElementById('modal-overlay').style.display = 'flex'; 
         setScrollLock(true); 
@@ -800,11 +915,9 @@ function requestNotificationPermission() {
         document.getElementById('tracking-overlay').style.display = 'flex';
         setScrollLock(true);
 
-        // Initial check for current status
         sb.from('kitchen_orders').select('status').eq('id', orderId).single()
         .then(({data}) => { if(data) updateTrackingUI(data.status); });
 
-        // FIXED: Listen ONLY to this specific order ID
         sb.channel(`track-${orderId}`)
         .on('postgres_changes', 
             { 
@@ -829,7 +942,6 @@ function requestNotificationPermission() {
         
         document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
         
-        // Reset Text and Ticks
         sWait.innerHTML = "✅ Sent to Kitchen";
         sPrep.innerHTML = "🔘 Chef is Preparing";
         sReady.innerHTML = "🔘 Food is Ready!";
@@ -841,7 +953,7 @@ function requestNotificationPermission() {
             icon.innerText = "👨‍🍳"; 
             main.innerText = "Chef is Cooking!"; 
             sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
+            sPrep.innerHTML = "✅ Chef is Preparing";
             sPrep.classList.add('active'); 
         } 
         else if(status === 'READY') { 
@@ -849,8 +961,8 @@ function requestNotificationPermission() {
             icon.innerText = "🔥"; 
             main.innerText = "Order Ready!"; 
             sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing"; // TICK ADDED
-            sReady.innerHTML = "✅ Food is Ready!";    // TICK ADDED
+            sPrep.innerHTML = "✅ Chef is Preparing";
+            sReady.innerHTML = "✅ Food is Ready!";
             sPrep.classList.add('active'); 
             sReady.classList.add('active');
         }
@@ -907,7 +1019,6 @@ function requestNotificationPermission() {
         let orderId = null;
         try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
-        // Loyalty Stamp Processing
         let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
         let bonus = "";
         if(localStorage.getItem('ovenx_member_name')) {
@@ -926,7 +1037,7 @@ function requestNotificationPermission() {
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
         if(orderId) initCustomerTracking(orderId);
-        window.location.href = `https://wa.me/923001450301?text=  ${waMsg}`;
+        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
     }
 
     function addToCartFinal() { 
@@ -942,58 +1053,253 @@ function requestNotificationPermission() {
     function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
     
     function startCheckout() { 
-    playClick('thud'); 
-    document.getElementById('overlay-screen').style.display = 'block'; 
-    setScrollLock(true); 
-    renderServiceTypeStep(); 
-}
-
-function closeCheckout() {
-    playClick('pop');
-    document.getElementById('overlay-screen').style.display = 'none';
-    setScrollLock(false);
-    chkStep = 1;
-}
-    function renderServiceTypeStep() { 
-    chkStep = 1; 
-    document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; 
-    renderCheckoutServiceButtons(); 
-}
-    function renderCheckoutServiceButtons() { 
-    const container = document.getElementById('checkout-options-buttons'); 
-    let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; 
-    if (!isQRScan) { 
-        html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; 
-    } 
-    container.innerHTML = html; 
-}
-    function setInitialService(type) {
-    playClick('pop');
-    orderType = type;
-    document.getElementById('welcome-overlay').style.display = 'none';
-    setScrollLock(false);
-
-    if (type === 'Dine-In') {
-        if (tableNum) {
-            renderFinalSummary(0);
-        } else {
-            renderTableStep();
-        }
-    } else if (type === 'Takeaway') {
-        renderFinalSummary(0);
-    } else if (type === 'Delivery') {
-        renderAddressStep();
+        playClick('thud'); 
+        document.getElementById('overlay-screen').style.display = 'block'; 
+        setScrollLock(true); 
+        renderServiceTypeStep(); 
     }
-}
+
+    function closeCheckout() {
+        playClick('pop');
+        document.getElementById('overlay-screen').style.display = 'none';
+        setScrollLock(false);
+        chkStep = 1;
+    }
+    
+    function renderServiceTypeStep() { 
+        chkStep = 1; 
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Where do you want your food?</div><div class="input-group" id="checkout-options-buttons"></div>`; 
+        renderCheckoutServiceButtons(); 
+    }
+    
+    function renderCheckoutServiceButtons() { 
+        const container = document.getElementById('checkout-options-buttons'); 
+        let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; 
+        if (!isQRScan) { 
+            html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; 
+        } 
+        container.innerHTML = html; 
+    }
+    
+    function setInitialService(type) {
+        playClick('pop');
+        orderType = type;
+        document.getElementById('welcome-overlay').style.display = 'none';
+        setScrollLock(false);
+
+        if (type === 'Dine-In') {
+            if (tableNum) {
+                renderFinalSummary(0);
+            } else {
+                renderTableStep();
+            }
+        } else if (type === 'Takeaway') {
+            renderFinalSummary(0);
+        } else if (type === 'Delivery') {
+            renderAddressStep();
+        }
+    }
+    
     function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
     
-    function renderAddressStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🚚 Click the map to see delivery costs!</div><div class="delivery-center-wrap"><div class="delivery-cta btn-3d" onclick="playClick('pop'); loadDeliverySystem()"><span style="font-size:50px;">🗺️💨</span><br><span style="font-weight:900;">FIND MY PRICE</span></div></div>`; }
-    function loadDeliverySystem() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">Once you see the price, wait for the green button! 👇</div><iframe id="delIframe" src="https://oven-x-deliverer--ovenxoperations.replit.app/ovenxdeliverycalculator?view=customer  " style="width:100%; height:400px; border:4px solid var(--orange); border-radius:30px;" allow="geolocation"></iframe><div id="unlock-area" style="margin-top:15px; text-align:center;"><button class="next-btn" style="background:#ccc; opacity:0.6;">I'M LOOKING... 🔍</button></div>`; setTimeout(() => { if(document.getElementById('unlock-area')) { document.getElementById('unlock-area').innerHTML = `<button class="next-btn btn-3d" onclick="playClick('thud'); renderDeliveryFeeInput()" style="background:var(--wa-green); box-shadow: 0 6px 0px var(--wa-dark); border:none;">I SAW THE PRICE! 💰 DONE →</button>`; } }, 5000); }
-    function renderDeliveryFeeInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">💰 How much was the delivery fee?</div><input type="number" id="manualFee" placeholder="Example: 100" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red); margin-top:15px;" onclick="playClick('thud'); saveFee()">NEXT</button>`; }
-    function saveFee() { let f = document.getElementById('manualFee').value; if(!f) return alert("Please enter price!"); delCharge = parseInt(f); renderDeliveryAddressInput(); }
-    function renderDeliveryAddressInput() { document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">🏠 Where should we bring your food?</div><textarea id="manualAddr" placeholder="Enter address..." class="big-input"></textarea><button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>`; }
-    function saveAddr() { let a = document.getElementById('manualAddr').value; if(!a) return alert("Please enter address!"); userAddress = a; renderFinalSummary(delCharge); }
+    // NEW: Delivery Calculator Integration
+    function renderAddressStep() { 
+        chkStep = 2; 
+        document.getElementById('checkout-content').innerHTML = `
+            <div class="chat-bubble">
+                <b>🚚 Delivery Setup</b><br>
+                Click below to calculate your delivery charges automatically
+            </div>
+            <div class="delivery-center-wrap">
+                <div class="delivery-cta btn-3d" onclick="playClick('pop'); openDeliveryCalc()">
+                    <span style="font-size:50px;">🗺️💨</span><br>
+                    <span style="font-weight:900; color:var(--red);">CALCULATE DELIVERY FEE</span><br>
+                    <small style="color:#666;">Auto-detect your location</small>
+                </div>
+            </div>
+            <div id="delivery-fee-display" style="display:none; background:#e8f5e9; border:2px solid #4caf50; border-radius:15px; padding:15px; margin:15px 0; text-align:center;">
+                <p style="margin:0; color:#2e7d32; font-weight:900;">✅ Delivery Fee: Rs <span id="display-fee-amount">0</span></p>
+                <p style="margin:5px 0 0; font-size:12px; color:#555;" id="display-distance-info"></p>
+            </div>
+            <button id="proceed-to-address" style="display:none; width:100%; padding:15px; background:#ccc; color:white; border:none; border-radius:15px; font-weight:900;" disabled>Enter Address →</button>
+        `; 
+    }
+
+    function openDeliveryCalc() {
+        document.getElementById('delivery-calc-overlay').style.display = 'flex';
+        setScrollLock(true);
+        // Reset states
+        document.getElementById('calc-permission-state').style.display = 'block';
+        document.getElementById('calc-loading-state').style.display = 'none';
+        document.getElementById('calc-result-state').style.display = 'none';
+        document.getElementById('calc-error-state').style.display = 'none';
+        currentCalcData = null;
+    }
+
+    function closeDeliveryCalc() {
+        document.getElementById('delivery-calc-overlay').style.display = 'none';
+        setScrollLock(false);
+    }
+
+    // Haversine Formula
+    function calculateStraightDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    async function getRoadDistance(userLat, userLng) {
+        try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${OVENX_COORDS.lng},${OVENX_COORDS.lat};${userLng},${userLat}?overview=false`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Routing service unavailable');
+            const data = await response.json();
+            if (data.code !== 'Ok' || !data.routes || !data.routes[0]) throw new Error('No route found');
+            return data.routes[0].distance / 1000;
+        } catch (error) {
+            console.warn('OSRM failed, using estimation:', error);
+            return null;
+        }
+    }
+
+    function requestCalcLocation() {
+        document.getElementById('calc-permission-state').style.display = 'none';
+        document.getElementById('calc-loading-state').style.display = 'block';
+        document.getElementById('calc-result-state').style.display = 'none';
+        document.getElementById('calc-error-state').style.display = 'none';
+
+        if (!navigator.geolocation) {
+            showCalcError("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            handleCalcSuccess,
+            handleCalcError,
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }
+
+    async function handleCalcSuccess(position) {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        
+        const roadDistance = await getRoadDistance(userLat, userLng);
+        const straightDistance = calculateStraightDistance(OVENX_COORDS.lat, OVENX_COORDS.lng, userLat, userLng);
+        
+        const usedDistance = roadDistance || (straightDistance * 1.4);
+        const roundTrip = usedDistance * 2;
+        const cost = Math.ceil(roundTrip * PRICE_PER_KM);
+
+        currentCalcData = {
+            userLat, userLng,
+            oneWay: usedDistance.toFixed(2),
+            roundTrip: roundTrip.toFixed(2),
+            straightLine: straightDistance.toFixed(2),
+            cost: cost,
+            isEstimated: !roadDistance,
+            timestamp: new Date().toISOString()
+        };
+
+        // Save to database
+        if (sb) {
+            await sb.from('delivery_calculations').insert([{
+                lat: userLat,
+                lng: userLng,
+                distance_one_way: usedDistance,
+                distance_round_trip: roundTrip,
+                cost: cost,
+                is_estimated: !roadDistance
+            }]);
+        }
+
+        // Show results
+        document.getElementById('calc-loading-state').style.display = 'none';
+        document.getElementById('calc-result-state').style.display = 'block';
+        
+        document.getElementById('calc-total-cost').innerText = cost;
+        document.getElementById('calc-one-way').innerText = currentCalcData.oneWay + ' km' + (currentCalcData.isEstimated ? ' (est.)' : '');
+        document.getElementById('calc-round-trip').innerText = currentCalcData.roundTrip + ' km';
+        document.getElementById('calc-straight-line').innerText = currentCalcData.straightLine + ' km';
+
+        // Auto-forward after 2 seconds
+        setTimeout(() => {
+            applyDeliveryFee(cost, currentCalcData);
+        }, 2000);
+    }
+
+    function handleCalcError(error) {
+        let msg = "Unable to retrieve your location.";
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                msg = "Location access denied. Please enable location permissions.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                msg = "Location information unavailable.";
+                break;
+            case error.TIMEOUT:
+                msg = "Location request timed out.";
+                break;
+        }
+        showCalcError(msg);
+    }
+
+    function showCalcError(msg) {
+        document.getElementById('calc-loading-state').style.display = 'none';
+        document.getElementById('calc-error-state').style.display = 'block';
+        document.getElementById('calc-error-msg').innerText = msg;
+    }
+
+    function applyDeliveryFee(fee, calcData) {
+        delCharge = fee;
+        closeDeliveryCalc();
+        
+        // Update checkout screen
+        const feeDisplay = document.getElementById('delivery-fee-display');
+        const proceedBtn = document.getElementById('proceed-to-address');
+        
+        if (feeDisplay && proceedBtn) {
+            feeDisplay.style.display = 'block';
+            document.getElementById('display-fee-amount').innerText = fee;
+            document.getElementById('display-distance-info').innerText = 
+                `Distance: ${calcData.oneWay} km one way | Round trip: ${calcData.roundTrip} km`;
+            
+            proceedBtn.style.display = 'block';
+            proceedBtn.style.background = 'var(--orange)';
+            proceedBtn.disabled = false;
+            proceedBtn.onclick = () => {
+                playClick('thud');
+                renderDeliveryAddressInput();
+            };
+        } else {
+            // Fallback if elements not found
+            renderDeliveryAddressInput();
+        }
+    }
+
+    function renderDeliveryAddressInput() {
+        document.getElementById('checkout-content').innerHTML = `
+            <div class="chat-bubble">
+                <b>🏠 Delivery Address</b><br>
+                Delivery Fee: <span style="color:var(--red); font-weight:900;">Rs ${delCharge}</span>
+            </div>
+            <textarea id="manualAddr" placeholder="Enter your full address..." class="big-input" style="height:100px;"></textarea>
+            <button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>
+        `;
+    }
+
+    function saveAddr() { 
+        let a = document.getElementById('manualAddr').value; 
+        if(!a) return alert("Please enter address!"); 
+        userAddress = a; 
+        renderFinalSummary(delCharge); 
+    }
 
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
@@ -1036,16 +1342,103 @@ function closeCheckout() {
     }
     
     function setKitchenFilter(f) {
-        currentKitchenFilter = f; playClick('pop'); document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
-        if(f === 'ALL') { document.getElementById('k-tab-all').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'none'; document.getElementById('clear-del-btn').style.display = 'none'; } 
-        else { document.getElementById('k-tab-del').classList.add('active'); document.getElementById('rider-audit-sidebar').style.display = 'flex'; document.getElementById('clear-del-btn').style.display = 'block'; }
+        currentKitchenFilter = f; 
+        playClick('pop'); 
+        document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
+        
+        // Hide all sidebars first
+        document.getElementById('rider-audit-sidebar').style.display = 'none';
+        document.getElementById('delivery-history-sidebar').style.display = 'none';
+        document.getElementById('clear-del-btn').style.display = 'none';
+        
+        if(f === 'ALL') { 
+            document.getElementById('k-tab-all').classList.add('active'); 
+        } else if (f === 'DELIVERY') { 
+            document.getElementById('k-tab-del').classList.add('active'); 
+            document.getElementById('rider-audit-sidebar').style.display = 'flex'; 
+            document.getElementById('clear-del-btn').style.display = 'block'; 
+        } else if (f === 'CALC_HISTORY') {
+            document.getElementById('k-tab-calc').classList.add('active');
+            document.getElementById('delivery-history-sidebar').style.display = 'flex';
+            loadDeliveryHistory();
+        }
         renderKitchenOrders();
     }
 
-    function openKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'flex'; renderKitchenOrders(); if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); setScrollLock(true); }
-    function closeKitchenPanel() { document.getElementById('kitchen-panel-overlay').style.display = 'none'; if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } setScrollLock(false); }
+    async function loadDeliveryHistory() {
+        if (!sb) return;
+        
+        const { data, error } = await sb.from('delivery_calculations')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+            
+        const list = document.getElementById('delivery-history-list');
+        const count = document.getElementById('calc-history-count');
+        
+        if (error) {
+            list.innerHTML = '<p style="text-align:center; color:#c62828;">Error loading history</p>';
+            return;
+        }
+        
+        count.innerText = data ? data.length : 0;
+        
+        if (!data || data.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No calculations yet</p>';
+            return;
+        }
+        
+        list.innerHTML = data.map(calc => {
+            const date = new Date(calc.created_at).toLocaleString('en-PK', {
+                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+            return `
+                <div class="delivery-history-card">
+                    <div class="distance-badge">${calc.distance_one_way.toFixed(1)} km</div>
+                    <div class="loc-text">
+                        📍 Lat: ${calc.lat.toFixed(4)}, Lng: ${calc.lng.toFixed(4)}
+                        ${calc.is_estimated ? '<span style="color:#ff9800; font-size:10px;"> (ESTIMATED)</span>' : ''}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="cost-highlight">Rs ${calc.cost}</span>
+                        <span style="font-size:11px; color:#666;">${date}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span>Round: ${calc.distance_round_trip.toFixed(2)} km</span>
+                        <span>Rate: Rs 12/km</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function clearDeliveryHistory() {
+        if (!confirm("Clear all delivery calculation history?")) return;
+        if (!sb) return;
+        
+        const { error } = await sb.from('delivery_calculations')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+            
+        if (!error) {
+            loadDeliveryHistory();
+            playClick('thud');
+        }
+    }
+
+    function openKitchenPanel() { 
+        document.getElementById('kitchen-panel-overlay').style.display = 'flex'; 
+        renderKitchenOrders(); 
+        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); 
+        setScrollLock(true); 
+    }
     
-    /* --- CUSTOMER DATABASE EXPORT --- */
+    function closeKitchenPanel() { 
+        document.getElementById('kitchen-panel-overlay').style.display = 'none'; 
+        if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } 
+        setScrollLock(false); 
+    }
+    
     async function downloadCustomerData() {
         if(!confirm("Download Customer Database?")) return;
         const { data, error } = await sb.from('gold_club_members').select('name, phone, created_at');
@@ -1065,8 +1458,8 @@ function closeCheckout() {
         document.body.removeChild(link);
     }
 
-    /* --- MANUAL ORDER LOGIC --- */
     function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
+    
     async function saveManualOrder() {
         const type = document.getElementById('man-type').value;
         const loc = document.getElementById('man-loc').value;
@@ -1082,7 +1475,6 @@ function closeCheckout() {
                 document.getElementById('manual-order-overlay').style.display = 'none';
                 setScrollLock(false);
                 renderKitchenOrders();
-                // Clear inputs
                 document.getElementById('man-loc').value = "";
                 document.getElementById('man-items').value = "";
                 document.getElementById('man-sub').value = "";
@@ -1092,189 +1484,192 @@ function closeCheckout() {
     }
 
     async function renderKitchenOrders() {
-        if(!sb) return; let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
-        if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-        const { data: orders } = await query; const list = document.getElementById('kitchen-orders-list');
-        list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
-        const now = new Date(); let isAnyOrderLate = false;
-        orders && orders.forEach((o) => {
-            const createdAt = new Date(o.created_at); const remaining = (25 * 60000) - (now - createdAt);
-            let timeLabel = ""; let alertClass = "";
-            if (o.status !== 'READY') { if (remaining <= 0) { alertClass = "late"; timeLabel = "LATE"; isAnyOrderLate = true; } else { timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); if (remaining <= 5 * 60000) alertClass = "warning"; } }
-            let priceHtml = ""; if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
-            let riderHtml = ""; if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
-            const card = document.createElement('div'); card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-            card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
-            ${priceHtml}
-            <div class="admin-actions">
-                <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
-                <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
-                <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
-                <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
-                <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
-                <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-            </div>
-            ${riderHtml}
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
-                ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}
-            </div>`;
-            list.appendChild(card);
-        });
-        if(isAnyOrderLate) playClick('siren');
-        if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
+        if(!sb) return; 
+        
+        // Only render orders list if not on calc history tab
+        if (currentKitchenFilter !== 'CALC_HISTORY') {
+            let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
+            if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
+            const { data: orders } = await query; 
+            const list = document.getElementById('kitchen-orders-list');
+            list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
+            const now = new Date(); 
+            let isAnyOrderLate = false;
+            orders && orders.forEach((o) => {
+                const createdAt = new Date(o.created_at); 
+                const remaining = (25 * 60000) - (now - createdAt);
+                let timeLabel = ""; 
+                let alertClass = "";
+                if (o.status !== 'READY') { 
+                    if (remaining <= 0) { 
+                        alertClass = "late"; 
+                        timeLabel = "LATE"; 
+                        isAnyOrderLate = true; 
+                    } else { 
+                        timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
+                        if (remaining <= 5 * 60000) alertClass = "warning"; 
+                    } 
+                }
+                let priceHtml = ""; 
+                if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
+                let riderHtml = ""; 
+                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+                const card = document.createElement('div'); 
+                card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
+                card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
+                ${priceHtml}
+                <div class="admin-actions">
+                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
+                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
+                    <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
+                    <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
+                    <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
+                    <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
+                </div>
+                ${riderHtml}
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
+                    ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}
+                </div>`;
+                list.appendChild(card);
+            });
+            if(isAnyOrderLate) playClick('siren');
+            if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
+        }
     }
 
     async function printOrderData(id, type) {
-    if (!sb) return alert("Database connection error");
-    const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
-    if (error || !o) return alert("Error loading order.");
+        if (!sb) return alert("Database connection error");
+        const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
+        if (error || !o) return alert("Error loading order.");
 
-    const printArea = document.getElementById('print-area');
-    const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-    }).replace(',', '');
+        const printArea = document.getElementById('print-area');
+        const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
+            day: 'numeric', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        }).replace(',', '');
 
-    const foodSub = o.subtotal || 0;
-    const delFee = o.delivery_fee || 0;
-    const serviceCharge = (o.type === 'Dine-In') ? Math.round(foodSub * 0.07) : 0;
-    const grandTotal = foodSub + serviceCharge + delFee;
+        const foodSub = o.subtotal || 0;
+        const delFee = o.delivery_fee || 0;
+        const serviceCharge = (o.type === 'Dine-In') ? Math.round(foodSub * 0.07) : 0;
+        const grandTotal = foodSub + serviceCharge + delFee;
 
-    // Helper to find price from menuData
-    const getPrice = (itemName) => {
-        for (let cat in menuData) {
-            const item = menuData[cat].find(i => itemName.includes(i.name));
-            if (item) return typeof item.price === 'object' ? "VAR" : item.price;
-        }
-        return "0";
-    };
+        const getPrice = (itemName) => {
+            for (let cat in menuData) {
+                const item = menuData[cat].find(i => itemName.includes(i.name));
+                if (item) return typeof item.price === 'object' ? "VAR" : item.price;
+            }
+            return "0";
+        };
 
-    let itemsHtml = "";
-    o.items.split('\n').forEach(line => {
-        if (!line.trim()) return;
-        const match = line.match(/(\d+)x (.+?)(?: \[(.*)\])?$/);
-        if (match) {
-            const qty = match[1];
-            const name = match[2].trim();
-            const note = match[3] ? match[3] : "";
-            const unitPrice = getPrice(name);
-            const lineTotal = unitPrice !== "VAR" ? (parseInt(qty) * parseInt(unitPrice)) : foodSub;
+        let itemsHtml = "";
+        o.items.split('\n').forEach(line => {
+            if (!line.trim()) return;
+            const match = line.match(/(\d+)x (.+?)(?: \[(.*)\])?$/);
+            if (match) {
+                const qty = match[1];
+                const name = match[2].trim();
+                const note = match[3] ? match[3] : "";
+                const unitPrice = getPrice(name);
+                const lineTotal = unitPrice !== "VAR" ? (parseInt(qty) * parseInt(unitPrice)) : foodSub;
 
-            itemsHtml += `
-                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                    <span>${qty} x ${name}</span>
-                    <span>${unitPrice !== "VAR" ? unitPrice : ""}</span>
+                itemsHtml += `
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
+                        <span>${qty} x ${name}</span>
+                        <span>${unitPrice !== "VAR" ? unitPrice : ""}</span>
+                    </div>
+                    ${note ? `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>` : ""}
+                `;
+            } else {
+                itemsHtml += `<div style="font-size: 13px; border-bottom: 1px dashed #eee;">${line}</div>`;
+            }
+        });
+
+        if (type === 'front') {
+            printArea.innerHTML = `
+                <div style="text-align: center; font-family: 'Courier New', Courier, monospace; color: black; padding: 10px;">
+                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">*** PROVE BILL ***</div>
+                    <div style="margin-bottom: 10px;">
+                        <h1 style="margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 900;">OVEN <span style="color: #000;">X</span></h1>
+                        <div style="font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; display: inline-block; padding: 2px 10px; margin-top: 2px;">MULTAN BRANCH</div>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 10px; line-height: 1.4;">
+                        Shop # 12, Gulgasht Colony, Multan<br>
+                        Phone: 0300-1450301<br>
+                        -----------------------------------
+                    </div>
+                    <div style="text-align: left; font-size: 13px; line-height: 1.5;">
+                        <b>Bill No:</b> ${o.id.slice(0, 8).toUpperCase()}<br>
+                        <b>Date  :</b> ${dateTime}<br>
+                        <b>Table :</b> ${o.location}<br>
+                        <b>Type  :</b> ${o.type}
+                    </div>
+                    <div style="border-bottom: 2px solid #000; margin: 10px 0 5px 0;"></div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
+                        <span>Item Description</span>
+                        <span>Price</span>
+                    </div>
+                    <div style="border-bottom: 1px solid #000; margin-bottom: 5px;"></div>
+                    <div style="text-align: left;">${itemsHtml}</div>
+                    <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+                    <div style="font-size: 14px; line-height: 1.6;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Net Total:</span> <span>Rs ${foodSub}</span>
+                        </div>
+                        ${serviceCharge > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Service Charges (7%):</span> <span>Rs ${serviceCharge}</span></div>` : ""}
+                        ${delFee > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Delivery Fee:</span> <span>Rs ${delFee}</span></div>` : ""}
+                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
+                            <span>Grand Total:</span> <span>Rs ${grandTotal}</span>
+                        </div>
+                    </div>
+                    <div style="border-bottom: 1px dashed #000; margin: 15px 0 10px 0;"></div>
+                    <div style="font-size: 14px; font-weight: bold;">
+                        CASH RECEIVED: Rs ${grandTotal}<br>
+                        CASH REFUND: Rs 0
+                    </div>
+                    <div style="margin-top: 20px; font-size: 12px;">
+                        <b>Thank You For Visiting Us!</b><br>
+                        Official System: OvenX.pk
+                    </div>
                 </div>
-                ${note ? `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>` : ""}
             `;
         } else {
-            itemsHtml += `<div style="font-size: 13px; border-bottom: 1px dashed #eee;">${line}</div>`;
+            printArea.innerHTML = `
+                <div style="text-align: center; font-family: sans-serif; color: black;">
+                    <h2 style="margin: 0; border-bottom: 2px solid #000;">KITCHEN TICKET</h2>
+                    <h1 style="margin: 5px 0;">${o.location}</h1>
+                    <div style="font-size: 18px; font-weight: bold; background: #000; color: #fff;">${o.type.toUpperCase()}</div>
+                    <div style="text-align: left; font-size: 20px; font-weight: bold; margin-top: 15px; white-space: pre-wrap;">${o.items}</div>
+                    <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 10px;">
+                        Time: ${new Date(o.created_at).toLocaleTimeString()}
+                    </div>
+                </div>
+            `;
         }
-    });
 
-    if (type === 'front') {
-        printArea.innerHTML = `
-            <div style="text-align: center; font-family: 'Courier New', Courier, monospace; color: black; padding: 10px;">
-                <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">*** PROVE BILL ***</div>
-                
-                <div style="margin-bottom: 10px;">
-                    <h1 style="margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 900;">OVEN <span style="color: #000;">X</span></h1>
-                    <div style="font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; display: inline-block; padding: 2px 10px; margin-top: 2px;">
-                        MULTAN BRANCH
-                    </div>
-                </div>
-
-                <div style="font-size: 12px; margin-bottom: 10px; line-height: 1.4;">
-                    Shop # 12, Gulgasht Colony, Multan<br>
-                    Phone: 0300-1450301<br>
-                    -----------------------------------
-                </div>
-
-                <div style="text-align: left; font-size: 13px; line-height: 1.5;">
-                    <b>Bill No:</b> ${o.id.slice(0, 8).toUpperCase()}<br>
-                    <b>Date  :</b> ${dateTime}<br>
-                    <b>Table :</b> ${o.location}<br>
-                    <b>Type  :</b> ${o.type}
-                </div>
-
-                <div style="border-bottom: 2px solid #000; margin: 10px 0 5px 0;"></div>
-                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
-                    <span>Item Description</span>
-                    <span>Price</span>
-                </div>
-                <div style="border-bottom: 1px solid #000; margin-bottom: 5px;"></div>
-
-                <div style="text-align: left;">
-                    ${itemsHtml}
-                </div>
-
-                <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
-
-                <div style="font-size: 14px; line-height: 1.6;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Net Total:</span> <span>Rs ${foodSub}</span>
-                    </div>
-                    ${serviceCharge > 0 ? `
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Service Charges (7%):</span> <span>Rs ${serviceCharge}</span>
-                    </div>` : ""}
-                    ${delFee > 0 ? `
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Delivery Fee:</span> <span>Rs ${delFee}</span>
-                    </div>` : ""}
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
-                        <span>Grand Total:</span> <span>Rs ${grandTotal}</span>
-                    </div>
-                </div>
-
-                <div style="border-bottom: 1px dashed #000; margin: 15px 0 10px 0;"></div>
-                
-                <div style="font-size: 14px; font-weight: bold;">
-                    CASH RECEIVED: Rs ${grandTotal}<br>
-                    CASH REFUND: Rs 0
-                </div>
-
-                <div style="margin-top: 20px; font-size: 12px;">
-                    <b>Thank You For Visiting Us!</b><br>
-                    Official System: OvenX.pk
-                </div>
-            </div>
-        `;
-    } else {
-        // Kitchen Ticket remains bold and simple
-        printArea.innerHTML = `
-            <div style="text-align: center; font-family: sans-serif; color: black;">
-                <h2 style="margin: 0; border-bottom: 2px solid #000;">KITCHEN TICKET</h2>
-                <h1 style="margin: 5px 0;">${o.location}</h1>
-                <div style="font-size: 18px; font-weight: bold; background: #000; color: #fff;">${o.type.toUpperCase()}</div>
-                <div style="text-align: left; font-size: 20px; font-weight: bold; margin-top: 15px; white-space: pre-wrap;">
-                    ${o.items}
-                </div>
-                <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 10px;">
-                    Time: ${new Date(o.created_at).toLocaleTimeString()}
-                </div>
-            </div>
-        `;
+        setTimeout(() => {
+            window.print();
+            printArea.innerHTML = "";
+        }, 400);
     }
 
-    setTimeout(() => {
-        window.print();
-        printArea.innerHTML = "";
-    }, 400);
-}
-
     function renderAuditUI(orders) {
-        const div = document.getElementById('rider-audit-selection'); div.innerHTML = "";
+        const div = document.getElementById('rider-audit-selection'); 
+        div.innerHTML = "";
         RIDERS.forEach(r => {
-            const b = document.createElement('button'); b.className = "rider-btn"; b.innerText = r;
+            const b = document.createElement('button'); 
+            b.className = "rider-btn"; 
+            b.innerText = r;
             b.onclick = () => {
                 const rOrders = orders.filter(o => o.rider === r);
                 const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
                 const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
-                document.getElementById('audit-result-box').style.display = 'block'; document.getElementById('audit-rider-name').innerText = r;
-                document.getElementById('audit-count').innerText = rOrders.length; document.getElementById('audit-cash').innerText = "Rs " + cash;
-                document.getElementById('audit-fees').innerText = "Rs " + fees; document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
+                document.getElementById('audit-result-box').style.display = 'block'; 
+                document.getElementById('audit-rider-name').innerText = r;
+                document.getElementById('audit-count').innerText = rOrders.length; 
+                document.getElementById('audit-cash').innerText = "Rs " + cash;
+                document.getElementById('audit-fees').innerText = "Rs " + fees; 
+                document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
                 playClick('pop');
             };
             div.appendChild(b);
@@ -1299,150 +1694,166 @@ function closeCheckout() {
     }
 
     function renderPublicDeals() {
-    const list = document.getElementById('deals-list'); 
-    list.innerHTML = '';
-    dealsData.forEach(deal => {
-        const card = document.createElement('div'); 
-        card.className = "deal-card";
-        card.innerHTML = `
-            <div class="deal-badge">${deal.badge || 'HOT'}</div>
-            <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
-            <div class="deal-info-box">
-                <div class="deal-title">${deal.name}</div>
-                <span class="deal-desc">${deal.desc || ''}</span>
-                <span class="deal-price">Rs ${deal.price}</span>
-            </div>
-        `;
-        const btn = document.createElement('button'); 
-        btn.className = "next-btn btn-3d"; 
-        btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
-        btn.innerText = "ADD TO BAG";
-        btn.onclick = () => openOrderFlow(deal); 
-        card.querySelector('.deal-info-box').appendChild(btn);
-        list.appendChild(card);
-    });
-}
+        const list = document.getElementById('deals-list'); 
+        list.innerHTML = '';
+        dealsData.forEach(deal => {
+            const card = document.createElement('div'); 
+            card.className = "deal-card";
+            card.innerHTML = `
+                <div class="deal-badge">${deal.badge || 'HOT'}</div>
+                <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+                <div class="deal-info-box">
+                    <div class="deal-title">${deal.name}</div>
+                    <span class="deal-desc">${deal.desc || ''}</span>
+                    <span class="deal-price">Rs ${deal.price}</span>
+                </div>
+            `;
+            const btn = document.createElement('button'); 
+            btn.className = "next-btn btn-3d"; 
+            btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
+            btn.innerText = "ADD TO BAG";
+            btn.onclick = () => openOrderFlow(deal); 
+            card.querySelector('.deal-info-box').appendChild(btn);
+            list.appendChild(card);
+        });
+    }
 
     function renderPublicMenu(filterText = "") {
-        const mC = document.getElementById('menu-container'); mC.innerHTML = ""; const search = filterText.toLowerCase();
+        const mC = document.getElementById('menu-container'); 
+        mC.innerHTML = ""; 
+        const search = filterText.toLowerCase();
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue;
             const filteredItems = menuData[cat].filter(item => item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search));
             if (filteredItems.length > 0) {
-                let title = document.createElement('div'); title.className = 'section-title'; title.innerText = cat; title.id = "cat-" + cat.replace(/\s+/g, '-'); mC.appendChild(title);
-                let grid = document.createElement('div'); grid.className = 'grid';
+                let title = document.createElement('div'); 
+                title.className = 'section-title'; 
+                title.innerText = cat; 
+                title.id = "cat-" + cat.replace(/\s+/g, '-'); 
+                mC.appendChild(title);
+                let grid = document.createElement('div'); 
+                grid.className = 'grid';
                 filteredItems.forEach(item => {
-                // Improved image matching logic
-let fBg = imgMap["pizza"]; // default fallback
-let itemNameLower = item.name.toLowerCase();
-
-// Priority matching for better accuracy
-if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
-else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
-else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
-else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
-else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
-else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
-else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
-else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
-else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
-else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
-else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
-else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
-else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
-else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
-else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
-else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
-else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
-else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
-else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
-else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
-else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
-else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
-else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
-else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
-else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
-else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
-else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
-else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
-else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
-else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
-else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
-else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
-else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
-else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
-else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
-else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
-else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
-else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
-else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
-else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
-else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
-else if (itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
-else if (itemNameLower.includes('doner')) fBg = imgMap["doner"];
-else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
-    if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
-    else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
-    else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
-    else fBg = imgMap["oven baked wings"];
-}
-else {
-    // Fallback to generic matching for anything else
-    for (let key in imgMap) {
-        if (itemNameLower.includes(key.toLowerCase())) {
-            fBg = imgMap[key];
-            break;
-        }
-    }
-}
-let b = document.createElement('div'); b.className = 'btn btn-3d'; b.style.backgroundImage = `url('${fBg}')`;
+                    let fBg = imgMap["pizza"];
+                    let itemNameLower = item.name.toLowerCase();
+                    
+                    if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
+                    else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
+                    else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
+                    else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
+                    else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
+                    else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
+                    else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
+                    else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
+                    else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
+                    else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
+                    else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
+                    else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
+                    else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
+                    else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
+                    else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
+                    else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
+                    else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
+                    else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
+                    else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
+                    else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
+                    else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
+                    else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
+                    else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
+                    else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
+                    else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
+                    else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
+                    else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
+                    else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
+                    else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
+                    else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
+                    else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
+                    else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
+                    else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
+                    else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
+                    else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
+                    else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
+                    else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
+                    else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
+                    else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
+                    else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
+                    else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
+                    else if (itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
+                    else if (itemNameLower.includes('doner')) fBg = imgMap["doner"];
+                    else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
+                        if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
+                        else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
+                        else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
+                        else fBg = imgMap["oven baked wings"];
+                    }
+                    else {
+                        for (let key in imgMap) {
+                            if (itemNameLower.includes(key.toLowerCase())) {
+                                fBg = imgMap[key];
+                                break;
+                            }
+                        }
+                    }
+                    
+                    let b = document.createElement('div'); 
+                    b.className = 'btn btn-3d'; 
+                    b.style.backgroundImage = `url('${fBg}')`;
                     b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
-                    b.onclick = () => openOrderFlow(item); grid.appendChild(b);
-                }); mC.appendChild(grid);
+                    b.onclick = () => openOrderFlow(item); 
+                    grid.appendChild(b);
+                }); 
+                mC.appendChild(grid);
             }
-        } renderCategoryBar();
+        } 
+        renderCategoryBar();
     }
+    
     function renderCategoryBar() {
-        const bar = document.getElementById('category-bar'); bar.innerHTML = "";
+        const bar = document.getElementById('category-bar'); 
+        bar.innerHTML = "";
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue; 
-            const pill = document.createElement('div'); pill.className = "cat-pill"; pill.innerText = cat;
+            const pill = document.createElement('div'); 
+            pill.className = "cat-pill"; 
+            pill.innerText = cat;
             pill.onclick = () => { 
-                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); pill.classList.add('active'); 
-                const t = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); if(t) t.scrollIntoView({ behavior: 'smooth' }); 
-            }; bar.appendChild(pill);
+                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); 
+                pill.classList.add('active'); 
+                const t = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); 
+                if(t) t.scrollIntoView({ behavior: 'smooth' }); 
+            }; 
+            bar.appendChild(pill);
         }
     }
 
     function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
+    
     function setupRealtimeNotifications() {
-    if(!sb) return;
-    
-    // Request permission immediately if not already set
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
+        if(!sb) return;
+        
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+        
+        sb.channel('kitchen-dashboard')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
+            playClick('siren');
+            
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🔥 NEW ORDER RECEIVED!", {
+                    body: `Type: ${payload.new.type}\nLocation: ${payload.new.location}`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png",
+                    badge: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png",
+                    tag: 'new-order',
+                    requireInteraction: true
+                });
+            }
+            
+            if(document.getElementById('kitchen-panel-overlay').style.display === 'flex') {
+                renderKitchenOrders();
+            }
+        }).subscribe();
     }
-    
-    sb.channel('kitchen-dashboard')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kitchen_orders' }, (payload) => {
-        playClick('siren');
-        
-        // Show browser notification
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("🔥 NEW ORDER RECEIVED!", {
-                body: `Type: ${payload.new.type}\nLocation: ${payload.new.location}`,
-                icon: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png ",
-                badge: "https://cdn-icons-png.flaticon.com/512/5973/5973307.png ",
-                tag: 'new-order',
-                requireInteraction: true
-            });
-        }
-        
-        if(document.getElementById('kitchen-panel-overlay').style.display === 'flex') {
-            renderKitchenOrders();
-        }
-    }).subscribe();
-}
 
     // Global Initialization
     renderPublicMenu(); 
@@ -1451,38 +1862,47 @@ let b = document.createElement('div'); b.className = 'btn btn-3d'; b.style.backg
     setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
-    let deferredPrompt; let secretClickCount = 0;
+    let deferredPrompt; 
+    let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-    function handleSecretClick() { secretClickCount++; if(secretClickCount === 5) { secretClickCount = 0; if (deferredPrompt) deferredPrompt.prompt(); else alert("Ready."); } setTimeout(() => { secretClickCount = 0; }, 2000); }
-    // Handle phone's physical back button
-window.addEventListener('popstate', function(event) {
-    const overlays = [
-        { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
-        { id: 'admin-login-overlay', close: closeAdminLogin },
-        { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
-        { id: 'flavor-overlay', close: closeModals },
-        { id: 'size-overlay', close: closeModals },
-        { id: 'modal-overlay', close: closeModals },
-        { id: 'welcome-overlay', close: () => { document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); } },
-        { id: 'tracking-overlay', close: clearTracking },
-        { id: 'upsell-overlay', close: () => { document.getElementById('upsell-overlay').style.display = 'none'; setScrollLock(false); } },
-        { id: 'manual-order-overlay', close: () => { document.getElementById('manual-order-overlay').style.display = 'none'; setScrollLock(false); } },
-        { id: 'overlay-screen', close: closeCheckout }
-    ];
-    
-    for (let overlay of overlays) {
-        const el = document.getElementById(overlay.id);
-        if (el && (el.style.display === 'flex' || el.style.display === 'block')) {
-            event.preventDefault();
-            overlay.close();
-            history.pushState(null, null, window.location.pathname);
-            return;
-        }
+    function handleSecretClick() { 
+        secretClickCount++; 
+        if(secretClickCount === 5) { 
+            secretClickCount = 0; 
+            if (deferredPrompt) deferredPrompt.prompt(); 
+            else alert("Ready."); 
+        } 
+        setTimeout(() => { secretClickCount = 0; }, 2000); 
     }
-});
+    
+    window.addEventListener('popstate', function(event) {
+        const overlays = [
+            { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
+            { id: 'admin-login-overlay', close: closeAdminLogin },
+            { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
+            { id: 'flavor-overlay', close: closeModals },
+            { id: 'size-overlay', close: closeModals },
+            { id: 'modal-overlay', close: closeModals },
+            { id: 'welcome-overlay', close: () => { document.getElementById('welcome-overlay').style.display = 'none'; setScrollLock(false); } },
+            { id: 'tracking-overlay', close: clearTracking },
+            { id: 'upsell-overlay', close: () => { document.getElementById('upsell-overlay').style.display = 'none'; setScrollLock(false); } },
+            { id: 'manual-order-overlay', close: () => { document.getElementById('manual-order-overlay').style.display = 'none'; setScrollLock(false); } },
+            { id: 'delivery-calc-overlay', close: closeDeliveryCalc },
+            { id: 'overlay-screen', close: closeCheckout }
+        ];
+        
+        for (let overlay of overlays) {
+            const el = document.getElementById(overlay.id);
+            if (el && (el.style.display === 'flex' || el.style.display === 'block')) {
+                event.preventDefault();
+                overlay.close();
+                history.pushState(null, null, window.location.pathname);
+                return;
+            }
+        }
+    });
 
-// Initialize history state
-history.pushState(null, null, window.location.pathname);
+    history.pushState(null, null, window.location.pathname);
 </script>
 </body>
 </html>
