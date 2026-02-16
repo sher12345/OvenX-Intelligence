@@ -1428,51 +1428,54 @@
     }
 
     async function loadDeliveryHistory() {
-        if (!sb) return;
+    if (!sb) return;
+    
+    const { data, error } = await sb.from('delivery_calculations')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
         
-        const { data, error } = await sb.from('delivery_calculations')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
-            
-        const list = document.getElementById('delivery-history-list');
-        const count = document.getElementById('calc-history-count');
-        
-        if (error) {
-            list.innerHTML = '<p style="text-align:center; color:#c62828;">Error loading history</p>';
-            return;
-        }
-        
-        count.innerText = data ? data.length : 0;
-        
-        if (!data || data.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No calculations yet</p>';
-            return;
-        }
-        
-        list.innerHTML = data.map(calc => {
-            const date = new Date(calc.created_at).toLocaleString('en-PK', {
-                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-            });
-            return `
-                <div class="delivery-history-card">
-                    <div class="distance-badge">${calc.distance_one_way.toFixed(1)} km</div>
-                    <div class="loc-text">
-                        📍 Lat: ${calc.lat.toFixed(4)}, Lng: ${calc.lng.toFixed(4)}
-                        ${calc.is_estimated ? '<span style="color:#ff9800; font-size:10px;"> (ESTIMATED)</span>' : ''}
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="cost-highlight">Rs ${calc.cost}</span>
-                        <span style="font-size:11px; color:#666;">${date}</span>
-                    </div>
-                    <div class="meta-row">
-                        <span>Round: ${calc.distance_round_trip.toFixed(2)} km</span>
-                        <span>Rate: Rs 12/km</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    const list = document.getElementById('delivery-history-list');
+    const count = document.getElementById('calc-history-count');
+    
+    if (error) {
+        list.innerHTML = '<p style="text-align:center; color:#c62828;">Error loading history</p>';
+        return;
     }
+    
+    count.innerText = data ? data.length : 0;
+    
+    if (!data || data.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No calculations yet</p>';
+        return;
+    }
+    
+    list.innerHTML = data.map(calc => {
+        const date = new Date(calc.created_at).toLocaleString('en-PK', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+        });
+        return `
+            <div class="delivery-history-card">
+                <div class="distance-badge">${calc.distance_one_way.toFixed(1)} km</div>
+                <div class="loc-text">
+                    📍 Lat: ${calc.lat.toFixed(4)}, Lng: ${calc.lng.toFixed(4)}
+                    ${calc.is_estimated ? '<span style="color:#ff9800; font-size:10px;"> (ESTIMATED)</span>' : ''}
+                </div>
+                <button onclick="openInGoogleMaps(${calc.lat}, ${calc.lng})" class="btn-3d" style="background:var(--wa-green); color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:900; font-size:11px; margin:8px 0; width:100%; box-shadow:0 4px 0px var(--wa-dark);">
+                    🗺️ OPEN IN GOOGLE MAPS
+                </button>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="cost-highlight">Rs ${calc.cost}</span>
+                    <span style="font-size:11px; color:#666;">${date}</span>
+                </div>
+                <div class="meta-row">
+                    <span>Round: ${calc.distance_round_trip.toFixed(2)} km</span>
+                    <span>Rate: Rs 12/km</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
     async function clearDeliveryHistory() {
         if (!confirm("Clear all delivery calculation history?")) return;
@@ -1486,6 +1489,19 @@
             loadDeliveryHistory();
             playClick('thud');
         }
+    }
+// ADD IT HERE - right after clearDeliveryHistory()
+    function openInGoogleMaps(lat, lng) {
+        playClick('pop');
+        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+        window.open(url, '_blank');
+    }
+
+    function openKitchenPanel() { 
+        document.getElementById('kitchen-panel-overlay').style.display = 'flex'; 
+        renderKitchenOrders(); 
+        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); 
+        setScrollLock(true); 
     }
 
     function openKitchenPanel() { 
