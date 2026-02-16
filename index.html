@@ -1005,65 +1005,43 @@
 
     function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
 
-        async function finalSubmitOrder() {
-    playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-    const grand = foodTotal + sc + delCharge;
-    const itemsText = cart.map(i => {
-        let detail = i.qty + "x " + i.name;
-        if (i.note) detail += " [" + i.note + "]"; 
-        return detail;
-    }).join("\n");
+    async function finalSubmitOrder() {
+        playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+        const grand = foodTotal + sc + delCharge;
+        const itemsText = cart.map(i => {
+            let detail = i.qty + "x " + i.name;
+            if (i.note) detail += " [" + i.note + "]"; 
+            return detail;
+        }).join("\n");
 
-    const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-    
-    let orderId = null;
-    try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
+        const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
+        
+        let orderId = null;
+        try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
-    let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
-    let bonus = "";
-    if(localStorage.getItem('ovenx_member_name')) {
-        if(stamps >= 10) {
-            const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-            bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-            localStorage.setItem('ovenx_stamps', 0);
-        } else if(foodTotal >= 1000) {
-            localStorage.setItem('ovenx_stamps', stamps + 1);
+        let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
+        let bonus = "";
+        if(localStorage.getItem('ovenx_member_name')) {
+            if(stamps >= 10) {
+                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
+                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+                localStorage.setItem('ovenx_stamps', 0);
+            } else if(foodTotal >= 1000) {
+                localStorage.setItem('ovenx_stamps', stamps + 1);
+            }
         }
+
+        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; 
+if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
+if (orderType === 'Delivery' && userAddress) headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
+
+const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
+        
+        cart = []; updateCartBar();
+        document.getElementById('overlay-screen').style.display = 'none';
+        if(orderId) initCustomerTracking(orderId);
+        window.location.href = `https://wa.me/923001450301?text=${waMsg}`;
     }
-
-    let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; 
-    if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-    if (orderType === 'Delivery' && userAddress) headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
-
-    const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
-    
-    cart = []; updateCartBar();
-    document.getElementById('overlay-screen').style.display = 'none';
-    if(orderId) initCustomerTracking(orderId);
-
-    // ============================================
-    // NEW: Dual WhatsApp for Delivery Orders
-    // ============================================
-    
-    const KITCHEN_NUMBER = "923001450301";        // Your existing kitchen number
-    const CUSTOMER_CARE_NUMBER = "923002450301";  // New customer care number
-
-    if (orderType === 'Delivery') {
-        // Delivery: Send to BOTH numbers
-        
-        // 1. Kitchen (main order) - same tab
-        window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text= ${waMsg}`;
-        
-        // 2. Customer Care (copy) - new tab after delay
-        setTimeout(() => {
-            window.open(`https://wa.me/${CUSTOMER_CARE_NUMBER}?text= ${waMsg}`, '_blank');
-        }, 1500);
-        
-    } else {
-        // Dine-in/Takeaway: Only to Kitchen (original behavior)
-        window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text= ${waMsg}`;
-    }
-}
 
     function addToCartFinal() { 
         playClick('thud'); 
@@ -1563,7 +1541,7 @@
         }
     }
 
-            async function printOrderData(id, type) {
+    async function printOrderData(id, type) {
         if (!sb) return alert("Database connection error");
         const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
         if (error || !o) return alert("Error loading order.");
@@ -1574,139 +1552,42 @@
             hour: '2-digit', minute: '2-digit', hour12: true
         }).replace(',', '');
 
+        const foodSub = o.subtotal || 0;
         const delFee = o.delivery_fee || 0;
-        
-        // Helper: Get price for regular menu items
-        const getMenuItemPrice = (itemName) => {
-            // Extract size from parentheses: "Extreme Peri Peri (M)" → "M"
-            const sizeMatch = itemName.match(/\(([^)]+)\)/);
-            const size = sizeMatch ? sizeMatch[1] : null;
-            const baseName = itemName.replace(/\s*\([^)]+\)\s*$/, '').trim();
-            
-            for (let cat in menuData) {
-                const item = menuData[cat].find(i => i.name === baseName || baseName.includes(i.name) || i.name.includes(baseName));
-                if (item) {
-                    if (typeof item.price === 'object') {
-                        if (size && item.price[size]) return item.price[size];
-                        // Try to match common size variations
-                        const sizeMap = { 'Med': 'M', 'Medium': 'M', 'Large': 'L', 'Regular': 'Reg' };
-                        if (size && sizeMap[size] && item.price[sizeMap[size]]) return item.price[sizeMap[size]];
-                        // Fallback to first price
-                        return Object.values(item.price)[0];
-                    }
-                    return item.price;
-                }
-            }
-            return null; // Not found in menu
-        };
-
-        // Helper: Get price for deals
-        const getDealPrice = (dealName) => {
-            const deal = dealsData.find(d => dealName.includes(d.name));
-            return deal ? deal.price : null;
-        };
-
-        // Parse items and calculate totals
-        let itemsHtml = "";
-        let calculatedFoodSub = 0;
-        
-        const lines = o.items.split('\n');
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-            
-            // Check if it's a main item line (starts with number + x)
-            const mainMatch = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.*)\])?$/);
-            
-            if (mainMatch) {
-                const qty = parseInt(mainMatch[1]);
-                const name = mainMatch[2].trim();
-                const note = mainMatch[3] || "";
-                
-                let unitPrice = 0;
-                let lineTotal = 0;
-                
-                // Try to get price from deals first
-                const dealPrice = getDealPrice(name);
-                
-                if (dealPrice !== null) {
-                    // It's a deal - use deal price directly
-                    unitPrice = dealPrice;
-                    lineTotal = qty * unitPrice;
-                    
-                    // Add deal line
-                    itemsHtml += `
-                        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                            <span>${qty} x ${name}</span>
-                            <span>${lineTotal}</span>
-                        </div>
-                    `;
-                    
-                    // Add flavor notes and includes (next lines until next main item)
-                    let j = i + 1;
-                    while (j < lines.length && !lines[j].match(/^\d+x\s+/)) {
-                        const detailLine = lines[j].trim();
-                        if (detailLine && !detailLine.startsWith('Note:')) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #555;">↳ ${detailLine}</div>`;
-                        }
-                        j++;
-                    }
-                    
-                    if (note) {
-                        itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                    }
-                    
-                } else {
-                    // It's a regular menu item
-                    const menuPrice = getMenuItemPrice(name);
-                    
-                    if (menuPrice !== null) {
-                        unitPrice = menuPrice;
-                        lineTotal = qty * unitPrice;
-                        
-                        itemsHtml += `
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                                <span>${qty} x ${name}</span>
-                                <span>${lineTotal}</span>
-                            </div>
-                        `;
-                        
-                        if (note) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                        }
-                    } else {
-                        // Manual item or unknown - show as-is without price
-                        itemsHtml += `
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                                <span>${qty} x ${name}</span>
-                                <span>-</span>
-                            </div>
-                        `;
-                        if (note) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                        }
-                    }
-                }
-                
-                calculatedFoodSub += lineTotal;
-                
-            } else if (!line.match(/^(Pizza|Includes|Flavor|Note):/i)) {
-                // Non-item lines that aren't details
-                itemsHtml += `<div style="font-size: 13px; color: #666; margin-top: 5px;">${line}</div>`;
-            }
-        }
-
-        // Use calculated subtotal or fallback to stored value
-        const foodSub = calculatedFoodSub > 0 ? calculatedFoodSub : (o.subtotal || 0);
-        
-        // Calculate service charge on food subtotal only
         const serviceCharge = (o.type === 'Dine-In') ? Math.round(foodSub * 0.07) : 0;
-        
-        // Grand total
         const grandTotal = foodSub + serviceCharge + delFee;
 
-        // ... rest of the receipt HTML (same as before) ...
+        const getPrice = (itemName) => {
+            for (let cat in menuData) {
+                const item = menuData[cat].find(i => itemName.includes(i.name));
+                if (item) return typeof item.price === 'object' ? "VAR" : item.price;
+            }
+            return "0";
+        };
+
+        let itemsHtml = "";
+        o.items.split('\n').forEach(line => {
+            if (!line.trim()) return;
+            const match = line.match(/(\d+)x (.+?)(?: \[(.*)\])?$/);
+            if (match) {
+                const qty = match[1];
+                const name = match[2].trim();
+                const note = match[3] ? match[3] : "";
+                const unitPrice = getPrice(name);
+                const lineTotal = unitPrice !== "VAR" ? (parseInt(qty) * parseInt(unitPrice)) : foodSub;
+
+                itemsHtml += `
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
+                        <span>${qty} x ${name}</span>
+                        <span>${unitPrice !== "VAR" ? unitPrice : ""}</span>
+                    </div>
+                    ${note ? `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>` : ""}
+                `;
+            } else {
+                itemsHtml += `<div style="font-size: 13px; border-bottom: 1px dashed #eee;">${line}</div>`;
+            }
+        });
+
         if (type === 'front') {
             printArea.innerHTML = `
                 <div style="text-align: center; font-family: 'Courier New', Courier, monospace; color: black; padding: 10px;">
