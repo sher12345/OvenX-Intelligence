@@ -1548,20 +1548,14 @@
 const CUSTOMER_CARE_NUMBER = '923002450301';
 
 function formatCCMessage(order) {
-    const dateTime = new Date(order.created_at).toLocaleString('en-PK', {
-        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-    });
     const total = (order.subtotal || 0) + (order.delivery_fee || 0);
     
-    return `🔥 *NEW DELIVERY ORDER - OVEN X*\n\n` +
-           `🆔 Order: #${order.id.slice(0,8).toUpperCase()}\n` +
-           `📍 *Address:* ${order.location}\n` +
-           `⏰ Time: ${dateTime}\n\n` +
-           `📝 *Items:*\n${order.items}\n\n` +
-           `💰 Subtotal: Rs ${order.subtotal || 0}\n` +
-           `🚚 Delivery: Rs ${order.delivery_fee || 0}\n` +
-           `*TOTAL: Rs ${total}*\n\n` +
-           `✅ Order Confirmed!`;
+    return `*Delivery Order*\n` +
+           `${order.location}\n\n` +
+           `${order.items}\n\n` +
+           `Bill: Rs ${order.subtotal || 0}\n` +
+           `Delivery: Rs ${order.delivery_fee || 0}\n` +
+           `*Total: Rs ${total}*`;
 }
 
 function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, btnElement) {
