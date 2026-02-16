@@ -1031,8 +1031,11 @@
             }
         }
 
-        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-        const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
+        let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; 
+if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
+if (orderType === 'Delivery' && userAddress) headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
+
+const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
         
         cart = []; updateCartBar();
         document.getElementById('overlay-screen').style.display = 'none';
