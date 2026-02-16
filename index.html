@@ -1564,7 +1564,7 @@ function formatCCMessage(order) {
            `✅ Order Confirmed!`;
 }
 
-function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt) {
+function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, btnElement) {
     playClick('thud');
     
     // Reconstruct order object
@@ -1583,14 +1583,19 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt) {
     // Open WhatsApp
     window.open(url, '_blank');
     
-    // Visual feedback
-    const btn = event.target;
-    btn.innerHTML = '✅ OPENED!';
-    btn.style.background = '#28a745';
-    setTimeout(() => {
-        btn.innerHTML = '📱 SEND TO CC';
-        btn.style.background = '#25D366';
-    }, 3000);
+    // Visual feedback - use the passed button element
+    if (btnElement) {
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = '✅ OPENED!';
+        btnElement.style.background = '#28a745';
+        btnElement.disabled = true;
+        
+        setTimeout(() => {
+            btnElement.innerHTML = originalText;
+            btnElement.style.background = '#25D366';
+            btnElement.disabled = false;
+        }, 3000);
+    }
 }
     async function renderKitchenOrders() {
         if(!sb) return; 
@@ -1634,8 +1639,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt) {
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-                    ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}')">📱 SEND TO CC</button>` : ''}
-                </div>
+${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">📱 SEND TO CC</button>` : ''}                </div>
                 ${riderHtml}
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
