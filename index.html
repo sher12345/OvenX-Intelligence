@@ -1051,8 +1051,15 @@
         return detail;
     }).join("\n");
 
-    const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-    
+const orderObj = { 
+    branch: BRANCH_CODE,  // ← ADD THIS LINE
+    type: orderType, 
+    location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, 
+    items: itemsText, 
+    status: 'WAITING', 
+    subtotal: foodTotal + sc, 
+    delivery_fee: delCharge 
+};    
     let orderId = null;
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
@@ -1271,14 +1278,15 @@
 
         // Save to database
         if (sb) {
-            await sb.from('delivery_calculations').insert([{
-                lat: userLat,
-                lng: userLng,
-                distance_one_way: usedDistance,
-                distance_round_trip: roundTrip,
-                cost: cost,
-                is_estimated: !roadDistance
-            }]);
+           await sb.from('delivery_calculations').insert([{
+    branch: BRANCH_CODE,  // ← ADD THIS LINE
+    lat: userLat,
+    lng: userLng,
+    distance_one_way: usedDistance,
+    distance_round_trip: roundTrip,
+    cost: cost,
+    is_estimated: !roadDistance
+}]);
         }
 
         // Show results
@@ -1432,6 +1440,7 @@
     
     const { data, error } = await sb.from('delivery_calculations')
         .select('*')
+        .eq('branch', BRANCH_CODE)  // ← ADD THIS LINE
         .order('created_at', { ascending: false })
         .limit(50);
         
@@ -1609,13 +1618,20 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
     }
 }
     async function renderKitchenOrders() {
-        if(!sb) return; 
+    if(!sb) return; 
+    
+    // Only render orders list if not on calc history tab
+    if (currentKitchenFilter !== 'CALC_HISTORY') {
+        let query = sb.from('kitchen_orders')
+            .select('*')
+            .eq('branch', BRANCH_CODE)  // ← ADD THIS (filters by branch)
+            .order('created_at', { ascending: false });
+            
+        if(currentKitchenFilter === 'DELIVERY') {
+            query = query.eq('type', 'Delivery');
+        }
         
-        // Only render orders list if not on calc history tab
-        if (currentKitchenFilter !== 'CALC_HISTORY') {
-            let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
-            if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-            const { data: orders } = await query; 
+        const { data: orders } = await query; 
             const list = document.getElementById('kitchen-orders-list');
             list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
             const now = new Date(); 
