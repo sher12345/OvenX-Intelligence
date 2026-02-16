@@ -1566,7 +1566,8 @@ const CUSTOMER_CARE_NUMBER = '923002450301';
 function formatCCMessage(order) {
     const total = (order.subtotal || 0) + (order.delivery_fee || 0);
     
-    return `*Delivery Order*\n` +
+    return `*Order Confirmed*\n\n` +
+           `*Delivery Order*\n` +
            `${order.location}\n\n` +
            `${order.items}\n\n` +
            `Bill: Rs ${order.subtotal || 0}\n` +
