@@ -837,16 +837,36 @@
         { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
         // RAMADAN SPECIAL PLATTER - ADDED TO DEALS
         { 
-    name: "🌙 Ramadan Special Platter", 
-    desc: "Complete Iftar meal for Ramadan", 
-    price: {Single: 600, Double: 1050}, 
-    badge: "RAMADAN SPECIAL", 
-    image: "https://i.postimg.cc/851vS0z7/Whats-App-Image-2026-02-17-at-4-02-34-PM.jpg", 
-    isRamadan: true,
-    fixedItems: ["🍚 Arabian Rice", "🥗 Russian Salad", "🌴 Dates", "🍰 Molten Lava Cake", "🥪 Cold Sandwich", "💧 Small Water", "🥤 Sprite Buddy"],
-    ramadanNote: "Perfect for breaking your fast! Available only during Ramadan."
-}
-    ];
+        name: "🌙 Ramadan Special Platter", 
+        desc: "Complete Iftar meal for Ramadan", 
+        price: {Single: 600, Double: 1050}, 
+        badge: "RAMADAN SPECIAL", 
+        image: "https://i.postimg.cc/851vS0z7/Whats-App-Image-2026-02-17-at-4-02-34-PM.jpg ", 
+        isRamadan: true,
+        fixedItems: ["🥪 Cold Sandwich", "🌴 4x Dates", "🥗 Bowl of Salad", "🍚 Crunchy Rice", "💧 Small Water", "🥤 Sprite Buddy"],
+        ramadanNote: "Single: 1 sandwich, 1 water, 1 sprite | Double: 2 sandwiches, 2 waters, 2 sprites"
+    },
+    
+    // UPDATED: Ramadan Behari Platter - With YOUR uploaded image!
+    { 
+        name: "🌙 Ramadan Behari Platter", 
+        desc: "Special Behari feast for Iftar", 
+        price: 1149, 
+        badge: "RAMADAN SPECIAL", 
+        image: "https://i.postimg.cc/KKCJChfL/behari-iftar-platter.jpg",  // ← YOUR IMAGE!
+        isRamadan: true,
+        fixedItems: [
+            "🌯 2x Behari Roll", 
+            "🍗 6x Oven Baked Wings", 
+            "🍟 50g Fries", 
+            "🧆 4x Fritters",
+            "💧 2x Small Water", 
+            "🥤 2x Sprite Buddy"
+        ],
+        ramadanNote: "Perfect Behari feast to break your fast! Now with Fritters!"
+    }
+];
+    
 
     const imgMap = {
         "plain fries": "https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
@@ -2001,62 +2021,69 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     // MODIFIED: Render Public Deals with Ramadan Special highlighted
     function renderPublicDeals() {
-        const list = document.getElementById('deals-list'); 
-        list.innerHTML = '';
+    const list = document.getElementById('deals-list'); 
+    list.innerHTML = '';
+    
+    // Sort deals to show Ramadan special first
+    const sortedDeals = [...dealsData].sort((a, b) => {
+        if (a.isRamadan) return -1;
+        if (b.isRamadan) return 1;
+        return 0;
+    });
+    
+    sortedDeals.forEach(deal => {
+        const card = document.createElement('div'); 
         
-        // Sort deals to show Ramadan special first
-        const sortedDeals = [...dealsData].sort((a, b) => {
-            if (a.isRamadan) return -1;
-            if (b.isRamadan) return 1;
-            return 0;
-        });
-        
-        sortedDeals.forEach(deal => {
-            const card = document.createElement('div'); 
+        // Special styling for Ramadan deal
+        if (deal.isRamadan) {
+            card.className = "deal-card ramadan-card";
+            card.innerHTML = `
+                <div class="ramadan-badge">🌙 RAMADAN SPECIAL</div>
+                <div class="deal-img-top" style="background-image: url('${deal.image}'); border-bottom: 3px solid var(--ramadan-green);"></div>
+                <div class="deal-info-box">
+                    <div class="deal-title ramadan-title"><span class="ramadan-crescent">🌙</span>${deal.name.replace('🌙 ', '')}</div>
+                    <div class="ramadan-items">
+                        <b>Includes:</b><br>
+                        ${deal.fixedItems.join('<br>')}
+                    </div>
+                    <span class="deal-desc" style="color: var(--ramadan-green); font-weight: 600;">${deal.ramadanNote}</span>
+                    <span class="deal-price ramadan-price">Rs ${typeof deal.price === 'object' ? deal.price.Single + ' / ' + deal.price.Double : deal.price}</span>
+                </div>
+            `;
+            const btn = document.createElement('button'); 
+            btn.className = "next-btn btn-3d ramadan-btn"; 
+            btn.style.cssText = "margin-bottom:0; margin-top: 10px;";
             
-            // Special styling for Ramadan deal
-            if (deal.isRamadan) {
-                card.className = "deal-card ramadan-card";
-                card.innerHTML = `
-                    <div class="ramadan-badge">🌙 RAMADAN SPECIAL</div>
-                    <div class="deal-img-top" style="background-image: url('${deal.image}'); border-bottom: 3px solid var(--ramadan-green);"></div>
-                    <div class="deal-info-box">
-                        <div class="deal-title ramadan-title"><span class="ramadan-crescent">🌙</span>${deal.name.replace('🌙 ', '')}</div>
-                        <div class="ramadan-items">
-                            <b>Includes:</b><br>
-                            ${deal.fixedItems.join('<br>')}
-                        </div>
-                        <span class="deal-desc" style="color: var(--ramadan-green); font-weight: 600;">${deal.ramadanNote}</span>
-                        <span class="deal-price ramadan-price">Rs ${typeof deal.price === 'object' ? deal.price.Single + ' / ' + deal.price.Double : deal.price}</span>
-                    </div>
-                `;
-                const btn = document.createElement('button'); 
-                btn.className = "next-btn btn-3d ramadan-btn"; 
-                btn.style.cssText = "margin-bottom:0; margin-top: 10px;"; 
-                btn.innerHTML = "🌙 SELECT SIZE";
-                btn.onclick = () => openOrderFlow(deal); 
-                card.querySelector('.deal-info-box').appendChild(btn);
+            // FIXED: Check if deal has size options or fixed price
+            if (typeof deal.price === 'object') {
+                btn.innerHTML = "🌙 SELECT SIZE";  // For Ramadan Special Platter
             } else {
-                card.className = "deal-card";
-                card.innerHTML = `
-                    <div class="deal-badge">${deal.badge || 'HOT'}</div>
-                    <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
-                    <div class="deal-info-box">
-                        <div class="deal-title">${deal.name}</div>
-                        <span class="deal-desc">${deal.desc || ''}</span>
-                        <span class="deal-price">Rs ${deal.price}</span>
-                    </div>
-                `;
-                const btn = document.createElement('button'); 
-                btn.className = "next-btn btn-3d"; 
-                btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
-                btn.innerText = "ADD TO BAG";
-                btn.onclick = () => openOrderFlow(deal); 
-                card.querySelector('.deal-info-box').appendChild(btn);
+                btn.innerHTML = "🌙 ADD TO BAG";   // For Ramadan Behari Platter
             }
-            list.appendChild(card);
-        });
-    }
+            
+            btn.onclick = () => openOrderFlow(deal); 
+            card.querySelector('.deal-info-box').appendChild(btn);
+        } else {
+            card.className = "deal-card";
+            card.innerHTML = `
+                <div class="deal-badge">${deal.badge || 'HOT'}</div>
+                <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+                <div class="deal-info-box">
+                    <div class="deal-title">${deal.name}</div>
+                    <span class="deal-desc">${deal.desc || ''}</span>
+                    <span class="deal-price">Rs ${deal.price}</span>
+                </div>
+            `;
+            const btn = document.createElement('button'); 
+            btn.className = "next-btn btn-3d"; 
+            btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
+            btn.innerText = "ADD TO BAG";
+            btn.onclick = () => openOrderFlow(deal); 
+            card.querySelector('.deal-info-box').appendChild(btn);
+        }
+        list.appendChild(card);
+    });
+}
 
     function renderPublicMenu(filterText = "") {
         const mC = document.getElementById('menu-container'); 
