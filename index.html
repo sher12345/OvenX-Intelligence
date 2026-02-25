@@ -12,6 +12,9 @@
     <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
 
     <title>Oven X - Official Order System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
             --red: #8b0000; 
@@ -27,6 +30,8 @@
             --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
             --ramadan-green: #0d5c3b;
             --ramadan-gold: #c9a227;
+            --inventory-indigo: #4f46e5;
+            --inventory-purple: #7c3aed;
         }
         * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
         body.modal-active { overflow: hidden; height: 100vh; }
@@ -464,6 +469,117 @@
             .charges-line { font-size: 15px; text-align: right; margin: 1mm 0; font-weight: bold; }
             body, html { height: auto !important; margin: 0 !important; padding: 0 !important; }
         }
+
+        /* INVENTORY MANAGEMENT STYLES */
+        #inventory-panel-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none; justify-content: center; align-items: center;
+            z-index: 9600; backdrop-filter: blur(10px);
+        }
+        .inventory-modal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 35px; width: 98%; max-width: 1400px; height: 95vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .inventory-header {
+            background: rgba(255,255,255,0.95); padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.2);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .inventory-tabs {
+            display: flex; gap: 10px; padding: 15px; background: rgba(255,255,255,0.1);
+        }
+        .inv-tab {
+            flex: 1; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.2);
+            color: white; font-weight: 900; text-align: center; cursor: pointer; transition: 0.3s;
+        }
+        .inv-tab.active {
+            background: white; color: #764ba2; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .inventory-content {
+            flex: 1; overflow-y: auto; padding: 20px; background: rgba(255,255,255,0.95);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .stock-low {
+            animation: pulse-red 2s infinite;
+            background: #fee2e2 !important;
+            border: 2px solid #ef4444 !important;
+        }
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        }
+        .inventory-table {
+            width: 100%; border-collapse: collapse;
+        }
+        .inventory-table th {
+            background: #f3f4f6; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280;
+        }
+        .inventory-table td {
+            padding: 12px; border-bottom: 1px solid #e5e7eb;
+        }
+        .stock-control {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .stock-btn {
+            width: 32px; height: 32px; border-radius: 8px; border: none;
+            background: #e5e7eb; cursor: pointer; font-weight: 900;
+            transition: 0.2s;
+        }
+        .stock-btn:hover { background: #d1d5db; }
+        .stock-btn.plus { background: #10b981; color: white; }
+        .stock-btn.minus { background: #ef4444; color: white; }
+        .low-stock-badge {
+            background: #ef4444; color: white; padding: 4px 8px; border-radius: 12px;
+            font-size: 10px; font-weight: 900; animation: pulse-red 2s infinite;
+        }
+        .sale-card {
+            background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px;
+            border-left: 4px solid var(--inventory-indigo); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .kitchen-order-card {
+            background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px;
+            border-left: 4px solid #f59e0b; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .deduction-log {
+            background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px;
+            padding: 10px; margin-top: 10px; font-size: 12px;
+        }
+        .quick-sale-form {
+            background: white; border-radius: 20px; padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .payment-btn {
+            padding: 12px; border-radius: 12px; border: 2px solid #e5e7eb;
+            background: white; cursor: pointer; font-weight: 700; transition: 0.2s;
+        }
+        .payment-btn.selected {
+            border-color: var(--inventory-indigo); background: #eef2ff; color: var(--inventory-indigo);
+        }
+        .stat-card {
+            background: white; border-radius: 15px; padding: 20px; text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-size: 32px; font-weight: 900; color: var(--inventory-indigo);
+        }
+        .stat-label {
+            font-size: 12px; color: #6b7280; text-transform: uppercase; font-weight: 700;
+        }
+        .add-item-btn {
+            background: linear-gradient(135deg, var(--inventory-indigo) 0%, var(--inventory-purple) 100%);
+            color: white; border: none; padding: 15px 30px; border-radius: 15px;
+            font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+            transition: transform 0.2s;
+        }
+        .add-item-btn:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -497,6 +613,10 @@
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
         <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
+        <!-- NEW: Inventory Management Button -->
+        <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; box-shadow: 0 6px 0px #4338ca;" onclick="openInventoryPanel()">
+            📦 INVENTORY & SALES
+        </button>
     </div>
 </div>
 
@@ -734,6 +854,50 @@
     </div>
 </div>
 
+<!-- INVENTORY & SALES MANAGEMENT PANEL -->
+<div id="inventory-panel-overlay">
+    <div class="inventory-modal">
+        <div class="inventory-header">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="width:50px; height:50px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius:15px; display:flex; align-items:center; justify-content:center; color:white; font-size:24px;">
+                    <i class="fas fa-warehouse"></i>
+                </div>
+                <div>
+                    <h2 style="margin:0; color:#1f2937; font-weight:900;">Inventory & Sales Hub</h2>
+                    <p style="margin:0; color:#6b7280; font-size:14px;">Kitchen-Integrated Management</p>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+    <button onclick="syncWithKitchen()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
+        <i class="fas fa-sync"></i> SYNC
+    </button>
+    <button onclick="logoutInventory()" style="background:#f59e0b; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
+        🔒 LOGOUT
+    </button>
+    <button onclick="closeInventoryPanel()" style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
+        ✕ CLOSE
+    </button>
+            </div>
+        </div>
+        
+        <div class="inventory-tabs">
+    <div class="inv-tab active" id="inv-tab-stock" onclick="switchInventoryTab('stock')">
+        <i class="fas fa-boxes"></i> STOCK
+    </div>
+    <div class="inv-tab" id="inv-tab-sales" onclick="switchInventoryTab('sales')">
+        <i class="fas fa-cash-register"></i> SALES
+    </div>
+    <div class="inv-tab" id="inv-tab-reports" onclick="switchInventoryTab('reports')">
+        <i class="fas fa-chart-line"></i> REPORTS
+    </div>
+</div>
+        
+        <div class="inventory-content" id="inventory-content-area">
+            <!-- Dynamic content loaded here -->
+        </div>
+    </div>
+</div>
+
 <div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
@@ -770,6 +934,1727 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // ==========================================
+    // INVENTORY MANAGEMENT SYSTEM INTEGRATION
+    // ==========================================
+    
+    // Inventory Data Store - Sales & Stock Only (No Kitchen Integration)
+let inventoryData = {
+    items: [], // Populated from menuData
+    sales: []  // All sales recorded here
+};
+function getBusinessDayStart(date) {
+    const d = new Date(date);
+    if (d.getHours() < 10) {
+        d.setDate(d.getDate() - 1);
+    }
+    d.setHours(10, 0, 0, 0);
+    return d;
+}
+
+function getBusinessDayEnd(date) {
+    const d = new Date(date);
+    if (d.getHours() >= 10) {
+        d.setDate(d.getDate() + 1);
+    }
+    d.setHours(2, 0, 0, 0);
+    return d;
+}
+
+function getPreviousBusinessDayStart(date) {
+    const d = getBusinessDayStart(date);
+    d.setDate(d.getDate() - 1);
+    return d;
+}
+
+function getPreviousBusinessDayEnd(date) {
+    const d = getBusinessDayStart(date);
+    d.setHours(2, 0, 0, 0);
+    return d;
+}
+
+let currentInventoryTab = 'stock';
+
+// Initialize inventory from menuData
+function initializeInventory() {
+    Object.keys(menuData).forEach(category => {
+        menuData[category].forEach(item => {
+            const baseItem = {
+                id: 'inv_' + Math.random().toString(36).substr(2, 9),
+                name: item.name,
+                category: category.replace(/[\u{1F600}-\u{1F64F}]/gu, '').trim(),
+                cost: calculateEstimatedCost(item.price),
+                price: typeof item.price === 'object' ? item.price[Object.keys(item.price)[0]] : item.price,
+                stock: 50,
+                minStock: 10,
+                soldToday: 0,
+                soldTotal: 0
+            };
+            inventoryData.items.push(baseItem);
+        });
+    });
+    
+    // Load from localStorage
+    const saved = localStorage.getItem('ovenx_inventory');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        parsed.items.forEach(savedItem => {
+            const existing = inventoryData.items.find(i => i.name === savedItem.name);
+            if (existing) {
+                existing.stock = savedItem.stock;
+                existing.soldTotal = savedItem.soldTotal || 0;
+            }
+        });
+        inventoryData.sales = parsed.sales || [];
+    }
+}
+
+function calculateEstimatedCost(price) {
+    if (typeof price === 'object') {
+        const firstPrice = price[Object.keys(price)[0]];
+        return Math.round(firstPrice * 0.4);
+    }
+    return Math.round(price * 0.4);
+}
+
+function saveInventory() {
+    localStorage.setItem('ovenx_inventory', JSON.stringify({
+        items: inventoryData.items,
+        sales: inventoryData.sales
+    }));
+}
+
+// Open Inventory Panel
+function openInventoryPanel() {
+    // Check if already authenticated this session
+    if (!inventoryAuthenticated) {
+        const enteredPass = prompt("🔒 Enter Inventory Panel Password:");
+        if (enteredPass !== INVENTORY_PASSWORD) {
+            alert("❌ Incorrect password! Access denied.");
+            return;
+        }
+        inventoryAuthenticated = true;
+        alert("✅ Access granted!");
+    }
+    
+    document.getElementById('inventory-panel-overlay').style.display = 'flex';
+    setScrollLock(true);
+    if (inventoryData.items.length === 0) initializeInventory();
+    renderInventoryTab('stock');
+}
+
+function closeInventoryPanel() {
+    document.getElementById('inventory-panel-overlay').style.display = 'none';
+    setScrollLock(false);
+    saveInventory();
+}
+
+function logoutInventory() {
+    inventoryAuthenticated = false;
+    closeInventoryPanel();
+    alert("🔒 Logged out successfully!");
+}
+
+function switchInventoryTab(tab) {
+    currentInventoryTab = tab;
+    document.querySelectorAll('.inv-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('inv-tab-' + tab).classList.add('active');
+    
+    if (tab === 'reports') {
+        renderReports(); // Async - handles its own DOM insertion
+    } else {
+        renderInventoryTab(tab); // Sync
+    }
+}
+
+function renderInventoryTab(tab) {
+    const container = document.getElementById('inventory-content-area');
+    
+    switch(tab) {
+        case 'stock':
+            container.innerHTML = renderStockManagement();
+            break;
+        case 'sales':
+            container.innerHTML = renderSalesEntry();
+            break;
+    }
+}
+
+    function renderStockManagement() {
+        const lowStock = inventoryData.items.filter(i => i.stock <= i.minStock);
+        const totalValue = inventoryData.items.reduce((sum, i) => sum + (i.stock * i.cost), 0);
+        
+        return `
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-value">${inventoryData.items.length}</div>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-card" style="${lowStock.length > 0 ? 'background:#fee2e2;' : ''}">
+                    <div class="stat-value" style="color:${lowStock.length > 0 ? '#ef4444' : '#4f46e5'}">${lowStock.length}</div>
+                    <div class="stat-label">Low Stock Alert</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Rs ${totalValue.toLocaleString()}</div>
+                    <div class="stat-label">Inventory Value</div>
+                </div>
+                <div class="stat-card">
+                    <button class="add-item-btn" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                </div>
+            </div>
+            
+            <div class="glass-panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0; color:#1f2937;">Stock Management</h3>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="inv-search" placeholder="Search items..." 
+                            style="padding:8px 15px; border:2px solid #e5e7eb; border-radius:10px;"
+                            onkeyup="filterInventoryTable()">
+                        <select id="inv-category" onchange="filterInventoryTable()"
+                            style="padding:8px 15px; border:2px solid #e5e7eb; border-radius:10px;">
+                            <option value="all">All Categories</option>
+                            ${[...new Set(inventoryData.items.map(i => i.category))].map(c => 
+                                `<option value="${c}">${c}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="overflow-x:auto;">
+                    <table class="inventory-table" id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Stock</th>
+                                <th>Cost</th>
+                                <th>Price</th>
+                                <th>Margin</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${inventoryData.items.map(item => {
+                                const isLow = item.stock <= item.minStock;
+                                const margin = ((item.price - item.cost) / item.price * 100).toFixed(1);
+                                return `
+                                    <tr class="${isLow ? 'stock-low' : ''}">
+                                        <td>
+                                            <div style="font-weight:700; color:#1f2937;">${item.name}</div>
+                                            ${isLow ? '<span class="low-stock-badge">LOW STOCK</span>' : ''}
+                                        </td>
+                                        <td><span style="background:#f3f4f6; padding:4px 12px; border-radius:20px; font-size:12px;">${item.category}</span></td>
+                                        <td>
+                                            <div class="stock-control">
+                                                <button class="stock-btn minus" onclick="adjustStock('${item.id}', -1)">-</button>
+                                                <span style="font-weight:900; min-width:40px; text-align:center; ${isLow ? 'color:#ef4444;' : ''}">${item.stock}</span>
+                                                <button class="stock-btn plus" onclick="adjustStock('${item.id}', 1)">+</button>
+                                            </div>
+                                        </td>
+                                        <td>Rs ${item.cost}</td>
+                                        <td style="font-weight:700;">Rs ${item.price}</td>
+                                        <td style="color:#10b981; font-weight:700;">${margin}%</td>
+                                        <td>
+                                            <button onclick="deleteInventoryItem('${item.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSalesEntry() {
+        const today = new Date().toDateString();
+        const todaySales = inventoryData.sales.filter(s => new Date(s.time).toDateString() === today);
+        const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
+        const totalItems = todaySales.reduce((sum, s) => sum + s.qty, 0);
+        const profit = todaySales.reduce((sum, s) => sum + ((s.price - s.cost) * s.qty), 0);
+
+        return `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div>
+                    <div class="quick-sale-form" style="margin-bottom:20px;">
+                        <h3 style="margin-top:0; color:#1f2937;">Quick Sale</h3>
+                        <select id="sale-item-select" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:10px; margin-bottom:15px; font-size:16px;">
+                            <option value="">Select item...</option>
+                            ${inventoryData.items.filter(i => i.stock > 0).map(item => 
+                                `<option value="${item.id}" data-price="${item.price}" data-cost="${item.cost}">${item.name} (Stock: ${item.stock})</option>`
+                            ).join('')}
+                        </select>
+                        
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                            <button onclick="adjustSaleQty(-1)" style="width:40px; height:40px; border-radius:10px; border:none; background:#e5e7eb; cursor:pointer; font-weight:900;">-</button>
+                            <input type="number" id="sale-qty" value="1" min="1" style="flex:1; padding:10px; border:2px solid #e5e7eb; border-radius:10px; text-align:center; font-weight:900;">
+                            <button onclick="adjustSaleQty(1)" style="width:40px; height:40px; border-radius:10px; border:none; background:#e5e7eb; cursor:pointer; font-weight:900;">+</button>
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:15px;">
+                            <button class="payment-btn" onclick="setPaymentMethod('cash')" data-method="cash">
+                                <i class="fas fa-money-bill-wave"></i> Cash
+                            </button>
+                            <button class="payment-btn" onclick="setPaymentMethod('card')" data-method="card">
+                                <i class="fas fa-credit-card"></i> Card
+                            </button>
+                            <button class="payment-btn" onclick="setPaymentMethod('online')" data-method="online">
+                                <i class="fas fa-mobile-alt"></i> Online
+                            </button>
+                        </div>
+                        <input type="hidden" id="sale-payment" value="cash">
+                        
+                        <div style="background:linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); padding:15px; border-radius:15px; margin-bottom:15px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <span>Subtotal:</span>
+                                <span id="sale-subtotal" style="font-weight:700;">Rs 0</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:20px; font-weight:900; color:#4f46e5;">
+                                <span>Total:</span>
+                                <span id="sale-total">Rs 0</span>
+                            </div>
+                        </div>
+                        
+                        <button onclick="processQuickSale()" style="width:100%; padding:15px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; border:none; border-radius:15px; font-weight:900; cursor:pointer; box-shadow:0 4px 15px rgba(79, 70, 229, 0.4);">
+                            COMPLETE SALE
+                        </button>
+                    </div>
+                    
+                    <div class="glass-panel">
+                        <h3 style="margin-top:0; color:#1f2937;">Today's Summary</h3>
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px;">
+                            <div style="background:#d1fae5; padding:15px; border-radius:12px; text-align:center;">
+                                <div style="font-size:24px; font-weight:900; color:#059669;">Rs ${totalSales.toLocaleString()}</div>
+                                <div style="font-size:12px; color:#065f46;">Total Sales</div>
+                            </div>
+                            <div style="background:#dbeafe; padding:15px; border-radius:12px; text-align:center;">
+                                <div style="font-size:24px; font-weight:900; color:#2563eb;">${totalItems}</div>
+                                <div style="font-size:12px; color:#1e40af;">Items Sold</div>
+                            </div>
+                            <div style="background:#e9d5ff; padding:15px; border-radius:12px; text-align:center;">
+                                <div style="font-size:24px; font-weight:900; color:#7c3aed;">Rs ${profit.toLocaleString()}</div>
+                                <div style="font-size:12px; color:#5b21b6;">Est. Profit</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-panel">
+                    <h3 style="margin-top:0; color:#1f2937;">Sales Log</h3>
+                    <div style="max-height:500px; overflow-y:auto;">
+                        ${todaySales.length === 0 ? 
+                            '<p style="text-align:center; color:#9ca3af; padding:40px;">No sales today</p>' :
+                            todaySales.map(sale => `
+                                <div class="sale-card">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div>
+                                            <div style="font-weight:700; color:#1f2937;">${sale.itemName}</div>
+                                            <div style="font-size:12px; color:#6b7280;">
+                                                ${new Date(sale.time).toLocaleTimeString()} • ${sale.payment} • ${sale.staff}
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <div style="font-weight:900; color:#4f46e5;">Rs ${sale.total}</div>
+                                            <div style="font-size:12px; color:#6b7280;">${sale.qty}x</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+
+    async function renderReports() {
+    const container = document.getElementById('inventory-content-area');
+    
+    // Initialize date filter if not set
+    if (!window.reportDateFilter) {
+        window.reportDateFilter = 'today';
+        window.reportCustomStart = null;
+        window.reportCustomEnd = null;
+    }
+    
+    // Show loading state
+    container.innerHTML = '<div style="text-align:center; padding:40px;"><div style="width:50px; height:50px; border:4px solid #f0f0f0; border-top-color:#4f46e5; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div><p>Loading data...</p></div>';
+    
+    // Calculate date range based on filter
+    const now = new Date();
+    let startDate, endDate, label;
+    
+    switch(window.reportDateFilter) {
+        case 'today':
+            startDate = getBusinessDayStart(now);
+            endDate = getBusinessDayEnd(now);
+            label = 'Today (10 AM - 2 AM)';
+            break;
+        case 'yesterday':
+            startDate = getPreviousBusinessDayStart(now);
+            endDate = getPreviousBusinessDayEnd(now);
+            label = 'Yesterday (10 AM - 2 AM)';
+            break;
+        case 'week':
+            endDate = getBusinessDayEnd(now);
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 7);
+            startDate.setHours(10, 0, 0, 0);
+            label = 'Last 7 Days (10 AM - 2 AM)';
+            break;
+        case 'month':
+            endDate = getBusinessDayEnd(now);
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 30);
+            startDate.setHours(10, 0, 0, 0);
+            label = 'Last 30 Days (10 AM - 2 AM)';
+            break;
+        case 'custom':
+            if (window.reportCustomStart && window.reportCustomEnd) {
+                const customStart = new Date(window.reportCustomStart);
+                const customEnd = new Date(window.reportCustomEnd);
+                startDate = new Date(customStart);
+                startDate.setHours(10, 0, 0, 0);
+                endDate = new Date(customEnd);
+                endDate.setDate(endDate.getDate() + 1);
+                endDate.setHours(2, 0, 0, 0);
+            } else {
+                startDate = getBusinessDayStart(now);
+                endDate = getBusinessDayEnd(now);
+            }
+            label = 'Custom Range (10 AM - 2 AM)';
+            break;
+        case 'all':
+            startDate = new Date(2020, 0, 1, 10, 0, 0);
+            endDate = getBusinessDayEnd(now);
+            label = 'All Time (10 AM - 2 AM)';
+            break;
+        default:
+            startDate = getBusinessDayStart(now);
+            endDate = getBusinessDayEnd(now);
+            label = 'Today (10 AM - 2 AM)';
+    }
+    
+    const startStr = startDate.toISOString();
+    const endStr = endDate.toISOString();
+    
+    // Fetch from Supabase
+    let kitchenOrders = [];
+    let manualSales = [];
+    
+    if (sb) {
+        let query = sb
+            .from('kitchen_orders')
+            .select('*')
+            .gte('created_at', startStr)
+            .lte('created_at', endStr)
+            .order('created_at', { ascending: false });
+            
+        // Limit for performance if showing all time
+        if (window.reportDateFilter === 'all') {
+            query = query.limit(1000);
+        }
+        
+        const { data: kOrders, error: kError } = await query;
+        
+        if (!kError && kOrders) {
+            kitchenOrders = kOrders;
+        }
+    }
+    
+    // Filter manual sales by date
+    manualSales = inventoryData.sales.filter(s => {
+        const saleTime = new Date(s.time);
+        return saleTime >= startDate && saleTime <= endDate;
+    });
+    
+    // Combine all orders
+    const allOrders = [...kitchenOrders.map(o => ({
+        ...o,
+        isKitchenOrder: true,
+        time: o.created_at,
+        total: (o.subtotal || 0) + (o.delivery_fee || 0)
+    })), ...manualSales];
+    
+    // Sort by time (newest first)
+    allOrders.sort((a, b) => new Date(b.time) - new Date(a.time));
+    
+    // Calculate totals
+    const totalRevenue = allOrders.reduce((sum, s) => sum + s.total, 0);
+    const totalTransactions = allOrders.length;
+    
+    // Calculate total items
+    let totalItemsSold = 0;
+    kitchenOrders.forEach(order => {
+        const lines = (order.items || '').split('\n');
+        lines.forEach(line => {
+            const match = line.match(/^(\d+)x\s+/);
+            if (match) {
+                totalItemsSold += parseInt(match[1]);
+            }
+        });
+    });
+    manualSales.forEach(s => {
+        totalItemsSold += (s.qty || 1);
+    });
+    
+    // Calculate previous period for comparison
+    const periodLength = endDate - startDate;
+    const prevStart = new Date(startDate.getTime() - periodLength);
+    const prevEnd = new Date(startDate.getTime() - 1);
+    
+    // Build filter buttons HTML
+    const filterButtons = [
+        { id: 'today', label: 'Today', icon: '📅' },
+        { id: 'yesterday', label: 'Yesterday', icon: '⏪' },
+        { id: 'week', label: '7 Days', icon: '📊' },
+        { id: 'month', label: '30 Days', icon: '📈' },
+        { id: 'all', label: 'All Time', icon: '🔥' },
+        { id: 'custom', label: 'Custom', icon: '📆' }
+    ].map(btn => `
+        <button onclick="setReportFilter('${btn.id}')" 
+            style="padding:10px 15px; border-radius:10px; border:none; font-weight:700; cursor:pointer;
+            ${window.reportDateFilter === btn.id ? 
+                'background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; box-shadow:0 4px 10px rgba(79,70,229,0.3);' : 
+                'background:#f3f4f6; color:#6b7280;'}">
+            ${btn.icon} ${btn.label}
+        </button>
+    `).join('');
+    
+    // Custom date picker HTML
+    const customDateHtml = window.reportDateFilter === 'custom' ? `
+        <div style="display:flex; gap:10px; margin-top:15px; padding:15px; background:#f9fafb; border-radius:10px; align-items:center;">
+            <div>
+                <label style="font-size:11px; color:#6b7280; font-weight:700;">FROM</label>
+                <input type="date" id="custom-start" value="${window.reportCustomStart || startDate.toISOString().split('T')[0]}" 
+                    style="padding:8px; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit;">
+            </div>
+            <div>
+                <label style="font-size:11px; color:#6b7280; font-weight:700;">TO</label>
+                <input type="date" id="custom-end" value="${window.reportCustomEnd || endDate.toISOString().split('T')[0]}" 
+                    style="padding:8px; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit;">
+            </div>
+            <button onclick="applyCustomDate()" 
+                style="background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:900; cursor:pointer; margin-top:15px;">
+                APPLY
+            </button>
+        </div>
+    ` : '';
+    
+    // Date range display
+    const formatBusinessDate = (date) => {
+        const d = new Date(date);
+        const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${dateStr} ${timeStr}`;
+    };
+    
+    // Date range display
+    const dateRangeDisplay = `
+        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:15px 20px; border-radius:15px; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:12px; opacity:0.8; text-transform:uppercase; letter-spacing:1px;">${label}</div>
+                    <div style="font-size:16px; font-weight:900; margin-top:5px;">
+                        ${formatBusinessDate(startDate)} → ${formatBusinessDate(endDate)}
+                    </div>
+                    <div style="font-size:11px; opacity:0.7; margin-top:3px;">
+                        🕙 Business Hours: 10:00 AM - 2:00 AM (Next Day)
+                    </div>
+                </div>
+                <div style="font-size:40px; opacity:0.3;">🍕</div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = `
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;">
+                ${filterButtons}
+            </div>
+            ${customDateHtml}
+        </div>
+        
+        ${dateRangeDisplay}
+        
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px; margin-bottom:20px;">
+            <div class="stat-card">
+                <div class="stat-value">Rs ${totalRevenue.toLocaleString()}</div>
+                <div class="stat-label">Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalTransactions}</div>
+                <div class="stat-label">Transactions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalItemsSold}</div>
+                <div class="stat-label">Items Sold</div>
+            </div>
+        </div>
+        
+        <div style="text-align:center; margin-bottom:20px;">
+            <button onclick="exportToExcel()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:15px 40px; border-radius:15px; font-weight:900; cursor:pointer; box-shadow:0 4px 15px rgba(16, 185, 129, 0.4); font-size:16px;">
+                <i class="fas fa-file-excel"></i> EXPORT TO EXCEL
+            </button>
+        </div>
+        
+        <div class="glass-panel">
+            <h3 style="margin-top:0; color:#1f2937; display:flex; justify-content:space-between; align-items:center;">
+                <span>Orders (${allOrders.length} total)</span>
+                <div>
+                    <span style="background:#dbeafe; color:#1e40af; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:700; margin-right:10px;">
+                        Kitchen: ${kitchenOrders.length}
+                    </span>
+                    <span style="background:#d1fae5; color:#065f46; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:700;">
+                        Manual: ${manualSales.length}
+                    </span>
+                </div>
+            </h3>
+            
+            <div style="max-height:500px; overflow-y:auto;">
+                <table class="inventory-table" id="sales-report-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Order Info</th>
+                            <th>Items</th>
+                            <th>Qty</th>
+                            <th>Revenue</th>
+                            <th>Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allOrders.length === 0 ? 
+                            '<tr><td colspan="6" style="text-align:center; color:#9ca3af; padding:40px;">No orders found for this period</td></tr>' :
+                            allOrders.map(order => {
+                                const orderDate = new Date(order.time || order.created_at);
+                                const dateStr = orderDate.toLocaleDateString('en-GB');
+                                const timeStr = orderDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                                
+                                let locationDisplay = 'Unknown';
+                                if (order.type === 'Dine-In' && order.location) {
+                                    locationDisplay = order.location;
+                                } else if (order.type === 'Delivery') {
+                                    locationDisplay = 'Delivery';
+                                } else if (order.type === 'Takeaway') {
+                                    locationDisplay = 'Takeaway';
+                                } else if (order.location) {
+                                    locationDisplay = order.location;
+                                }
+                                
+                                let itemsList = '';
+                                let totalQty = 0;
+                                
+                                if (order.items) {
+                                    const lines = order.items.split('\n').filter(l => l.trim());
+                                    itemsList = lines.slice(0, 2).map(line => {
+                                        const match = line.match(/^(\d+)x\s+(.+)$/);
+                                        if (match) {
+                                            totalQty += parseInt(match[1]);
+                                            return match[2].trim().substring(0, 30) + (match[2].length > 30 ? '...' : '');
+                                        }
+                                        return line.trim().substring(0, 30);
+                                    }).join(', ');
+                                    if (lines.length > 2) itemsList += ` (+${lines.length - 2} more)`;
+                                } else if (order.itemName) {
+                                    itemsList = order.itemName;
+                                    totalQty = order.qty || 1;
+                                }
+                                
+                                return `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:700;">${dateStr}</div>
+                                        <div style="font-size:11px; color:#6b7280;">${timeStr}</div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:700; color:var(--red);">${locationDisplay}</div>
+                                        <div style="font-size:10px; color:#9ca3af;">${order.id ? order.id.toString().slice(0,12) : 'N/A'}</div>
+                                    </td>
+                                    <td style="font-size:12px; max-width:250px; word-wrap:break-word; color:#4b5563;">${itemsList || 'N/A'}</td>
+                                    <td style="font-weight:700; text-align:center;">${totalQty}</td>
+                                    <td style="font-weight:700;">Rs ${order.total.toLocaleString()}</td>
+                                    <td>
+                                        <span style="background:${order.isKitchenOrder ? '#dbeafe' : '#d1fae5'}; color:${order.isKitchenOrder ? '#1e40af' : '#065f46'}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">
+                                            ${order.isKitchenOrder ? 'Kitchen' : 'Manual'}
+                                        </span>
+                                    </td>
+                                </tr>
+                                `;
+                            }).join('')
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+// Helper function to set filter
+function setReportFilter(filter) {
+    window.reportDateFilter = filter;
+    if (filter !== 'custom') {
+        window.reportCustomStart = null;
+        window.reportCustomEnd = null;
+    }
+    renderReports();
+}
+
+// Helper function to apply custom date
+function applyCustomDate() {
+    const start = document.getElementById('custom-start').value;
+    const end = document.getElementById('custom-end').value;
+    
+    if (!start || !end) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    if (new Date(start) > new Date(end)) {
+        alert('Start date cannot be after end date');
+        return;
+    }
+    
+    window.reportCustomStart = start;
+    window.reportCustomEnd = end;
+    renderReports();
+}
+
+function toggleOrderDetails(orderId) {
+    const row = document.getElementById(`details-${orderId}`);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function exportToExcel() {
+    // Get current filter dates
+    const now = new Date();
+    let startDate, endDate, label;
+    
+    // Helper functions for restaurant business hours (10 AM - 2 AM)
+    function getBusinessDayStart(date) {
+    const d = new Date(date);
+    const hour = d.getHours();
+    
+    // If it's between 12 AM (0) and 2 AM, we're still in previous day's business hours
+    // So we go back to yesterday's 10 AM
+    if (hour >= 0 && hour < 2) {
+        d.setDate(d.getDate() - 1);
+    }
+    // Otherwise (2 AM to 11:59 PM), we stay on current day
+    
+    d.setHours(10, 0, 0, 0);
+    return d;
+}
+
+function getBusinessDayStart(date) {
+    const d = new Date(date);
+    const hour = d.getHours();
+    
+    // If it's between 12 AM (0) and 2 AM, we're still in previous day's business hours
+    // So we go back to yesterday's 10 AM
+    if (hour >= 0 && hour < 2) {
+        d.setDate(d.getDate() - 1);
+    }
+    // Otherwise (2 AM to 11:59 PM), we stay on current day
+    
+    d.setHours(10, 0, 0, 0);
+    return d;
+}
+
+function getBusinessDayEnd(date) {
+    const d = new Date(date);
+    const hour = d.getHours();
+    
+    // If we're at/after 2 AM, business day ends at 2 AM tomorrow
+    if (hour >= 2) {
+        d.setDate(d.getDate() + 1);
+    }
+    // Otherwise (before 2 AM), it ends at 2 AM today
+    
+    d.setHours(2, 0, 0, 0);
+    return d;
+}
+
+function getPreviousBusinessDayStart(date) {
+    const d = getBusinessDayStart(date);
+    d.setDate(d.getDate() - 1);
+    return d;
+}
+
+function getPreviousBusinessDayEnd(date) {
+    const d = getBusinessDayStart(date);
+    d.setHours(2, 0, 0, 0);
+    return d;
+}
+    
+     switch(window.reportDateFilter) {
+        case 'today':
+            startDate = getBusinessDayStart(now);
+            endDate = getBusinessDayEnd(now);
+            label = 'Today (10 AM - 2 AM)';
+            break;
+        case 'yesterday':
+            startDate = getPreviousBusinessDayStart(now);
+            endDate = getPreviousBusinessDayEnd(now);
+            label = 'Yesterday (10 AM - 2 AM)';
+            break;
+        case 'week':
+            endDate = getBusinessDayEnd(now);
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 7);
+            startDate.setHours(10, 0, 0, 0);
+            label = 'Last 7 Days (10 AM - 2 AM)';
+            break;
+        case 'month':
+            endDate = getBusinessDayEnd(now);
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 30);
+            startDate.setHours(10, 0, 0, 0);
+            label = 'Last 30 Days (10 AM - 2 AM)';
+            break;
+        case 'custom':
+            if (window.reportCustomStart && window.reportCustomEnd) {
+                const customStart = new Date(window.reportCustomStart);
+                const customEnd = new Date(window.reportCustomEnd);
+                startDate = new Date(customStart);
+                startDate.setHours(10, 0, 0, 0);
+                endDate = new Date(customEnd);
+                endDate.setDate(endDate.getDate() + 1);
+                endDate.setHours(2, 0, 0, 0);
+            } else {
+                startDate = getBusinessDayStart(now);
+                endDate = getBusinessDayEnd(now);
+            }
+            label = 'Custom Range (10 AM - 2 AM)';
+            break;
+        case 'all':
+            startDate = new Date(2020, 0, 1, 10, 0, 0);
+            endDate = getBusinessDayEnd(now);
+            label = 'All Time (10 AM - 2 AM)';
+            break;
+        default:
+            startDate = getBusinessDayStart(now);
+            endDate = getBusinessDayEnd(now);
+            label = 'Today (10 AM - 2 AM)';
+    }
+    
+    // Fetch data and generate Excel
+    fetchDataAndExport(startDate, endDate, label);
+}
+
+async function fetchDataAndExport(startDate, endDate, label) {
+    const container = document.getElementById('inventory-content-area');
+    const originalContent = container.innerHTML;
+    container.innerHTML = '<div style="text-align:center; padding:40px;"><div style="width:50px; height:50px; border:4px solid #f0f0f0; border-top-color:#4f46e5; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div><p>Preparing Excel export...</p></div>';
+    
+    const startStr = startDate.toISOString();
+    const endStr = endDate.toISOString();
+    
+    let kitchenOrders = [];
+    let manualSales = [];
+    
+    // Fetch from Supabase
+    if (sb) {
+        try {
+            let query = sb
+                .from('kitchen_orders')
+                .select('*')
+                .gte('created_at', startStr)
+                .lte('created_at', endStr)
+                .order('created_at', { ascending: false });
+                
+            if (window.reportDateFilter === 'all') {
+                query = query.limit(5000);
+            }
+            
+            const { data: kOrders, error: kError } = await query;
+            if (!kError && kOrders) kitchenOrders = kOrders;
+        } catch (e) {
+            console.error('Error fetching kitchen orders:', e);
+        }
+    }
+    
+    // Filter manual sales
+    manualSales = inventoryData.sales.filter(s => {
+        const saleTime = new Date(s.time);
+        return saleTime >= startDate && saleTime <= endDate;
+    });
+    
+    // Combine all orders
+    const allOrders = [
+        ...kitchenOrders.map(o => ({
+            ...o,
+            isKitchenOrder: true,
+            time: o.created_at,
+            total: (o.subtotal || 0) + (o.delivery_fee || 0)
+        })),
+        ...manualSales.map(s => ({
+            ...s,
+            isKitchenOrder: false,
+            time: s.time,
+            total: s.total,
+            type: s.type || 'Direct Sale',
+            location: s.location || 'Counter',
+            status: 'COMPLETED'
+        }))
+    ];
+    
+    allOrders.sort((a, b) => new Date(b.time) - new Date(a.time));
+    
+    // Generate Excel
+    generateExcelFile(allOrders, kitchenOrders, manualSales, startDate, endDate, label);
+    container.innerHTML = originalContent;
+}
+
+function generateExcelFile(allOrders, kitchenOrders, manualSales, startDate, endDate, label) {
+    // Calculate totals
+    const totalRevenue = allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalKitchenRevenue = kitchenOrders.reduce((sum, o) => sum + ((o.subtotal || 0) + (o.delivery_fee || 0)), 0);
+    const totalManualRevenue = manualSales.reduce((sum, s) => sum + s.total, 0);
+    
+    // Count items
+    let totalItemsSold = 0;
+    kitchenOrders.forEach(order => {
+        const lines = (order.items || '').split('\n');
+        lines.forEach(line => {
+            const match = line.match(/^(\d+)x\s+/);
+            if (match) totalItemsSold += parseInt(match[1]);
+        });
+    });
+    manualSales.forEach(s => totalItemsSold += (s.qty || 1));
+    
+    // Payment summary
+    const paymentSummary = {};
+    manualSales.forEach(s => {
+        const method = s.payment || 'Cash';
+        paymentSummary[method] = (paymentSummary[method] || 0) + s.total;
+    });
+    
+    // Type summary
+    const typeSummary = {};
+    allOrders.forEach(o => {
+        const type = o.type || 'Unknown';
+        typeSummary[type] = (typeSummary[type] || 0) + (o.total || 0);
+    });
+    
+    // Build CSV
+    let csvContent = "\uFEFF"; // UTF-8 BOM
+    
+    // Header
+    csvContent += "OVEN X RESTAURANT - SALES REPORT\n";
+    csvContent += "═══════════════════════════════════════════════════════════════\n\n";
+    csvContent += "Report Period:," + label + "\n";
+    csvContent += "Business Hours:,10:00 AM - 2:00 AM (Next Day)\n";
+    csvContent += "Date Range:," + formatDateTime(startDate) + " to " + formatDateTime(endDate) + "\n";
+    csvContent += "Generated:," + formatDateTime(new Date()) + "\n";
+    csvContent += "Branch:,Multan\n\n";
+    
+    // Executive Summary
+    csvContent += "EXECUTIVE SUMMARY\n";
+    csvContent += "───────────────────────────────────────────────────────────────\n";
+    csvContent += "Metric,Value\n";
+    csvContent += "Total Revenue,Rs " + totalRevenue.toLocaleString() + "\n";
+    csvContent += "Kitchen Orders Revenue,Rs " + totalKitchenRevenue.toLocaleString() + "\n";
+    csvContent += "Direct Sales Revenue,Rs " + totalManualRevenue.toLocaleString() + "\n";
+    csvContent += "Total Transactions," + allOrders.length + "\n";
+    csvContent += "Kitchen Orders," + kitchenOrders.length + "\n";
+    csvContent += "Direct Sales," + manualSales.length + "\n";
+    csvContent += "Total Items Sold," + totalItemsSold + "\n";
+    csvContent += "Average Order Value,Rs " + (allOrders.length > 0 ? Math.round(totalRevenue / allOrders.length) : 0) + "\n\n";
+    
+    // Revenue by Type
+    csvContent += "REVENUE BY ORDER TYPE\n";
+    csvContent += "───────────────────────────────────────────────────────────────\n";
+    csvContent += "Order Type,Revenue,Percentage\n";
+    for (const [type, amount] of Object.entries(typeSummary)) {
+        const percentage = totalRevenue > 0 ? ((amount / totalRevenue) * 100).toFixed(1) : 0;
+        csvContent += type + ",Rs " + amount.toLocaleString() + "," + percentage + "%\n";
+    }
+    csvContent += "\n";
+    
+    // Payment Methods
+    csvContent += "PAYMENT METHODS\n";
+    csvContent += "───────────────────────────────────────────────────────────────\n";
+    csvContent += "Method,Amount,Percentage\n";
+    for (const [method, amount] of Object.entries(paymentSummary)) {
+        const percentage = totalManualRevenue > 0 ? ((amount / totalManualRevenue) * 100).toFixed(1) : 0;
+        csvContent += method + ",Rs " + amount.toLocaleString() + "," + percentage + "%\n";
+    }
+    csvContent += "\n";
+    
+    // Detailed Transactions
+    csvContent += "DETAILED TRANSACTIONS\n";
+    csvContent += "═══════════════════════════════════════════════════════════════\n";
+    csvContent += "Date,Time,Order ID,Type,Location,Items Summary,Qty,Subtotal,Delivery Fee,Total,Payment,Status,Source,Rider\n";
+    
+    allOrders.forEach(order => {
+        const date = new Date(order.time || order.created_at);
+        const dateStr = date.toLocaleDateString('en-GB');
+        const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        
+        let itemsSummary = '';
+        let qty = 0;
+        if (order.items) {
+            const lines = order.items.split('\n').filter(l => l.trim());
+            const mainItems = lines.slice(0, 3).map(line => {
+                const match = line.match(/^(\d+)x\s+(.+)$/);
+                if (match) {
+                    qty += parseInt(match[1]);
+                    return match[2].trim().substring(0, 25);
+                }
+                return line.trim().substring(0, 25);
+            }).join('; ');
+            itemsSummary = mainItems + (lines.length > 3 ? ` (+${lines.length - 3} more)` : '');
+        } else if (order.itemName) {
+            itemsSummary = order.itemName;
+            qty = order.qty || 1;
+        }
+        
+        itemsSummary = itemsSummary.replace(/"/g, '""');
+        const location = (order.location || order.table || 'N/A').replace(/"/g, '""');
+        
+        csvContent += dateStr + ",";
+        csvContent += timeStr + ",";
+        csvContent += (order.id ? order.id.toString().slice(0, 12) : 'N/A') + ",";
+        csvContent += (order.type || 'Unknown') + ",";
+        csvContent += "\"" + location + "\",";
+        csvContent += "\"" + itemsSummary + "\",";
+        csvContent += qty + ",";
+        csvContent += (order.subtotal || order.price * order.qty || 0) + ",";
+        csvContent += (order.delivery_fee || 0) + ",";
+        csvContent += (order.total || 0) + ",";
+        csvContent += (order.payment || 'Cash') + ",";
+        csvContent += (order.status || 'COMPLETED') + ",";
+        csvContent += (order.isKitchenOrder ? 'Kitchen POS' : 'Direct Sale') + ",";
+        csvContent += (order.rider || '-') + "\n";
+    });
+    
+    // Kitchen Orders Detail
+    csvContent += "\n\nKITCHEN ORDERS DETAIL\n";
+    csvContent += "═══════════════════════════════════════════════════════════════\n";
+    csvContent += "Order ID,Date,Time,Type,Location,Table,Full Items,Subtotal,Delivery Fee,Total,Status,Rider\n";
+    
+    kitchenOrders.forEach(order => {
+        const date = new Date(order.created_at);
+        const items = (order.items || '').replace(/\n/g, ' | ').replace(/"/g, '""');
+        
+        csvContent += (order.id ? order.id.toString().slice(0, 12) : 'N/A') + ",";
+        csvContent += date.toLocaleDateString('en-GB') + ",";
+        csvContent += date.toLocaleTimeString('en-GB') + ",";
+        csvContent += (order.type || 'Dine-In') + ",";
+        csvContent += "\"" + (order.location || '').replace(/"/g, '""') + "\",";
+        csvContent += (order.table || 'N/A') + ",";
+        csvContent += "\"" + items.substring(0, 500) + "\",";
+        csvContent += (order.subtotal || 0) + ",";
+        csvContent += (order.delivery_fee || 0) + ",";
+        csvContent += ((order.subtotal || 0) + (order.delivery_fee || 0)) + ",";
+        csvContent += (order.status || 'WAITING') + ",";
+        csvContent += (order.rider || 'Unassigned') + "\n";
+    });
+    
+    // Direct Sales Detail
+    csvContent += "\n\nDIRECT SALES DETAIL\n";
+    csvContent += "═══════════════════════════════════════════════════════════════\n";
+    csvContent += "Date,Time,Item,Category,Qty,Unit Price,Cost,Profit,Total,Payment,Staff\n";
+    
+    manualSales.forEach(sale => {
+        const date = new Date(sale.time);
+        const profit = ((sale.price || 0) - (sale.cost || 0)) * (sale.qty || 1);
+        
+        csvContent += date.toLocaleDateString('en-GB') + ",";
+        csvContent += date.toLocaleTimeString('en-GB') + ",";
+        csvContent += "\"" + (sale.itemName || 'Unknown').replace(/"/g, '""') + "\",";
+        csvContent += (sale.category || 'General') + ",";
+        csvContent += (sale.qty || 1) + ",";
+        csvContent += (sale.price || 0) + ",";
+        csvContent += (sale.cost || 0) + ",";
+        csvContent += profit + ",";
+        csvContent += (sale.total || 0) + ",";
+        csvContent += (sale.payment || 'Cash') + ",";
+        csvContent += (sale.staff || 'Admin') + "\n";
+    });
+    
+    // Footer
+    csvContent += "\n\n═══════════════════════════════════════════════════════════════\n";
+    csvContent += "End of Report - Oven X Restaurant Management System\n";
+    
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const safeLabel = label.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", "OvenX_Sales_Report_" + safeLabel + "_" + timestamp + ".csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    // Success notification
+    showExportSuccess(allOrders.length, totalRevenue);
+}
+
+function formatDateTime(date) {
+    return date.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
+    });
+}
+
+function showExportSuccess(count, revenue) {
+    playClick('thud');
+    
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white; padding: 20px 30px; border-radius: 15px;
+        font-weight: 900; z-index: 10001;
+        box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+        animation: slideIn 0.4s ease; max-width: 350px;
+    `;
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 28px;">✅</span>
+            <span style="font-size: 18px;">Export Complete!</span>
+        </div>
+        <div style="font-size: 14px; opacity: 0.9; padding-left: 40px;">
+            ${count} transactions exported<br>
+            Total: <strong>Rs ${revenue.toLocaleString()}</strong>
+        </div>
+    `;
+    
+    if (!document.getElementById('export-animations')) {
+        const style = document.createElement('style');
+        style.id = 'export-animations';
+        style.textContent = `
+            @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.4s ease forwards';
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
+}
+
+async function syncKitchenOrdersForReports() {
+    if (!sb) {
+        alert("Database not connected");
+        return;
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: orders, error } = await sb
+        .from('kitchen_orders')
+        .select('*')
+        .eq('status', 'READY')
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
+    
+    if (error) {
+        console.error("Error:", error);
+        alert("Error fetching orders");
+        return;
+    }
+    
+    if (!orders || orders.length === 0) {
+        alert("No ready orders found today");
+        return;
+    }
+    
+    let processedCount = 0;
+    let totalRevenue = 0;
+    
+    orders.forEach(order => {
+        if (order.inventory_processed) return;
+        
+        // Parse items and build breakdown
+        const lines = order.items.split('\n');
+        let itemsBreakdown = [];
+        let orderTotal = 0;
+        
+        lines.forEach(line => {
+            // Match pattern: "2x Item Name [note]" or "2x Item Name"
+            const match = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.*)\])?$/);
+            if (match) {
+                const qty = parseInt(match[1]);
+                const itemName = match[2].trim();
+                const note = match[3] ? match[3].trim() : "";
+                
+                // CHECK IF THIS IS A DEAL - EXPAND IT
+                const deal = dealsData.find(d => itemName.toLowerCase().includes(d.name.toLowerCase().replace('🌙 ', '').trim()));
+                
+                if (deal) {
+                    // EXPAND DEAL COMPONENTS
+                    let dealComponents = [];
+                    
+                    // Add flavor selections (pizzas)
+                    if (deal.flavorsNeeded && note) {
+                        const flavorMatches = note.match(/(Pizza \d+|Flavor|Crown Flavor|Medium Pizza|Large Pizza):\s*([^,]+)/gi);
+                        if (flavorMatches) {
+                            flavorMatches.forEach(fm => {
+                                const parts = fm.split(':');
+                                if (parts.length === 2) {
+                                    const flavorName = parts[1].trim();
+                                    // Determine size from deal or context
+                                    let size = 'M';
+                                    if (deal.name.includes('Large')) size = 'L';
+                                    if (deal.name.includes('Medium')) size = 'M';
+                                    if (parts[0].includes('Large')) size = 'L';
+                                    
+                                    const fullItemName = `${flavorName} (${size})`;
+                                    const unitPrice = getItemPrice(flavorName, size) || Math.round(deal.price / deal.flavorsNeeded.length);
+                                    const revenue = unitPrice * 1; // 1 per flavor selection
+                                    
+                                    dealComponents.push({
+                                        name: fullItemName,
+                                        qty: 1,
+                                        unitPrice: unitPrice,
+                                        revenue: revenue
+                                    });
+                                    
+                                    // Deduct stock for this pizza
+                                    deductStock(fullItemName, 1);
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Add fixed items (wings, drinks, fries, etc.)
+                    if (deal.fixedItems) {
+                        deal.fixedItems.forEach(fixedItem => {
+                            // Parse qty from fixed item string like "2x Zinger Burgers" or "1.5L Soft Drink"
+                            const fixedMatch = fixedItem.match(/^(\d+(?:\.\d+)?)?x?\s*(.+)$/i);
+                            const fixedQty = fixedMatch && fixedMatch[1] ? parseFloat(fixedMatch[1]) : 1;
+                            const fixedName = fixedMatch ? fixedMatch[2].trim() : fixedItem;
+                            
+                            const unitPrice = getItemPrice(fixedName) || 0;
+                            const revenue = unitPrice * fixedQty;
+                            
+                            dealComponents.push({
+                                name: fixedName,
+                                qty: fixedQty,
+                                unitPrice: unitPrice,
+                                revenue: revenue
+                            });
+                            
+                            // Deduct stock
+                            deductStock(fixedName, fixedQty);
+                        });
+                    }
+                    
+                    // If deal has Ramadan items
+                    if (deal.isRamadan && deal.fixedItems) {
+                        deal.fixedItems.forEach(item => {
+                            const cleanItem = item.replace(/^[^\w\s]+/, '').trim(); // Remove emoji
+                            deductStock(cleanItem, 1);
+                        });
+                    }
+                    
+                    // Add all components to breakdown
+                    itemsBreakdown.push(...dealComponents);
+                    
+                    // Calculate deal total
+                    const dealTotal = typeof deal.price === 'object' ? 
+                        (deal.price.Single || deal.price.Double || Object.values(deal.price)[0]) : 
+                        deal.price;
+                    orderTotal += dealTotal * qty;
+                    
+                } else {
+                    // REGULAR ITEM (not a deal)
+                    let unitPrice = 0;
+                    
+                    // Try to find price from menu data
+                    const menuPrice = getItemPrice(itemName);
+                    if (menuPrice) unitPrice = menuPrice;
+                    
+                    // If has size in name like "Item (M)"
+                    const sizeMatch = itemName.match(/\(([SML]|Small|Medium|Large|Reg|Regular)\)/i);
+                    if (sizeMatch && !menuPrice) {
+                        const baseName = itemName.replace(/\s*\([^)]+\)\s*$/, '').trim();
+                        unitPrice = getItemPrice(baseName, sizeMatch[1]) || 0;
+                    }
+                    
+                    const revenue = unitPrice * qty;
+                    orderTotal += revenue;
+                    
+                    itemsBreakdown.push({
+                        name: note ? `${itemName} [${note}]` : itemName,
+                        qty: qty,
+                        unitPrice: unitPrice,
+                        revenue: revenue
+                    });
+                    
+                    // Deduct stock
+                    deductStock(itemName, qty);
+                }
+            }
+        });
+        
+        // Determine type and location
+        let orderType = order.type || 'Dine-In';
+        let tableNum = null;
+        
+        if (order.location && order.location.toLowerCase().includes('table')) {
+            const tableMatch = order.location.match(/table\s*([a-z0-9]+)/i);
+            if (tableMatch) tableNum = tableMatch[1];
+        }
+        
+        // Add to sales with full breakdown
+        const sale = {
+            id: 'kitchen_' + order.id,
+            itemId: 'kitchen_order',
+            itemName: `Order #${order.id.slice(0,8)}`,
+            location: order.location,
+            type: orderType,
+            table: tableNum,
+            qty: itemsBreakdown.reduce((sum, i) => sum + i.qty, 0),
+            price: orderTotal,
+            cost: Math.round(orderTotal * 0.4),
+            total: (order.subtotal || orderTotal) + (order.delivery_fee || 0),
+            payment: 'Cash',
+            staff: 'Kitchen',
+            time: order.created_at,
+            isKitchenOrder: true,
+            itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : [{
+                name: order.items.substring(0, 50),
+                qty: 1,
+                unitPrice: order.subtotal || 0,
+                revenue: order.subtotal || 0
+            }]
+        };
+        
+        const exists = inventoryData.sales.find(s => s.id === sale.id);
+        if (!exists) {
+            inventoryData.sales.push(sale);
+            totalRevenue += sale.total;
+            processedCount++;
+        }
+        
+        // Mark as processed in database
+        sb.from('kitchen_orders').update({ inventory_processed: true }).eq('id', order.id);
+    });
+    
+    saveInventory();
+    renderReports();
+    alert(`Synced ${processedCount} orders!\nRevenue: Rs ${totalRevenue.toLocaleString()}`);
+}
+
+// Helper function to get item price from menuData
+function getItemPrice(itemName, size = null) {
+    for (let cat in menuData) {
+        const item = menuData[cat].find(i => {
+            const match = itemName.toLowerCase().includes(i.name.toLowerCase()) || 
+                         i.name.toLowerCase().includes(itemName.toLowerCase());
+            return match;
+        });
+        
+        if (item) {
+            if (typeof item.price === 'object') {
+                if (size) {
+                    const sizeKey = size === 'S' || size === 'Small' ? 'S' :
+                                   size === 'M' || size === 'Medium' || size === 'Med' ? 'M' :
+                                   size === 'L' || size === 'Large' ? 'L' : size;
+                    if (item.price[sizeKey]) return item.price[sizeKey];
+                }
+                return Object.values(item.price)[0];
+            }
+            return item.price;
+        }
+    }
+    return 0;
+}
+
+// Helper function to deduct stock
+function deductStock(itemName, qty) {
+    const inventoryItem = inventoryData.items.find(i => 
+        itemName.toLowerCase().includes(i.name.toLowerCase()) || 
+        i.name.toLowerCase().includes(itemName.toLowerCase())
+    );
+    
+    if (inventoryItem) {
+        inventoryItem.stock -= qty;
+        if (inventoryItem.stock < 0) inventoryItem.stock = 0;
+        inventoryItem.soldToday += qty;
+        inventoryItem.soldTotal += qty;
+    }
+}
+
+
+    // Inventory Actions
+    // ==========================================
+// FIXED REPORTS DATA AGGREGATION
+// ==========================================
+
+function updateReportsFromKitchenOrders() {
+    // Get today's date
+    const today = new Date().toDateString();
+    
+    // Filter kitchen orders from today that are served/completed
+    const todayOrders = inventoryData.kitchenOrders.filter(o => {
+        const orderDate = new Date(o.time).toDateString();
+        return orderDate === today && (o.status === 'served' || o.status === 'SERVED' || o.status === 'READY');
+    });
+    
+    // Calculate metrics from kitchen orders
+    let totalRevenue = 0;
+    let totalProfit = 0;
+    const itemCounts = {};
+    const staffSales = {};
+    
+    todayOrders.forEach(order => {
+        // Parse subtotal from order
+        const subtotal = order.subtotal || 0;
+        totalRevenue += subtotal;
+        
+        // Estimate profit (30% margin if no cost data)
+        const estimatedProfit = subtotal * 0.30;
+        totalProfit += estimatedProfit;
+        
+        // Count items
+        const lines = order.items.split('\n');
+        lines.forEach(line => {
+            const match = line.match(/(\d+)x\s+(.+)/);
+            if (match) {
+                const qty = parseInt(match[1]);
+                const itemName = match[2].split('[')[0].trim();
+                itemCounts[itemName] = (itemCounts[itemName] || 0) + qty;
+            }
+        });
+        
+        // Track by staff (if available, otherwise default)
+        const staff = order.staff || 'Kitchen';
+        staffSales[staff] = (staffSales[staff] || 0) + subtotal;
+    });
+    
+    // Also include manual sales from inventory system
+    const manualSales = inventoryData.sales.filter(s => new Date(s.time).toDateString() === today);
+    manualSales.forEach(sale => {
+        totalRevenue += sale.total;
+        totalProfit += ((sale.price - sale.cost) * sale.qty);
+        itemCounts[sale.itemName] = (itemCounts[sale.itemName] || 0) + sale.qty;
+        staffSales[sale.staff] = (staffSales[sale.staff] || 0) + sale.total;
+    });
+    
+    // Find best seller
+    let bestSeller = '-';
+    let maxCount = 0;
+    for (const [item, count] of Object.entries(itemCounts)) {
+        if (count > maxCount) {
+            maxCount = count;
+            bestSeller = item;
+        }
+    }
+    
+    // Update the DOM elements directly
+    const revenueEl = document.getElementById('report-revenue');
+    const profitEl = document.getElementById('report-profit');
+    const bestSellerEl = document.getElementById('report-best-seller');
+    const transactionsEl = document.getElementById('report-transactions');
+    
+    if (revenueEl) revenueEl.textContent = 'Rs ' + totalRevenue.toLocaleString();
+    if (profitEl) profitEl.textContent = 'Rs ' + Math.round(totalProfit).toLocaleString();
+    if (bestSellerEl) bestSellerEl.textContent = bestSeller;
+    if (transactionsEl) transactionsEl.textContent = todayOrders.length + manualSales.length;
+    
+    // Update charts if they exist
+    updateChartsData(itemCounts, todayOrders, manualSales);
+    
+    return {
+        revenue: totalRevenue,
+        profit: totalProfit,
+        bestSeller: bestSeller,
+        transactions: todayOrders.length + manualSales.length,
+        itemCounts: itemCounts,
+        staffSales: staffSales
+    };
+}
+
+function updateChartsData(itemCounts, kitchenOrders, manualSales) {
+    // Prepare data for charts
+    const labels = Object.keys(itemCounts).slice(0, 5);
+    const data = Object.values(itemCounts).slice(0, 5);
+    
+    // Update Sales Trend Chart
+    if (window.salesChartInstance) {
+        window.salesChartInstance.destroy();
+    }
+    
+    const salesCtx = document.getElementById('salesChart');
+    if (salesCtx) {
+        window.salesChartInstance = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: ['9AM', '11AM', '1PM', '3PM', '5PM', '7PM', '9PM'],
+                datasets: [{
+                    label: 'Kitchen Orders',
+                    data: generateHourlyData(kitchenOrders),
+                    borderColor: 'rgb(79, 70, 229)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Direct Sales',
+                    data: generateHourlyData(manualSales),
+                    borderColor: 'rgb(243, 112, 33)',
+                    backgroundColor: 'rgba(243, 112, 33, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                }
+            }
+        });
+    }
+    
+    // Update Items Chart
+    if (window.itemsChartInstance) {
+        window.itemsChartInstance.destroy();
+    }
+    
+    const itemsCtx = document.getElementById('itemsChart');
+    if (itemsCtx && labels.length > 0) {
+        window.itemsChartInstance = new Chart(itemsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        'rgb(79, 70, 229)',
+                        'rgb(124, 58, 237)',
+                        'rgb(236, 72, 153)',
+                        'rgb(243, 112, 33)',
+                        'rgb(16, 185, 129)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+}
+
+function generateHourlyData(orders) {
+    const hourly = [0, 0, 0, 0, 0, 0, 0];
+    const hours = [9, 11, 13, 15, 17, 19, 21];
+    
+    orders.forEach(order => {
+        const orderHour = new Date(order.time || order.created_at).getHours();
+        for (let i = 0; i < hours.length; i++) {
+            if (orderHour >= hours[i] && orderHour < (hours[i+1] || 24)) {
+                hourly[i] += (order.subtotal || order.total || 0);
+                break;
+            }
+        }
+    });
+    
+    return hourly;
+}
+    function adjustStock(itemId, change) {
+        const item = inventoryData.items.find(i => i.id === itemId);
+        if (item) {
+            item.stock += change;
+            if (item.stock < 0) item.stock = 0;
+            saveInventory();
+            renderInventoryTab('stock');
+        }
+    }
+
+    function deleteInventoryItem(itemId) {
+        if (confirm('Delete this item from inventory?')) {
+            inventoryData.items = inventoryData.items.filter(i => i.id !== itemId);
+            saveInventory();
+            renderInventoryTab('stock');
+        }
+    }
+
+    function filterInventoryTable() {
+        const search = document.getElementById('inv-search').value.toLowerCase();
+        const category = document.getElementById('inv-category').value;
+        const rows = document.querySelectorAll('#inventory-table tbody tr');
+        
+        rows.forEach(row => {
+            const name = row.cells[0].textContent.toLowerCase();
+            const cat = row.cells[1].textContent;
+            const matchSearch = name.includes(search);
+            const matchCat = category === 'all' || cat.includes(category);
+            row.style.display = matchSearch && matchCat ? '' : 'none';
+        });
+    }
+
+    // Sales Functions
+    function adjustSaleQty(change) {
+        const input = document.getElementById('sale-qty');
+        let val = parseInt(input.value) + change;
+        if (val < 1) val = 1;
+        input.value = val;
+        updateSaleTotal();
+    }
+
+    function setPaymentMethod(method) {
+        document.getElementById('sale-payment').value = method;
+        document.querySelectorAll('.payment-btn').forEach(btn => {
+            if (btn.dataset.method === method) {
+                btn.classList.add('selected');
+                btn.style.borderColor = '#4f46e5';
+                btn.style.background = '#eef2ff';
+            } else {
+                btn.classList.remove('selected');
+                btn.style.borderColor = '#e5e7eb';
+                btn.style.background = 'white';
+            }
+        });
+    }
+
+    function updateSaleTotal() {
+        const select = document.getElementById('sale-item-select');
+        const option = select.options[select.selectedIndex];
+        if (!option.value) return;
+        
+        const price = parseFloat(option.dataset.price);
+        const qty = parseInt(document.getElementById('sale-qty').value);
+        const total = price * qty;
+        
+        document.getElementById('sale-subtotal').textContent = 'Rs ' + total;
+        document.getElementById('sale-total').textContent = 'Rs ' + total;
+    }
+
+    function processQuickSale() {
+        const select = document.getElementById('sale-item-select');
+        const option = select.options[select.selectedIndex];
+        if (!option.value) {
+            alert('Please select an item');
+            return;
+        }
+        
+        const itemId = option.value;
+        const item = inventoryData.items.find(i => i.id === itemId);
+        const qty = parseInt(document.getElementById('sale-qty').value);
+        const payment = document.getElementById('sale-payment').value;
+        
+        if (item.stock < qty) {
+            alert('Insufficient stock!');
+            return;
+        }
+        
+        // Deduct stock
+        item.stock -= qty;
+        item.soldToday += qty;
+        item.soldTotal += qty;
+        
+        // Record sale
+        const sale = {
+            id: Date.now(),
+            itemId: itemId,
+            itemName: item.name,
+            qty: qty,
+            price: item.price,
+            cost: item.cost,
+            total: item.price * qty,
+            payment: payment,
+            staff: 'Admin',
+            time: new Date()
+        };
+        
+        inventoryData.sales.push(sale);
+        saveInventory();
+        
+        // Reset form
+        document.getElementById('sale-item-select').value = '';
+        document.getElementById('sale-qty').value = 1;
+        setPaymentMethod('cash');
+        
+        alert('Sale completed! Stock updated.');
+        renderInventoryTab('sales');
+    }
+
+        
+
+    function filterKitchenOrders(filter) {
+        // Re-render with filter
+        const display = document.getElementById('kitchen-orders-display');
+        let filtered = inventoryData.kitchenOrders;
+        if (filter !== 'all') {
+            filtered = filtered.filter(o => o.status === filter);
+        }
+        
+        display.innerHTML = filtered.map(order => `
+            <div class="kitchen-order-card" style="border-left-color: ${order.status === 'pending' ? '#f59e0b' : order.status === 'preparing' ? '#3b82f6' : '#10b981'};">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div>
+                        <span style="background:${order.status === 'pending' ? '#fef3c7' : order.status === 'preparing' ? '#dbeafe' : '#d1fae5'}; 
+                            color:${order.status === 'pending' ? '#92400e' : order.status === 'preparing' ? '#1e40af' : '#065f46'}; 
+                            padding:4px 12px; border-radius:20px; font-size:12px; font-weight:900; text-transform:uppercase;">
+                            ${order.status}
+                        </span>
+                        <span style="margin-left:10px; font-weight:700; color:#1f2937;">${order.table || 'Delivery'}</span>
+                    </div>
+                    <div style="font-size:12px; color:#6b7280;">
+                        ${new Date(order.time).toLocaleTimeString()}
+                    </div>
+                </div>
+                <div style="font-size:14px; color:#4b5563; margin-bottom:10px; white-space:pre-wrap;">${order.items}</div>
+                ${order.status === 'ready' ? `
+                    <button onclick="serveOrderAndDeduct('${order.id}')" 
+                        style="width:100%; padding:10px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; border:none; border-radius:10px; font-weight:900; cursor:pointer;">
+                        <i class="fas fa-check"></i> SERVE & DEDUCT STOCK
+                    </button>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+
+    function openAddItemModal() {
+        const name = prompt('Item Name:');
+        if (!name) return;
+        
+        const category = prompt('Category:', 'Food');
+        const cost = parseInt(prompt('Cost Price (Rs):', '100')) || 100;
+        const price = parseInt(prompt('Selling Price (Rs):', '200')) || 200;
+        const stock = parseInt(prompt('Initial Stock:', '50')) || 50;
+        
+        inventoryData.items.push({
+            id: 'inv_' + Math.random().toString(36).substr(2, 9),
+            name,
+            category,
+            cost,
+            price,
+            stock,
+            minStock: 10,
+            soldToday: 0,
+            soldTotal: 0
+        });
+        
+        saveInventory();
+        renderInventoryTab('stock');
+    }
+
+    // ==========================================
+    // EXISTING OVEN X CODE (PRESERVED)
+    // ==========================================
+    
     const BRANCH_CODE = 'MULTAN';
     let audioCtx = null;
     function playClick(type = 'pop') { 
@@ -790,12 +2675,13 @@
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
     let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
-    let currentKitchenFilter = 'ALL';
-    let currentCalcData = null; // Store calculation data
+     let currentKitchenFilter = 'ALL';
+    let currentCalcData = null;
+    let inventoryAuthenticated = false;
+    const INVENTORY_PASSWORD = "ovenx123";
     const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
-    // OvenX Coordinates
     const OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 12;
 
@@ -835,25 +2721,23 @@
         { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
         { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
         { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
-        // RAMADAN SPECIAL PLATTER - ADDED TO DEALS
         { 
         name: "🌙 Ramadan Special Platter", 
         desc: "Complete Iftar meal for Ramadan", 
         price: {Single: 600, Double: 1050}, 
         badge: "RAMADAN SPECIAL", 
-        image: "https://i.postimg.cc/851vS0z7/Whats-App-Image-2026-02-17-at-4-02-34-PM.jpg ", 
+        image: "https://i.postimg.cc/851vS0z7/Whats-App-Image-2026-02-17-at-4-02-34-PM.jpg", 
         isRamadan: true,
         fixedItems: ["🥪 Cold Sandwich", "🌴 4x Dates", "🥗 Bowl of Salad", "🍚 Crunchy Rice", "💧 Small Water", "🥤 Sprite Buddy"],
         ramadanNote: "Single: 1 sandwich, 1 water, 1 sprite | Double: 2 sandwiches, 2 waters, 2 sprites"
     },
     
-    // UPDATED: Ramadan Behari Platter - With YOUR uploaded image!
     { 
         name: "🌙 Ramadan Behari Platter", 
         desc: "Special Behari feast for Iftar", 
         price: 1149, 
         badge: "RAMADAN SPECIAL", 
-        image: "https://i.postimg.cc/KKCJChfL/behari-iftar-platter.jpg",  // ← YOUR IMAGE!
+        image: "https://i.postimg.cc/KKCJChfL/behari-iftar-platter.jpg",
         isRamadan: true,
         fixedItems: [
             "🌯 2x Behari Roll", 
@@ -940,7 +2824,6 @@
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     
-    /* --- LOYALTY LOGIC --- */
     function renderLoyaltyCard() {
         const name = localStorage.getItem('ovenx_member_name');
         const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
@@ -1270,7 +3153,6 @@
     function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
     function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
     
-    // NEW: Delivery Calculator Integration
     function renderAddressStep() { 
         chkStep = 2; 
         document.getElementById('checkout-content').innerHTML = `
@@ -1296,7 +3178,6 @@
     function openDeliveryCalc() {
         document.getElementById('delivery-calc-overlay').style.display = 'flex';
         setScrollLock(true);
-        // Reset states
         document.getElementById('calc-permission-state').style.display = 'block';
         document.getElementById('calc-loading-state').style.display = 'none';
         document.getElementById('calc-result-state').style.display = 'none';
@@ -1309,7 +3190,6 @@
         setScrollLock(false);
     }
 
-    // Haversine Formula
     function calculateStraightDistance(lat1, lon1, lat2, lon2) {
         const R = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1374,7 +3254,6 @@
             timestamp: new Date().toISOString()
         };
 
-        // Save to database
         if (sb) {
             await sb.from('delivery_calculations').insert([{
                 lat: userLat,
@@ -1386,7 +3265,6 @@
             }]);
         }
 
-        // Show results
         document.getElementById('calc-loading-state').style.display = 'none';
         document.getElementById('calc-result-state').style.display = 'block';
         
@@ -1395,7 +3273,6 @@
         document.getElementById('calc-round-trip').innerText = currentCalcData.roundTrip + ' km';
         document.getElementById('calc-straight-line').innerText = currentCalcData.straightLine + ' km';
 
-        // Auto-forward after 2 seconds
         setTimeout(() => {
             applyDeliveryFee(cost, currentCalcData);
         }, 2000);
@@ -1427,7 +3304,6 @@
         delCharge = fee;
         closeDeliveryCalc();
         
-        // Update checkout screen
         const feeDisplay = document.getElementById('delivery-fee-display');
         const proceedBtn = document.getElementById('proceed-to-address');
         
@@ -1445,7 +3321,6 @@
                 renderDeliveryAddressInput();
             };
         } else {
-            // Fallback if elements not found
             renderDeliveryAddressInput();
         }
     }
@@ -1494,7 +3369,6 @@
         document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
     }
 
-    /* --- LIVE KITCHEN LOGIC --- */
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
     async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
     async function clearReadyOrders() { if(!confirm("Clear Ready Dine-In orders?")) return; playClick('pop'); if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY').neq('type', 'Delivery'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); renderKitchenOrders(); } }
@@ -1513,7 +3387,6 @@
         playClick('pop'); 
         document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
         
-        // Hide all sidebars first
         document.getElementById('rider-audit-sidebar').style.display = 'none';
         document.getElementById('delivery-history-sidebar').style.display = 'none';
         document.getElementById('clear-del-btn').style.display = 'none';
@@ -1588,25 +3461,18 @@
         
         const { error } = await sb.from('delivery_calculations')
             .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+            .neq('id', '00000000-0000-0000-0000-000000000000');
             
         if (!error) {
             loadDeliveryHistory();
             playClick('thud');
         }
     }
-// ADD IT HERE - right after clearDeliveryHistory()
+
     function openInGoogleMaps(lat, lng) {
         playClick('pop');
         const url = `https://www.google.com/maps?q=${lat},${lng}`;
         window.open(url, '_blank');
-    }
-
-    function openKitchenPanel() { 
-        document.getElementById('kitchen-panel-overlay').style.display = 'flex'; 
-        renderKitchenOrders(); 
-        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); 
-        setScrollLock(true); 
     }
 
     function openKitchenPanel() { 
@@ -1682,7 +3548,6 @@ function formatCCMessage(order) {
 function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, btnElement) {
     playClick('thud');
     
-    // Reconstruct order object
     const order = {
         id: orderId,
         items: items,
@@ -1695,10 +3560,8 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
     const message = encodeURIComponent(formatCCMessage(order));
     const url = `https://wa.me/${CUSTOMER_CARE_NUMBER}?text=${message}`;
     
-    // Open WhatsApp
     window.open(url, '_blank');
     
-    // Visual feedback - use the passed button element
     if (btnElement) {
         const originalText = btnElement.innerHTML;
         btnElement.innerHTML = '✅ OPENED!';
@@ -1715,7 +3578,6 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
     async function renderKitchenOrders() {
         if(!sb) return; 
         
-        // Only render orders list if not on calc history tab
         if (currentKitchenFilter !== 'CALC_HISTORY') {
             let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
             if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
@@ -1780,9 +3642,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
         const delFee = o.delivery_fee || 0;
         
-        // Helper: Get price for regular menu items
         const getMenuItemPrice = (itemName) => {
-            // Extract size from parentheses: "Extreme Peri Peri (M)" → "M"
             const sizeMatch = itemName.match(/\(([^)]+)\)/);
             const size = sizeMatch ? sizeMatch[1] : null;
             const baseName = itemName.replace(/\s*\([^)]+\)\s*$/, '').trim();
@@ -1792,25 +3652,21 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 if (item) {
                     if (typeof item.price === 'object') {
                         if (size && item.price[size]) return item.price[size];
-                        // Try to match common size variations
                         const sizeMap = { 'Med': 'M', 'Medium': 'M', 'Large': 'L', 'Regular': 'Reg' };
                         if (size && sizeMap[size] && item.price[sizeMap[size]]) return item.price[sizeMap[size]];
-                        // Fallback to first price
                         return Object.values(item.price)[0];
                     }
                     return item.price;
                 }
             }
-            return null; // Not found in menu
+            return null;
         };
 
-        // Helper: Get price for deals
         const getDealPrice = (dealName) => {
             const deal = dealsData.find(d => dealName.includes(d.name));
             return deal ? deal.price : null;
         };
 
-        // Parse items and calculate totals
         let itemsHtml = "";
         let calculatedFoodSub = 0;
         
@@ -1820,7 +3676,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             const line = lines[i].trim();
             if (!line) continue;
             
-            // Check if it's a main item line (starts with number + x)
             const mainMatch = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.*)\])?$/);
             
             if (mainMatch) {
@@ -1831,15 +3686,12 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 let unitPrice = 0;
                 let lineTotal = 0;
                 
-                // Try to get price from deals first
                 const dealPrice = getDealPrice(name);
                 
                 if (dealPrice !== null) {
-                    // It's a deal - use deal price directly
                     unitPrice = dealPrice;
                     lineTotal = qty * unitPrice;
                     
-                    // Add deal line
                     itemsHtml += `
                         <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
                             <span>${qty} x ${name}</span>
@@ -1847,7 +3699,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                         </div>
                     `;
                     
-                    // Add flavor notes and includes (next lines until next main item)
                     let j = i + 1;
                     while (j < lines.length && !lines[j].match(/^\d+x\s+/)) {
                         const detailLine = lines[j].trim();
@@ -1862,7 +3713,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     }
                     
                 } else {
-                    // It's a regular menu item
                     const menuPrice = getMenuItemPrice(name);
                     
                     if (menuPrice !== null) {
@@ -1880,7 +3730,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                             itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
                         }
                     } else {
-                        // Manual item or unknown - show as-is without price
                         itemsHtml += `
                             <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
                                 <span>${qty} x ${name}</span>
@@ -1896,21 +3745,14 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 calculatedFoodSub += lineTotal;
                 
             } else if (!line.match(/^(Pizza|Includes|Flavor|Note):/i)) {
-                // Non-item lines that aren't details
                 itemsHtml += `<div style="font-size: 13px; color: #666; margin-top: 5px;">${line}</div>`;
             }
         }
 
-        // Use calculated subtotal or fallback to stored value
         const foodSub = calculatedFoodSub > 0 ? calculatedFoodSub : (o.subtotal || 0);
-        
-        // Calculate service charge on food subtotal only
         const serviceCharge = (o.type === 'Dine-In') ? Math.round(foodSub * 0.07) : 0;
-        
-        // Grand total
         const grandTotal = foodSub + serviceCharge + delFee;
 
-        // ... rest of the receipt HTML (same as before) ...
         if (type === 'front') {
             printArea.innerHTML = `
                 <div style="text-align: center; font-family: 'Courier New', Courier, monospace; color: black; padding: 10px;">
@@ -2019,12 +3861,10 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         await sb.from('kitchen_orders').update({ items: arr.join('\n'), subtotal: updatedSub }).eq('id', id); renderKitchenOrders();
     }
 
-    // MODIFIED: Render Public Deals with Ramadan Special highlighted
     function renderPublicDeals() {
     const list = document.getElementById('deals-list'); 
     list.innerHTML = '';
     
-    // Sort deals to show Ramadan special first
     const sortedDeals = [...dealsData].sort((a, b) => {
         if (a.isRamadan) return -1;
         if (b.isRamadan) return 1;
@@ -2034,7 +3874,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     sortedDeals.forEach(deal => {
         const card = document.createElement('div'); 
         
-        // Special styling for Ramadan deal
         if (deal.isRamadan) {
             card.className = "deal-card ramadan-card";
             card.innerHTML = `
@@ -2054,11 +3893,10 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             btn.className = "next-btn btn-3d ramadan-btn"; 
             btn.style.cssText = "margin-bottom:0; margin-top: 10px;";
             
-            // FIXED: Check if deal has size options or fixed price
             if (typeof deal.price === 'object') {
-                btn.innerHTML = "🌙 SELECT SIZE";  // For Ramadan Special Platter
+                btn.innerHTML = "🌙 SELECT SIZE";
             } else {
-                btn.innerHTML = "🌙 ADD TO BAG";   // For Ramadan Behari Platter
+                btn.innerHTML = "🌙 ADD TO BAG";
             }
             
             btn.onclick = () => openOrderFlow(deal); 
@@ -2175,19 +4013,16 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         renderCategoryBar();
     }
     
-    // MODIFIED: Render Category Bar with Ramadan category
     function renderCategoryBar() {
         const bar = document.getElementById('category-bar'); 
-        bar.innerHTML = "";
+        bar.innerHTML="";
         
-        // Add Ramadan category pill first
         const ramadanPill = document.createElement('div');
         ramadanPill.className = "cat-pill ramadan-cat";
         ramadanPill.innerHTML = "🌙 Ramadan";
         ramadanPill.onclick = () => {
             document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
             ramadanPill.classList.add('active');
-            // Scroll to deals section since Ramadan platter is there
             document.getElementById('deals-container').scrollIntoView({ behavior: 'smooth' });
             switchTab('deals');
         };
@@ -2237,7 +4072,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         }).subscribe();
     }
 
-    // Global Initialization
     renderPublicMenu(); 
     renderPublicDeals(); 
     renderLoyaltyCard();
@@ -2262,6 +4096,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
             { id: 'admin-login-overlay', close: closeAdminLogin },
             { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
+            { id: 'inventory-panel-overlay', close: closeInventoryPanel },
             { id: 'flavor-overlay', close: closeModals },
             { id: 'size-overlay', close: closeModals },
             { id: 'modal-overlay', close: closeModals },
