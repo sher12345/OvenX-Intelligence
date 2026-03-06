@@ -2912,17 +2912,17 @@ function generateHourlyData(orders) {
     // Get flavors from the specified category
     let flavors = menuData[step.cat] || [];
     
-    // Special handling for Family Feast - show Pan and Premium separately with labels
+    // Special handling for Family Feast - show Pan and Premium separately
     if (selectedItem.name === "Family Feast" && step.cat === "Pan/Premium") {
         // Split into Pan and Premium sections
         const panPizzas = menuData["Pan Pizza 🍕"] || [];
         const premiumPizzas = menuData["Premium Pizza 🌟"] || [];
         
-        // Add Pan Pizza Section Header
+        // Add Pan Pizza Section Header - NO PRICES
         if (panPizzas.length > 0) {
             const panHeader = document.createElement('div');
-            panHeader.style.cssText = "grid-column: 1 / -1; background: #f37021; color: white; padding: 10px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 5px;";
-            panHeader.innerText = "🍕 PAN PIZZA (Rs 499-999)";
+            panHeader.style.cssText = "grid-column: 1 / -1; background: linear-gradient(135deg, #f37021, #b34e12); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
+            panHeader.innerText = "🍕 PAN PIZZA";
             grid.appendChild(panHeader);
             
             panPizzas.forEach(f => {
@@ -2931,11 +2931,11 @@ function generateHourlyData(orders) {
             });
         }
         
-        // Add Premium Pizza Section Header
+        // Add Premium Pizza Section Header - NO PRICES
         if (premiumPizzas.length > 0) {
             const premiumHeader = document.createElement('div');
-            premiumHeader.style.cssText = "grid-column: 1 / -1; background: #d4af37; color: white; padding: 10px; border-radius: 15px; font-weight: 900; text-align: center; margin-top: 15px; margin-bottom: 5px;";
-            premiumHeader.innerText = "🌟 PREMIUM PIZZA (Rs 1199-1699)";
+            premiumHeader.style.cssText = "grid-column: 1 / -1; background: linear-gradient(135deg, #d4af37, #aa771c); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
+            premiumHeader.innerText = "🌟 PREMIUM PIZZA";
             grid.appendChild(premiumHeader);
             
             premiumPizzas.forEach(f => {
@@ -2944,7 +2944,7 @@ function generateHourlyData(orders) {
             });
         }
     } else {
-        // Normal behavior for other deals
+        // Normal behavior for other deals - NO PRICES shown
         flavors.forEach(f => {
             const b = createFlavorButton(f);
             grid.appendChild(b);
@@ -2955,20 +2955,28 @@ function generateHourlyData(orders) {
     setScrollLock(true);
 }
 
-// Helper function to create flavor buttons
+// Helper function to create flavor buttons - NO PRICES ANYWHERE
 function createFlavorButton(f, categoryLabel) {
     const b = document.createElement('div');
     b.className = 'btn btn-3d';
+    b.style.position = "relative";
+    b.style.background = "white";
+    b.style.border = "3px solid " + (categoryLabel === "Pan" ? "#f37021" : categoryLabel === "Premium" ? "#d4af37" : "#eee");
     
-    // Add category badge if provided
-    let categoryBadge = "";
+    // Category badge only - NO PRICE
+    let badge = "";
     if (categoryLabel) {
         const badgeColor = categoryLabel === "Pan" ? "#f37021" : "#d4af37";
-        categoryBadge = `<span style="position: absolute; top: 5px; right: 5px; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 900;">${categoryLabel}</span>`;
+        badge = `<span style="position: absolute; top: 5px; right: 5px; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; text-transform: uppercase;">${categoryLabel}</span>`;
     }
     
-    b.style.position = "relative";
-    b.innerHTML = `<div class="item-label-box">${categoryBadge}<div>${f.name}</div></div>`;
+    // Simple display - just name, no price
+    b.innerHTML = `
+        <div class="item-label-box" style="padding: 15px 10px;">
+            ${badge}
+            <div style="font-weight: 800; font-size: 14px;">${f.name}</div>
+        </div>
+    `;
     
     b.onclick = function() { 
         b.classList.add('size-feedback'); 
