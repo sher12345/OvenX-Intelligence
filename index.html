@@ -2904,13 +2904,91 @@ function generateHourlyData(orders) {
     }
     
     function startFlavorSelection() {
-        const step = selectedItem.flavorsNeeded[currentFlavorStep]; document.getElementById('flavor-title').innerText = "Pick " + step.label; const grid = document.getElementById('flavor-grid'); grid.innerHTML = ''; let flavors = menuData[step.cat] || [];
+    const step = selectedItem.flavorsNeeded[currentFlavorStep];
+    document.getElementById('flavor-title').innerText = "Pick " + step.label;
+    const grid = document.getElementById('flavor-grid');
+    grid.innerHTML = '';
+    
+    // Get flavors from the specified category
+    let flavors = menuData[step.cat] || [];
+    
+    // Special handling for Family Feast - show Pan and Premium separately with labels
+    if (selectedItem.name === "Family Feast" && step.cat === "Pan/Premium") {
+        // Split into Pan and Premium sections
+        const panPizzas = menuData["Pan Pizza 🍕"] || [];
+        const premiumPizzas = menuData["Premium Pizza 🌟"] || [];
+        
+        // Add Pan Pizza Section Header
+        if (panPizzas.length > 0) {
+            const panHeader = document.createElement('div');
+            panHeader.style.cssText = "grid-column: 1 / -1; background: #f37021; color: white; padding: 10px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 5px;";
+            panHeader.innerText = "🍕 PAN PIZZA (Rs 499-999)";
+            grid.appendChild(panHeader);
+            
+            panPizzas.forEach(f => {
+                const b = createFlavorButton(f, "Pan");
+                grid.appendChild(b);
+            });
+        }
+        
+        // Add Premium Pizza Section Header
+        if (premiumPizzas.length > 0) {
+            const premiumHeader = document.createElement('div');
+            premiumHeader.style.cssText = "grid-column: 1 / -1; background: #d4af37; color: white; padding: 10px; border-radius: 15px; font-weight: 900; text-align: center; margin-top: 15px; margin-bottom: 5px;";
+            premiumHeader.innerText = "🌟 PREMIUM PIZZA (Rs 1199-1699)";
+            grid.appendChild(premiumHeader);
+            
+            premiumPizzas.forEach(f => {
+                const b = createFlavorButton(f, "Premium");
+                grid.appendChild(b);
+            });
+        }
+    } else {
+        // Normal behavior for other deals
         flavors.forEach(f => {
-            const b = document.createElement('div'); b.className = 'btn btn-3d'; b.innerHTML = `<div class="item-label-box"><div>${f.name}</div></div>`;
-            b.onclick = function() { b.classList.add('size-feedback'); playClick('pop'); setTimeout(() => { dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${f.name}`); currentFlavorStep++; if (currentFlavorStep < selectedItem.flavorsNeeded.length) startFlavorSelection(); else { document.getElementById('flavor-overlay').style.display = 'none'; selectedItem.flavorNotes = dealChoices.join(", "); openQtyModal(); } }, 100); }; grid.appendChild(b);
+            const b = createFlavorButton(f);
+            grid.appendChild(b);
         });
-        document.getElementById('flavor-overlay').style.display = 'flex'; setScrollLock(true);
     }
+    
+    document.getElementById('flavor-overlay').style.display = 'flex';
+    setScrollLock(true);
+}
+
+// Helper function to create flavor buttons
+function createFlavorButton(f, categoryLabel) {
+    const b = document.createElement('div');
+    b.className = 'btn btn-3d';
+    
+    // Add category badge if provided
+    let categoryBadge = "";
+    if (categoryLabel) {
+        const badgeColor = categoryLabel === "Pan" ? "#f37021" : "#d4af37";
+        categoryBadge = `<span style="position: absolute; top: 5px; right: 5px; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 900;">${categoryLabel}</span>`;
+    }
+    
+    b.style.position = "relative";
+    b.innerHTML = `<div class="item-label-box">${categoryBadge}<div>${f.name}</div></div>`;
+    
+    b.onclick = function() { 
+        b.classList.add('size-feedback'); 
+        playClick('pop'); 
+        setTimeout(() => { 
+            const categoryPrefix = categoryLabel ? `[${categoryLabel}] ` : "";
+            dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${categoryPrefix}${f.name}`); 
+            currentFlavorStep++; 
+            if (currentFlavorStep < selectedItem.flavorsNeeded.length) {
+                startFlavorSelection(); 
+            } else { 
+                document.getElementById('flavor-overlay').style.display = 'none'; 
+                selectedItem.flavorNotes = dealChoices.join(", "); 
+                openQtyModal(); 
+            } 
+        }, 100); 
+    };
+    
+    return b;
+}
     
     function openQtyModal() { 
         document.getElementById('modal-item-name').innerText = selectedItem.name; 
