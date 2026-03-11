@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3171,6 +3172,30 @@ function createFlavorButton(f, categoryLabel) {
 
     function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
 
+function validateAndSubmitOrder() {
+    // Validate Takeaway fields
+    if (orderType === 'Takeaway') {
+        const name = document.getElementById('takeawayName').value.trim();
+        const phone = document.getElementById('takeawayPhone').value.trim();
+        
+        if (!name) {
+            alert("Please enter your name!");
+            document.getElementById('takeawayName').focus();
+            return;
+        }
+        if (!phone) {
+            alert("Please enter your phone number!");
+            document.getElementById('takeawayPhone').focus();
+            return;
+        }
+        
+        // Store for WhatsApp message
+        window.takeawayCustomerName = name;
+        window.takeawayCustomerPhone = phone;
+    }
+    
+    finalSubmitOrder();
+}
         async function finalSubmitOrder() {
     playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
     const grand = foodTotal + sc + delCharge;
@@ -3180,15 +3205,23 @@ function createFlavorButton(f, categoryLabel) {
         return detail;
     }).join("\n");
 
-const orderObj = { 
+// Build order object for database
+let orderObj = { 
     type: orderType, 
-    location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, 
-    phone: deliveryPhone, // ADD THIS LINE
-    items: itemsText, 
+    location: orderType === 'Dine-In' ? "Table " + tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),    items: itemsText, 
     status: 'WAITING', 
     subtotal: foodTotal + sc, 
     delivery_fee: delCharge 
-};    
+};
+
+// Add customer info based on order type
+if (orderType === 'Takeaway') {
+    orderObj.customer_name = window.takeawayCustomerName || '';
+    orderObj.phone = window.takeawayCustomerPhone || '';
+} else if (orderType === 'Delivery') {
+    orderObj.phone = deliveryPhone;
+}
+// Dine-in: no phone, no name needed    
     let orderId = null;
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
@@ -3205,12 +3238,29 @@ const orderObj = {
     }
 
     let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; 
-    if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
-    if (orderType === 'Delivery' && userAddress) headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
 
-const waMsg = encodeURIComponent(`${headerInfo}\n\n📞 Phone: ${deliveryPhone}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);    cart = []; updateCartBar();
-    document.getElementById('overlay-screen').style.display = 'none';
-    if(orderId) initCustomerTracking(orderId);
+if (orderType === 'Dine-In' && tableNum) {
+    headerInfo += `\n*TABLE: ${tableNum}*`;
+}
+
+if (orderType === 'Delivery' && userAddress) {
+    headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
+}
+
+// Build customer info section
+let customerInfo = "";
+
+if (orderType === 'Takeaway') {
+    // Use the captured name and phone
+    const custName = window.takeawayCustomerName || '';
+    const custPhone = window.takeawayCustomerPhone || '';
+    customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${custPhone}`;
+} else if (orderType === 'Delivery') {
+    customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
+}
+// Dine-in: no phone needed
+
+const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
 
     // ============================================
     // NEW: Dual WhatsApp for Delivery Orders
@@ -3520,17 +3570,60 @@ const waMsg = encodeURIComponent(`${headerInfo}\n\n📞 Phone: ${deliveryPhone}\
     }
 
     function renderFinalSummary(fee) {
-    chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
-    const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
+    chkStep = 3; 
+    delCharge = parseFloat(fee) || 0; 
+    const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); 
+    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; 
+    const grand = foodTotal + delCharge + sc;
+    
+    const summaryHTML = cart.map((i, idx) => `
+        <div class="summary-item">
+            <div class="summary-info">
+                <b>${i.qty}x ${i.name}</b><br>
+                <small style="color:#666;">${i.note || ''}</small>
+            </div>
+            <div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div>
+        </div>
+    `).join('');
+    
     let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; 
+    if (orderType === 'Dine-In' && tableNum) {
+        summaryBubbleContent += `<br><small style="color:var(--red);">🪑 Table: ${tableNum}</small>`;
+    }
     if (orderType === 'Delivery' && userAddress) {
         summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
-        // ADD PHONE NUMBER DISPLAY
         if (deliveryPhone) {
             summaryBubbleContent += `<br><small style="color:var(--orange);">📞 Phone: ${deliveryPhone}</small>`;
         }
     }
-    document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
+    if (orderType === 'Takeaway') {
+        summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Takeaway Order</small>`;
+    }
+    
+    // Build customer info inputs for Takeaway
+    let customerInfoHtml = '';
+    if (orderType === 'Takeaway') {
+        customerInfoHtml = `
+            <div class="chat-bubble" style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px solid var(--orange);">
+                <b>👤 Customer Details</b>
+                <input type="text" id="takeawayName" placeholder="Enter your name" class="big-input" style="margin-top:10px; margin-bottom:10px;">
+                <input type="tel" id="takeawayPhone" placeholder="📞 Enter phone number (e.g. 0300-1234567)" class="big-input" maxlength="15">
+            </div>
+        `;
+    }
+    
+    document.getElementById('checkout-content').innerHTML = `
+        <div class="chat-bubble">${summaryBubbleContent}</div>
+        ${summaryHTML}
+        ${customerInfoHtml}
+        <div class="chat-bubble">
+            Subtotal: Rs ${foodTotal}
+            ${sc > 0 ? '<br>S.C: Rs '+sc : ''}
+            ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
+            <br><hr>Total: <b>Rs ${grand}</b>
+        </div>
+        <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>
+    `;
 }
 
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
@@ -3680,7 +3773,16 @@ const waMsg = encodeURIComponent(`${headerInfo}\n\n📞 Phone: ${deliveryPhone}\
         const sub = parseInt(document.getElementById('man-sub').value || 0);
         const fee = parseInt(document.getElementById('man-fee').value || 0);
         if(!loc || !items) return alert("Please fill Table/Address and Items list!");
-        const obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee };
+        let obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee };
+
+// If manual order is Takeaway and phone is provided in location (format: "Name - 0300xxxxxxx")
+if (type === 'Takeaway' && loc.includes('-')) {
+    const parts = loc.split('-');
+    if (parts.length >= 2) {
+        obj.customer_name = parts[0].trim();
+        obj.phone = parts[1].trim();
+    }
+}
         if(sb) {
             playClick('thud');
             const { error } = await sb.from('kitchen_orders').insert([obj]);
@@ -3771,7 +3873,26 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>${o.phone ? `<div style="font-weight:700; color:var(--orange); font-size:14px; margin-top:5px;">📞 ${o.phone}</div>` : ''}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>                ${priceHtml}
+// Build customer info display
+let customerInfoHtml = '';
+if (o.type === 'Takeaway') {
+    // Extract name and phone from the order items or stored fields
+    // Check if we have stored name/phone in the order object
+    const custName = o.customer_name || '';
+    const custPhone = o.phone || '';
+    
+    if (custName || custPhone) {
+        customerInfoHtml = `<div style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px dashed var(--orange); padding:10px; border-radius:10px; margin-top:8px; margin-bottom:8px;">`;
+        if (custName) customerInfoHtml += `<div style="font-weight:800; color:var(--red); font-size:14px;">👤 ${custName}</div>`;
+        if (custPhone) customerInfoHtml += `<div style="font-weight:700; color:var(--orange); font-size:13px;">📞 ${custPhone}</div>`;
+        customerInfoHtml += `</div>`;
+    }
+} else if (o.phone) {
+    customerInfoHtml = `<div style="font-weight:700; color:var(--orange); font-size:14px; margin-top:5px;">📞 ${o.phone}</div>`;
+}
+
+card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>${customerInfoHtml}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
+${priceHtml}
                 <div class="admin-actions">
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
                     <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
@@ -4284,6 +4405,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     history.pushState(null, null, window.location.pathname);
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
