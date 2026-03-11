@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2674,9 +2675,7 @@ function generateHourlyData(orders) {
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
-    let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null;
-     let currentKitchenFilter = 'ALL';
-    let currentCalcData = null;
+let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL';    let currentCalcData = null;
     let inventoryAuthenticated = false;
     const INVENTORY_PASSWORD = "ovenx123";
     const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
@@ -3089,30 +3088,86 @@ function createFlavorButton(f, categoryLabel) {
         overlay.style.display = 'none';
         content.innerHTML = `<p id="upsell-desc" style="font-weight:bold; color:#555; margin-bottom:20px;"></p><button id="upsell-yes-btn" class="confirm-btn btn-3d" style="margin-top:0; background:var(--orange); box-shadow: 0 6px 0px var(--dark-orange);">YES, ADD IT! 🚀</button>`;
         if(itemName.includes('pizza') || itemName.startsWith('plain fries')) {
-            icon.innerText = "🍯"; document.getElementById('upsell-desc').innerHTML = "Add a **Dip Sauce** for only **Rs 50**!";
-            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(false);
+            icon.innerText = "🍯"; document.getElementById('upsell-desc').innerHTML = "Add a <span style='color:var(--red); font-weight:900;'>Dip Sauce</span> for only <span style='color:var(--orange); font-weight:900;'>Rs 50</span>!";            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(false);
             overlay.style.display = 'flex'; setScrollLock(true);
         } else if (itemName.includes('club sandwich') || itemName.includes('burger')) {
-            icon.innerText = "🍟🥤"; document.getElementById('upsell-desc').innerHTML = "Make it a **Combo Meal**!<br>Add Regular Fries + Buddy Drink for **Rs 360**.";
-            document.getElementById('upsell-yes-btn').onclick = () => { addUpsellToCart("Combo Meal (Fries + Drink)", 360); overlay.style.display='none'; setScrollLock(false); };
-            overlay.style.display = 'flex'; setScrollLock(true);
+            icon.innerText = "🍟🥤"; document.getElementById('upsell-desc').innerHTML = "Make it a <span style='color:var(--red); font-weight:900;'>Combo Meal</span>!<br>Add Regular Fries + Buddy Drink for <span style='color:var(--orange); font-weight:900;'>Rs 360</span>.";            overlay.style.display = 'flex'; setScrollLock(true);
         } else if (itemName.includes('wings')) {
-            icon.innerText = "🍗🔥"; document.getElementById('upsell-desc').innerHTML = "Make it a **Wings Combo**!<br>Add Sauce + Buddy Drink for only **Rs 180**.";
+            icon.innerText = "🍗🔥"; document.getElementById('upsell-desc').innerHTML = "Make it a <span style='color:var(--red); font-weight:900;'>Wings Combo</span>!<br>Add Sauce + Buddy Drink for only <span style='color:var(--orange); font-weight:900;'>Rs 180</span>.";
             document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(true);
             overlay.style.display = 'flex'; setScrollLock(true);
         }
     }
 
     function showDipFlavorGrid(isWingsCombo) {
-        const flavors = ["BBQ", "Peri Peri", "Bonfire", "Special", "Chipotle", "Creamy Dreamy", "Chili Mayo"];
-        const content = document.getElementById('upsell-body-content');
-        let html = `<p style="font-weight:900; color:var(--red);">PICK YOUR SAUCE:</p><div class="upsell-grid">`;
-        flavors.forEach(f => {
-            if(isWingsCombo) html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); addUpsellToCart('Buddy Drink', 130); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
-            else html += `<button class="upsell-flavor-btn btn-3d" onclick="addUpsellToCart('Dip: ${f}', 50); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);">${f}</button>`;
-        });
-        html += `</div>`; content.innerHTML = html;
-    }
+    const flavors = ["BBQ", "Peri Peri", "Bonfire", "Special", "Chipotle", "Creamy Dreamy", "Chili Mayo"];
+    const content = document.getElementById('upsell-body-content');
+    
+    let html = `
+        <p style="font-weight:900; color:var(--red); margin-bottom:15px; font-size:16px;">PICK YOUR SAUCE:</p>
+        <div class="upsell-grid" style="
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        ">
+    `;
+    
+    flavors.forEach(f => {
+        if(isWingsCombo) {
+            html += `
+                <button class="upsell-flavor-btn btn-3d" 
+                    onclick="addUpsellToCart('Dip: ${f}', 50); addUpsellToCart('Buddy Drink', 130); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);"
+                    style="
+                        background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+                        border: 3px solid var(--orange);
+                        border-radius: 20px;
+                        padding: 15px 10px;
+                        font-weight: 900;
+                        font-size: 14px;
+                        color: var(--red);
+                        cursor: pointer;
+                        box-shadow: 0 6px 0px var(--dark-orange);
+                        transition: all 0.2s;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    "
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 0px var(--dark-orange)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 0px var(--dark-orange)'"
+                >
+                    🍯 ${f}
+                </button>
+            `;
+        } else {
+            html += `
+                <button class="upsell-flavor-btn btn-3d" 
+                    onclick="addUpsellToCart('Dip: ${f}', 50); document.getElementById('upsell-overlay').style.display='none'; setScrollLock(false);"
+                    style="
+                        background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+                        border: 3px solid var(--orange);
+                        border-radius: 20px;
+                        padding: 15px 10px;
+                        font-weight: 900;
+                        font-size: 14px;
+                        color: var(--red);
+                        cursor: pointer;
+                        box-shadow: 0 6px 0px var(--dark-orange);
+                        transition: all 0.2s;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    "
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 0px var(--dark-orange)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 0px var(--dark-orange)'"
+                >
+                    🍯 ${f}
+                </button>
+            `;
+        }
+    });
+    
+    html += `</div>`;
+    content.innerHTML = html;
+}
 
     function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
 
@@ -3125,8 +3180,15 @@ function createFlavorButton(f, categoryLabel) {
         return detail;
     }).join("\n");
 
-    const orderObj = { type: orderType, location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, items: itemsText, status: 'WAITING', subtotal: foodTotal + sc, delivery_fee: delCharge };
-    
+const orderObj = { 
+    type: orderType, 
+    location: orderType === 'Dine-In' ? "Table " + tableNum : userAddress, 
+    phone: deliveryPhone, // ADD THIS LINE
+    items: itemsText, 
+    status: 'WAITING', 
+    subtotal: foodTotal + sc, 
+    delivery_fee: delCharge 
+};    
     let orderId = null;
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 
@@ -3146,9 +3208,7 @@ function createFlavorButton(f, categoryLabel) {
     if (tableNum && orderType === 'Dine-In') headerInfo += `\n*TABLE: ${tableNum}*`;
     if (orderType === 'Delivery' && userAddress) headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
 
-    const waMsg = encodeURIComponent(`${headerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
-    
-    cart = []; updateCartBar();
+const waMsg = encodeURIComponent(`${headerInfo}\n\n📞 Phone: ${deliveryPhone}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);    cart = []; updateCartBar();
     document.getElementById('overlay-screen').style.display = 'none';
     if(orderId) initCustomerTracking(orderId);
 
@@ -3412,22 +3472,33 @@ function createFlavorButton(f, categoryLabel) {
     }
 
     function renderDeliveryAddressInput() {
-        document.getElementById('checkout-content').innerHTML = `
-            <div class="chat-bubble">
-                <b>🏠 Delivery Address</b><br>
-                Delivery Fee: <span style="color:var(--red); font-weight:900;">Rs ${delCharge}</span>
-            </div>
-            <textarea id="manualAddr" placeholder="Enter your full address..." class="big-input" style="height:100px;"></textarea>
-            <button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>
-        `;
-    }
+    document.getElementById('checkout-content').innerHTML = `
+        <div class="chat-bubble">
+            <b>🏠 Delivery Address</b><br>
+            Delivery Fee: <span style="color:var(--red); font-weight:900;">Rs ${delCharge}</span>
+        </div>
+        <textarea id="manualAddr" placeholder="Enter your full address..." class="big-input" style="height:100px;"></textarea>
+        
+        <!-- NEW PHONE NUMBER FIELD -->
+        <input type="tel" id="deliveryPhone" placeholder="📞 Enter your phone number (e.g. 0300-1234567)" 
+               class="big-input" style="margin-top:12px;" maxlength="15">
+        
+        <button class="next-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-top:15px;" onclick="playClick('thud'); saveAddr()">SHOW SUMMARY →</button>
+    `;
+}
 
     function saveAddr() { 
-        let a = document.getElementById('manualAddr').value; 
-        if(!a) return alert("Please enter address!"); 
-        userAddress = a; 
-        renderFinalSummary(delCharge); 
-    }
+    let a = document.getElementById('manualAddr').value; 
+    let phone = document.getElementById('deliveryPhone').value; // ADD THIS LINE
+    
+    if(!a) return alert("Please enter address!"); 
+    if(!phone) return alert("Please enter phone number!"); // ADD VALIDATION
+    
+    userAddress = a; 
+    deliveryPhone = phone; // Store in global variable (add this variable at top)
+    
+    renderFinalSummary(delCharge); 
+}
 
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
@@ -3449,11 +3520,18 @@ function createFlavorButton(f, categoryLabel) {
     }
 
     function renderFinalSummary(fee) {
-        chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
-        const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
-        let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; if (orderType === 'Delivery' && userAddress) summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
-        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
+    chkStep = 3; delCharge = parseFloat(fee) || 0; const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; const grand = foodTotal + delCharge + sc;
+    const summaryHTML = cart.map((i, idx) => `<div class="summary-item"><div class="summary-info"><b>${i.qty}x ${i.name}</b><br><small style="color:#666;">${i.note || ''}</small></div><div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div></div>`).join('');
+    let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; 
+    if (orderType === 'Delivery' && userAddress) {
+        summaryBubbleContent += `<br><small style="color:var(--red);">📍 Address: ${userAddress}</small>`;
+        // ADD PHONE NUMBER DISPLAY
+        if (deliveryPhone) {
+            summaryBubbleContent += `<br><small style="color:var(--orange);">📞 Phone: ${deliveryPhone}</small>`;
+        }
     }
+    document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">${summaryBubbleContent}</div>${summaryHTML}<div class="chat-bubble">Subtotal: Rs ${foodTotal}${sc > 0 ? '<br>S.C: Rs '+sc : ''}${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}<br><hr>Total: <b>Rs ${grand}</b></div><button onclick="finalSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>`;
+}
 
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
     async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
@@ -3693,8 +3771,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-                card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div><div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
-                ${priceHtml}
+card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>${o.phone ? `<div style="font-weight:700; color:var(--orange); font-size:14px; margin-top:5px;">📞 ${o.phone}</div>` : ''}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>                ${priceHtml}
                 <div class="admin-actions">
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
                     <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
@@ -4207,5 +4284,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     history.pushState(null, null, window.location.pathname);
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
