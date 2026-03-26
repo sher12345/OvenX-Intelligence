@@ -773,6 +773,90 @@ body {
     width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px;
     margin: 12px auto 0; 
 }
+    /* ── LANDING PAGE ── */
+#landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0d0000; z-index: 3500; overflow-y: auto; display: block; scroll-behavior: smooth; }
+.lp-nav { position: sticky; top: 0; z-index: 10; padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; background: rgba(13,0,0,0.9); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.lp-logo { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -1px; color: white; }
+.lp-logo span { color: #e67e22; }
+.lp-nav-links { display: flex; gap: 24px; list-style: none; }
+.lp-nav-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; transition: color 0.2s; }
+.lp-nav-links a:hover { color: white; }
+.lp-cta-btn { background: #e67e22; color: white; padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: background 0.2s; }
+.lp-cta-btn:hover { background: #a04000; }
+.lp-hero { min-height: 100vh; display: flex; align-items: center; position: relative; overflow: hidden; padding: 80px 40px; }
+.lp-hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 50%, rgba(192,57,43,0.25) 0%, transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(230,126,34,0.15) 0%, transparent 50%), #0d0000; }
+.lp-hero-content { position: relative; z-index: 2; max-width: 580px; }
+.lp-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(192,57,43,0.2); border: 1px solid rgba(192,57,43,0.4); padding: 7px 16px; border-radius: 30px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #e67e22; margin-bottom: 24px; }
+.lp-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #e67e22; animation: lp-pulse 2s infinite; }
+@keyframes lp-pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.lp-hero h1 { font-family: 'Outfit', sans-serif; font-size: clamp(48px,7vw,80px); font-weight: 900; line-height: 0.95; letter-spacing: -3px; margin-bottom: 22px; color: white; }
+.lp-hero h1 span { color: #e67e22; }
+.lp-hero p { font-size: 17px; color: rgba(255,255,255,0.6); font-weight: 300; line-height: 1.7; margin-bottom: 36px; max-width: 440px; }
+.lp-hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+.lp-btn-primary { background: #c0392b; color: white; padding: 15px 32px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 6px 0px #922b21; transition: all 0.15s; display: inline-block; border: none; cursor: pointer; }
+.lp-btn-primary:active { transform: translateY(3px); box-shadow: 0 3px 0px #922b21; }
+.lp-btn-secondary { background: rgba(255,255,255,0.08); color: white; padding: 15px 32px; border-radius: 12px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1.5px solid rgba(255,255,255,0.15); transition: all 0.2s; display: inline-block; cursor: pointer; }
+.lp-btn-secondary:hover { background: rgba(255,255,255,0.13); }
+.lp-hero-img { position: absolute; right: -40px; top: 50%; transform: translateY(-50%); width: 50%; max-width: 650px; opacity: 0.85; border-radius: 30px; overflow: hidden; }
+.lp-hero-img img { width: 100%; object-fit: cover; border-radius: 30px; }
+.lp-stats { padding: 50px 40px; background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.lp-stats-grid { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; text-align: center; }
+.lp-stat-num { font-family: 'Outfit', sans-serif; font-size: 42px; font-weight: 900; color: #e67e22; }
+.lp-stat-label { font-size: 12px; color: rgba(255,255,255,0.5); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+.lp-section { padding: 90px 40px; max-width: 1100px; margin: 0 auto; color: white; }
+.lp-section-label { font-size: 11px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: #e67e22; margin-bottom: 14px; }
+.lp-section-title { font-family: 'Outfit', sans-serif; font-size: clamp(32px,4vw,52px); font-weight: 900; line-height: 1.1; margin-bottom: 44px; color: white; }
+.lp-categories { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+.lp-cat-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 28px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+.lp-cat-card:hover { border-color: rgba(192,57,43,0.4); transform: translateY(-4px); background: rgba(192,57,43,0.08); }
+.lp-cat-icon { font-size: 36px; margin-bottom: 14px; display: block; }
+.lp-cat-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: white; }
+.lp-cat-desc { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+.lp-deals-section { background: rgba(192,57,43,0.08); border-top: 1px solid rgba(192,57,43,0.15); border-bottom: 1px solid rgba(192,57,43,0.15); padding: 90px 40px; }
+.lp-deals-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.lp-deal-cards { display: flex; flex-direction: column; gap: 14px; }
+.lp-deal-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+.lp-deal-card:hover { border-color: rgba(230,126,34,0.4); background: rgba(230,126,34,0.08); }
+.lp-deal-name { font-weight: 700; font-size: 15px; margin-bottom: 3px; color: white; }
+.lp-deal-includes { font-size: 12px; color: rgba(255,255,255,0.5); }
+.lp-deal-price { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900; color: #e67e22; white-space: nowrap; margin-left: 16px; }
+.lp-branches { padding: 90px 40px; max-width: 1100px; margin: 0 auto; }
+.lp-branch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; }
+.lp-branch-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 34px; transition: all 0.3s; }
+.lp-branch-card:hover { border-color: rgba(192,57,43,0.4); }
+.lp-branch-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 18px; }
+.lp-tag-multan { background: rgba(192,57,43,0.2); color: #f08070; border: 1px solid rgba(192,57,43,0.3); }
+.lp-tag-bwp { background: rgba(93,58,26,0.3); color: #c9a227; border: 1px solid rgba(201,162,39,0.3); }
+.lp-branch-city { font-family: 'Outfit', sans-serif; font-size: 30px; font-weight: 900; margin-bottom: 8px; color: white; }
+.lp-branch-addr { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.6; margin-bottom: 22px; }
+.lp-branch-btn { display: inline-block; background: #c0392b; color: white; padding: 11px 22px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; box-shadow: 0 4px 0px #922b21; transition: all 0.15s; border: none; cursor: pointer; }
+.lp-branch-btn:active { transform: translateY(2px); box-shadow: 0 2px 0px #922b21; }
+.lp-footer { background: #080000; border-top: 1px solid rgba(255,255,255,0.06); padding: 50px 40px 30px; color: white; }
+.lp-footer-inner { max-width: 1100px; margin: 0 auto; }
+.lp-footer-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; flex-wrap: wrap; gap: 30px; }
+.lp-footer-logo { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 900; }
+.lp-footer-logo span { color: #e67e22; }
+.lp-footer-tagline { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 6px; }
+.lp-footer-links { display: flex; gap: 50px; flex-wrap: wrap; }
+.lp-footer-col h4 { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
+.lp-footer-col a { display: block; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; margin-bottom: 10px; transition: color 0.2s; }
+.lp-footer-col a:hover { color: white; }
+.lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.lp-footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.3); }
+@media(max-width:768px){
+  .lp-nav { padding: 14px 20px; }
+  .lp-nav-links { display: none; }
+  .lp-hero { padding: 80px 20px 60px; }
+  .lp-hero-img { display: none; }
+  .lp-stats-grid { grid-template-columns: repeat(2,1fr); }
+  .lp-section, .lp-branches { padding: 60px 20px; }
+  .lp-categories { grid-template-columns: 1fr 1fr; }
+  .lp-deals-section { padding: 60px 20px; }
+  .lp-deals-inner { grid-template-columns: 1fr; gap: 40px; }
+  .lp-branch-grid { grid-template-columns: 1fr; }
+  .lp-footer { padding: 40px 20px 24px; }
+  .lp-footer-links { gap: 24px; }
+}
     </style>
 </head>
 <body>
@@ -781,6 +865,128 @@ body {
 
 <!-- Hidden print container -->
 <div id="print-area"></div>
+<!-- LANDING PAGE -->
+<div id="landing-page">
+
+  <nav class="lp-nav">
+    <div class="lp-logo">OVEN <span>X</span></div>
+    <ul class="lp-nav-links">
+      <li><a href="#lp-menu">Menu</a></li>
+      <li><a href="#lp-deals">Deals</a></li>
+      <li><a href="#lp-branches">Branches</a></li>
+    </ul>
+    <button class="lp-cta-btn" onclick="enterFromLanding()">Order Now →</button>
+  </nav>
+
+  <section class="lp-hero">
+    <div class="lp-hero-bg"></div>
+    <div class="lp-hero-content">
+      <div class="lp-badge">Now in Multan & Bahawalpur</div>
+      <h1>Crafted<br>With <span>Fire</span><br>& Flavor</h1>
+      <p>Pizza, burgers, steaks & more — made fresh in our kitchen and delivered straight to your door.</p>
+      <div class="lp-hero-btns">
+        <button class="lp-btn-primary" onclick="enterFromLanding()">Order Now 🔥</button>
+        <a class="lp-btn-secondary" href="#lp-menu">View Menu</a>
+      </div>
+    </div>
+    <div class="lp-hero-img">
+      <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80" alt="Food">
+    </div>
+  </section>
+
+  <div class="lp-stats">
+    <div class="lp-stats-grid">
+      <div><div class="lp-stat-num">2</div><div class="lp-stat-label">Branches</div></div>
+      <div><div class="lp-stat-num">50+</div><div class="lp-stat-label">Menu Items</div></div>
+      <div><div class="lp-stat-num">13</div><div class="lp-stat-label">Hot Deals</div></div>
+      <div><div class="lp-stat-num">⭐ 4.8</div><div class="lp-stat-label">Rating</div></div>
+    </div>
+  </div>
+
+  <div class="lp-section" id="lp-menu">
+    <div class="lp-section-label">What We Serve</div>
+    <div class="lp-section-title">Something for<br>Every Craving</div>
+    <div class="lp-categories">
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍕</span><div class="lp-cat-name">Pizzas</div><div class="lp-cat-desc">Pan, Premium, Deep Dish, Extreme & Craft your own</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍔</span><div class="lp-cat-name">Burgers</div><div class="lp-cat-desc">Fried & Grilled — from classic Zingers to bold Grilled stacks</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🥩</span><div class="lp-cat-name">Steaks</div><div class="lp-cat-desc">Mexican, Moroccan, Pepper & more — BWP exclusive</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍝</span><div class="lp-cat-name">Pasta</div><div class="lp-cat-desc">Alfredo, Flaming, Fire Kissed & X-Special</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🌯</span><div class="lp-cat-name">Wraps & Rolls</div><div class="lp-cat-desc">Chipotle, BBQ, Behari, Peri Peri & more</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍟</span><div class="lp-cat-name">Starters</div><div class="lp-cat-desc">Wings, Fries, Nuggets, Cheese Sticks & more</div></div>
+    </div>
+  </div>
+
+  <div class="lp-deals-section" id="lp-deals">
+    <div class="lp-deals-inner">
+      <div>
+        <div class="lp-section-label">Hot Deals</div>
+        <div class="lp-section-title">Best Value<br>Every Time</div>
+        <p style="color:rgba(255,255,255,0.5);font-size:16px;line-height:1.7;margin-bottom:28px;">From family feasts to solo combos — deals that keep your wallet happy.</p>
+        <button class="lp-btn-primary" onclick="enterFromLandingDeals()">See All Deals 🔥</button>
+      </div>
+      <div class="lp-deal-cards">
+        <div class="lp-deal-card"><div><div class="lp-deal-name">Family Feast</div><div class="lp-deal-includes">2 Pizzas + 2 Zingers + 1L Drink + 6 Wings</div></div><div class="lp-deal-price">Rs 2299</div></div>
+        <div class="lp-deal-card"><div><div class="lp-deal-name">Extreme Buddy</div><div class="lp-deal-includes">1 Med Extreme Pizza + 1L Drink</div></div><div class="lp-deal-price">Rs 1449</div></div>
+        <div class="lp-deal-card"><div><div class="lp-deal-name">Midnight Deal 1</div><div class="lp-deal-includes">2x Med Extreme Pizzas + 1.5L Drink</div></div><div class="lp-deal-price">Rs 2699</div></div>
+        <div class="lp-deal-card"><div><div class="lp-deal-name">Burger Deal 3</div><div class="lp-deal-includes">4 Zingers + 2 Fries + 1L Drink + 6 Wings</div></div><div class="lp-deal-price">Rs 1990</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lp-branches" id="lp-branches">
+    <div class="lp-section-label">Our Locations</div>
+    <div class="lp-section-title">Find Us Near You</div>
+    <div class="lp-branch-grid">
+      <div class="lp-branch-card">
+        <div class="lp-branch-tag lp-tag-multan">🍕 Multan</div>
+        <div class="lp-branch-city">Multan</div>
+        <div class="lp-branch-addr">Shop #12, Gulgasht Colony, Multan<br>📞 0300-145-0301</div>
+        <button class="lp-branch-btn" onclick="enterFromLandingBranch('MULTAN')">Order from Multan →</button>
+      </div>
+      <div class="lp-branch-card">
+        <div class="lp-branch-tag lp-tag-bwp">🥩 Bahawalpur</div>
+        <div class="lp-branch-city">Bahawalpur</div>
+        <div class="lp-branch-addr">Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony<br>📞 0300-345-0301</div>
+        <button class="lp-branch-btn" onclick="enterFromLandingBranch('BWP')">Order from BWP →</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="lp-footer">
+    <div class="lp-footer-inner">
+      <div class="lp-footer-top">
+        <div>
+          <div class="lp-footer-logo">OVEN <span>X</span></div>
+          <div class="lp-footer-tagline">Pizza, Burgers & Cafe</div>
+        </div>
+        <div class="lp-footer-links">
+          <div class="lp-footer-col">
+            <h4>Menu</h4>
+            <a href="#lp-menu">Pizzas</a>
+            <a href="#lp-menu">Burgers</a>
+            <a href="#lp-menu">Steaks</a>
+            <a href="#lp-deals">Deals</a>
+          </div>
+          <div class="lp-footer-col">
+            <h4>Branches</h4>
+            <a href="#lp-branches">Multan</a>
+            <a href="#lp-branches">Bahawalpur</a>
+          </div>
+          <div class="lp-footer-col">
+            <h4>Follow Us</h4>
+            <a href="https://www.instagram.com/ovenxpakistan/" target="_blank">Instagram</a>
+<a href="https://www.facebook.com/p/OvenX-Pakistan-61557715508382/" target="_blank">Facebook</a>
+          </div>
+        </div>
+      </div>
+      <div class="lp-footer-bottom">
+        <p>© 2025 Oven X. All rights reserved.</p>
+        <p>www.ovenxpakistan.com</p>
+      </div>
+    </div>
+  </footer>
+
+</div>
 
 <!-- BRANCH SELECTOR SCREEN -->
 <div id="branch-selector-screen">
@@ -1288,9 +1494,16 @@ body {
             }
         } catch(e) {}
         document.getElementById('branch-selector-screen').style.display = 'none';
-        document.getElementById('gateway-screen').style.display = 'flex';
-        renderLoyaltyCard();
-    }
+    document.getElementById('gateway-screen').style.display = 'flex';
+    renderLoyaltyCard();
+    
+    if (window._pendingTab) {
+    document.getElementById('gateway-screen').style.display = 'none';
+    document.getElementById('top-sticky-container').style.display = 'flex';
+    switchTab(window._pendingTab);
+    window._pendingTab = null;
+}
+}
     document.getElementById('bcard-MULTAN').addEventListener('click', () => selectBranch('MULTAN'));
     document.getElementById('bcard-BWP').addEventListener('click', () => selectBranch('BWP'));
     document.getElementById('branch-manual-btn').addEventListener('click', () => showBranchCards(null));
@@ -3388,8 +3601,15 @@ function proceedFromSheet() {
     }
     
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
-    function exitToGateway() { playClick('pop'); document.getElementById('gateway-screen').style.display = 'flex'; document.getElementById('top-sticky-container').style.display = 'none'; document.getElementById('cart-bar').style.display = 'none'; renderLoyaltyCard(); setScrollLock(false); }
-    function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); document.getElementById('menu-controls').style.display = 'block'; renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); document.getElementById('menu-controls').style.display = 'none'; renderPublicDeals(); } }
+function exitToGateway() { 
+    playClick('pop'); 
+    document.getElementById('top-sticky-container').style.display = 'none'; 
+    document.getElementById('cart-bar').style.display = 'none'; 
+    document.getElementById('gateway-screen').style.display = 'none';
+    document.getElementById('branch-selector-screen').style.display = 'none';
+    document.getElementById('landing-page').style.display = 'block';
+    setScrollLock(false); 
+}    function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); document.getElementById('menu-controls').style.display = 'block'; renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); document.getElementById('menu-controls').style.display = 'none'; renderPublicDeals(); } }
 
     function openOrderFlow(item) {
         playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
@@ -4899,8 +5119,46 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
-    // Start branch selector — this shows gateway after branch chosen
-    document.addEventListener('DOMContentLoaded', () => initBranchSelector());
+    // ── LANDING PAGE LOGIC ──
+function initLandingPage() {
+    const params = new URLSearchParams(window.location.search);
+    const isQR = params.has('table') || params.has('branch');
+    if (isQR) {
+        document.getElementById('landing-page').style.display = 'none';
+        initBranchSelector();
+    } else {
+        document.getElementById('branch-selector-screen').style.display = 'none';
+        document.getElementById('gateway-screen').style.display = 'none';
+        document.getElementById('landing-page').style.display = 'block';
+    }
+}
+function enterFromLanding() {
+    document.getElementById('landing-page').style.display = 'none';
+    initBranchSelector();
+}
+
+function enterFromLandingBranch(branchId) {
+    document.getElementById('landing-page').style.display = 'none';
+    selectBranch(branchId, true);
+}
+
+function enterFromLandingDeals() {
+    document.getElementById('landing-page').style.display = 'none';
+    const saved = localStorage.getItem('ovenx_branch');
+    if (saved && BRANCH_CONFIG[saved]) {
+        activeBranch = BRANCH_CONFIG[saved];
+        OVENX_COORDS = { lat: activeBranch.lat, lng: activeBranch.lng };
+        document.getElementById('branch-selector-screen').style.display = 'none';
+        document.getElementById('gateway-screen').style.display = 'none';
+        document.getElementById('top-sticky-container').style.display = 'flex';
+        switchTab('deals');
+    } else {
+        window._pendingTab = 'deals';
+        initBranchSelector();
+    }
+}
+
+initLandingPage();
     let deferredPrompt; 
     let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
