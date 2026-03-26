@@ -580,6 +580,43 @@
             transition: transform 0.2s;
         }
         .add-item-btn:hover { transform: translateY(-2px); }
+        /* ── BRANCH SELECTOR ── */
+        #branch-selector-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at top, #150000 0%, #000 80%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5000; color: white; padding: 20px; overflow-y: auto; text-align: center; }
+        .branch-sel-logo { font-size: 52px; font-weight: 900; letter-spacing: -2px; margin: 0 0 4px; }
+        .branch-sel-logo span { color: #f37021; }
+        .branch-tagline { color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; margin: 0 0 28px; }
+        .branch-detect-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 18px 28px; margin-bottom: 22px; text-align: center; width: 90%; max-width: 360px; }
+        .branch-spinner { width: 36px; height: 36px; border: 3px solid rgba(243,112,33,0.2); border-top-color: #f37021; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .branch-cards-wrap { display: flex; flex-direction: column; gap: 14px; width: 90%; max-width: 360px; }
+        .branch-card { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 22px; padding: 18px 22px; cursor: pointer; transition: all .25s; position: relative; text-align: left; }
+        .branch-card:hover, .branch-card.highlighted { background: rgba(243,112,33,0.15); border-color: rgba(243,112,33,0.5); box-shadow: 0 0 28px rgba(243,112,33,0.25); }
+        .branch-card .near-tag { position: absolute; top: 10px; right: 10px; background: #f37021; color: white; font-size: 9px; font-weight: 900; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .branch-card-city { font-size: 20px; font-weight: 900; color: white; margin-bottom: 2px; }
+        .branch-card-addr { font-size: 12px; color: rgba(255,255,255,0.45); font-weight: 600; margin-bottom: 8px; }
+        .branch-card-meta { display: flex; gap: 12px; align-items: center; }
+        .branch-card-dist { font-size: 11px; color: #f37021; font-weight: 900; }
+        .branch-card-status { font-size: 11px; font-weight: 700; color: #66bb6a; }
+        .branch-manual-btn { background: transparent; border: 1px solid rgba(255,255,255,0.18); color: rgba(255,255,255,0.45); padding: 9px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 8px; cursor: pointer; }
+        #branch-pill { background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; padding: 7px 18px; border-radius: 30px; margin-bottom: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .2s; }
+        #branch-pill:hover { border-color: var(--orange); color: var(--orange); }
+        #branch-pill .bpill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: pulsedot 2s infinite; }
+        @keyframes pulsedot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+        #header-branch-badge { font-size: 9px; font-weight: 900; letter-spacing: 1.5px; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 6px; display: inline-block; margin-left: 6px; }
+        .order-branch-tag { display: inline-block; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 8px; margin-left: 8px; text-transform: uppercase; vertical-align: middle; }
+        .order-branch-tag.MULTAN { background: #ffe0e0; color: var(--red); }
+        .order-branch-tag.BWP { background: #fef3c7; color: #5d3a1a; }
+        .kbranch-tabs { display: flex; gap: 8px; }
+        .kbranch-tab { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 900; cursor: pointer; background: #eee; color: #666; border: none; transition: .2s; }
+        .kbranch-tab.active-all { background: #444; color: white; }
+        .kbranch-tab.active-multan { background: var(--red); color: white; }
+        .kbranch-tab.active-bwp { background: #5d3a1a; color: #c9a227; }
+        .steak-section-title { color: #5d3a1a !important; border-bottom-color: #c9a227 !important; }
+        .steak-cat-pill { background: linear-gradient(135deg, #5d3a1a, #8B4513) !important; color: #c9a227 !important; border: 2px solid #c9a227 !important; }
+        .steak-deal-card { background: linear-gradient(135deg, #fdf6ee 0%, #fff8f0 100%) !important; border: 3px solid #5d3a1a !important; }
+        .steak-deal-badge { position: absolute; top: -10px; right: -10px; background: linear-gradient(135deg, #5d3a1a, #8B4513); color: #c9a227; padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; z-index: 10; border: 2px solid #c9a227; }
+        .steak-btn { background: linear-gradient(135deg, #5d3a1a, #8B4513) !important; color: #c9a227 !important; box-shadow: 0 6px 0px #3d2010 !important; font-weight: 900; }
+        .bwp-item-ribbon { position: absolute; top: 7px; left: 7px; background: #5d3a1a; color: #c9a227; font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 10px; z-index: 2; border: 1px solid #c9a227; }
     </style>
 </head>
 <body>
@@ -589,9 +626,48 @@
 <!-- Hidden print container -->
 <div id="print-area"></div>
 
-<div id="gateway-screen">
-    <div class="bouncing-logo"><p class="gateway-logo">OVEN <span>X</span></p></div>
+<!-- BRANCH SELECTOR SCREEN -->
+<div id="branch-selector-screen">
+    <div class="bouncing-logo">
+        <p class="branch-sel-logo">OVEN <span>X</span></p>
+    </div>
+    <p class="branch-tagline">Select Your Branch</p>
+    <div class="branch-detect-box" id="branch-detect-box">
+        <div class="branch-spinner"></div>
+        <p style="font-size:13px; color:rgba(255,255,255,0.55); font-weight:700; margin:0 0 12px;">Finding your nearest branch...</p>
+        <button onclick="if(typeof showBranchCards==='function'){showBranchCards(null)}else{document.getElementById('branch-detect-box').style.display='none';document.getElementById('branch-cards-wrap').style.display='flex';document.getElementById('branch-manual-btn').style.display='block';}" style="background:rgba(243,112,33,0.8); border:none; color:white; padding:8px 20px; border-radius:20px; font-weight:900; font-size:12px; cursor:pointer; margin-top:8px;">
+    SELECT MANUALLY →
+</button>
+    </div>
+    <div class="branch-cards-wrap" id="branch-cards-wrap" style="display:none;">
+<div class="branch-card" id="bcard-MULTAN">            <div class="near-tag" id="bnear-MULTAN" style="display:none;">📍 NEAREST</div>
+            <div class="branch-card-city">🍕 Multan</div>
+            <div class="branch-card-addr">Shop #12, Gulgasht Colony, Multan</div>
+            <div class="branch-card-meta">
+                <span class="branch-card-dist" id="bdist-MULTAN"></span>
+                <span class="branch-card-status">● Open Now</span>
+            </div>
+        </div>
+<div class="branch-card" id="bcard-BWP">
+            <div class="near-tag" id="bnear-BWP" style="display:none;">📍 NEAREST</div>
+            <div class="branch-card-city">🥩 Bahawalpur</div>
+            <div class="branch-card-addr">Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony</div>
+            <div class="branch-card-meta">
+                <span class="branch-card-dist" id="bdist-BWP"></span>
+                <span class="branch-card-status">● Open Now</span>
+            </div>
+        </div>
+    </div>
+    <button class="branch-manual-btn" id="branch-manual-btn" style="display:none;">Choose Manually →</button>
+</div>
+<div id="gateway-screen" style="display:none;">
+      <div class="bouncing-logo"><p class="gateway-logo">OVEN <span>X</span></p></div>
     
+    <div id="branch-pill" onclick="resetBranchSelection()">
+    <span class="bpill-dot"></span>
+    <span id="branch-pill-text">MULTAN</span>
+    <span style="opacity:.4; font-size:10px;">↺ change</span>
+</div>
     <div id="gateway-table-note">🎉 WELCOME! TABLE <span id="gateway-table-id"></span> 🎉</div>
 
     <!-- OVEN X CLUB CARD -->
@@ -623,7 +699,9 @@
 <div id="top-sticky-container">
     <header id="main-header">
         <button class="header-back-btn btn-3d" onclick="exitToGateway()">← HOME</button>
-        <p class="logo">OVEN <span>X</span> <br><small id="header-table-indicator" style="font-size:10px; font-weight:bold;"></small></p>
+        <p class="logo">OVEN <span>X</span>
+    <span id="header-branch-badge"></span>
+    <br><small id="header-table-indicator" style="font-size:10px; font-weight:bold;"></small></p>
         <div style="width:60px;"></div>
     </header>
     <div class="tab-bar" id="nav-tabs">
@@ -650,6 +728,9 @@
 <div id="manual-order-overlay">
     <div class="modal">
         <h2 style="color:var(--red); font-weight:900;">Manual Order 📝</h2>
+        <div style="background:#f0f0f0; padding:8px 15px; border-radius:10px; margin-bottom:10px; font-size:12px; font-weight:900; color:#555;">
+            Branch: <span id="man-branch-tag" style="color:var(--red);">MULTAN</span>
+        </div>
         <select id="man-type" class="big-input">
             <option value="Dine-In">Dine-In</option>
             <option value="Takeaway">Takeaway</option>
@@ -669,8 +750,11 @@
 <!-- DELIVERY CALCULATOR OVERLAY -->
 <div id="delivery-calc-overlay">
     <div class="delivery-calc-modal">
-        <div class="calc-header">
-            <h2 style="margin:0; font-weight:900;">🚚 Delivery Calculator</h2>
+<div class="calc-header">
+            <div>
+                <h2 style="margin:0; font-weight:900;">🚚 Delivery Calculator</h2>
+                <p style="margin:3px 0 0; font-size:11px; opacity:.7;" id="calc-branch-label">From: OvenX Multan Kitchen</p>
+            </div>
             <button onclick="closeDeliveryCalc()" style="background:white; color:var(--red); border:none; padding:8px 15px; border-radius:10px; font-weight:900;">✕</button>
         </div>
         <div class="calc-content" id="calc-content-area">
@@ -803,7 +887,14 @@
 <div id="kitchen-panel-overlay">
     <div class="kitchen-modal">
         <div class="kitchen-header">
-            <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE KITCHEN</h2>
+            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                <h2 style="margin:0; color:var(--red); font-weight:900;">LIVE KITCHEN</h2>
+                <div class="kbranch-tabs">
+                    <button class="kbranch-tab active-all" id="kb-ALL" onclick="setKBranchFilter('ALL')">ALL BRANCHES</button>
+                    <button class="kbranch-tab" id="kb-MULTAN" onclick="setKBranchFilter('MULTAN')">🍕 MULTAN</button>
+                    <button class="kbranch-tab" id="kb-BWP" onclick="setKBranchFilter('BWP')">🥩 BWP</button>
+                </div>
+            </div>
             <div style="display:flex; gap:10px;">
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
@@ -864,7 +955,7 @@
                 </div>
                 <div>
                     <h2 style="margin:0; color:#1f2937; font-weight:900;">Inventory & Sales Hub</h2>
-                    <p style="margin:0; color:#6b7280; font-size:14px;">Kitchen-Integrated Management</p>
+                    <p style="margin:0; color:#6b7280; font-size:14px;">Kitchen-Integrated Management — <span id="inv-branch-label" style="font-weight:900; color:#4f46e5;">MULTAN</span></p>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
@@ -934,6 +1025,144 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // ══════════════════════════════════════════
+    // BRANCH CONFIGURATION
+    // ══════════════════════════════════════════
+    const BRANCH_CONFIG = {
+        MULTAN: {
+            id: 'MULTAN',
+            name: 'Multan',
+            address: 'Shop #12, Gulgasht Colony, Multan',
+            lat: 30.2197, lng: 71.4711,
+            phone: '923001450301',
+            cc_phone: '923002450301',
+            riders: ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"],
+            inventoryPassword: 'ovenx123',
+            excludedDeals: []
+        },
+        BWP: {
+    id: 'BWP',
+    name: 'Bahawalpur',
+    address: 'Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony, Bahawalpur',
+    lat: 29.38365358488693, lng: 71.67091027857997,
+    phone: '923003450301',
+    cc_phone: '923003450301',
+    riders: ["Rider 1", "Rider 2", "Rider 3"],
+    inventoryPassword: 'bwp123',
+    excludedDeals: []
+}
+    };
+
+    let activeBranch = null;
+    let kitchenBranchFilter = 'ALL';
+
+    // ── Branch selector functions ──
+    function haversineKm(lat1,lng1,lat2,lng2){const R=6371,t=x=>x*Math.PI/180;const a=Math.sin(t(lat2-lat1)/2)**2+Math.cos(t(lat1))*Math.cos(t(lat2))*Math.sin(t(lng2-lng1)/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+    function fmtDist(km){return km<1?Math.round(km*1000)+' m away':km.toFixed(1)+' km away';}
+
+
+    function showBranchCards(nearestId) {
+        document.getElementById('branch-detect-box').style.display = 'none';
+        document.getElementById('branch-cards-wrap').style.display = 'flex';
+        document.getElementById('branch-manual-btn').style.display = 'block';
+        Object.values(BRANCH_CONFIG).forEach(b => {
+            const distEl = document.getElementById('bdist-' + b.id);
+            const nearEl = document.getElementById('bnear-' + b.id);
+            const card = document.getElementById('bcard-' + b.id);
+            if (distEl && b._dist !== undefined) distEl.textContent = fmtDist(b._dist);
+            if (nearestId === b.id && nearEl) { nearEl.style.display = 'block'; card.classList.add('highlighted'); }
+        });
+        if (nearestId) setTimeout(() => selectBranch(nearestId, false), 2500);
+    }
+    function detectNearestBranch(ulat, ulng) {
+        let nearest = null, nearestD = Infinity;
+        Object.values(BRANCH_CONFIG).forEach(b => {
+            const d = haversineKm(ulat, ulng, b.lat, b.lng);
+            b._dist = d;
+            if (d < nearestD) { nearestD = d; nearest = b.id; }
+        });
+        showBranchCards(nearest);
+    }
+
+    function initBranchSelector() {
+        try {
+            const p = new URLSearchParams(window.location.search);
+            if (p.has('branch')) {
+                const b = p.get('branch').toUpperCase();
+                if (BRANCH_CONFIG[b]) { selectBranch(b, true); return; }
+            }
+        } catch(e) {}
+        const saved = localStorage.getItem('ovenx_branch');
+        if (saved && BRANCH_CONFIG[saved]) { selectBranch(saved, true); return; }
+
+        // Show cards immediately — don't wait for GPS
+        showBranchCards(null);
+
+        // GPS runs silently in background to highlight nearest
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => detectNearestBranch(pos.coords.latitude, pos.coords.longitude),
+                () => {},
+                { timeout: 4000, maximumAge: 60000 }
+            );
+        }
+    }
+
+    function selectBranch(id, silent) {
+        const b = BRANCH_CONFIG[id];
+        if (!b) return;
+        activeBranch = b;
+        localStorage.setItem('ovenx_branch', id);
+        // Update OVENX_COORDS to active branch (used by delivery calc)
+        OVENX_COORDS = { lat: b.lat, lng: b.lng };
+        // Update UI labels
+        document.getElementById('branch-pill-text').textContent = b.name.toUpperCase();
+        if (document.getElementById('header-branch-badge')) document.getElementById('header-branch-badge').textContent = b.name.toUpperCase();
+        if (document.getElementById('inv-branch-label')) document.getElementById('inv-branch-label').textContent = b.name.toUpperCase();
+        if (document.getElementById('man-branch-tag')) document.getElementById('man-branch-tag').textContent = b.name.toUpperCase();
+        if (document.getElementById('calc-branch-label')) document.getElementById('calc-branch-label').textContent = 'From: OvenX ' + b.name + ' Kitchen';
+        // Handle QR table
+        try {
+            const p = new URLSearchParams(window.location.search);
+            if (p.has('table')) {
+                isQRScan = true; tableNum = p.get('table').toUpperCase();
+                document.getElementById('gateway-table-id').innerText = tableNum;
+                document.getElementById('gateway-table-note').style.display = 'block';
+                document.getElementById('header-table-indicator').innerText = '(TABLE ' + tableNum + ')';
+            }
+        } catch(e) {}
+        document.getElementById('branch-selector-screen').style.display = 'none';
+        document.getElementById('gateway-screen').style.display = 'flex';
+        renderLoyaltyCard();
+    }
+    document.getElementById('bcard-MULTAN').addEventListener('click', () => selectBranch('MULTAN'));
+    document.getElementById('bcard-BWP').addEventListener('click', () => selectBranch('BWP'));
+    document.getElementById('branch-manual-btn').addEventListener('click', () => showBranchCards(null));
+
+    function resetBranchSelection() {
+        if (!confirm('Switch branch? Your cart will be cleared.')) return;
+        cart = []; updateCartBar(); activeBranch = null;
+        localStorage.removeItem('ovenx_branch');
+        document.getElementById('gateway-screen').style.display = 'none';
+        document.getElementById('branch-selector-screen').style.display = 'flex';
+        document.getElementById('branch-detect-box').style.display = 'block';
+        document.getElementById('branch-cards-wrap').style.display = 'none';
+        document.getElementById('branch-manual-btn').style.display = 'none';
+        document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('highlighted'));
+        document.querySelectorAll('.near-tag').forEach(t => t.style.display = 'none');
+        setTimeout(() => initBranchSelector(), 400);
+    }
+
+    function setKBranchFilter(f) {
+        kitchenBranchFilter = f;
+        document.querySelectorAll('.kbranch-tab').forEach(t => {
+            t.className = 'kbranch-tab';
+        });
+        if (f === 'ALL') document.getElementById('kb-ALL').classList.add('active-all');
+        else if (f === 'MULTAN') document.getElementById('kb-MULTAN').classList.add('active-multan');
+        else if (f === 'BWP') document.getElementById('kb-BWP').classList.add('active-bwp');
+        renderKitchenOrders();
+    }
     // ==========================================
     // INVENTORY MANAGEMENT SYSTEM INTEGRATION
     // ==========================================
@@ -2680,7 +2909,7 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
-    const OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
+    let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 14.77;
 
     try {
@@ -2701,7 +2930,33 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         "Platters 🍱": [{name: "Khameera Sandwich Platter", price: 699}, {name: "Calzone Platter", price: 899}, {name: "Behari Platter", price: 949}],
         "Pasta 🍝": [{name: "Alfredo Pasta", price: 749}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
         "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
-        "Bar Menu 🥤": [{name: "Coke Buddy", price: 130}, {name: "Sprite Buddy", price: 130}, {name: "Coke 1 Liter", price: 190}, {name: "Next Cola 1 Liter", price: 170}, {name: "Coke 1.5L", price: 230}, {name: "Sprite 1.5L", price: 230}, {name: "Water Small", price: 99}, {name: "Water Large", price: 170}]
+        "Bar Menu 🥤": [
+            {name: "Coke Buddy", price: 130},
+            {name: "Sprite Buddy", price: 130},
+            {name: "Coke 1 Liter", price: 190},
+            {name: "Next Cola 1 Liter", price: 170},
+            {name: "Coke 1.5L", price: 230},
+            {name: "Sprite 1.5L", price: 230},
+            {name: "Water Small", price: 99},
+            {name: "Water Large", price: 170},
+            // BWP Moctails — hidden at Multan
+            {name: "Mint Margarita", price: 249, bwpOnly: true},
+            {name: "Lemonade", price: 249, bwpOnly: true},
+            {name: "Pina Colada", price: 349, bwpOnly: true},
+            {name: "Red Rose", price: 220, bwpOnly: true},
+            {name: "Fresh Lime", price: 220, bwpOnly: true},
+            {name: "Blue Lagoon", price: 220, bwpOnly: true}
+        ],
+        // BWP Steaks — never shown at Multan
+        "Steaks 🥩": [
+            {name: "Mexican Steak", price: 1549, bwpOnly: true},
+            {name: "Moroccan Steak", price: 1549, bwpOnly: true},
+            {name: "Tarragon Steak", price: 1549, bwpOnly: true},
+            {name: "Mushroom Steak", price: 1549, bwpOnly: true},
+            {name: "Cordon Blue Steak", price: 1549, bwpOnly: true},
+            {name: "Stuffed Jalapeno Steak", price: 1549, bwpOnly: true},
+            {name: "Pepper Steak", price: 1499, bwpOnly: true}
+        ]
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
 
@@ -2718,38 +2973,10 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", image: "https://media.sodagift.com/img/image/678369644447129.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
         { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
         { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
-        { 
-        name: "🌙 Ramadan Special Platter", 
-        desc: "Complete Iftar meal for Ramadan", 
-        price: {Single: 600, Double: 1050}, 
-        badge: "RAMADAN SPECIAL", 
-        image: "https://i.postimg.cc/851vS0z7/Whats-App-Image-2026-02-17-at-4-02-34-PM.jpg", 
-        isRamadan: true,
-        fixedItems: ["🥪 Cold Sandwich", "🌴 4x Dates", "🥗 Bowl of Salad", "🍚 Crunchy Rice", "💧 Small Water", "🥤 Sprite Buddy"],
-        ramadanNote: "Single: 1 sandwich, 1 water, 1 sprite | Double: 2 sandwiches, 2 waters, 2 sprites"
-    },
-    
-    { 
-        name: "🌙 Ramadan Behari Platter", 
-        desc: "Special Behari feast for Iftar", 
-        price: 1149, 
-        badge: "RAMADAN SPECIAL", 
-        image: "https://i.postimg.cc/KKCJChfL/behari-iftar-platter.jpg",
-        isRamadan: true,
-        fixedItems: [
-            "🌯 2x Behari Roll", 
-            "🍗 6x Oven Baked Wings", 
-            "🍟 50g Fries", 
-            "🧆 4x Fritters",
-            "💧 2x Small Water", 
-            "🥤 2x Sprite Buddy"
-        ],
-        ramadanNote: "Perfect Behari feast to break your fast! Now with Fritters!"
-    }
-];
-    
+        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
+    ];
 
+        
     const imgMap = {
         "plain fries": "https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
         "loaded fries": "https://www.carolynscooking.com/wp-content/uploads/2024/01/Loaded-Bacon-Cheese-Fries-3.jpg",
@@ -3206,10 +3433,12 @@ function validateAndSubmitOrder() {
 // Build order object for database
 let orderObj = { 
     type: orderType, 
-    location: orderType === 'Dine-In' ? "Table " + tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),    items: itemsText, 
+    location: orderType === 'Dine-In' ? "Table " + tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
+    items: itemsText, 
     status: 'WAITING', 
     subtotal: foodTotal + sc, 
-    delivery_fee: delCharge 
+    delivery_fee: delCharge,
+    branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
 };
 
 // Add customer info based on order type
@@ -3264,8 +3493,9 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     // NEW: Dual WhatsApp for Delivery Orders
     // ============================================
     
-    const KITCHEN_NUMBER = "923001450301";        // Your existing kitchen number
-    const CUSTOMER_CARE_NUMBER = "923002450301";  // New customer care number
+    const br = activeBranch || BRANCH_CONFIG.MULTAN;
+    const KITCHEN_NUMBER = br.phone;
+    const CUSTOMER_CARE_NUMBER = br.cc_phone;
 
     if (orderType === 'Delivery') {
         // Delivery: Send to BOTH numbers
@@ -3449,15 +3679,16 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
         };
 
         if (sb) {
-            await sb.from('delivery_calculations').insert([{
-                lat: userLat,
-                lng: userLng,
-                distance_one_way: usedDistance,
-                distance_round_trip: roundTrip,
-                cost: cost,
-                is_estimated: !roadDistance
-            }]);
-        }
+    await sb.from('delivery_calculations').insert([{
+        lat: userLat,
+        lng: userLng,
+        distance_one_way: usedDistance,
+        distance_round_trip: roundTrip,
+        cost: cost,
+        is_estimated: !roadDistance,
+        branch: (activeBranch || BRANCH_CONFIG.MULTAN).id  // ADD THIS
+    }]);
+}
 
         document.getElementById('calc-loading-state').style.display = 'none';
         document.getElementById('calc-result-state').style.display = 'block';
@@ -3771,7 +4002,7 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
         const sub = parseInt(document.getElementById('man-sub').value || 0);
         const fee = parseInt(document.getElementById('man-fee').value || 0);
         if(!loc || !items) return alert("Please fill Table/Address and Items list!");
-        let obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee };
+        let obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee, branch: (activeBranch || BRANCH_CONFIG.MULTAN).id };
 
 // If manual order is Takeaway and phone is provided in location (format: "Name - 0300xxxxxxx")
 if (type === 'Takeaway' && loc.includes('-')) {
@@ -3845,6 +4076,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
         if (currentKitchenFilter !== 'CALC_HISTORY') {
             let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
             if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
+            if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
             const { data: orders } = await query; 
             const list = document.getElementById('kitchen-orders-list');
             list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
@@ -3868,7 +4100,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 let priceHtml = ""; 
                 if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
                 let riderHtml = ""; 
-                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${RIDERS.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(activeBranch || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
 // Build customer info display
@@ -3889,7 +4121,8 @@ if (o.type === 'Takeaway') {
     customerInfoHtml = `<div style="font-weight:700; color:var(--orange); font-size:14px; margin-top:5px;">📞 ${o.phone}</div>`;
 }
 
-card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location}</div>${customerInfoHtml}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
+const orderBranch = o.branch || 'MULTAN';
+card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location} <span class="order-branch-tag ${orderBranch}">${orderBranch}</span></div>${customerInfoHtml}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
 ${priceHtml}
                 <div class="admin-actions">
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
@@ -4041,11 +4274,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">*** PROVE BILL ***</div>
                     <div style="margin-bottom: 10px;">
                         <h1 style="margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 900;">OVEN <span style="color: #000;">X</span></h1>
-                        <div style="font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; display: inline-block; padding: 2px 10px; margin-top: 2px;">MULTAN BRANCH</div>
+                        <div style="font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; display: inline-block; padding: 2px 10px; margin-top: 2px;">${(activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase()} BRANCH</div>
                     </div>
                     <div style="font-size: 12px; margin-bottom: 10px; line-height: 1.4;">
-                        Shop # 12, Gulgasht Colony, Multan<br>
-                        Phone: 0300-1450301<br>
+                        ${(activeBranch || BRANCH_CONFIG.MULTAN).address}<br>
+                        Phone: 0${(activeBranch || BRANCH_CONFIG.MULTAN).phone.slice(2)}<br>
                         -----------------------------------
                     </div>
                     <div style="text-align: left; font-size: 13px; line-height: 1.5;">
@@ -4104,27 +4337,27 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     }
 
     function renderAuditUI(orders) {
-        const div = document.getElementById('rider-audit-selection'); 
-        div.innerHTML = "";
-        RIDERS.forEach(r => {
-            const b = document.createElement('button'); 
-            b.className = "rider-btn"; 
-            b.innerText = r;
-            b.onclick = () => {
-                const rOrders = orders.filter(o => o.rider === r);
-                const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
-                const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
-                document.getElementById('audit-result-box').style.display = 'block'; 
-                document.getElementById('audit-rider-name').innerText = r;
-                document.getElementById('audit-count').innerText = rOrders.length; 
-                document.getElementById('audit-cash').innerText = "Rs " + cash;
-                document.getElementById('audit-fees').innerText = "Rs " + fees; 
-                document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
-                playClick('pop');
-            };
-            div.appendChild(b);
-        });
-    }
+    const div = document.getElementById('rider-audit-selection'); 
+    div.innerHTML = "";
+    (activeBranch || BRANCH_CONFIG.MULTAN).riders.forEach(r => {
+        const b = document.createElement('button'); 
+        b.className = "rider-btn"; 
+        b.innerText = r;
+        b.onclick = () => {
+            const rOrders = orders.filter(o => o.rider === r);
+            const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
+            const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
+            document.getElementById('audit-result-box').style.display = 'block'; 
+            document.getElementById('audit-rider-name').innerText = r;
+            document.getElementById('audit-count').innerText = rOrders.length; 
+            document.getElementById('audit-cash').innerText = "Rs " + cash;
+            document.getElementById('audit-fees').innerText = "Rs " + fees; 
+            document.getElementById('audit-net').innerText = "Rs " + (cash - fees);
+            playClick('pop');
+        };
+        div.appendChild(b);
+    });
+}
 
     async function adminVoidOrder(id) { if(!confirm("Delete order?")) return; playClick('thud'); await sb.from('kitchen_orders').delete().eq('id', id); renderKitchenOrders(); }
     async function adminChangeTable(id, currentLoc) { const nl = prompt("New Table/Address:", currentLoc); if(nl) { playClick('pop'); await sb.from('kitchen_orders').update({ location: nl }).eq('id', id); renderKitchenOrders(); } }
@@ -4147,17 +4380,17 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     const list = document.getElementById('deals-list'); 
     list.innerHTML = '';
 
-    const now = new Date();
-    const eidStart = new Date('2026-03-21T00:00:00');
-    const eidEnd = new Date('2026-03-23T23:59:59');
-    if (now >= eidStart && now <= eidEnd) {
-        list.innerHTML = `<div style="text-align:center; padding:40px 20px; background:#f5f5f5; border-radius:25px; margin:20px 0; border:3px dashed #ccc;"><div style="font-size:60px; margin-bottom:15px;">🌙✨</div><div style="font-weight:900; font-size:22px; color:#888; margin-bottom:10px;">EID MUBARAK!</div><div style="color:#999; font-size:15px; font-weight:600; line-height:1.6;">We're sorry, no deals available on Eid Days.<br>Please visit our full menu instead!</div></div>`;
-        return;
-    }
-    
-    const sortedDeals = [...dealsData].sort((a, b) => {
+        const isBWP = activeBranch && activeBranch.id === 'BWP';
+    const br = activeBranch || BRANCH_CONFIG.MULTAN;
+    const filteredDeals = dealsData.filter(d => {
+        if (d.bwpOnly && !isBWP) return false;
+        if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
+        return true;
+    });
+    const sortedDeals = [...filteredDeals].sort((a, b) => {
         if (a.isRamadan) return -1;
         if (b.isRamadan) return 1;
+        if (a.bwpOnly && !b.bwpOnly) return -1;
         return 0;
     });
     
@@ -4191,6 +4424,24 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             
             btn.onclick = () => openOrderFlow(deal); 
             card.querySelector('.deal-info-box').appendChild(btn);
+        } else if (deal.bwpOnly) {
+            card.className = "deal-card steak-deal-card";
+            card.innerHTML = `
+                <div class="steak-deal-badge">🥩 BWP EXCLUSIVE</div>
+                <div class="deal-badge" style="background:#5d3a1a; box-shadow:0 4px 0px #3d2010;">${deal.badge || 'BWP'}</div>
+                <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+                <div class="deal-info-box">
+                    <div class="deal-title" style="color:#5d3a1a;">${deal.name}</div>
+                    <span class="deal-desc">${deal.desc || ''}</span>
+                    <span class="deal-price" style="color:#5d3a1a;">Rs ${deal.price}</span>
+                </div>
+            `;
+            const btn = document.createElement('button');
+            btn.className = "next-btn btn-3d steak-btn";
+            btn.style.cssText = "margin-bottom:0;";
+            btn.innerText = "🥩 ADD TO BAG";
+            btn.onclick = () => openOrderFlow(deal);
+            card.querySelector('.deal-info-box').appendChild(btn);
         } else {
             card.className = "deal-card";
             card.innerHTML = `
@@ -4219,7 +4470,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         const search = filterText.toLowerCase();
         for (let cat in menuData) {
             if (cat === "Pan/Premium") continue;
-            const filteredItems = menuData[cat].filter(item => item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search));
+            const isBWP = activeBranch && activeBranch.id === 'BWP';
+            const filteredItems = menuData[cat].filter(item => {
+                if (item.bwpOnly && !isBWP) return false;
+                return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
+            });
             if (filteredItems.length > 0) {
                 let title = document.createElement('div'); 
                 title.className = 'section-title'; 
@@ -4307,18 +4562,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         const bar = document.getElementById('category-bar'); 
         bar.innerHTML="";
         
-        const ramadanPill = document.createElement('div');
-        ramadanPill.className = "cat-pill ramadan-cat";
-        ramadanPill.innerHTML = "🌙 Ramadan";
-        ramadanPill.onclick = () => {
-            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-            ramadanPill.classList.add('active');
-            document.getElementById('deals-container').scrollIntoView({ behavior: 'smooth' });
-            switchTab('deals');
-        };
-        bar.appendChild(ramadanPill);
-        
-        for (let cat in menuData) {
+                for (let cat in menuData) {
             if (cat === "Pan/Premium") continue; 
             const pill = document.createElement('div'); 
             pill.className = "cat-pill"; 
@@ -4364,10 +4608,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     renderPublicMenu(); 
     renderPublicDeals(); 
-    renderLoyaltyCard();
     setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
+    // Start branch selector — this shows gateway after branch chosen
+    document.addEventListener('DOMContentLoaded', () => initBranchSelector());
     let deferredPrompt; 
     let secretClickCount = 0;
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
@@ -4411,6 +4656,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     history.pushState(null, null, window.location.pathname);
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
