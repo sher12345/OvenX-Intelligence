@@ -4398,8 +4398,12 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
         }
     }
     if (orderType === 'Takeaway') {
+    if (window.carPlateNumber) {
+        summaryBubbleContent += `<br><small style="color:var(--red);">🚗 Car Dine Order</small>`;
+    } else {
         summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Takeaway Order</small>`;
     }
+}
     
     // Build customer info inputs for Takeaway
     let customerInfoHtml = '';
