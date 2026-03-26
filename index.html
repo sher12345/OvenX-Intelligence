@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1450,28 +1451,32 @@ body {
     }
 
     function initBranchSelector() {
-        try {
-            const p = new URLSearchParams(window.location.search);
-            if (p.has('branch')) {
-                const b = p.get('branch').toUpperCase();
-                if (BRANCH_CONFIG[b]) { selectBranch(b, true); return; }
+    try {
+        const p = new URLSearchParams(window.location.search);
+        if (p.has('branch')) {
+            const b = p.get('branch').toUpperCase();
+            if (BRANCH_CONFIG[b]) {
+                if (p.has('type') && p.get('type') === 'takeaway') {
+                    window._forcedOrderType = 'Takeaway';
+                }
+                selectBranch(b, true);
+                return;
             }
-        } catch(e) {}
-        const saved = localStorage.getItem('ovenx_branch');
-        if (saved && BRANCH_CONFIG[saved]) { selectBranch(saved, true); return; }
-
-        // Show cards immediately — don't wait for GPS
-        showBranchCards(null);
-
-        // GPS runs silently in background to highlight nearest
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                pos => detectNearestBranch(pos.coords.latitude, pos.coords.longitude),
-                () => {},
-                { timeout: 4000, maximumAge: 60000 }
-            );
         }
+    } catch(e) {}
+    const saved = localStorage.getItem('ovenx_branch');
+    if (saved && BRANCH_CONFIG[saved]) { selectBranch(saved, true); return; }
+    // Show cards immediately — don't wait for GPS
+    showBranchCards(null);
+    // GPS runs silently in background to highlight nearest
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => detectNearestBranch(pos.coords.latitude, pos.coords.longitude),
+            () => {},
+            { timeout: 4000, maximumAge: 60000 }
+        );
     }
+}
 
     function selectBranch(id, silent) {
         const b = BRANCH_CONFIG[id];
@@ -3595,13 +3600,19 @@ function proceedFromSheet() {
     }
 
     function enterApp(target) { 
-        playClick('thud'); 
-        requestNotificationPermission();
-        document.getElementById('gateway-screen').style.display = 'none'; 
-        document.getElementById('top-sticky-container').style.display = 'flex'; 
-        if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
-        if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
+    playClick('thud'); 
+    requestNotificationPermission();
+    document.getElementById('gateway-screen').style.display = 'none'; 
+    document.getElementById('top-sticky-container').style.display = 'flex';
+    
+    if (window._forcedOrderType) {
+        orderType = window._forcedOrderType;
+        window._forcedOrderType = null;
     }
+    
+    if(tableNum && orderType === "") { renderServiceOptions(); document.getElementById('welcome-overlay').style.display = 'flex'; setScrollLock(true); } 
+    if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
+}
     
     function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
 function exitToGateway() { 
