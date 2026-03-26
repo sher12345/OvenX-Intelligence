@@ -1203,7 +1203,7 @@ body {
     lat: 29.38365358488693, lng: 71.67091027857997,
     phone: '923003450301',
     cc_phone: '923003450301',
-    riders: ["Rider 1", "Rider 2", "Rider 3"],
+    riders: ["Raffay", "Waseem", "Asif", "Touqeer", "Talha", "Danish", "Umair"],
     inventoryPassword: 'bwp123',
     excludedDeals: []
 }
@@ -3201,29 +3201,92 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         "sprite 1.5l": "https://m.media-amazon.com/images/I/51HQiqPnFWL._AC_UF894,1000_QL80_.jpg",
         "water small": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
         "water large": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
+        "behari roll": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
+"cordon blue": "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=500",
+"tarragon": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500",
+"moroccan": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=500",
+"mushroom steak": "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?w=500",
+"mexican steak": "https://images.unsplash.com/photo-1615361200141-f45040f367be?w=500",
+"pepper steak": "https://images.unsplash.com/photo-1558030006-450675393462?w=500",
+"pina colada": "https://images.unsplash.com/photo-1587223962930-cb7f31384c19?w=500",
+"red rose": "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500",
+"blue lagoon": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500",
+"mint margarita": "https://images.unsplash.com/photo-1609345265499-2133bbeb6ce5?w=500",
+"lemonade": "https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=500",
+"fresh lime": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=500",
+"blue lagoon": "https://www.thespruceeats.com/thmb/blue-lagoon-mocktail.jpg",
+"donar kabab": "https://silkroadrecipes.com/wp-content/uploads/2024/06/Turkish-Doner-Kebabs-Beef-or-Lamb-square.jpg",
     };
     const itemDescriptions = {
-    "CM Grilled": "Savour the perfect balance of flavours with our CM Grilled Burger — a juicy, flame-grilled Single CM patty with cheese, lettuce, tomato, onion, and secret sauce, all on a soft, buttery potato bun.",
+    // GRILLED BURGERS
+    "CM Grilled": "Savour the perfect balance of flavours with our CM Grilled Burger — a juicy, flame-grilled Single CM patty with cheese, lettuce, tomato, onion, and secret sauce, all on a soft, buttery potato bun. Pure satisfaction in every bite!",
     "Smokey Grilled": "Indulge in our Smokey Grilled Burger — double flame-grilled thigh fillets, cheese, lettuce, tomato, onion, and a smoky, tangy secret sauce, all on a soft potato bun. Bold flavours in every bite!",
     "Peri Peri Grilled": "Spice up your bite with our Peri-Peri Grilled Burger — double grilled chest fillets, cheese, lettuce, tomato, onion, and a bold blend of peri-peri and mustard sauce, all on a soft potato bun. Fiery, flavorful, and satisfying!",
     "Drizzler X": "Savor the bold taste of our Drizzler X Grilled Burger — double grilled chest fillets, cheese, lettuce, tomato, onion, and pickled cucumber, drizzled with Mexican and mustard sauce, all on a soft potato bun. A flavorful bite every time!",
     "Jalapeno Blaze": "Turn up the heat with our Jalapeno Blaze — two juicy grilled patties, cheese, iceberg lettuce, onion, jalapeños, tomato, and our secret sauce, all wrapped in a premium potato bun. Served with crispy fries for the ultimate kick!",
     "Mexi Fiesta": "Experience bold flavors with our Mexi Fiesta — two juicy grilled patties, cheese, iceberg lettuce, onion, tomato, and our secret sauce, all wrapped in a premium potato bun. Served with crispy fries for the perfect feast!",
+
+    // PASTA
     "OvenX Flaming Pasta": "Indulge in our OvenX Flaming Pasta — elbow macaroni tossed in pizza sauce and mayonnaise, loaded with chicken, capsicum, black olives, and mushrooms, topped with melty cheese and baked to perfection. A rich, flavorful delight!",
     "Fire Kissed Pasta": "Savor the heat with our Fire Kissed Pasta — elbow macaroni tossed in pizza sauce and mayonnaise, loaded with crispy chicken, capsicum, black olives, and mushrooms, topped with melty cheese and baked to perfection. A fiery, cheesy delight!",
     "Alfredo Pasta": "Indulge in our Alfredo Pasta — fettuccine macaroni coated in creamy white sauce, topped with grilled chicken steak fillets and garnished with black olives for a rich, flavorful bite. Pure creamy perfection!",
-    "X-Special Pasta": "Experience bold flavors with our X-Special Pasta — two juicy grilled patties, cheese, iceberg lettuce, onion, tomato, and our secret sauce, all wrapped in a premium potato bun.",
+    "X-Special Pasta": "Experience bold flavors with our X-Special Pasta — fettuccine macaroni loaded with grilled chicken, capsicum, and mushrooms in our signature X-Special sauce, topped with melty cheese. A bold, unforgettable bite!",
+
+    // STEAKS
     "Mexican Steak": "Savor the bold flavors of our Mexican Steak — two grilled chicken fillets smothered in zesty Mexican sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A spicy, satisfying feast!",
     "Moroccan Steak": "Enjoy the rich flavors of our Moroccan Steak — two grilled chicken fillets drizzled with aromatic Moroccan sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. Mildly spicy and utterly delicious!",
     "Tarragon Steak": "Indulge in our Tarragon Steak — two grilled chicken fillets topped with creamy, aromatic tarragon sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A mild, flavorful delight!",
     "Mushroom Steak": "Delight in our Mushroom Steak — two grilled chicken fillets smothered in rich, creamy white sauce with mushrooms, served with your choice of mashed potatoes, green vegetables, or crispy fries. A smooth, savory, non-spicy treat!",
-    "Cordon Blue Steak": "Served with your choice of mashed potatoes, green vegetables, or crispy fries. A delightful, non-spicy indulgence!",
+    "Cordon Blue Steak": "A classic indulgence — our Cordon Blue Steak served with your choice of mashed potatoes, green vegetables, or crispy fries. A delightful, non-spicy indulgence!",
     "Stuffed Jalapeno Steak": "Turn up the heat with our Stuffed Jalapeno Steak — two fried chicken fillets stuffed with melty cheese and crushed jalapeños, topped with rich cheese sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A spicy, cheesy delight!",
-    "Pepper Steak": "Savor the bold flavors of our Pepper Steak — two grilled chicken fillets topped with rich, creamy black pepper (white) sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. Mildly spicy and irresistibly delicious!",
-    "Kabab Crust": "Experience the perfect stuffed kabab with our stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
-    "Crown Crust": "Experience the perfect stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
-    "Cheese Crust": "Experience the perfect stuffed cheese with our stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
-    "Crusti Thin": "Experience the perfect crunch with our CrustiThin Pizza — a crispy thin crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!"
+    "Pepper Steak": "Savor the bold flavors of our Pepper Steak — two grilled chicken fillets topped with rich, creamy black pepper sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. Mildly spicy and irresistibly delicious!",
+
+    // CRAFT PIZZA
+    "Kabab Crust": "Experience the perfect stuffed kabab crust Pizza — a crispy thick crust loaded with kabab filling, topped with customized sauces and fresh toppings. Light, crispy, and full of flavor!",
+    "Crown Crust": "Experience the perfect Crown Crust Pizza — a crispy thick stuffed crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
+    "Cheese Crust": "Experience the perfect cheese-stuffed crust Pizza — a crispy thick crust packed with melty cheese, topped with customized sauces and fresh toppings. Light, crispy, and full of flavor!",
+    "Crusti Thin": "Experience the perfect crunch with our CrustiThin Pizza — a crispy thin crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
+
+    // SANDWICHES
+    "Health Harvest": "A fresh and wholesome sandwich packed with crisp vegetables, greens, and a light sauce — the perfect healthy choice for those who want flavor without the guilt.",
+    "Khameera Sandwich": "Our signature Khameera Sandwich — juicy chicken filling packed inside a soft, fluffy khameera bun with fresh vegetables and our secret sauce. A rich, comforting bite every time!",
+    "Club Sandwich": "A classic triple-decker Club Sandwich loaded with grilled chicken, fresh lettuce, tomato, and creamy sauce between toasted bread. A timeless, satisfying meal!",
+
+    // FRIED BURGERS
+    "Chicken Patty Burger": "A simple yet satisfying Chicken Patty Burger — a juicy crispy chicken patty with fresh lettuce, tomato, and our signature sauce in a soft bun. Classic and delicious!",
+    "Zinger Burger": "Our legendary Zinger Burger — a perfectly spiced crispy fried chicken fillet with fresh lettuce and zinger sauce in a soft bun. Bold, crunchy, and utterly satisfying!",
+    "Mighty Burger": "Go big with our Mighty Burger — a towering double crispy chicken fillet burger loaded with cheese, fresh veggies, and our bold signature sauce. For those with a mighty appetite!",
+    "Chipotle Burger": "Experience the smoky heat of our Chipotle Burger — a crispy chicken fillet topped with smoky chipotle sauce, fresh lettuce, tomato, and cheese. Bold flavor in every bite!",
+    "Crispy Jalapeno": "Feel the heat with our Crispy Jalapeno Burger — a perfectly fried chicken fillet loaded with fresh jalapeños, cheese, and our spicy sauce. A fiery crunch in every bite!",
+    "Stuff Jalapeno": "Our Stuffed Jalapeno Burger takes it up a notch — a crispy chicken fillet stuffed with jalapeño and cheese filling, topped with spicy sauce. An explosion of heat and flavor!",
+
+    // PLATTERS
+    "Khameera Sandwich Platter": "Our Khameera Sandwich Platter — a generous serving of our signature khameera sandwich with sides. Perfect for a complete, satisfying meal!",
+    "Calzone Platter": "A hearty Calzone Platter — our stuffed folded pizza packed with chicken, cheese, and fresh toppings, served as a complete meal. Rich, filling, and delicious!",
+    "Behari Platter": "Our signature Behari Platter — tender, juicy behari chicken served with fresh accompaniments. A rich, aromatic feast bursting with bold flavors!",
+
+    // WRAPS & ROLLS
+    "Chipotle Wrap": "Our smoky Chipotle Wrap — grilled chicken, crisp vegetables, and bold chipotle sauce wrapped in a soft tortilla. A satisfying, flavor-packed meal on the go!",
+    "BBQ Wrap": "Our BBQ Wrap — tender grilled chicken smothered in rich BBQ sauce with fresh veggies, all wrapped in a soft tortilla. Smoky, sweet, and absolutely delicious!",
+    "Donar Kabab": "Our authentic Donar Kabab — juicy, seasoned chicken sliced fresh and wrapped with crisp vegetables and garlic sauce. A classic street food experience elevated!",
+    "Crunch Wrap": "Our Crunch Wrap — a crispy tortilla loaded with fried chicken, fresh veggies, cheese, and sauce. The perfect combination of crunch and flavor in every bite!",
+    "Zingeratha Roll": "Our Zingeratha Roll — a crispy zinger fillet wrapped in a soft paratha with fresh vegetables and zinger sauce. The ultimate fusion of crunch and comfort!",
+    "Paratha Roll": "Our classic Paratha Roll — tender chicken filling wrapped in a soft, buttery paratha with fresh veggies and sauce. A comforting, homestyle favorite!",
+    "Malai Roll": "Our creamy Malai Roll — tender malai chicken wrapped in a soft paratha with fresh vegetables. Rich, creamy, and absolutely delightful!",
+    "Behari Roll": "Our signature Behari Roll — juicy, aromatic behari chicken wrapped in a soft paratha with fresh veggies and chutney. Bold, flavorful, and utterly satisfying!",
+    "Peri Peri Wrap": "Our fiery Peri Peri Wrap — grilled chicken marinated in bold peri-peri sauce with fresh veggies, all wrapped in a soft tortilla. Spicy, smoky, and irresistible!",
+    // STARTERS
+    "Plain Fries": "Golden, crispy fries fried to perfection — light, salted, and irresistibly crunchy. The perfect classic side for any meal!",
+    "Loaded Fries": "Our Loaded Fries — a generous portion of crispy fries smothered in creamy sauces, fresh toppings, and melted cheese. A indulgent treat in every bite!",
+    "Pizza Fries": "Our Pizza Fries — crispy fries topped with pizza sauce, melted cheese, and fresh toppings. The ultimate mashup of two favorites!",
+    "Dragon Shots": "Our Dragon Shots — crispy, juicy chicken bites with a fiery kick. Bold, spicy, and impossible to stop eating!",
+    "Oven Baked Wings": "Our Oven Baked Wings — tender, juicy chicken wings baked to golden perfection with our signature seasoning. Crispy outside, succulent inside!",
+    "Peri-Peri Wings": "Our Peri-Peri Wings — tender chicken wings marinated in bold, fiery peri-peri sauce and cooked to perfection. A spicy, smoky delight!",
+    "Hot Wings": "Our Hot Wings — crispy chicken wings coated in a bold, fiery hot sauce. For those who love the heat — irresistibly spicy and delicious!",
+    "Honey Chili Wings": "Our Honey Chili Wings — crispy chicken wings glazed in a perfect sweet and spicy honey chili sauce. The ultimate balance of heat and sweetness!",
+    "Cheese Sticks": "Our Cheese Sticks — golden, crispy on the outside with a gooey, melted cheese center. A perfect snack for cheese lovers!",
+    "Meat Sticks": "Our Meat Sticks — juicy, seasoned minced meat on skewers, grilled to perfection. Bold, aromatic, and absolutely delicious!",
+    "Nuggets": "Our Chicken Nuggets — bite-sized crispy fried chicken pieces, tender on the inside and golden on the outside. A timeless classic everyone loves!",
 };
 function openItemSheet(item, imgUrl) {
     const desc = itemDescriptions[item.name];
@@ -4549,7 +4612,8 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     function renderAuditUI(orders) {
     const div = document.getElementById('rider-audit-selection'); 
     div.innerHTML = "";
-    (activeBranch || BRANCH_CONFIG.MULTAN).riders.forEach(r => {
+    const branchForAudit = kitchenBranchFilter !== 'ALL' ? (BRANCH_CONFIG[kitchenBranchFilter] || BRANCH_CONFIG.MULTAN) : (activeBranch || BRANCH_CONFIG.MULTAN);
+    branchForAudit.riders.forEach(r => {
         const b = document.createElement('button'); 
         b.className = "rider-btn"; 
         b.innerText = r;
@@ -4694,66 +4758,80 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 let grid = document.createElement('div'); 
                 grid.className = 'grid';
                 filteredItems.forEach(item => {
-                    let fBg = imgMap["pizza"];
-                    let itemNameLower = item.name.toLowerCase();
-                    
-                    if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
-                    else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
-                    else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
-                    else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
-                    else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
-                    else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
-                    else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
-                    else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
-                    else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
-                    else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
-                    else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
-                    else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
-                    else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
-                    else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
-                    else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
-                    else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
-                    else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
-                    else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
-                    else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
-                    else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
-                    else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
-                    else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
-                    else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
-                    else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
-                    else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
-                    else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
-                    else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
-                    else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
-                    else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
-                    else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
-                    else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
-                    else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
-                    else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
-                    else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
-                    else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
-                    else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
-                    else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
-                    else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
-                    else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
-                    else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
-                    else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
-                    else if (itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
-                    else if (itemNameLower.includes('doner')) fBg = imgMap["doner"];
-                    else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
-                        if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
-                        else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
-                        else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
-                        else fBg = imgMap["oven baked wings"];
-                    }
-                    else {
-                        for (let key in imgMap) {
-                            if (itemNameLower.includes(key.toLowerCase())) {
-                                fBg = imgMap[key];
-                                break;
-                            }
-                        }
-                    }
+    let fBg = imgMap["pizza"];
+    let itemNameLower = item.name.toLowerCase();
+    
+    if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
+    else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
+    else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
+    else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
+    else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
+    else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
+    else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
+    else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
+    else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
+    else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
+    else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
+    else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
+    else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
+    else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
+    else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
+    else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
+    else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
+    else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
+    else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
+    else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
+    else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
+    else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
+    else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
+    else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
+    else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
+    else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
+    else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
+    else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
+    else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
+    else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
+    else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
+    else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
+    else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
+    else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
+    else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
+    else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
+    else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
+    else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
+    else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
+    else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
+    else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
+    else if (itemNameLower.includes('behari roll')) fBg = imgMap["behari roll"];
+    else if (itemNameLower.includes('peri peri wrap') || itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
+    else if (itemNameLower.includes('doner') || itemNameLower.includes('donar')) fBg = imgMap["doner"];
+    else if (itemNameLower.includes('cordon blue')) fBg = imgMap["cordon blue"];
+    else if (itemNameLower.includes('tarragon')) fBg = imgMap["tarragon"];
+    else if (itemNameLower.includes('moroccan')) fBg = imgMap["moroccan"];
+    else if (itemNameLower.includes('mushroom steak')) fBg = imgMap["mushroom steak"];
+    else if (itemNameLower.includes('mexican steak')) fBg = imgMap["mexican steak"];
+    else if (itemNameLower.includes('stuffed jalapeno steak')) fBg = imgMap["stuffed jalapeno steak"];
+    else if (itemNameLower.includes('pepper steak')) fBg = imgMap["pepper steak"];
+    else if (itemNameLower.includes('mint margarita')) fBg = imgMap["mint margarita"];
+    else if (itemNameLower.includes('lemonade')) fBg = imgMap["lemonade"];
+    else if (itemNameLower.includes('pina colada')) fBg = imgMap["pina colada"];
+    else if (itemNameLower.includes('red rose')) fBg = imgMap["red rose"];
+    else if (itemNameLower.includes('fresh lime')) fBg = imgMap["fresh lime"];
+    else if (itemNameLower.includes('blue lagoon')) fBg = imgMap["blue lagoon"];
+    else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
+        if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
+        else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
+        else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
+        else fBg = imgMap["oven baked wings"];
+    }
+    else {
+        for (let key in imgMap) {
+            if (itemNameLower.includes(key.toLowerCase())) {
+                fBg = imgMap[key];
+                break;
+            }
+        }
+    }
                     
                     let b = document.createElement('div'); 
                     b.className = 'btn btn-3d'; 
@@ -4882,5 +4960,6 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
     </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
