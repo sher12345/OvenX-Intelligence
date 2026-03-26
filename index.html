@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#8b0000">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href='data:application/manifest+json,{"name":"Oven X Official","short_name":"OvenX","start_url":".","display":"standalone","background_color":"#8b0000","theme_color":"#8b0000","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/5973/5973307.png","sizes":"512x512","type":"image/png","purpose":"any"}]}'>
@@ -17,36 +18,38 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
-            --red: #8b0000; 
-            --dark-red: #5e0000;
-            --orange: #f37021; 
-            --dark-orange: #b34e12;
-            --white: #ffffff;
-            --bg-body: #fff9f5; 
-            --radius-bubble: 25px;
-            --wa-green: #25D366;
-            --wa-dark: #1a9648;
-            --gold: #d4af37;
-            --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
-            --ramadan-green: #0d5c3b;
-            --ramadan-gold: #c9a227;
-            --inventory-indigo: #4f46e5;
-            --inventory-purple: #7c3aed;
-        }
-        * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
-        body.modal-active { overflow: hidden; height: 100vh; }
-        body { 
-            background: var(--bg-body) !important; 
-            color: #333 !important; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0; padding-bottom: 0; overflow-x: hidden;
-        }
+    --red: #c0392b; 
+    --dark-red: #922b21;
+    --orange: #e67e22; 
+    --dark-orange: #a04000;
+    --white: #ffffff;
+    --bg-body: #f8f5f2; 
+    --radius-bubble: 20px;
+    --wa-green: #25D366;
+    --wa-dark: #1a9648;
+    --gold: #d4af37;
+    --gold-gradient: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+    --ramadan-green: #0d5c3b;
+    --ramadan-gold: #c9a227;
+    --inventory-indigo: #4f46e5;
+    --inventory-purple: #7c3aed;
+    --card-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    --card-radius: 20px;
+}
+* { -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; box-sizing: border-box; }
+body.modal-active { overflow: hidden; height: 100vh; }
+body { 
+    background: var(--bg-body) !important; 
+    color: #1a1a1a !important; 
+    font-family: 'Outfit', 'Segoe UI', Roboto, sans-serif;
+    margin: 0; padding-bottom: 0; overflow-x: hidden;
+}
         #top-sticky-container {
-            position: sticky; top: 0; z-index: 2000;
-            display: none; flex-direction: column;
-            background: var(--bg-body);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+    position: sticky; top: 0; z-index: 2000;
+    display: none; flex-direction: column;
+    background: white;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+}
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
             40% {transform: translateY(-15px);}
@@ -74,12 +77,24 @@
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
         
         #gateway-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #2c0000, #000000);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 4000; text-align: center; color: white; overflow-y: auto; padding: 20px 0;
-        }
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(160deg, #1a0000 0%, #2d0a0a 50%, #1a0000 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 4000; text-align: center; color: white; overflow-y: auto; padding: 30px 0;
+}
+.gateway-logo { font-size: 58px; font-weight: 900; margin-bottom: 5px; letter-spacing: -2px; font-family: 'Outfit', sans-serif; }
+.gateway-logo span { color: var(--orange); }
+.gateway-options { display: flex; flex-direction: column; gap: 12px; width: 85%; max-width: 340px; }
+.gate-btn { 
+    padding: 18px 24px; border-radius: 14px; font-size: 15px; 
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: 'Outfit', sans-serif;
+}
+.btn-red { background: var(--red); color: white; box-shadow: 0 4px 0px var(--dark-red); }
+.btn-orange { background: var(--orange); color: white; box-shadow: 0 4px 0px var(--dark-orange); }
+.btn-outline { background: rgba(255,255,255,0.08); color: white; border: 1.5px solid rgba(255,255,255,0.2); box-shadow: none; backdrop-filter: blur(10px); }
 
+        
         /* --- LOYALTY CARD CSS --- */
         .loyalty-card { 
             background: rgba(10, 10, 10, 0.95); 
@@ -172,52 +187,152 @@
             margin-right: 8px;
         }
         
-        header { background: var(--red); color: white; padding: 12px 15px; text-align: center; border-bottom: 6px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
-        .header-back-btn { background: var(--orange); color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 900; font-size: 12px; box-shadow: 0 3px 0px var(--dark-orange); }
-        .logo { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1;}
-        .logo span { color: var(--orange); }
-        .tab-bar { background: #fff; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #eee; }
-        .tab-item { background: #f0f0f0; padding: 12px; border-radius: 20px; font-weight: 800; font-size: 13px; flex: 1; text-align: center; color: #777; transition: 0.2s; }
-        .tab-item.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(139, 0, 0, 0.3); }
+        header { 
+    background: var(--red); color: white; 
+    padding: 14px 18px; text-align: center; 
+    border-bottom: none;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 10px rgba(192,57,43,0.3);
+}
+.header-back-btn { 
+    background: var(--red); color: white; border: none; 
+    padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; 
+    box-shadow: 0 3px 0px var(--dark-red);
+}
+.logo { font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase; flex-grow: 1; letter-spacing: 1px; font-family: 'Outfit', sans-serif; }
+.logo span { color: #ffb347; }
+.tab-bar { 
+    background: #fff; padding: 10px 15px; 
+    display: flex; justify-content: center; gap: 8px; 
+    border-bottom: 1px solid #f0ece8;
+}
+.tab-item { 
+    background: #f5f0ed; padding: 10px 20px; border-radius: 10px; 
+    font-weight: 700; font-size: 13px; flex: 1; text-align: center; 
+    color: #999; transition: 0.2s; letter-spacing: 0.3px;
+}
+.tab-item.active { 
+    background: var(--red); color: white; 
+    box-shadow: 0 3px 10px rgba(192,57,43,0.25); 
+}
 
-        .menu-controls { background: white; padding: 10px 0; border-bottom: 2px solid #eee; }
-        .search-box-wrap { padding: 0 15px 10px; }
-        .search-input { width: 100%; border: 3px solid #f0f0f0; border-radius: 50px; padding: 12px 20px; font-size: 14px; font-weight: 700; box-sizing: border-box; }
-        .search-input:focus { border-color: var(--orange); }
-        .category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 10px; padding: 0 15px; scroll-behavior: smooth; }
-        .category-scroller::-webkit-scrollbar { display: none; }
-        .cat-pill { background: #f0f0f0; color: #777; padding: 8px 18px; border-radius: 50px; font-size: 12px; font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; border: 2px solid transparent; }
-        .cat-pill.active { background: var(--orange); color: white; box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3); }
-        .cat-pill.ramadan-cat {
-            background: linear-gradient(135deg, var(--ramadan-green) 0%, #1a7a52 100%) !important;
-            color: var(--ramadan-gold) !important;
-            border: 2px solid var(--ramadan-gold) !important;
-            animation: glow-pulse 2s infinite;
-        }
+        .menu-controls { background: white; padding: 12px 0 8px; border-bottom: 1px solid #f0ece8; }
+.search-box-wrap { padding: 0 15px 10px; }
+.search-input { 
+    width: 100%; border: 2px solid #f0ece8; border-radius: 12px; 
+    padding: 12px 18px; font-size: 14px; font-weight: 500; 
+    box-sizing: border-box; background: #faf8f6;
+    font-family: 'Outfit', sans-serif;
+}
+.search-input:focus { border-color: var(--orange); background: white; }
+.category-scroller { display: flex; overflow-x: auto; white-space: nowrap; gap: 8px; padding: 0 15px; scroll-behavior: smooth; }
+.category-scroller::-webkit-scrollbar { display: none; }
+.cat-pill { 
+    background: white; color: #666; padding: 7px 16px; 
+    border-radius: 10px; font-size: 12px; font-weight: 600; 
+    cursor: pointer; transition: 0.2s; flex-shrink: 0; 
+    border: 1.5px solid #ede8e4;
+    font-family: 'Outfit', sans-serif;
+}
+.cat-pill.active { 
+    background: var(--red); color: white; 
+    border-color: var(--red);
+    box-shadow: 0 3px 8px rgba(192,57,43,0.2); 
+}
 
-        .container, .deals-container { max-width: 600px; margin: auto; padding: 10px 15px 180px 15px; }
-        .section-title { font-weight: 900; color: var(--red); margin: 30px 0 15px; font-size: 26px; text-transform: uppercase; display: inline-block; border-bottom: 5px solid var(--orange); padding-bottom: 2px; scroll-margin-top: 180px; }
-        .section-title.ramadan-section {
-            color: var(--ramadan-green) !important;
-            border-bottom-color: var(--ramadan-gold) !important;
-            background: linear-gradient(90deg, transparent 0%, rgba(201, 162, 39, 0.1) 50%, transparent 100%);
-            padding: 10px 20px;
-            border-radius: 15px;
-        }
-        .deal-card { background: white; border-radius: 35px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 0px #eee; position: relative; border: 3px solid #fff; }
-        .deal-img-top { height: 180px; background-size: cover; background-position: center; border-bottom: 2px solid #f9f9f9; }
-        .deal-info-box { padding: 20px; text-align: center; }
-        .deal-badge { position: absolute; top: 12px; left: 12px; background: var(--orange); color: white; padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; box-shadow: 0 4px 0px var(--dark-orange); z-index: 5; }
-        .deal-title { font-weight: 900; color: var(--red); font-size: 22px; text-transform: uppercase; margin-bottom: 5px; }
-        .deal-desc { font-size: 13px; color: #666; font-weight: 600; line-height: 1.3; margin-bottom: 15px; display: block;}
-        .deal-price { color: var(--orange); font-weight: 900; font-size: 24px; display: block; margin-bottom: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn { background-color: #eee; background-size: cover; background-position: center; border: 3px solid #fff; border-radius: 25px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 160px; box-shadow: 0 6px 0px #ddd; position: relative; }
-        .item-label-box { background: rgba(255, 255, 255, 0.98); padding: 12px; width: 100%; box-sizing: border-box; text-align: center; border-top: 1px solid rgba(0,0,0,0.05); }
-        .price-tag { color: var(--orange); font-weight: 900; font-size: 13px; margin-top: 4px; }
+        .container, .deals-container { max-width: 600px; margin: auto; padding: 20px 15px 180px 15px; }
+        
+        .deal-card { 
+    background: white; border-radius: var(--card-radius); overflow: hidden; 
+    margin-bottom: 20px; box-shadow: var(--card-shadow); 
+    position: relative; border: none;
+}
+.deal-img-top { height: 200px; background-size: cover; background-position: center; }
+.deal-info-box { padding: 16px 18px 18px; text-align: left; }
+.deal-badge { 
+    position: absolute; top: 14px; left: 14px; 
+    background: var(--orange); color: white; 
+    padding: 5px 12px; border-radius: 8px; 
+    font-size: 10px; font-weight: 700; 
+    box-shadow: none; z-index: 5;
+    letter-spacing: 0.5px;
+    font-family: 'Outfit', sans-serif;
+}
+.deal-title { 
+    font-weight: 800; color: #1a1a1a; font-size: 18px; 
+    text-transform: uppercase; margin-bottom: 4px; 
+    letter-spacing: 0.3px; font-family: 'Outfit', sans-serif;
+}
+.deal-desc { font-size: 13px; color: #888; font-weight: 400; line-height: 1.4; margin-bottom: 12px; display: block; }
+.deal-price { 
+    color: var(--red); font-weight: 800; font-size: 22px; 
+    display: block; margin-bottom: 14px; 
+    font-family: 'Outfit', sans-serif;
+}
+.section-title { 
+    font-weight: 700; color: #888; margin: 28px 0 12px; 
+    font-size: 11px; text-transform: uppercase; 
+    display: flex; align-items: center; gap: 10px;
+    letter-spacing: 3px;
+    font-family: 'Outfit', sans-serif;
+    scroll-margin-top: 260px;
+    position: relative;
+}
+.section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e8e2dc;
+}
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn { 
+    background-color: #eee; background-size: cover; background-position: center; 
+    border: none; border-radius: 14px; overflow: hidden; display: flex; 
+    flex-direction: column; justify-content: flex-end; 
+    height: 150px; min-height: unset; width: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; 
+    transition: transform 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn::before { 
+    content: ''; position: absolute; inset: 0; 
+    background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.7) 100%); 
+    z-index: 1; 
+}
+.item-label-box { 
+    position: relative; z-index: 2;
+    background: transparent; 
+    padding: 8px 10px 10px; 
+    width: 100%; box-sizing: border-box; 
+    text-align: left; 
+    border-top: none; 
+    color: white; font-weight: 700; font-size: 13px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.price-tag { 
+    display: inline-block;
+    color: white; font-weight: 700; font-size: 11px; margin-top: 3px; 
+    background: var(--orange); padding: 2px 8px; border-radius: 20px;
+    text-shadow: none; letter-spacing: 0.3px;
+}
         .size-feedback { background: var(--orange) !important; color: white !important; box-shadow: 0 4px 0px var(--dark-orange) !important; }
-        #cart-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; background: var(--red); color: white; padding: 12px 20px; border-radius: 50px; display: none; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
-        .checkout-btn { background: var(--orange); padding: 12px 25px; border-radius: 30px; color: white; font-weight: 900; font-size: 15px; box-shadow: 0 5px 0px var(--dark-orange); }
+        #cart-bar { 
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+    width: 90%; max-width: 420px; 
+    background: #1a1a1a; 
+    color: white; padding: 14px 18px; border-radius: 16px; 
+    display: none; justify-content: space-between; align-items: center; 
+    z-index: 1000; box-shadow: 0 8px 30px rgba(0,0,0,0.25); 
+    border: none;
+}
+.checkout-btn { 
+    background: var(--orange); padding: 10px 22px; border-radius: 12px; 
+    color: white; font-weight: 700; font-size: 14px; 
+    box-shadow: none; letter-spacing: 0.3px;
+    font-family: 'Outfit', sans-serif;
+}
         
         #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay { 
             position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); 
@@ -617,6 +732,47 @@
         .steak-deal-badge { position: absolute; top: -10px; right: -10px; background: linear-gradient(135deg, #5d3a1a, #8B4513); color: #c9a227; padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; z-index: 10; border: 2px solid #c9a227; }
         .steak-btn { background: linear-gradient(135deg, #5d3a1a, #8B4513) !important; color: #c9a227 !important; box-shadow: 0 6px 0px #3d2010 !important; font-weight: 900; }
         .bwp-item-ribbon { position: absolute; top: 7px; left: 7px; background: #5d3a1a; color: #c9a227; font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 10px; z-index: 2; border: 1px solid #c9a227; }
+    /* BOTTOM SHEET ITEM DETAIL */
+#item-detail-sheet {
+    position: fixed; bottom: 0; left: 0; width: 100%; 
+    background: white; border-radius: 28px 28px 0 0;
+    z-index: 9100; transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+}
+#item-detail-sheet.open { transform: translateY(0); }
+#item-sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 9099; display: none; backdrop-filter: blur(4px);
+}
+#item-sheet-backdrop.open { display: block; }
+.sheet-img {
+    width: 100%; height: 240px; object-fit: cover;
+    border-radius: 28px 28px 0 0; background-size: cover;
+    background-position: center;
+}
+.sheet-content { padding: 20px 20px 30px; }
+.sheet-name { font-size: 22px; font-weight: 900; color: #1a1a1a; margin: 0 0 6px; font-family: 'Outfit', sans-serif; }
+.sheet-price { font-size: 18px; font-weight: 700; color: var(--orange); margin: 0 0 14px; }
+.sheet-desc { font-size: 14px; color: #666; line-height: 1.6; font-weight: 400; margin-bottom: 24px; font-family: 'Outfit', sans-serif; }
+.sheet-add-btn { 
+    width: 100%; padding: 18px; background: var(--red); color: white;
+    border: none; border-radius: 16px; font-size: 16px; font-weight: 800;
+    font-family: 'Outfit', sans-serif; cursor: pointer; letter-spacing: 0.5px;
+    box-shadow: 0 4px 0px var(--dark-red);
+}
+.sheet-close { 
+    position: absolute; top: 15px; right: 15px;
+    background: rgba(0,0,0,0.4); color: white; border: none;
+    width: 34px; height: 34px; border-radius: 50%; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px); z-index: 10;
+}
+.sheet-handle {
+    width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px;
+    margin: 12px auto 0; 
+}
     </style>
 </head>
 <body>
@@ -3046,6 +3202,60 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         "water small": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
         "water large": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
     };
+    const itemDescriptions = {
+    "CM Grilled": "Savour the perfect balance of flavours with our CM Grilled Burger — a juicy, flame-grilled Single CM patty with cheese, lettuce, tomato, onion, and secret sauce, all on a soft, buttery potato bun.",
+    "Smokey Grilled": "Indulge in our Smokey Grilled Burger — double flame-grilled thigh fillets, cheese, lettuce, tomato, onion, and a smoky, tangy secret sauce, all on a soft potato bun. Bold flavours in every bite!",
+    "Peri Peri Grilled": "Spice up your bite with our Peri-Peri Grilled Burger — double grilled chest fillets, cheese, lettuce, tomato, onion, and a bold blend of peri-peri and mustard sauce, all on a soft potato bun. Fiery, flavorful, and satisfying!",
+    "Drizzler X": "Savor the bold taste of our Drizzler X Grilled Burger — double grilled chest fillets, cheese, lettuce, tomato, onion, and pickled cucumber, drizzled with Mexican and mustard sauce, all on a soft potato bun. A flavorful bite every time!",
+    "Jalapeno Blaze": "Turn up the heat with our Jalapeno Blaze — two juicy grilled patties, cheese, iceberg lettuce, onion, jalapeños, tomato, and our secret sauce, all wrapped in a premium potato bun. Served with crispy fries for the ultimate kick!",
+    "Mexi Fiesta": "Experience bold flavors with our Mexi Fiesta — two juicy grilled patties, cheese, iceberg lettuce, onion, tomato, and our secret sauce, all wrapped in a premium potato bun. Served with crispy fries for the perfect feast!",
+    "OvenX Flaming Pasta": "Indulge in our OvenX Flaming Pasta — elbow macaroni tossed in pizza sauce and mayonnaise, loaded with chicken, capsicum, black olives, and mushrooms, topped with melty cheese and baked to perfection. A rich, flavorful delight!",
+    "Fire Kissed Pasta": "Savor the heat with our Fire Kissed Pasta — elbow macaroni tossed in pizza sauce and mayonnaise, loaded with crispy chicken, capsicum, black olives, and mushrooms, topped with melty cheese and baked to perfection. A fiery, cheesy delight!",
+    "Alfredo Pasta": "Indulge in our Alfredo Pasta — fettuccine macaroni coated in creamy white sauce, topped with grilled chicken steak fillets and garnished with black olives for a rich, flavorful bite. Pure creamy perfection!",
+    "X-Special Pasta": "Experience bold flavors with our X-Special Pasta — two juicy grilled patties, cheese, iceberg lettuce, onion, tomato, and our secret sauce, all wrapped in a premium potato bun.",
+    "Mexican Steak": "Savor the bold flavors of our Mexican Steak — two grilled chicken fillets smothered in zesty Mexican sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A spicy, satisfying feast!",
+    "Moroccan Steak": "Enjoy the rich flavors of our Moroccan Steak — two grilled chicken fillets drizzled with aromatic Moroccan sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. Mildly spicy and utterly delicious!",
+    "Tarragon Steak": "Indulge in our Tarragon Steak — two grilled chicken fillets topped with creamy, aromatic tarragon sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A mild, flavorful delight!",
+    "Mushroom Steak": "Delight in our Mushroom Steak — two grilled chicken fillets smothered in rich, creamy white sauce with mushrooms, served with your choice of mashed potatoes, green vegetables, or crispy fries. A smooth, savory, non-spicy treat!",
+    "Cordon Blue Steak": "Served with your choice of mashed potatoes, green vegetables, or crispy fries. A delightful, non-spicy indulgence!",
+    "Stuffed Jalapeno Steak": "Turn up the heat with our Stuffed Jalapeno Steak — two fried chicken fillets stuffed with melty cheese and crushed jalapeños, topped with rich cheese sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. A spicy, cheesy delight!",
+    "Pepper Steak": "Savor the bold flavors of our Pepper Steak — two grilled chicken fillets topped with rich, creamy black pepper (white) sauce, served with your choice of mashed potatoes, green vegetables, or crispy fries. Mildly spicy and irresistibly delicious!",
+    "Kabab Crust": "Experience the perfect stuffed kabab with our stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
+    "Crown Crust": "Experience the perfect stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
+    "Cheese Crust": "Experience the perfect stuffed cheese with our stuffed crust Pizza — a crispy thick crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!",
+    "Crusti Thin": "Experience the perfect crunch with our CrustiThin Pizza — a crispy thin crust topped with customized sauces and fresh toppings, crafted just the way you like it. Light, crispy, and full of flavor!"
+};
+function openItemSheet(item, imgUrl) {
+    const desc = itemDescriptions[item.name];
+    
+    // If no description, skip sheet and go straight to order flow
+    if (!desc) { openOrderFlow(item); return; }
+    
+    // Store item for later
+    window._sheetItem = item;
+    
+    // Populate sheet
+    document.getElementById('sheet-img').style.backgroundImage = `url('${imgUrl}')`;
+    document.getElementById('sheet-name').innerText = item.name;
+    document.getElementById('sheet-price').innerText = typeof item.price === 'object' ? 'Select Size' : 'Rs ' + item.price;
+    document.getElementById('sheet-desc').innerText = desc;
+    
+    // Open
+    document.getElementById('item-sheet-backdrop').classList.add('open');
+    document.getElementById('item-detail-sheet').classList.add('open');
+    setScrollLock(true);
+}
+
+function closeItemSheet() {
+    document.getElementById('item-sheet-backdrop').classList.remove('open');
+    document.getElementById('item-detail-sheet').classList.remove('open');
+    setScrollLock(false);
+}
+
+function proceedFromSheet() {
+    closeItemSheet();
+    setTimeout(() => openOrderFlow(window._sheetItem), 300);
+}
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     
@@ -4100,7 +4310,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 let priceHtml = ""; 
                 if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
                 let riderHtml = ""; 
-                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(activeBranch || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
 // Build customer info display
@@ -4549,7 +4759,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     b.className = 'btn btn-3d'; 
                     b.style.backgroundImage = `url('${fBg}')`;
                     b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
-                    b.onclick = () => openOrderFlow(item); 
+                    b.onclick = () => openItemSheet(item, fBg); 
                     grid.appendChild(b);
                 }); 
                 mC.appendChild(grid);
@@ -4659,5 +4869,18 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<!-- ITEM DETAIL BOTTOM SHEET -->
+<div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
+<div id="item-detail-sheet">
+    <button class="sheet-close" onclick="closeItemSheet()">✕</button>
+    <div id="sheet-img" class="sheet-img"></div>
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h2 class="sheet-name" id="sheet-name"></h2>
+        <p class="sheet-price" id="sheet-price"></p>
+        <p class="sheet-desc" id="sheet-desc"></p>
+        <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
+    </div>
+</div>
 </body>
 </html>
