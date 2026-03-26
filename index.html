@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3617,8 +3618,9 @@ function proceedFromSheet() {
     if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
 }
     
-    function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; 
-      function renderTakeawayWelcome() {
+    function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
+
+function renderTakeawayWelcome() {
     document.getElementById('welcome-msg').innerHTML = "Welcome to <b>Oven X " + (activeBranch ? activeBranch.name : '') + "</b>! 👋<br><small style='color:#888;'>How would you like your order?</small>";
     const container = document.getElementById('service-options-container');
     container.innerHTML = `
@@ -3626,7 +3628,6 @@ function proceedFromSheet() {
         <button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#c0392b; box-shadow: 0 6px 0px #922b21;">🚗 Car Dine — Stay in Car</button>
     `;
 }
-    }
 function exitToGateway() { 
     playClick('pop'); 
     document.getElementById('top-sticky-container').style.display = 'none'; 
