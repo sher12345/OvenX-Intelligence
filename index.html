@@ -4028,7 +4028,7 @@ if (orderType === 'Takeaway') {
         }
     }
 
-    let headerInfo = `*OVEN X - ${orderType.toUpperCase()} ORDER*`; 
+    let headerInfo = `*OVEN X - ${window.carPlateNumber ? 'CAR DINE' : orderType.toUpperCase()} ORDER*`; 
 
 if (orderType === 'Dine-In' && tableNum) {
     headerInfo += `\n*TABLE: ${tableNum}*`;
