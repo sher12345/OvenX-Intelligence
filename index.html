@@ -4091,12 +4091,17 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     
     function startCheckout() {
     playClick('thud');
-    window.carPlateNumber = null;
-    window.takeawayCustomerName = null;
-    window.takeawayCustomerPhone = null;
     document.getElementById('overlay-screen').style.display = 'block';
     setScrollLock(true);
-    renderServiceTypeStep();
+
+    if (orderType === 'Takeaway') {
+        renderFinalSummary(0);
+    } else {
+        window.carPlateNumber = null;
+        window.takeawayCustomerName = null;
+        window.takeawayCustomerPhone = null;
+        renderServiceTypeStep();
+    }
 }
     
 
