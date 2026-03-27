@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1940,7 +1941,8 @@ function openItemSheet(item, imgUrl) {
     window._sheetItem = item;
     
     // Populate sheet
-    document.getElementById('sheet-img').style.backgroundImage = `url('${imgUrl}')`;
+    const sheetImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : imgUrl;
+document.getElementById('sheet-img').style.backgroundImage = `url('${sheetImg}')`;
     document.getElementById('sheet-name').innerText = item.name;
     document.getElementById('sheet-price').innerText = typeof item.price === 'object' ? 'Select Size' : 'Rs ' + item.price;
     document.getElementById('sheet-desc').innerText = desc;
@@ -3430,7 +3432,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             card.innerHTML = `
                 <div class="steak-deal-badge">🥩 BWP EXCLUSIVE</div>
                 <div class="deal-badge" style="background:#5d3a1a; box-shadow:0 4px 0px #3d2010;">${deal.badge || 'BWP'}</div>
-                <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+                <div class="deal-img-top" style="background-image: url('${(window._adminImgOverrides && window._adminImgOverrides[deal.name]) ? window._adminImgOverrides[deal.name] : deal.image}')">
                 <div class="deal-info-box">
                     <div class="deal-title" style="color:#5d3a1a;">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
@@ -3447,7 +3449,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             card.className = "deal-card";
             card.innerHTML = `
                 <div class="deal-badge">${deal.badge || 'HOT'}</div>
-                <div class="deal-img-top" style="background-image: url('${deal.image}')"></div>
+                <div class="deal-img-top" style="background-image: url('${(window._adminImgOverrides && window._adminImgOverrides[deal.name]) ? window._adminImgOverrides[deal.name] : deal.image}')">
                 <div class="deal-info-box">
                     <div class="deal-title">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
@@ -3562,8 +3564,10 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     }
                     
                     let b = document.createElement('div'); 
-                    b.className = 'btn btn-3d'; 
-                    b.style.backgroundImage = `url('${fBg}')`;
+b.className = 'btn btn-3d';
+// Use admin override image if available
+const overrideImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : null;
+b.style.backgroundImage = `url('${overrideImg || fBg}')`;
                     const displayPrice = getItemPrice(item);
 b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
                     b.onclick = () => openItemSheet(item, fBg); 
@@ -4100,6 +4104,7 @@ async function applyAdminOverrides() {
     data.forEach(r => { _overrideMap[r.item_name] = r; });
     window._adminImgOverrides = window._adminImgOverrides || {};
     data.forEach(r => { if (r.image) window._adminImgOverrides[r.item_name] = r.image; });
+    console.log('Image overrides loaded:', window._adminImgOverrides); // ← ADD THIS
   } catch(e) { console.error('applyAdminOverrides:', e); }
 }
 
