@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -896,6 +895,222 @@ body {
   .lp-footer { padding: 40px 20px 24px; }
   .lp-footer-links { gap: 24px; }
 }
+/* ══ TRIGGER BUTTON ══ */
+.ar-trigger-btn {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; padding:14px;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  color:white; border:none; border-radius:14px;
+  font-family:'Outfit',sans-serif; font-size:15px; font-weight:700;
+  cursor:pointer; margin-bottom:10px;
+  box-shadow:0 4px 20px rgba(99,102,241,0.4);
+  position:relative; overflow:hidden;
+}
+.ar-trigger-btn .ar-badge {
+  position:absolute; top:6px; right:8px;
+  background:#48bb78; color:white;
+  font-size:8px; font-weight:900; letter-spacing:1px;
+  padding:2px 7px; border-radius:4px;
+}
+
+/* ══ OVERLAY ══ */
+#ar-overlay {
+  position:fixed; inset:0; z-index:99999;
+  display:none; background:#000;
+  font-family:'Outfit',sans-serif;
+}
+#ar-overlay.active { display:block; }
+
+#ar-canvas { position:absolute; inset:0; width:100%; height:100%; display:none; }
+#ar-video  { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; }
+#ar-demo-bg {
+  position:absolute; inset:0; display:none;
+  background:radial-gradient(ellipse at 30% 65%,rgba(120,80,40,.4) 0%,transparent 55%),
+             radial-gradient(ellipse at 70% 35%,rgba(80,60,40,.3) 0%,transparent 50%),
+             linear-gradient(180deg,#1a0e06 0%,#3d2810 50%,#2c1a08 100%);
+}
+
+/* ══ LOADING ══ */
+#ar-loading {
+  position:absolute; inset:0; z-index:30; background:#000;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+}
+#ar-loading.hidden { display:none; }
+.ar-spin {
+  width:54px; height:54px;
+  border:3px solid rgba(99,102,241,.2); border-top-color:#6366f1;
+  border-radius:50%; animation:ar-spin .9s linear infinite;
+}
+@keyframes ar-spin { to{transform:rotate(360deg)} }
+#ar-loading h3 { color:white; font-size:18px; font-weight:800; }
+#ar-loading p  { color:rgba(255,255,255,.5); font-size:13px; text-align:center; padding:0 30px; }
+
+/* ══ NOT SUPPORTED ══ */
+#ar-nosupport {
+  position:absolute; inset:0; z-index:30;
+  background:linear-gradient(160deg,#1a0000,#0d0d1a);
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:14px; padding:30px; text-align:center;
+}
+#ar-nosupport.show { display:flex; }
+#ar-nosupport .ns-icon { font-size:60px; }
+#ar-nosupport h3 { color:white; font-size:20px; font-weight:900; }
+#ar-nosupport p  { color:rgba(255,255,255,.55); font-size:13px; line-height:1.7; max-width:300px; }
+.ns-devices {
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  border-radius:14px; padding:14px 18px; width:100%; max-width:300px; text-align:left;
+}
+.ns-devices span { color:rgba(255,255,255,.4); font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; display:block; margin-bottom:8px; }
+.ns-devices li { color:rgba(255,255,255,.6); font-size:12px; margin:5px 0; list-style:none; }
+.ns-btn { padding:14px; border:none; border-radius:12px; font-family:'Outfit',sans-serif; font-size:14px; font-weight:700; cursor:pointer; width:100%; max-width:300px; }
+.ns-primary { background:linear-gradient(135deg,#c0392b,#e05c2b); color:white; }
+.ns-sec     { background:rgba(255,255,255,.08); color:rgba(255,255,255,.6); margin-top:4px; }
+
+/* ══ HEADER ══ */
+#ar-header {
+  position:absolute; top:0; left:0; right:0; padding:50px 18px 16px;
+  display:flex; align-items:center; justify-content:space-between; z-index:20;
+  background:linear-gradient(to bottom,rgba(0,0,0,.65) 0%,transparent 100%);
+  pointer-events:none;
+}
+#ar-header>* { pointer-events:all; }
+#ar-title { color:white; font-size:16px; font-weight:800; text-shadow:0 2px 8px rgba(0,0,0,.5); max-width:200px; }
+#ar-mode-badge {
+  background:rgba(99,102,241,.3); border:1px solid rgba(99,102,241,.5);
+  color:white; font-size:10px; font-weight:700; letter-spacing:1.5px;
+  padding:4px 10px; border-radius:20px; backdrop-filter:blur(8px);
+}
+#ar-close {
+  width:40px; height:40px; border-radius:50%;
+  background:rgba(255,255,255,.12); border:1.5px solid rgba(255,255,255,.25);
+  color:white; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* ══ CATEGORY BADGE ══ */
+#ar-cat-badge {
+  position:absolute; top:110px; left:18px; z-index:20;
+  background:rgba(0,0,0,.5); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+  color:white; font-size:11px; font-weight:700;
+  padding:5px 12px; border-radius:20px;
+}
+
+/* ══ SCAN HINT ══ */
+#ar-scan-hint {
+  position:absolute; bottom:215px; left:50%; transform:translateX(-50%);
+  z-index:20; text-align:center; transition:opacity .5s; pointer-events:none;
+}
+#ar-scan-hint.hidden { opacity:0; }
+.scan-shape {
+  margin:0 auto 12px;
+  animation:scan-pulse 1.6s ease-in-out infinite;
+  border:2px solid rgba(99,102,241,.75); border-radius:50%;
+}
+@keyframes scan-pulse {
+  0%,100%{opacity:.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.07);}
+}
+#ar-scan-hint p { color:rgba(255,255,255,.85); font-size:13px; font-weight:600; text-shadow:0 1px 4px rgba(0,0,0,.5); }
+
+/* ══ ITEM LAYER ══ */
+#ar-item-layer { position:absolute; inset:0; z-index:15; pointer-events:none; display:none; }
+#ar-item-layer.active { display:block; }
+#ar-item-wrap { position:absolute; cursor:grab; touch-action:none; pointer-events:all; }
+#ar-item-wrap:active { cursor:grabbing; }
+#ar-item-img {
+  display:block; pointer-events:none;
+  user-select:none; -webkit-user-drag:none;
+}
+
+/* ══ EFFECTS CANVAS ══ */
+#ar-fx-canvas {
+  position:absolute; inset:0; pointer-events:none; z-index:16; display:none;
+}
+#ar-fx-canvas.active { display:block; }
+
+/* ══ SIZE BUTTONS ══ */
+#ar-sizes {
+  position:absolute; bottom:112px; left:0; right:0;
+  display:flex; justify-content:center; gap:9px;
+  z-index:20; padding:0 16px;
+}
+.ar-sz {
+  flex:1; max-width:90px; padding:10px 5px; border-radius:13px;
+  background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(12px); color:white;
+  font-family:'Outfit',sans-serif; font-size:11px; font-weight:700;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.ar-sz.on {
+  background:rgba(230,126,34,.35); border-color:rgba(230,126,34,.8);
+  box-shadow:0 0 18px rgba(230,126,34,.25);
+}
+.ar-sz .sz-n { font-size:13px; font-weight:900; }
+.ar-sz .sz-i { font-size:10px; opacity:.55; margin-top:1px; }
+.ar-sz .sz-p { font-size:11px; color:#f6ad55; margin-top:2px; font-weight:800; }
+
+/* ══ BOTTOM ══ */
+#ar-bottom {
+  position:absolute; bottom:0; left:0; right:0;
+  padding:14px 18px 42px; z-index:20;
+  display:flex; gap:10px; align-items:center;
+  background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 100%);
+}
+#ar-add-btn {
+  flex:1; padding:15px;
+  background:linear-gradient(135deg,#c0392b,#e05c2b);
+  color:white; border:none; border-radius:14px;
+  font-family:'Outfit',sans-serif; font-size:15px; font-weight:800;
+  cursor:pointer; box-shadow:0 4px 0px #922b21;
+}
+#ar-add-btn:active { transform:translateY(2px); box-shadow:0 2px 0px #922b21; }
+#ar-flip-btn {
+  width:50px; height:50px; border-radius:13px; flex-shrink:0;
+  background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.2);
+  color:white; font-size:20px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* ══ PILL ══ */
+#ar-pill {
+  position:absolute; top:112px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.55); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+  color:white; font-size:12px; font-weight:600;
+  padding:5px 14px; border-radius:20px;
+  z-index:20; white-space:nowrap;
+  opacity:0; transition:opacity .3s; pointer-events:none;
+}
+#ar-pill.show { opacity:1; }
+
+#ar-tip {
+  position:absolute; bottom:172px; left:50%; transform:translateX(-50%);
+  color:rgba(255,255,255,.4); font-size:11px; z-index:20;
+  white-space:nowrap; pointer-events:none;
+}
+
+/* Tap hint (WebXR) */
+#ar-tap-hint {
+  position:absolute; bottom:205px; left:50%; transform:translateX(-50%);
+  background:rgba(99,102,241,.3); border:1px solid rgba(99,102,241,.6);
+  color:white; font-size:13px; font-weight:700;
+  padding:8px 18px; border-radius:20px; z-index:20;
+  display:none; pointer-events:none;
+}
+#ar-tap-hint.show { display:block; }
+
+/* ══ GLOW RINGS (for pizza/burger placed) ══ */
+#ar-glow {
+  position:absolute; border-radius:50%;
+  pointer-events:none; z-index:14;
+  display:none;
+  animation:glow-pulse 2s ease-in-out infinite;
+}
+@keyframes glow-pulse {
+  0%,100%{opacity:.4;}
+  50%{opacity:.75;}
+}
     </style>
 </head>
 <body>
@@ -1517,6 +1732,7 @@ body {
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   // ══════════════════════════════════════════
@@ -1946,6 +2162,16 @@ document.getElementById('sheet-img').style.backgroundImage = `url('${sheetImg}')
     document.getElementById('sheet-name').innerText = item.name;
     document.getElementById('sheet-price').innerText = typeof item.price === 'object' ? 'Select Size' : 'Rs ' + item.price;
     document.getElementById('sheet-desc').innerText = desc;
+    // ── ADD THIS BLOCK ──
+  const existingAR = document.getElementById('sheet-ar-btn');
+  if (existingAR) existingAR.remove();
+  const arBtn = document.createElement('button');
+  arBtn.id = 'sheet-ar-btn';
+  arBtn.className = 'ar-trigger-btn';
+  arBtn.innerHTML = '<span>🔮</span><span>View in AR — Place on Your Table</span><span class="ar-badge">AR</span>';
+  arBtn.onclick = () => openAR({ name: item.name, image: imgUrl, price: item.price });
+  document.querySelector('.sheet-add-btn').insertAdjacentElement('beforebegin', arBtn);
+  
     
     // Open
     document.getElementById('item-sheet-backdrop').classList.add('open');
@@ -3599,7 +3825,735 @@ b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="pr
     }
 
     function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
-    
+    // ════════════════════════════════════════════════════════
+// CATEGORY DEFINITIONS
+// Each category gets its own: sizing, AR transform style,
+// scan hint shape, effects (steam/glow/etc), display name
+// ════════════════════════════════════════════════════════
+const CATS = {
+  pizza: {
+    label:'🍕 Pizza',
+    // Sizes map (key → real dimensions)
+    sizes: {
+      S:  { label:'Small',   inches:6,  meters:0.152, px_base:200 },
+      M:  { label:'Medium',  inches:9,  meters:0.229, px_base:300 },
+      L:  { label:'Large',   inches:12, meters:0.305, px_base:400 },
+      Med:{ label:'Medium',  inches:9,  meters:0.229, px_base:300 },
+      Large:{label:'Large',  inches:12, meters:0.305, px_base:400 },
+    },
+    defaultSize: 'M',
+    // CSS transform applied to image in fallback mode
+    transform: 'perspective(700px) rotateX(38deg)',
+    transformOrigin: 'center bottom',
+    // clip shape: 'circle' | 'rect' | 'tall-rect'
+    shape: 'circle',
+    // shadow
+    shadow: 'drop-shadow(0 24px 32px rgba(0,0,0,0.8))',
+    // effects: 'steam' | 'glow' | 'both' | 'none'
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.95)','rgba(210,225,255,0.4)'],
+    steamCount: 60,
+    // scan hint shape dimensions (ellipse)
+    scanW: 120, scanH: 50,
+    scanText: 'Point camera at your table\nMove slowly to detect surface',
+    // 3D shape: 'disc' | 'box' | 'cylinder'
+    xrShape: 'disc',
+  },
+  burger: {
+    label:'🍔 Burger',
+    sizes: {
+      _: { label:'Regular', inches:4, meters:0.10, px_base:180 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(600px) rotateX(15deg)',
+    transformOrigin: 'center bottom',
+    shape: 'circle',
+    shadow: 'drop-shadow(0 18px 25px rgba(0,0,0,0.75))',
+    effects: 'steam',
+    steamColor: ['rgba(255,240,200,0.9)','rgba(255,200,100,0.3)'],
+    steamCount: 35,
+    scanW: 90, scanH: 45,
+    scanText: 'Point camera at your table\nTap to place burger',
+    xrShape: 'disc',
+  },
+  fries: {
+    label:'🍟 Fries',
+    sizes: {
+      Reg:  { label:'Regular', inches:3,  meters:0.08, px_base:150 },
+      Large:{ label:'Large',   inches:4,  meters:0.11, px_base:200 },
+    },
+    defaultSize: 'Reg',
+    transform: 'perspective(500px) rotateX(10deg)',
+    transformOrigin: 'center bottom',
+    shape: 'tall-rect',
+    shadow: 'drop-shadow(0 14px 20px rgba(0,0,0,0.7))',
+    effects: 'steam',
+    steamColor: ['rgba(255,250,210,0.9)','rgba(255,220,100,0.3)'],
+    steamCount: 25,
+    scanW: 70, scanH: 38,
+    scanText: 'Point camera at your table',
+    xrShape: 'box',
+  },
+  wrap: {
+    label:'🌯 Wrap',
+    sizes: {
+      _: { label:'Regular', inches:8, meters:0.20, px_base:240 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(600px) rotateX(20deg) rotateZ(-5deg)',
+    transformOrigin: 'center center',
+    shape: 'tall-rect',
+    shadow: 'drop-shadow(0 16px 22px rgba(0,0,0,0.75))',
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.9)','rgba(200,255,200,0.3)'],
+    steamCount: 20,
+    scanW: 100, scanH: 42,
+    scanText: 'Point camera at your table',
+    xrShape: 'box',
+  },
+  pasta: {
+    label:'🍝 Pasta',
+    sizes: {
+      _: { label:'Bowl', inches:7, meters:0.18, px_base:250 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(650px) rotateX(35deg)',
+    transformOrigin: 'center bottom',
+    shape: 'circle',
+    shadow: 'drop-shadow(0 20px 28px rgba(0,0,0,0.8))',
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.95)','rgba(255,220,180,0.4)'],
+    steamCount: 50,
+    scanW: 110, scanH: 48,
+    scanText: 'Point camera at your table',
+    xrShape: 'disc',
+  },
+  sandwich: {
+    label:'🥪 Sandwich',
+    sizes: {
+      _: { label:'Regular', inches:6, meters:0.15, px_base:220 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(600px) rotateX(18deg)',
+    transformOrigin: 'center bottom',
+    shape: 'rect',
+    shadow: 'drop-shadow(0 16px 22px rgba(0,0,0,0.7))',
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.9)','rgba(200,220,255,0.3)'],
+    steamCount: 22,
+    scanW: 100, scanH: 42,
+    scanText: 'Point camera at your table',
+    xrShape: 'box',
+  },
+  steak: {
+    label:'🥩 Steak',
+    sizes: {
+      _: { label:'Plate', inches:10, meters:0.25, px_base:320 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(700px) rotateX(40deg)',
+    transformOrigin: 'center bottom',
+    shape: 'circle',
+    shadow: 'drop-shadow(0 22px 30px rgba(0,0,0,0.85))',
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.95)','rgba(255,180,100,0.4)'],
+    steamCount: 65,
+    scanW: 130, scanH: 55,
+    scanText: 'Point camera at your table',
+    xrShape: 'disc',
+  },
+  drink: {
+    label:'🥤 Drink',
+    sizes: {
+      _:    { label:'Regular', inches:3,  meters:0.08, px_base:130 },
+      Large:{ label:'Large',   inches:3.5,meters:0.09, px_base:155 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(400px) rotateX(5deg)',
+    transformOrigin: 'center bottom',
+    shape: 'tall-rect',
+    shadow: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',
+    effects: 'glow',
+    glowColor: 'rgba(100,180,255,0.25)',
+    steamCount: 0,
+    scanW: 60, scanH: 35,
+    scanText: 'Point camera at your table',
+    xrShape: 'box',
+  },
+  deal: {
+    label:'🔥 Deal',
+    sizes: {
+      _: { label:'Combo', inches:14, meters:0.35, px_base:380 },
+    },
+    defaultSize: '_',
+    transform: 'perspective(800px) rotateX(35deg)',
+    transformOrigin: 'center bottom',
+    shape: 'rect',
+    shadow: 'drop-shadow(0 28px 40px rgba(0,0,0,0.85))',
+    effects: 'steam',
+    steamColor: ['rgba(255,255,255,0.95)','rgba(255,200,100,0.4)'],
+    steamCount: 80,
+    scanW: 140, scanH: 60,
+    scanText: 'Point camera at your table',
+    xrShape: 'disc',
+  },
+};
+
+// Auto-detect category from item name
+function detectCat(item) {
+  if (item.cat) return item.cat;
+  const n = item.name.toLowerCase();
+  if (n.includes('pizza') || n.includes('crust')) return 'pizza';
+  if (n.includes('burger') || n.includes('zinger') || n.includes('grilled') || n.includes('patty') || n.includes('mighty') || n.includes('chipotle burger') || n.includes('jalapeno blaze') || n.includes('mexi fiesta') || n.includes('drizzler')) return 'burger';
+  if (n.includes('fries') || n.includes('shots') || n.includes('sticks') || n.includes('nuggets') || n.includes('wings') || n.includes('wing')) return 'fries';
+  if (n.includes('wrap') || n.includes('roll') || n.includes('kabab') || n.includes('sandwich') || n.includes('health harvest') || n.includes('club')) return 'wrap';
+  if (n.includes('pasta')) return 'pasta';
+  if (n.includes('steak')) return 'steak';
+  if (n.includes('coke') || n.includes('sprite') || n.includes('water') || n.includes('cola') || n.includes('drink') || n.includes('margarita') || n.includes('colada') || n.includes('lemonade') || n.includes('lagoon') || n.includes('rose') || n.includes('lime')) return 'drink';
+  if (n.includes('deal') || n.includes('feast') || n.includes('buddy') || n.includes('platter')) return 'deal';
+  return 'pizza'; // default
+}
+
+// Build size keys from item price
+function getSizeKeys(item, cat) {
+  const catDef = CATS[cat];
+  if (typeof item.price === 'object') {
+    const keys = Object.keys(item.price);
+    // Map each key to catDef.sizes or create a generic one
+    return keys.map(k => {
+      const info = catDef.sizes[k];
+      if (info) return { key:k, ...info, price: item.price[k] };
+      // Generic fallback for unknown size keys
+      const inches = k==='S'?6 : k==='M'||k==='Med'?9 : k==='L'||k==='Large'?12 : 8;
+      return { key:k, label:k, inches, meters:inches*0.0254, px_base:inches*32, price:item.price[k] };
+    });
+  } else {
+    const def = catDef.sizes[catDef.defaultSize] || { label:'Regular', inches:8, meters:0.20, px_base:260 };
+    return [{ key:'_', ...def, price: item.price }];
+  }
+}
+
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+let AR = {
+  mode:null, item:null, cat:null, catDef:null,
+  sizeKeys:[], currentSize:null,
+  // WebXR
+  xrSession:null, xrRefSpace:null, xrHitSrc:null,
+  renderer:null, scene:null, camera:null,
+  itemMesh:null, reticle:null, steamMesh:null, steamPos:null,
+  pizzaPlaced:false,
+  // Fallback
+  stream:null, facing:'environment',
+  px:0, py:0, scale:1.0,
+  drag:false, dox:0, doy:0, pd0:0, ps0:1,
+  fxParts:[], fxRAF:null, fxCtx:null,
+};
+
+// ════════════════════════════════════
+// OPEN AR
+// ════════════════════════════════════
+async function openAR(item) {
+  AR.item = item;
+  AR.scale = 1.0;
+  AR.cat = detectCat(item);
+  AR.catDef = CATS[AR.cat] || CATS.pizza;
+  AR.sizeKeys = getSizeKeys(item, AR.cat);
+  AR.currentSize = AR.sizeKeys[0];
+
+  const ov = document.getElementById('ar-overlay');
+  ov.classList.add('active');
+  show('ar-loading');
+  hide('ar-nosupport');
+  setText('ar-title', item.name);
+  setText('ar-cat-badge', AR.catDef.label);
+  setText('ar-mode-badge', 'WebXR AR');
+
+  // Update scan hint
+  const sh = document.getElementById('scan-shape');
+  sh.style.width  = AR.catDef.scanW+'px';
+  sh.style.height = AR.catDef.scanH+'px';
+  document.getElementById('scan-text').innerHTML = AR.catDef.scanText.replace('\n','<br>');
+
+  buildSizeBtns();
+
+  const ok = await isXRSupported();
+  if (ok) {
+    msg('Starting AR session...');
+    await initWebXR();
+  } else {
+    hide('ar-loading');
+    show('ar-nosupport');
+  }
+}
+
+async function isXRSupported() {
+  if (!navigator.xr) return false;
+  try { return await navigator.xr.isSessionSupported('immersive-ar'); }
+  catch(e) { return false; }
+}
+
+// ════════════════════════════════════
+// WEBXR
+// ════════════════════════════════════
+async function initWebXR() {
+  try {
+    const canvas = document.getElementById('ar-canvas');
+    canvas.style.display = 'block';
+
+    AR.renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    AR.renderer.setPixelRatio(window.devicePixelRatio);
+    AR.renderer.setSize(window.innerWidth, window.innerHeight);
+    AR.renderer.xr.enabled = true;
+    AR.renderer.setClearColor(0x000000, 0);
+
+    AR.scene = new THREE.Scene();
+    AR.camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+
+    AR.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dl = new THREE.DirectionalLight(0xfff8f0, 1.0);
+    dl.position.set(1,3,2); AR.scene.add(dl);
+    const pl = new THREE.PointLight(0xff6600, 0.5, 1.5);
+    pl.position.set(0,.3,0); AR.scene.add(pl);
+
+    // Reticle
+    const rg = new THREE.Group();
+    const rm = new THREE.Mesh(
+      new THREE.RingGeometry(.07,.09,40),
+      new THREE.MeshBasicMaterial({color:0x6366f1,side:THREE.DoubleSide,transparent:true,opacity:.85})
+    );
+    rm.rotation.x = -Math.PI/2; rg.add(rm);
+    const dm = new THREE.Mesh(
+      new THREE.CircleGeometry(.015,20),
+      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9})
+    );
+    dm.rotation.x = -Math.PI/2; rg.add(dm);
+    rg.visible = false; AR.scene.add(rg); AR.reticle = rg;
+
+    await makeXRMesh();
+    makeXRSteam();
+
+    AR.xrSession = await navigator.xr.requestSession('immersive-ar',{
+      requiredFeatures:['hit-test'],
+      optionalFeatures:['dom-overlay'],
+      domOverlay:{root:document.getElementById('ar-overlay')}
+    });
+    AR.renderer.xr.setReferenceSpaceType('local');
+    await AR.renderer.xr.setSession(AR.xrSession);
+    AR.xrRefSpace = await AR.xrSession.requestReferenceSpace('local');
+    const vs = await AR.xrSession.requestReferenceSpace('viewer');
+    AR.xrHitSrc = await AR.xrSession.requestHitTestSource({space:vs});
+    AR.xrSession.addEventListener('end',()=>{AR.xrSession=null;AR.xrHitSrc=null;});
+
+    AR.pizzaPlaced = false;
+    AR.mode = 'webxr';
+    hide('ar-loading');
+    show_el('ar-scan-hint');
+    document.getElementById('ar-canvas').addEventListener('click', onXRTap);
+    AR.renderer.setAnimationLoop(xrFrame);
+
+  } catch(err) {
+    console.error('WebXR:', err);
+    hide('ar-loading');
+    show('ar-nosupport');
+  }
+}
+
+async function makeXRMesh() {
+  const sz = AR.currentSize;
+  const shape = AR.catDef.xrShape;
+  let geo;
+
+  if (shape === 'disc') {
+    geo = new THREE.CircleGeometry(sz.meters/2, 80);
+  } else if (shape === 'box') {
+    geo = new THREE.BoxGeometry(sz.meters, sz.meters*0.6, sz.meters*0.1);
+  } else {
+    geo = new THREE.CircleGeometry(sz.meters/2, 64);
+  }
+
+  const tex = await loadTex(AR.item.image);
+  const mat = new THREE.MeshStandardMaterial({map:tex, roughness:.75, metalness:0});
+
+  if (AR.itemMesh) AR.scene.remove(AR.itemMesh);
+  AR.itemMesh = new THREE.Mesh(geo, mat);
+  if (shape === 'disc') AR.itemMesh.rotation.x = -Math.PI/2;
+  AR.itemMesh.visible = false;
+  AR.scene.add(AR.itemMesh);
+}
+
+function loadTex(url) {
+  return new Promise(r => {
+    new THREE.TextureLoader().load(url, r, undefined, () => {
+      const c=document.createElement('canvas'); c.width=c.height=2;
+      r(new THREE.CanvasTexture(c));
+    });
+  });
+}
+
+function makeXRSteam() {
+  if ((AR.catDef.steamCount||0) === 0) return;
+  const N = AR.catDef.steamCount;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(N*3);
+  for (let i=0;i<N;i++) {
+    pos[i*3]   = (Math.random()-.5)*.18;
+    pos[i*3+1] = Math.random()*.5;
+    pos[i*3+2] = (Math.random()-.5)*.18;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const mat = new THREE.PointsMaterial({color:0xffffff,size:.018,transparent:true,opacity:.28,sizeAttenuation:true,depthWrite:false});
+  AR.steamMesh = new THREE.Points(geo,mat);
+  AR.steamMesh.visible = false;
+  AR.steamPos = pos;
+  AR.scene.add(AR.steamMesh);
+}
+
+let xrT=0;
+function xrFrame(time,frame) {
+  xrT=time;
+  if (!frame){AR.renderer.render(AR.scene,AR.camera);return;}
+  const pose = frame.getViewerPose(AR.xrRefSpace);
+  if (AR.xrHitSrc && pose) {
+    const hits = frame.getHitTestResults(AR.xrHitSrc);
+    if (hits.length>0) {
+      const hp = hits[0].getPose(AR.xrRefSpace).transform.position;
+      AR.reticle.visible = !AR.pizzaPlaced;
+      AR.reticle.position.set(hp.x,hp.y,hp.z);
+      if (!AR.pizzaPlaced) {
+        const s = 1+Math.sin(time*.003)*.08;
+        AR.reticle.scale.set(s,s,s);
+        document.getElementById('ar-tap-hint').classList.add('show');
+      }
+    }
+  }
+  // Animate steam
+  if (AR.pizzaPlaced && AR.steamMesh && AR.steamPos) {
+    const p=AR.steamPos; const N=p.length/3;
+    for (let i=0;i<N;i++){
+      p[i*3+1]+=.003+Math.random()*.002;
+      p[i*3]+=Math.sin(time*.001+i)*.0006;
+      if(p[i*3+1]>.55){p[i*3]=(Math.random()-.5)*.18;p[i*3+1]=0;p[i*3+2]=(Math.random()-.5)*.18;}
+    }
+    AR.steamMesh.geometry.attributes.position.needsUpdate=true;
+    AR.steamMesh.material.opacity=.12+Math.sin(time*.0008)*.07;
+  }
+  AR.renderer.render(AR.scene,AR.camera);
+}
+
+function onXRTap() {
+  if (AR.reticle&&AR.reticle.visible&&!AR.pizzaPlaced) {
+    const p=AR.reticle.position;
+    AR.itemMesh.position.set(p.x,p.y+.002,p.z);
+    AR.itemMesh.visible=true;
+    if (AR.steamMesh){AR.steamMesh.position.set(p.x,p.y+.005,p.z);AR.steamMesh.visible=true;}
+    AR.reticle.visible=false; AR.pizzaPlaced=true;
+    hide('ar-scan-hint');
+    document.getElementById('ar-tap-hint').classList.remove('show');
+    showPill();
+  }
+}
+
+function updateXRSize(sz) {
+  if (!AR.itemMesh) return;
+  const base = AR.sizeKeys[0].meters;
+  const s = sz.meters / base;
+  AR.itemMesh.scale.set(s,s,s);
+  if (AR.steamMesh) AR.steamMesh.scale.set(s,s,s);
+}
+
+// ════════════════════════════════════
+// FALLBACK CAMERA
+// ════════════════════════════════════
+async function startFallback() {
+  hide('ar-nosupport');
+  show('ar-loading');
+  msg('Starting camera...');
+  setText('ar-mode-badge','Camera AR');
+  document.getElementById('ar-canvas').style.display='none';
+  hide('ar-scan-hint');
+  AR.mode='fallback';
+
+  if (AR.stream){AR.stream.getTracks().forEach(t=>t.stop());AR.stream=null;}
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:AR.facing,width:{ideal:1280},height:{ideal:720}}
+    });
+    AR.stream=stream;
+    const v=document.getElementById('ar-video');
+    v.srcObject=stream; v.style.display='block';
+    document.getElementById('ar-demo-bg').style.display='none';
+    await new Promise(r=>{v.onloadedmetadata=r;}); await v.play();
+  } catch(e) {
+    document.getElementById('ar-video').style.display='none';
+    document.getElementById('ar-demo-bg').style.display='block';
+  }
+
+  hide('ar-loading');
+
+  // Setup item image
+  const img = document.getElementById('ar-item-img');
+  img.src = AR.item.image;
+  applyItemStyle(img);
+
+  AR.px = window.innerWidth/2;
+  AR.py = window.innerHeight*.5;
+  AR.scale = 1.0;
+
+  updateFallbackSize(AR.currentSize);
+
+  document.getElementById('ar-item-layer').classList.add('active');
+  setupDrag();
+  initFX();
+  showGlow();
+  showPill();
+}
+
+function applyItemStyle(img) {
+  const cat = AR.catDef;
+  img.style.transform = cat.transform;
+  img.style.transformOrigin = cat.transformOrigin;
+  img.style.filter = cat.shadow;
+  if (cat.shape === 'circle') {
+    img.style.borderRadius = '50%';
+  } else if (cat.shape === 'rect') {
+    img.style.borderRadius = '12px';
+  } else if (cat.shape === 'tall-rect') {
+    img.style.borderRadius = '10px';
+  }
+}
+
+function updateFallbackSize(sz) {
+  AR.currentSize = sz;
+  renderItem();
+}
+
+function renderItem() {
+  const sz = AR.currentSize;
+  const size = sz.px_base * AR.scale;
+  const img  = document.getElementById('ar-item-img');
+  const wrap = document.getElementById('ar-item-wrap');
+  img.style.width  = size+'px';
+  img.style.height = size+'px';
+  wrap.style.left   = (AR.px - size/2)+'px';
+  wrap.style.top    = (AR.py - size/2)+'px';
+  wrap.style.width  = size+'px';
+  wrap.style.height = size+'px';
+  // Update glow position
+  updateGlow();
+}
+
+function showGlow() {
+  const cat = AR.catDef;
+  if (cat.effects === 'glow' || cat.effects === 'both') {
+    const g = document.getElementById('ar-glow');
+    g.style.display = 'block';
+    g.style.background = cat.glowColor || 'rgba(255,160,0,0.2)';
+    updateGlow();
+  }
+}
+
+function updateGlow() {
+  const sz = AR.currentSize;
+  const size = sz.px_base * AR.scale * 1.15;
+  const g = document.getElementById('ar-glow');
+  g.style.width  = size+'px';
+  g.style.height = size+'px';
+  g.style.left = (AR.px - size/2)+'px';
+  g.style.top  = (AR.py - size/2)+'px';
+}
+
+function setupDrag() {
+  const wrap = document.getElementById('ar-item-wrap');
+  wrap.addEventListener('touchstart',e=>{
+    e.preventDefault(); hideHint();
+    if (e.touches.length===1){AR.drag=true;AR.dox=e.touches[0].clientX-AR.px;AR.doy=e.touches[0].clientY-AR.py;}
+    else if(e.touches.length===2){AR.drag=false;AR.pd0=pd(e.touches);AR.ps0=AR.scale;}
+  },{passive:false});
+  wrap.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(e.touches.length===1&&AR.drag){
+      AR.px=e.touches[0].clientX-AR.dox;
+      AR.py=e.touches[0].clientY-AR.doy;
+      const h=AR.currentSize.px_base*AR.scale/2;
+      AR.px=Math.max(h,Math.min(window.innerWidth-h,AR.px));
+      AR.py=Math.max(h+80,Math.min(window.innerHeight-h-170,AR.py));
+      renderItem();
+    } else if(e.touches.length===2){
+      AR.scale=Math.max(.3,Math.min(3.5,AR.ps0*pd(e.touches)/AR.pd0));
+      AR.px=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      AR.py=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      renderItem(); pillLive();
+    }
+  },{passive:false});
+  wrap.addEventListener('touchend',()=>{AR.drag=false;});
+  wrap.addEventListener('mousedown',e=>{AR.drag=true;AR.dox=e.clientX-AR.px;AR.doy=e.clientY-AR.py;hideHint();e.preventDefault();});
+  window.addEventListener('mousemove',e=>{if(AR.drag&&AR.mode==='fallback'){AR.px=e.clientX-AR.dox;AR.py=e.clientY-AR.doy;renderItem();}});
+  window.addEventListener('mouseup',()=>{AR.drag=false;});
+  wrap.addEventListener('wheel',e=>{e.preventDefault();AR.scale=Math.max(.3,Math.min(3.5,AR.scale*(e.deltaY>0?.9:1.1)));renderItem();pillLive();},{passive:false});
+}
+
+function pd(t){const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+
+// ════════════════════════════════════
+// EFFECTS (steam / glow particles)
+// ════════════════════════════════════
+function initFX() {
+  const cat = AR.catDef;
+  if (!cat.steamCount || cat.effects === 'glow') return;
+
+  const c = document.getElementById('ar-fx-canvas');
+  c.width=window.innerWidth; c.height=window.innerHeight;
+  c.classList.add('active');
+  AR.fxCtx = c.getContext('2d');
+  AR.fxParts = Array.from({length:cat.steamCount}, ()=>newPart());
+  fxLoop();
+}
+
+function newPart() {
+  const cat = AR.catDef;
+  const sz = AR.currentSize;
+  const size = sz.px_base * AR.scale;
+  const spread = size * .38;
+  return {
+    x: AR.px+(Math.random()-.5)*spread,
+    y: AR.py-size*.28,
+    vx:(Math.random()-.5)*.45,
+    vy:-(0.5+Math.random()*.85),
+    life:0, maxLife:.5+Math.random()*.7,
+    r:4+Math.random()*10,
+    op:.06+Math.random()*.16,
+    w:Math.random()*Math.PI*2,
+    col:cat.steamColor||['rgba(255,255,255,0.9)','rgba(200,200,255,0.3)'],
+  };
+}
+
+function fxLoop() {
+  AR.fxRAF=requestAnimationFrame(fxLoop);
+  if (AR.mode!=='fallback'||!AR.fxCtx) return;
+  const ctx=AR.fxCtx;
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  AR.fxParts.forEach((p,i)=>{
+    p.life+=.013; p.y+=p.vy; p.x+=p.vx+Math.sin(p.w+p.life*2)*.28;
+    p.w+=.018; p.r+=.055;
+    const prog=p.life/p.maxLife;
+    const alpha=p.op*Math.sin(prog*Math.PI);
+    if(alpha<=0){AR.fxParts[i]=newPart();return;}
+    ctx.save(); ctx.globalAlpha=Math.max(0,alpha);
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+    g.addColorStop(0,p.col[0]); g.addColorStop(.5,p.col[1]); g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    if(p.life>=p.maxLife) AR.fxParts[i]=newPart();
+  });
+}
+
+// ════════════════════════════════════
+// SIZE BUTTONS
+// ════════════════════════════════════
+function buildSizeBtns() {
+  const c=document.getElementById('ar-sizes'); c.innerHTML='';
+  if (AR.sizeKeys.length===1 && AR.sizeKeys[0].key==='_') {
+    // Single size — hide buttons
+    return;
+  }
+  AR.sizeKeys.forEach((sz,i)=>{
+    const btn=document.createElement('button');
+    btn.className='ar-sz'+(i===0?' on':''); btn.dataset.k=sz.key;
+    btn.innerHTML=`<div class="sz-n">${sz.label}</div><div class="sz-i">${sz.inches}"</div><div class="sz-p">Rs ${sz.price||''}</div>`;
+    btn.onclick=()=>onSize(sz); c.appendChild(btn);
+  });
+}
+
+function onSize(sz) {
+  AR.currentSize=sz; AR.scale=1.0;
+  document.querySelectorAll('.ar-sz').forEach(b=>b.classList.toggle('on',b.dataset.k===sz.key));
+  if (AR.mode==='webxr') updateXRSize(sz);
+  else renderItem();
+  showPill();
+}
+
+// ════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════
+function showPill(){
+  const sz=AR.currentSize;
+  const p=document.getElementById('ar-pill');
+  p.textContent=`📏 ${sz.label} — ${sz.inches}"`;
+  p.classList.add('show'); setTimeout(()=>p.classList.remove('show'),2500);
+}
+function pillLive(){
+  const sz=AR.currentSize;
+  const scaled=(sz.inches*AR.scale).toFixed(1);
+  const p=document.getElementById('ar-pill');
+  p.textContent=`📏 ${sz.label} — ${scaled}"`;
+  p.classList.add('show');
+}
+let hintGone=false;
+function hideHint(){if(!hintGone){hide('ar-scan-hint');hintGone=true;}}
+function msg(t){document.getElementById('ar-load-msg').textContent=t;}
+function show(id){
+  const el=document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('show');
+}
+function hide(id){
+  const el=document.getElementById(id);
+  el.classList.add('hidden');
+  el.classList.remove('show');
+}
+function show_el(id){document.getElementById(id).classList.remove('hidden');}
+function setText(id,t){document.getElementById(id).textContent=t;}
+
+function flipCam(){
+  if(AR.mode==='webxr')return;
+  AR.facing=AR.facing==='environment'?'user':'environment';
+  if(AR.stream){AR.stream.getTracks().forEach(t=>t.stop());AR.stream=null;}
+  startFallback();
+}
+
+function closeAR(){
+  if(AR.xrSession){AR.xrSession.end();AR.xrSession=null;}
+  if(AR.renderer){AR.renderer.setAnimationLoop(null);}
+  if(AR.stream){AR.stream.getTracks().forEach(t=>t.stop());AR.stream=null;}
+  if(AR.fxRAF){cancelAnimationFrame(AR.fxRAF);AR.fxRAF=null;}
+
+  document.getElementById('ar-overlay').classList.remove('active');
+  document.getElementById('ar-video').srcObject=null;
+  document.getElementById('ar-video').style.display='none';
+  document.getElementById('ar-canvas').style.display='none';
+  document.getElementById('ar-item-layer').classList.remove('active');
+  document.getElementById('ar-fx-canvas').classList.remove('active');
+  document.getElementById('ar-demo-bg').style.display='none';
+  document.getElementById('ar-glow').style.display='none';
+  document.getElementById('ar-tap-hint').classList.remove('show');
+
+  // Reset states
+  ['ar-loading','ar-nosupport'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('show','hidden');
+    if(id==='ar-loading') el.style.display='flex';
+    if(id==='ar-nosupport') el.style.display='none';
+  });
+  document.getElementById('ar-scan-hint').classList.remove('hidden');
+  hintGone=false; AR.mode=null; AR.pizzaPlaced=false;
+}
+
+function addFromAR(){
+  const item=AR.item; const sz=AR.currentSize;
+  if(!item) return;
+  closeAR();
+  if(typeof openOrderFlow==='function'){
+    openOrderFlow({
+      name: sz.key!=='_' ? `${item.name} (${sz.key})` : item.name,
+      price: sz.price,
+      image: item.image
+    });
+  } else {
+    alert(`✅ Added: ${item.name}${sz.key!=='_'?' ('+sz.key+')':''} — Rs ${sz.price}`);
+  }
+}
     function setupRealtimeNotifications() {
         if(!sb) return;
         // ── MENU SYNC LISTENER ── re-renders menu when admin makes changes
@@ -4221,17 +5175,68 @@ initLandingPage();
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
 <div id="item-detail-sheet">
-    <button class="sheet-close" onclick="closeItemSheet()">✕</button>
-    <div id="sheet-img" class="sheet-img"></div>
-    <div class="sheet-content">
-        <div class="sheet-handle"></div>
-        <h2 class="sheet-name" id="sheet-name"></h2>
-        <p class="sheet-price" id="sheet-price"></p>
-        <p class="sheet-desc" id="sheet-desc"></p>
-        <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
-    </div>
+  <button class="sheet-close" onclick="closeItemSheet()">✕</button>
+  <div id="sheet-img" class="sheet-img"></div>
+  <div class="sheet-content">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-name" id="sheet-name"></h2>
+      <p class="sheet-price" id="sheet-price"></p>
+      <p class="sheet-desc" id="sheet-desc"></p>
+      <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
+  </div>
 </div>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+<!-- AR OVERLAY -->
+<div id="ar-overlay">
+  <div id="ar-loading">
+    <div class="ar-spin"></div>
+    <h3>Initializing AR</h3>
+    <p id="ar-load-msg">Checking device...</p>
+  </div>
+  <div id="ar-nosupport">
+    <div class="ns-icon">📱</div>
+    <h3>WebXR Not Available</h3>
+    <p>Your device doesn't support surface-based AR. Use the enhanced camera preview — still shows accurate size!</p>
+    <div class="ns-devices">
+      <span>WebXR Supported On</span>
+      <ul>
+        <li>✅ Android Chrome + ARCore</li>
+        <li>✅ Samsung Galaxy S8+, A52+</li>
+        <li>✅ Google Pixel 3+, OnePlus 6+</li>
+        <li>❌ iPhone (Safari blocks WebXR)</li>
+      </ul>
+    </div>
+    <button class="ns-btn ns-primary" onclick="startFallback()">📷 Camera Preview Instead</button>
+    <button class="ns-btn ns-sec" onclick="closeAR()">Close</button>
+  </div>
+  <div id="ar-demo-bg"></div>
+  <video id="ar-video" autoplay playsinline muted></video>
+  <canvas id="ar-canvas"></canvas>
+  <canvas id="ar-fx-canvas"></canvas>
+  <div id="ar-item-layer">
+    <div id="ar-item-wrap">
+      <img id="ar-item-img" src="" alt="" draggable="false">
+    </div>
+  </div>
+  <div id="ar-glow"></div>
+  <div id="ar-header">
+    <div id="ar-title">Item</div>
+    <div id="ar-mode-badge">WebXR AR</div>
+    <div id="ar-close" onclick="closeAR()">✕</div>
+  </div>
+  <div id="ar-cat-badge">🍕 Pizza</div>
+  <div id="ar-pill">📏 Medium — 9"</div>
+  <div id="ar-scan-hint">
+    <div class="scan-shape" id="scan-shape" style="width:120px;height:50px;"></div>
+    <p id="scan-text">Point camera at your table<br>Move slowly to detect surface</p>
+  </div>
+  <div id="ar-tap-hint">👆 Tap table to place item</div>
+  <div id="ar-sizes"></div>
+  <div id="ar-tip">🤏 Pinch to resize &nbsp;•&nbsp; 👆 Drag to move</div>
+  <div id="ar-bottom">
+    <button id="ar-flip-btn" onclick="flipCam()">🔄</button>
+    <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
+  </div>
+</div>
 </body>
 </html>
