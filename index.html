@@ -587,117 +587,152 @@ body {
             .charges-line { font-size: 15px; text-align: right; margin: 1mm 0; font-weight: bold; }
             body, html { height: auto !important; margin: 0 !important; padding: 0 !important; }
         }
-
-        /* INVENTORY MANAGEMENT STYLES */
-        #inventory-panel-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none; justify-content: center; align-items: center;
-            z-index: 9600; backdrop-filter: blur(10px);
-        }
-        .inventory-modal {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 35px; width: 98%; max-width: 1400px; height: 95vh;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
-        .inventory-header {
-            background: rgba(255,255,255,0.95); padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.2);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .inventory-tabs {
-            display: flex; gap: 10px; padding: 15px; background: rgba(255,255,255,0.1);
-        }
-        .inv-tab {
-            flex: 1; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.2);
-            color: white; font-weight: 900; text-align: center; cursor: pointer; transition: 0.3s;
-        }
-        .inv-tab.active {
-            background: white; color: #764ba2; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        .inventory-content {
-            flex: 1; overflow-y: auto; padding: 20px; background: rgba(255,255,255,0.95);
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .stock-low {
-            animation: pulse-red 2s infinite;
-            background: #fee2e2 !important;
-            border: 2px solid #ef4444 !important;
-        }
-        @keyframes pulse-red {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-        }
-        .inventory-table {
-            width: 100%; border-collapse: collapse;
-        }
-        .inventory-table th {
-            background: #f3f4f6; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280;
-        }
-        .inventory-table td {
-            padding: 12px; border-bottom: 1px solid #e5e7eb;
-        }
-        .stock-control {
-            display: flex; align-items: center; gap: 8px;
-        }
-        .stock-btn {
-            width: 32px; height: 32px; border-radius: 8px; border: none;
-            background: #e5e7eb; cursor: pointer; font-weight: 900;
-            transition: 0.2s;
-        }
-        .stock-btn:hover { background: #d1d5db; }
-        .stock-btn.plus { background: #10b981; color: white; }
-        .stock-btn.minus { background: #ef4444; color: white; }
-        .low-stock-badge {
-            background: #ef4444; color: white; padding: 4px 8px; border-radius: 12px;
-            font-size: 10px; font-weight: 900; animation: pulse-red 2s infinite;
-        }
-        .sale-card {
-            background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px;
-            border-left: 4px solid var(--inventory-indigo); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .kitchen-order-card {
-            background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px;
-            border-left: 4px solid #f59e0b; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .deduction-log {
-            background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px;
-            padding: 10px; margin-top: 10px; font-size: 12px;
-        }
-        .quick-sale-form {
-            background: white; border-radius: 20px; padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .payment-btn {
-            padding: 12px; border-radius: 12px; border: 2px solid #e5e7eb;
-            background: white; cursor: pointer; font-weight: 700; transition: 0.2s;
-        }
-        .payment-btn.selected {
-            border-color: var(--inventory-indigo); background: #eef2ff; color: var(--inventory-indigo);
-        }
-        .stat-card {
-            background: white; border-radius: 15px; padding: 20px; text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .stat-value {
-            font-size: 32px; font-weight: 900; color: var(--inventory-indigo);
-        }
-        .stat-label {
-            font-size: 12px; color: #6b7280; text-transform: uppercase; font-weight: 700;
-        }
-        .add-item-btn {
-            background: linear-gradient(135deg, var(--inventory-indigo) 0%, var(--inventory-purple) 100%);
-            color: white; border: none; padding: 15px 30px; border-radius: 15px;
-            font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
-            transition: transform 0.2s;
-        }
-        .add-item-btn:hover { transform: translateY(-2px); }
+/* ── ADMIN PANEL OVERLAY ── */
+#admin-panel-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #f0f2f5; z-index: 9700; display: none;
+  flex-direction: column; overflow: hidden;
+  font-family: 'Barlow', sans-serif;
+}
+#admin-panel-overlay.open { display: flex; }
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
+.adm-header {
+  position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%);
+  padding: 0 28px; display: flex; align-items: center;
+  justify-content: space-between; height: 62px;
+  box-shadow: 0 2px 12px rgba(192,57,43,0.35); flex-shrink: 0;
+}
+.adm-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: white; line-height: 1; }
+.adm-logo-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.6); display: block; margin-top: 1px; }
+.adm-badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: white; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 4px; }
+.adm-save-btn { background: white; color: #c0392b; border: none; padding: 8px 20px; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; }
+.adm-save-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.adm-close-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+.adm-branch-sw { display: flex; align-items: center; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 3px; gap: 3px; }
+.adm-branch-btn { padding: 6px 16px; border-radius: 6px; border: none; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.18s; color: rgba(255,255,255,0.75); background: transparent; }
+.adm-branch-btn.active { background: white; color: #c0392b; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+.adm-branch-btn.active.bwp { color: #5d3a1a; }
+.adm-ctx-bar { background: white; border-bottom: 1px solid #e2e5ea; padding: 8px 28px; display: flex; align-items: center; gap: 14px; font-family: 'Barlow', sans-serif; font-size: 13px; color: #6b7280; flex-shrink: 0; }
+.adm-branch-ind { display: inline-flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; padding: 3px 12px; border-radius: 4px; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+.adm-branch-ind.multan { background: rgba(192,57,43,0.08); color: #c0392b; border: 1px solid #fecaca; }
+.adm-branch-ind.bwp { background: rgba(93,58,26,0.08); color: #5d3a1a; border: 1px solid rgba(201,162,39,0.3); }
+.adm-body { display: flex; flex: 1; overflow: hidden; }
+.adm-sidebar { background: white; border-right: 1px solid #e2e5ea; padding: 16px 0; width: 220px; flex-shrink: 0; overflow-y: auto; }
+.adm-nav-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #9ca3af; padding: 14px 18px 6px; display: block; }
+.adm-nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; user-select: none; }
+.adm-nav-item:hover { background: #f7f8fa; color: #1a1d23; }
+.adm-nav-item.active { background: rgba(192,57,43,0.08); color: #c0392b; border-left-color: #c0392b; font-weight: 600; }
+.adm-nav-cnt { margin-left: auto; background: #c0392b; color: white; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 20px; min-width: 22px; text-align: center; }
+.adm-nav-cnt.org { background: #e67e22; }
+.adm-nav-div { height: 1px; background: #e8eaee; margin: 8px 14px; }
+.adm-main { flex: 1; overflow-y: auto; padding: 24px 28px; background: #f0f2f5; }
+.adm-panel { display: none; }
+.adm-panel.active { display: block; }
+.adm-page-title { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; color: #1a1d23; }
+.adm-page-sub { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+.adm-stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+.adm-stat { background: white; border: 1px solid #e2e5ea; border-radius: 12px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.adm-stat::after { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; border-radius:2px 0 0 2px; }
+.adm-stat.red::after { background:#c0392b; } .adm-stat.orange::after { background:#e67e22; } .adm-stat.green::after { background:#16a34a; } .adm-stat.gold::after { background:#b45309; }
+.adm-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:800; line-height:1; margin-bottom:3px; }
+.adm-stat.red .adm-stat-val { color:#c0392b; } .adm-stat.orange .adm-stat-val { color:#e67e22; } .adm-stat.green .adm-stat-val { color:#16a34a; } .adm-stat.gold .adm-stat-val { color:#b45309; }
+.adm-stat-lbl { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; }
+.adm-card { background:white; border:1px solid #e2e5ea; border-radius:12px; margin-bottom:18px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+.adm-card-hdr { padding:14px 20px; border-bottom:1px solid #e8eaee; display:flex; align-items:center; justify-content:space-between; }
+.adm-card-title { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:10px; color:#1a1d23; }
+.adm-card-ico { width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.adm-card-ico.red { background:rgba(192,57,43,0.08); } .adm-card-ico.org { background:rgba(230,126,34,0.1); } .adm-card-ico.grn { background:rgba(22,163,74,0.1); }
+.adm-card-body { padding:18px 20px; }
+.adm-filter-bar { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.adm-search { background:white; border:1px solid #e2e5ea; border-radius:8px; padding:8px 14px; color:#1a1d23; font-family:'Barlow',sans-serif; font-size:14px; outline:none; flex:1; min-width:200px; transition:border-color 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+.adm-search:focus { border-color:#e67e22; box-shadow:0 0 0 3px rgba(230,126,34,0.12); }
+.adm-select { background:white; border:1px solid #e2e5ea; border-radius:8px; padding:8px 14px; color:#1a1d23; font-family:'Barlow',sans-serif; font-size:13px; outline:none; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+.adm-avail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:10px; }
+.adm-avail-item { background:white; border:1px solid #e2e5ea; border-radius:8px; padding:12px 14px; display:flex; align-items:center; gap:12px; transition:all 0.18s; position:relative; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+.adm-avail-item:hover { border-color:#d1d5db; }
+.adm-avail-item.unavailable { border-color:#fecaca; background:#fff5f5; }
+.adm-avail-item.unavailable .adm-avail-name { text-decoration:line-through; color:#9ca3af; }
+.adm-avail-img { width:46px; height:46px; border-radius:8px; flex-shrink:0; background-size:cover; background-position:center; background-color:#eef0f3; border:1px solid #e2e5ea; }
+.adm-avail-info { flex:1; min-width:0; }
+.adm-avail-name { font-family:'Barlow',sans-serif; font-size:13px; font-weight:600; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1a1d23; }
+.adm-avail-cat { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ca3af; }
+.adm-avail-price { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:#e67e22; font-weight:700; margin-top:1px; }
+.adm-avail-out { position:absolute; top:7px; right:54px; background:#c0392b; color:white; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; letter-spacing:1px; text-transform:uppercase; display:none; }
+.adm-avail-item.unavailable .adm-avail-out { display:block; }
+.adm-toggle { width:42px; height:23px; border-radius:12px; background:#e5e7eb; border:none; cursor:pointer; position:relative; flex-shrink:0; transition:all 0.25s; outline:none; }
+.adm-toggle::after { content:''; position:absolute; width:17px; height:17px; border-radius:50%; background:white; top:3px; left:3px; transition:all 0.25s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+.adm-avail-item:not(.unavailable) .adm-toggle { background:#16a34a; }
+.adm-avail-item:not(.unavailable) .adm-toggle::after { left:22px; }
+.adm-cat-hdr { display:flex; align-items:center; justify-content:space-between; padding:12px 0 8px; border-bottom:2px solid #e2e5ea; margin-bottom:12px; }
+.adm-cat-lbl { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#1a1d23; display:flex; align-items:center; gap:8px; }
+.adm-cat-tog { background:#f7f8fa; border:1px solid #e2e5ea; color:#6b7280; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:4px 12px; border-radius:4px; cursor:pointer; transition:all 0.18s; }
+.adm-cat-tog:hover { border-color:#e67e22; color:#e67e22; background:rgba(230,126,34,0.1); }
+.adm-price-table { width:100%; border-collapse:collapse; }
+.adm-price-table th { text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#9ca3af; padding:10px 14px; border-bottom:2px solid #e2e5ea; background:#f7f8fa; }
+.adm-price-table td { padding:10px 14px; border-bottom:1px solid #e8eaee; vertical-align:middle; }
+.adm-price-table tr:last-child td { border-bottom:none; }
+.adm-price-table tr:hover td { background:#f7f8fa; }
+.adm-price-table tr.changed td { background:#fffbeb; }
+.adm-price-table tr.changed td:first-child { border-left:3px solid #e67e22; }
+.adm-thumb { width:38px; height:38px; border-radius:7px; background-size:cover; background-position:center; background-color:#eef0f3; border:1px solid #e2e5ea; }
+.adm-row-name { font-family:'Barlow',sans-serif; font-size:14px; font-weight:600; color:#1a1d23; }
+.adm-row-cat { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ca3af; margin-top:1px; }
+.adm-price-wrap { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.adm-price-lbl { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9ca3af; white-space:nowrap; }
+.adm-price-inp { background:#f7f8fa; border:1px solid #e2e5ea; border-radius:6px; padding:5px 9px; color:#1a1d23; font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; width:88px; outline:none; transition:all 0.2s; }
+.adm-price-inp:focus { border-color:#e67e22; background:white; box-shadow:0 0 0 3px rgba(230,126,34,0.1); }
+.adm-img-inp { background:#f7f8fa; border:1px solid #e2e5ea; border-radius:6px; padding:5px 9px; color:#6b7280; font-family:'Barlow',sans-serif; font-size:12px; width:100%; max-width:240px; outline:none; transition:all 0.2s; }
+.adm-img-inp:focus { border-color:#e67e22; background:white; }
+.adm-tog-btn { background:#f7f8fa; border:1px solid #e2e5ea; color:#6b7280; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.18s; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+.adm-tog-btn:hover { border-color:#e67e22; color:#e67e22; }
+.adm-tog-btn.active { background:#f0fdf4; border-color:#bbf7d0; color:#16a34a; }
+.adm-status-dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.adm-status-dot.on { background:#16a34a; } .adm-status-dot.off { background:#c0392b; }
+.adm-deal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+.adm-deal-card { background:white; border:1px solid #e2e5ea; border-radius:12px; overflow:hidden; transition:all 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+.adm-deal-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.adm-deal-card.unavailable { opacity:0.6; border-color:#fecaca; background:#fff5f5; }
+.adm-deal-img-wrap { position:relative; height:140px; background:#eef0f3; overflow:hidden; }
+.adm-deal-img-wrap img { width:100%; height:100%; object-fit:cover; }
+.adm-deal-off-overlay { position:absolute; inset:0; background:rgba(192,57,43,0.8); display:none; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; letter-spacing:3px; color:white; text-transform:uppercase; }
+.adm-deal-card.unavailable .adm-deal-off-overlay { display:flex; }
+.adm-deal-body { padding:14px 16px; }
+.adm-deal-name { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:3px; color:#1a1d23; }
+.adm-deal-desc { font-size:12px; color:#6b7280; margin-bottom:12px; line-height:1.5; }
+.adm-deal-price-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.adm-deal-price-inp { background:#f7f8fa; border:1px solid #e2e5ea; border-radius:6px; padding:6px 10px; color:#e67e22; font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; width:110px; outline:none; transition:all 0.2s; }
+.adm-deal-price-inp:focus { border-color:#e67e22; background:white; }
+.adm-deal-img-url { width:100%; background:#f7f8fa; border:1px solid #e2e5ea; border-radius:6px; padding:5px 9px; color:#6b7280; font-size:11px; font-family:'Barlow',sans-serif; outline:none; margin-top:8px; transition:all 0.2s; }
+.adm-deal-img-url:focus { border-color:#e67e22; background:white; }
+.adm-deal-tog-btn { width:100%; padding:9px; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+.adm-deal-tog-btn.available { background:#f0fdf4; color:#16a34a; border:1.5px solid #bbf7d0; }
+.adm-deal-tog-btn.unavailable { background:#fff5f5; color:#c0392b; border:1.5px solid #fecaca; }
+.adm-batch-btn { background:#f7f8fa; border:1px solid #e2e5ea; color:#6b7280; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:6px 14px; border-radius:6px; cursor:pointer; transition:all 0.18s; }
+.adm-batch-btn:hover { border-color:#e67e22; color:#e67e22; }
+.adm-batch-btn.red { border-color:#fecaca; color:#c0392b; background:#fff5f5; }
+.adm-batch-btn.green { border-color:#bbf7d0; color:#16a34a; background:#f0fdf4; }
+.adm-unsaved-dot { width:7px; height:7px; background:#fbbf24; border-radius:50%; display:none; box-shadow:0 0 6px rgba(251,191,36,0.8); }
+.adm-unsaved-dot.visible { display:inline-block; }
+.adm-empty { text-align:center; padding:60px 20px; color:#9ca3af; }
+.adm-empty-icon { font-size:44px; margin-bottom:14px; opacity:0.35; }
+.adm-img-preview-btn { background:#f7f8fa; border:1px solid #e2e5ea; color:#6b7280; font-size:11px; padding:5px 9px; border-radius:6px; cursor:pointer; white-space:nowrap; transition:all 0.18s; font-family:'Barlow',sans-serif; }
+.adm-img-preview-btn:hover { border-color:#e67e22; color:#e67e22; }
+.adm-toast { position:fixed; bottom:24px; right:24px; z-index:10000; background:white; border:1px solid #e2e5ea; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px; font-family:'Barlow',sans-serif; font-size:14px; font-weight:500; box-shadow:0 8px 30px rgba(0,0,0,0.12); transform:translateY(100px); opacity:0; transition:all 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events:none; max-width:320px; }
+.adm-toast.show { transform:translateY(0); opacity:1; }
+.adm-toast.success { border-left:4px solid #16a34a; }
+.adm-toast.error { border-left:4px solid #c0392b; }
+.adm-spin { width:40px; height:40px; border:4px solid #f0f0f0; border-top-color:#c0392b; border-radius:50%; animation:adm-spin 0.8s linear infinite; }
+@keyframes adm-spin { to { transform:rotate(360deg); } }
+.adm-loader { position:fixed; inset:0; background:rgba(255,255,255,0.85); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:10001; font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; letter-spacing:1px; color:#c0392b; gap:16px; }
+.adm-loader.show { display:flex; }
+@media (max-width:768px) {
+  .adm-sidebar { display:none; }
+  .adm-header { flex-wrap:wrap; height:auto; padding:12px 16px; gap:8px; }
+  .adm-stats-row { grid-template-columns:repeat(2,1fr); }
+  .adm-main { padding:16px; }
+}
+        
         /* ── BRANCH SELECTOR ── */
         #branch-selector-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at top, #150000 0%, #000 80%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5000; color: white; padding: 20px; overflow-y: auto; text-align: center; }
         .branch-sel-logo { font-size: 52px; font-weight: 900; letter-spacing: -2px; margin: 0 0 4px; }
@@ -1054,10 +1089,9 @@ body {
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
         <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
-        <!-- NEW: Inventory Management Button -->
-        <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; box-shadow: 0 6px 0px #4338ca;" onclick="openInventoryPanel()">
-            📦 INVENTORY & SALES
-        </button>
+        <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
+    ⚙️ ADMIN PANEL
+</button>
     </div>
 </div>
 
@@ -1310,50 +1344,144 @@ body {
     </div>
 </div>
 
-<!-- INVENTORY & SALES MANAGEMENT PANEL -->
-<div id="inventory-panel-overlay">
-    <div class="inventory-modal">
-        <div class="inventory-header">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="width:50px; height:50px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius:15px; display:flex; align-items:center; justify-content:center; color:white; font-size:24px;">
-                    <i class="fas fa-warehouse"></i>
-                </div>
-                <div>
-                    <h2 style="margin:0; color:#1f2937; font-weight:900;">Inventory & Sales Hub</h2>
-                    <p style="margin:0; color:#6b7280; font-size:14px;">Kitchen-Integrated Management — <span id="inv-branch-label" style="font-weight:900; color:#4f46e5;">MULTAN</span></p>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px;">
-    <button onclick="syncWithKitchen()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
-        <i class="fas fa-sync"></i> SYNC
-    </button>
-    <button onclick="logoutInventory()" style="background:#f59e0b; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
-        🔒 LOGOUT
-    </button>
-    <button onclick="closeInventoryPanel()" style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:900; cursor:pointer;">
-        ✕ CLOSE
-    </button>
-            </div>
-        </div>
-        
-        <div class="inventory-tabs">
-    <div class="inv-tab active" id="inv-tab-stock" onclick="switchInventoryTab('stock')">
-        <i class="fas fa-boxes"></i> STOCK
-    </div>
-    <div class="inv-tab" id="inv-tab-sales" onclick="switchInventoryTab('sales')">
-        <i class="fas fa-cash-register"></i> SALES
-    </div>
-    <div class="inv-tab" id="inv-tab-reports" onclick="switchInventoryTab('reports')">
-        <i class="fas fa-chart-line"></i> REPORTS
-    </div>
-</div>
-        
-        <div class="inventory-content" id="inventory-content-area">
-            <!-- Dynamic content loaded here -->
-        </div>
-    </div>
-</div>
 
+<!-- ADMIN PANEL OVERLAY -->
+<div id="admin-panel-overlay">
+
+  <!-- Loading overlay -->
+  <div class="adm-loader" id="adm-loader">
+    <div class="adm-spin"></div>
+    <span id="adm-loader-msg">Loading…</span>
+  </div>
+
+  <!-- Toast -->
+  <div class="adm-toast" id="adm-toast">
+    <span id="adm-toast-icon">✅</span>
+    <span id="adm-toast-msg">Saved!</span>
+  </div>
+
+  <!-- Header -->
+  <div class="adm-header">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div>
+        <div class="adm-logo">OVEN X ADMIN</div>
+        <span class="adm-logo-sub">RESTAURANT STOCK MANAGEMENT</span>
+      </div>
+      <div class="adm-badge">PANEL</div>
+      <div class="adm-unsaved-dot" id="adm-unsaved-dot"></div>
+    </div>
+    <div class="adm-branch-sw">
+      <button class="adm-branch-btn active" id="adm-btn-MULTAN" onclick="admSwitchBranch('MULTAN')">🍕 Multan</button>
+      <button class="adm-branch-btn" id="adm-btn-BWP" onclick="admSwitchBranch('BWP')">🥩 Bahawalpur</button>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:6px;" id="adm-save-label">
+        <i class="fas fa-cloud" style="opacity:0.5;"></i> Not saved yet
+      </div>
+      <button class="adm-save-btn" onclick="admSaveAll()">
+        <i class="fas fa-cloud-upload-alt"></i> SAVE ALL
+      </button>
+      <button class="adm-close-btn" onclick="closeAdminPanel()">✕ CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Context bar -->
+  <div class="adm-ctx-bar">
+    <span class="adm-branch-ind multan" id="adm-branch-ind">🍕 MULTAN</span>
+    <span>Changes only affect <b id="adm-branch-ctx-name">Multan</b> branch menu.</span>
+    <span style="margin-left:auto;font-size:11px;opacity:0.5;">Each branch has independent settings</span>
+  </div>
+
+  <!-- Body -->
+  <div class="adm-body">
+
+    <!-- Sidebar -->
+    <aside class="adm-sidebar">
+      <span class="adm-nav-lbl">Management</span>
+      <div class="adm-nav-item active" id="adm-nav-availability" onclick="admSwitchPanel('availability')">
+        <span>🚦</span> Availability
+        <span class="adm-nav-cnt" id="adm-cnt-unavail">0</span>
+      </div>
+      <div class="adm-nav-item" id="adm-nav-prices" onclick="admSwitchPanel('prices')">
+        <span>💰</span> Prices & Images
+      </div>
+      <div class="adm-nav-item" id="adm-nav-deals" onclick="admSwitchPanel('deals')">
+        <span>🔥</span> Deals
+        <span class="adm-nav-cnt org" id="adm-cnt-deals">0</span>
+      </div>
+      <div class="adm-nav-div"></div>
+      <span class="adm-nav-lbl">Info</span>
+      <div class="adm-nav-item" id="adm-nav-preview" onclick="admSwitchPanel('preview')">
+        <span>👁️</span> Live Preview
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="adm-main">
+
+      <!-- AVAILABILITY -->
+      <div class="adm-panel active" id="adm-panel-availability">
+        <div class="adm-page-title">Item Availability</div>
+        <div class="adm-page-sub">Toggle items on/off. Customers won't see disabled items.</div>
+        <div class="adm-stats-row">
+          <div class="adm-stat green"><div class="adm-stat-val" id="adm-stat-avail">0</div><div class="adm-stat-lbl">Available</div></div>
+          <div class="adm-stat red"><div class="adm-stat-val" id="adm-stat-unavail">0</div><div class="adm-stat-lbl">Disabled</div></div>
+          <div class="adm-stat orange"><div class="adm-stat-val" id="adm-stat-total">0</div><div class="adm-stat-lbl">Total Items</div></div>
+          <div class="adm-stat gold"><div class="adm-stat-val" id="adm-stat-deals-off">0</div><div class="adm-stat-lbl">Deals Off</div></div>
+        </div>
+        <div class="adm-filter-bar">
+          <input type="text" class="adm-search" id="adm-avail-search" placeholder="🔍 Search items..." oninput="admFilterAvailability()">
+          <select class="adm-select" id="adm-avail-cat" onchange="admFilterAvailability()"><option value="all">All Categories</option></select>
+          <button class="adm-batch-btn red" onclick="admBatchToggle('all',false)">🚫 Disable All</button>
+          <button class="adm-batch-btn green" onclick="admBatchToggle('all',true)">✅ Enable All</button>
+        </div>
+        <div id="adm-avail-content"></div>
+      </div>
+
+      <!-- PRICES -->
+      <div class="adm-panel" id="adm-panel-prices">
+        <div class="adm-page-title">Prices & Images</div>
+        <div class="adm-page-sub">Edit prices and image URLs. Changes apply to menu when saved.</div>
+        <div class="adm-filter-bar">
+          <input type="text" class="adm-search" id="adm-price-search" placeholder="🔍 Search items..." oninput="admFilterPrices()">
+          <select class="adm-select" id="adm-price-cat" onchange="admFilterPrices()"><option value="all">All Categories</option></select>
+        </div>
+        <div class="adm-card">
+          <div class="adm-card-hdr">
+            <div class="adm-card-title"><div class="adm-card-ico org"><i class="fas fa-tag"></i></div> Price Editor</div>
+            <div style="font-size:12px;color:#9ca3af;"><i class="fas fa-circle" style="color:#e67e22;font-size:8px;"></i> Yellow rows = unsaved changes</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="adm-price-table">
+              <thead><tr><th style="width:52px;"></th><th>Item</th><th>Price(s) — Rs</th><th>Image URL</th><th style="width:100px;">Status</th></tr></thead>
+              <tbody id="adm-price-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEALS -->
+      <div class="adm-panel" id="adm-panel-deals">
+        <div class="adm-page-title">Deals Manager</div>
+        <div class="adm-page-sub">Enable/disable deals and update prices and images.</div>
+        <div class="adm-filter-bar">
+          <input type="text" class="adm-search" id="adm-deal-search" placeholder="🔍 Search deals..." oninput="admFilterDeals()">
+          <button class="adm-batch-btn red" onclick="admBatchDeals(false)">🚫 Disable All</button>
+          <button class="adm-batch-btn green" onclick="admBatchDeals(true)">✅ Enable All</button>
+        </div>
+        <div class="adm-deal-grid" id="adm-deal-grid"></div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="adm-panel" id="adm-panel-preview">
+        <div class="adm-page-title">Live Preview</div>
+        <div class="adm-page-sub">See what's currently visible to customers.</div>
+        <div id="adm-preview-content"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
 <div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
@@ -1477,7 +1605,7 @@ body {
     }
 }
 
-    function selectBranch(id, silent) {
+    async function selectBranch(id, silent) {
         const b = BRANCH_CONFIG[id];
         if (!b) return;
         activeBranch = b;
@@ -1511,8 +1639,9 @@ body {
         setScrollLock(true);
         window._forcedOrderType = null;
     } else {
-        document.getElementById('gateway-screen').style.display = 'flex';
-        renderLoyaltyCard();
+        await applyAdminOverrides();
+document.getElementById('gateway-screen').style.display = 'flex';
+renderLoyaltyCard();
         if (window._pendingTab) {
             document.getElementById('gateway-screen').style.display = 'none';
             document.getElementById('top-sticky-container').style.display = 'flex';
@@ -1549,1722 +1678,7 @@ body {
         else if (f === 'BWP') document.getElementById('kb-BWP').classList.add('active-bwp');
         renderKitchenOrders();
     }
-    // ==========================================
-    // INVENTORY MANAGEMENT SYSTEM INTEGRATION
-    // ==========================================
     
-    // Inventory Data Store - Sales & Stock Only (No Kitchen Integration)
-let inventoryData = {
-    items: [], // Populated from menuData
-    sales: []  // All sales recorded here
-};
-function getBusinessDayStart(date) {
-    const d = new Date(date);
-    if (d.getHours() < 10) {
-        d.setDate(d.getDate() - 1);
-    }
-    d.setHours(10, 0, 0, 0);
-    return d;
-}
-
-function getBusinessDayEnd(date) {
-    const d = new Date(date);
-    if (d.getHours() >= 10) {
-        d.setDate(d.getDate() + 1);
-    }
-    d.setHours(2, 0, 0, 0);
-    return d;
-}
-
-function getPreviousBusinessDayStart(date) {
-    const d = getBusinessDayStart(date);
-    d.setDate(d.getDate() - 1);
-    return d;
-}
-
-function getPreviousBusinessDayEnd(date) {
-    const d = getBusinessDayStart(date);
-    d.setHours(2, 0, 0, 0);
-    return d;
-}
-
-let currentInventoryTab = 'stock';
-
-// Initialize inventory from menuData
-function initializeInventory() {
-    Object.keys(menuData).forEach(category => {
-        menuData[category].forEach(item => {
-            const baseItem = {
-                id: 'inv_' + Math.random().toString(36).substr(2, 9),
-                name: item.name,
-                category: category.replace(/[\u{1F600}-\u{1F64F}]/gu, '').trim(),
-                cost: calculateEstimatedCost(item.price),
-                price: typeof item.price === 'object' ? item.price[Object.keys(item.price)[0]] : item.price,
-                stock: 50,
-                minStock: 10,
-                soldToday: 0,
-                soldTotal: 0
-            };
-            inventoryData.items.push(baseItem);
-        });
-    });
-    
-    // Load from localStorage
-    const saved = localStorage.getItem('ovenx_inventory');
-    if (saved) {
-        const parsed = JSON.parse(saved);
-        parsed.items.forEach(savedItem => {
-            const existing = inventoryData.items.find(i => i.name === savedItem.name);
-            if (existing) {
-                existing.stock = savedItem.stock;
-                existing.soldTotal = savedItem.soldTotal || 0;
-            }
-        });
-        inventoryData.sales = parsed.sales || [];
-    }
-}
-
-function calculateEstimatedCost(price) {
-    if (typeof price === 'object') {
-        const firstPrice = price[Object.keys(price)[0]];
-        return Math.round(firstPrice * 0.4);
-    }
-    return Math.round(price * 0.4);
-}
-
-function saveInventory() {
-    localStorage.setItem('ovenx_inventory', JSON.stringify({
-        items: inventoryData.items,
-        sales: inventoryData.sales
-    }));
-}
-
-// Open Inventory Panel
-function openInventoryPanel() {
-    // Check if already authenticated this session
-    if (!inventoryAuthenticated) {
-        const enteredPass = prompt("🔒 Enter Inventory Panel Password:");
-        if (enteredPass !== INVENTORY_PASSWORD) {
-            alert("❌ Incorrect password! Access denied.");
-            return;
-        }
-        inventoryAuthenticated = true;
-        alert("✅ Access granted!");
-    }
-    
-    document.getElementById('inventory-panel-overlay').style.display = 'flex';
-    setScrollLock(true);
-    if (inventoryData.items.length === 0) initializeInventory();
-    renderInventoryTab('stock');
-}
-
-function closeInventoryPanel() {
-    document.getElementById('inventory-panel-overlay').style.display = 'none';
-    setScrollLock(false);
-    saveInventory();
-}
-
-function logoutInventory() {
-    inventoryAuthenticated = false;
-    closeInventoryPanel();
-    alert("🔒 Logged out successfully!");
-}
-
-function switchInventoryTab(tab) {
-    currentInventoryTab = tab;
-    document.querySelectorAll('.inv-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('inv-tab-' + tab).classList.add('active');
-    
-    if (tab === 'reports') {
-        renderReports(); // Async - handles its own DOM insertion
-    } else {
-        renderInventoryTab(tab); // Sync
-    }
-}
-
-function renderInventoryTab(tab) {
-    const container = document.getElementById('inventory-content-area');
-    
-    switch(tab) {
-        case 'stock':
-            container.innerHTML = renderStockManagement();
-            break;
-        case 'sales':
-            container.innerHTML = renderSalesEntry();
-            break;
-    }
-}
-
-    function renderStockManagement() {
-        const lowStock = inventoryData.items.filter(i => i.stock <= i.minStock);
-        const totalValue = inventoryData.items.reduce((sum, i) => sum + (i.stock * i.cost), 0);
-        
-        return `
-            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; margin-bottom:20px;">
-                <div class="stat-card">
-                    <div class="stat-value">${inventoryData.items.length}</div>
-                    <div class="stat-label">Total Items</div>
-                </div>
-                <div class="stat-card" style="${lowStock.length > 0 ? 'background:#fee2e2;' : ''}">
-                    <div class="stat-value" style="color:${lowStock.length > 0 ? '#ef4444' : '#4f46e5'}">${lowStock.length}</div>
-                    <div class="stat-label">Low Stock Alert</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">Rs ${totalValue.toLocaleString()}</div>
-                    <div class="stat-label">Inventory Value</div>
-                </div>
-                <div class="stat-card">
-                    <button class="add-item-btn" onclick="openAddItemModal()">
-                        <i class="fas fa-plus"></i> Add Item
-                    </button>
-                </div>
-            </div>
-            
-            <div class="glass-panel">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0; color:#1f2937;">Stock Management</h3>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="inv-search" placeholder="Search items..." 
-                            style="padding:8px 15px; border:2px solid #e5e7eb; border-radius:10px;"
-                            onkeyup="filterInventoryTable()">
-                        <select id="inv-category" onchange="filterInventoryTable()"
-                            style="padding:8px 15px; border:2px solid #e5e7eb; border-radius:10px;">
-                            <option value="all">All Categories</option>
-                            ${[...new Set(inventoryData.items.map(i => i.category))].map(c => 
-                                `<option value="${c}">${c}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="overflow-x:auto;">
-                    <table class="inventory-table" id="inventory-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Category</th>
-                                <th>Stock</th>
-                                <th>Cost</th>
-                                <th>Price</th>
-                                <th>Margin</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${inventoryData.items.map(item => {
-                                const isLow = item.stock <= item.minStock;
-                                const margin = ((item.price - item.cost) / item.price * 100).toFixed(1);
-                                return `
-                                    <tr class="${isLow ? 'stock-low' : ''}">
-                                        <td>
-                                            <div style="font-weight:700; color:#1f2937;">${item.name}</div>
-                                            ${isLow ? '<span class="low-stock-badge">LOW STOCK</span>' : ''}
-                                        </td>
-                                        <td><span style="background:#f3f4f6; padding:4px 12px; border-radius:20px; font-size:12px;">${item.category}</span></td>
-                                        <td>
-                                            <div class="stock-control">
-                                                <button class="stock-btn minus" onclick="adjustStock('${item.id}', -1)">-</button>
-                                                <span style="font-weight:900; min-width:40px; text-align:center; ${isLow ? 'color:#ef4444;' : ''}">${item.stock}</span>
-                                                <button class="stock-btn plus" onclick="adjustStock('${item.id}', 1)">+</button>
-                                            </div>
-                                        </td>
-                                        <td>Rs ${item.cost}</td>
-                                        <td style="font-weight:700;">Rs ${item.price}</td>
-                                        <td style="color:#10b981; font-weight:700;">${margin}%</td>
-                                        <td>
-                                            <button onclick="deleteInventoryItem('${item.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
-    function renderSalesEntry() {
-        const today = new Date().toDateString();
-        const todaySales = inventoryData.sales.filter(s => new Date(s.time).toDateString() === today);
-        const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
-        const totalItems = todaySales.reduce((sum, s) => sum + s.qty, 0);
-        const profit = todaySales.reduce((sum, s) => sum + ((s.price - s.cost) * s.qty), 0);
-
-        return `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                <div>
-                    <div class="quick-sale-form" style="margin-bottom:20px;">
-                        <h3 style="margin-top:0; color:#1f2937;">Quick Sale</h3>
-                        <select id="sale-item-select" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:10px; margin-bottom:15px; font-size:16px;">
-                            <option value="">Select item...</option>
-                            ${inventoryData.items.filter(i => i.stock > 0).map(item => 
-                                `<option value="${item.id}" data-price="${item.price}" data-cost="${item.cost}">${item.name} (Stock: ${item.stock})</option>`
-                            ).join('')}
-                        </select>
-                        
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                            <button onclick="adjustSaleQty(-1)" style="width:40px; height:40px; border-radius:10px; border:none; background:#e5e7eb; cursor:pointer; font-weight:900;">-</button>
-                            <input type="number" id="sale-qty" value="1" min="1" style="flex:1; padding:10px; border:2px solid #e5e7eb; border-radius:10px; text-align:center; font-weight:900;">
-                            <button onclick="adjustSaleQty(1)" style="width:40px; height:40px; border-radius:10px; border:none; background:#e5e7eb; cursor:pointer; font-weight:900;">+</button>
-                        </div>
-                        
-                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:15px;">
-                            <button class="payment-btn" onclick="setPaymentMethod('cash')" data-method="cash">
-                                <i class="fas fa-money-bill-wave"></i> Cash
-                            </button>
-                            <button class="payment-btn" onclick="setPaymentMethod('card')" data-method="card">
-                                <i class="fas fa-credit-card"></i> Card
-                            </button>
-                            <button class="payment-btn" onclick="setPaymentMethod('online')" data-method="online">
-                                <i class="fas fa-mobile-alt"></i> Online
-                            </button>
-                        </div>
-                        <input type="hidden" id="sale-payment" value="cash">
-                        
-                        <div style="background:linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); padding:15px; border-radius:15px; margin-bottom:15px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <span>Subtotal:</span>
-                                <span id="sale-subtotal" style="font-weight:700;">Rs 0</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; font-size:20px; font-weight:900; color:#4f46e5;">
-                                <span>Total:</span>
-                                <span id="sale-total">Rs 0</span>
-                            </div>
-                        </div>
-                        
-                        <button onclick="processQuickSale()" style="width:100%; padding:15px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; border:none; border-radius:15px; font-weight:900; cursor:pointer; box-shadow:0 4px 15px rgba(79, 70, 229, 0.4);">
-                            COMPLETE SALE
-                        </button>
-                    </div>
-                    
-                    <div class="glass-panel">
-                        <h3 style="margin-top:0; color:#1f2937;">Today's Summary</h3>
-                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px;">
-                            <div style="background:#d1fae5; padding:15px; border-radius:12px; text-align:center;">
-                                <div style="font-size:24px; font-weight:900; color:#059669;">Rs ${totalSales.toLocaleString()}</div>
-                                <div style="font-size:12px; color:#065f46;">Total Sales</div>
-                            </div>
-                            <div style="background:#dbeafe; padding:15px; border-radius:12px; text-align:center;">
-                                <div style="font-size:24px; font-weight:900; color:#2563eb;">${totalItems}</div>
-                                <div style="font-size:12px; color:#1e40af;">Items Sold</div>
-                            </div>
-                            <div style="background:#e9d5ff; padding:15px; border-radius:12px; text-align:center;">
-                                <div style="font-size:24px; font-weight:900; color:#7c3aed;">Rs ${profit.toLocaleString()}</div>
-                                <div style="font-size:12px; color:#5b21b6;">Est. Profit</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="glass-panel">
-                    <h3 style="margin-top:0; color:#1f2937;">Sales Log</h3>
-                    <div style="max-height:500px; overflow-y:auto;">
-                        ${todaySales.length === 0 ? 
-                            '<p style="text-align:center; color:#9ca3af; padding:40px;">No sales today</p>' :
-                            todaySales.map(sale => `
-                                <div class="sale-card">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <div>
-                                            <div style="font-weight:700; color:#1f2937;">${sale.itemName}</div>
-                                            <div style="font-size:12px; color:#6b7280;">
-                                                ${new Date(sale.time).toLocaleTimeString()} • ${sale.payment} • ${sale.staff}
-                                            </div>
-                                        </div>
-                                        <div style="text-align:right;">
-                                            <div style="font-weight:900; color:#4f46e5;">Rs ${sale.total}</div>
-                                            <div style="font-size:12px; color:#6b7280;">${sale.qty}x</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')
-                        }
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-
-    async function renderReports() {
-    const container = document.getElementById('inventory-content-area');
-    
-    // Initialize date filter if not set
-    if (!window.reportDateFilter) {
-        window.reportDateFilter = 'today';
-        window.reportCustomStart = null;
-        window.reportCustomEnd = null;
-    }
-    
-    // Show loading state
-    container.innerHTML = '<div style="text-align:center; padding:40px;"><div style="width:50px; height:50px; border:4px solid #f0f0f0; border-top-color:#4f46e5; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div><p>Loading data...</p></div>';
-    
-    // Calculate date range based on filter
-    const now = new Date();
-    let startDate, endDate, label;
-    
-    switch(window.reportDateFilter) {
-        case 'today':
-            startDate = getBusinessDayStart(now);
-            endDate = getBusinessDayEnd(now);
-            label = 'Today (10 AM - 2 AM)';
-            break;
-        case 'yesterday':
-            startDate = getPreviousBusinessDayStart(now);
-            endDate = getPreviousBusinessDayEnd(now);
-            label = 'Yesterday (10 AM - 2 AM)';
-            break;
-        case 'week':
-            endDate = getBusinessDayEnd(now);
-            startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - 7);
-            startDate.setHours(10, 0, 0, 0);
-            label = 'Last 7 Days (10 AM - 2 AM)';
-            break;
-        case 'month':
-            endDate = getBusinessDayEnd(now);
-            startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - 30);
-            startDate.setHours(10, 0, 0, 0);
-            label = 'Last 30 Days (10 AM - 2 AM)';
-            break;
-        case 'custom':
-            if (window.reportCustomStart && window.reportCustomEnd) {
-                const customStart = new Date(window.reportCustomStart);
-                const customEnd = new Date(window.reportCustomEnd);
-                startDate = new Date(customStart);
-                startDate.setHours(10, 0, 0, 0);
-                endDate = new Date(customEnd);
-                endDate.setDate(endDate.getDate() + 1);
-                endDate.setHours(2, 0, 0, 0);
-            } else {
-                startDate = getBusinessDayStart(now);
-                endDate = getBusinessDayEnd(now);
-            }
-            label = 'Custom Range (10 AM - 2 AM)';
-            break;
-        case 'all':
-            startDate = new Date(2020, 0, 1, 10, 0, 0);
-            endDate = getBusinessDayEnd(now);
-            label = 'All Time (10 AM - 2 AM)';
-            break;
-        default:
-            startDate = getBusinessDayStart(now);
-            endDate = getBusinessDayEnd(now);
-            label = 'Today (10 AM - 2 AM)';
-    }
-    
-    const startStr = startDate.toISOString();
-    const endStr = endDate.toISOString();
-    
-    // Fetch from Supabase
-    let kitchenOrders = [];
-    let manualSales = [];
-    
-    if (sb) {
-        let query = sb
-            .from('kitchen_orders')
-            .select('*')
-            .gte('created_at', startStr)
-            .lte('created_at', endStr)
-            .order('created_at', { ascending: false });
-            
-        // Limit for performance if showing all time
-        if (window.reportDateFilter === 'all') {
-            query = query.limit(1000);
-        }
-        
-        const { data: kOrders, error: kError } = await query;
-        
-        if (!kError && kOrders) {
-            kitchenOrders = kOrders;
-        }
-    }
-    
-    // Filter manual sales by date
-    manualSales = inventoryData.sales.filter(s => {
-        const saleTime = new Date(s.time);
-        return saleTime >= startDate && saleTime <= endDate;
-    });
-    
-    // Combine all orders
-    const allOrders = [...kitchenOrders.map(o => ({
-        ...o,
-        isKitchenOrder: true,
-        time: o.created_at,
-        total: (o.subtotal || 0) + (o.delivery_fee || 0)
-    })), ...manualSales];
-    
-    // Sort by time (newest first)
-    allOrders.sort((a, b) => new Date(b.time) - new Date(a.time));
-    
-    // Calculate totals
-    const totalRevenue = allOrders.reduce((sum, s) => sum + s.total, 0);
-    const totalTransactions = allOrders.length;
-    
-    // Calculate total items
-    let totalItemsSold = 0;
-    kitchenOrders.forEach(order => {
-        const lines = (order.items || '').split('\n');
-        lines.forEach(line => {
-            const match = line.match(/^(\d+)x\s+/);
-            if (match) {
-                totalItemsSold += parseInt(match[1]);
-            }
-        });
-    });
-    manualSales.forEach(s => {
-        totalItemsSold += (s.qty || 1);
-    });
-    
-    // Calculate previous period for comparison
-    const periodLength = endDate - startDate;
-    const prevStart = new Date(startDate.getTime() - periodLength);
-    const prevEnd = new Date(startDate.getTime() - 1);
-    
-    // Build filter buttons HTML
-    const filterButtons = [
-        { id: 'today', label: 'Today', icon: '📅' },
-        { id: 'yesterday', label: 'Yesterday', icon: '⏪' },
-        { id: 'week', label: '7 Days', icon: '📊' },
-        { id: 'month', label: '30 Days', icon: '📈' },
-        { id: 'all', label: 'All Time', icon: '🔥' },
-        { id: 'custom', label: 'Custom', icon: '📆' }
-    ].map(btn => `
-        <button onclick="setReportFilter('${btn.id}')" 
-            style="padding:10px 15px; border-radius:10px; border:none; font-weight:700; cursor:pointer;
-            ${window.reportDateFilter === btn.id ? 
-                'background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; box-shadow:0 4px 10px rgba(79,70,229,0.3);' : 
-                'background:#f3f4f6; color:#6b7280;'}">
-            ${btn.icon} ${btn.label}
-        </button>
-    `).join('');
-    
-    // Custom date picker HTML
-    const customDateHtml = window.reportDateFilter === 'custom' ? `
-        <div style="display:flex; gap:10px; margin-top:15px; padding:15px; background:#f9fafb; border-radius:10px; align-items:center;">
-            <div>
-                <label style="font-size:11px; color:#6b7280; font-weight:700;">FROM</label>
-                <input type="date" id="custom-start" value="${window.reportCustomStart || startDate.toISOString().split('T')[0]}" 
-                    style="padding:8px; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit;">
-            </div>
-            <div>
-                <label style="font-size:11px; color:#6b7280; font-weight:700;">TO</label>
-                <input type="date" id="custom-end" value="${window.reportCustomEnd || endDate.toISOString().split('T')[0]}" 
-                    style="padding:8px; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit;">
-            </div>
-            <button onclick="applyCustomDate()" 
-                style="background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:900; cursor:pointer; margin-top:15px;">
-                APPLY
-            </button>
-        </div>
-    ` : '';
-    
-    // Date range display
-    const formatBusinessDate = (date) => {
-        const d = new Date(date);
-        const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
-        return `${dateStr} ${timeStr}`;
-    };
-    
-    // Date range display
-    const dateRangeDisplay = `
-        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:15px 20px; border-radius:15px; margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-size:12px; opacity:0.8; text-transform:uppercase; letter-spacing:1px;">${label}</div>
-                    <div style="font-size:16px; font-weight:900; margin-top:5px;">
-                        ${formatBusinessDate(startDate)} → ${formatBusinessDate(endDate)}
-                    </div>
-                    <div style="font-size:11px; opacity:0.7; margin-top:3px;">
-                        🕙 Business Hours: 10:00 AM - 2:00 AM (Next Day)
-                    </div>
-                </div>
-                <div style="font-size:40px; opacity:0.3;">🍕</div>
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML = `
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;">
-                ${filterButtons}
-            </div>
-            ${customDateHtml}
-        </div>
-        
-        ${dateRangeDisplay}
-        
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px; margin-bottom:20px;">
-            <div class="stat-card">
-                <div class="stat-value">Rs ${totalRevenue.toLocaleString()}</div>
-                <div class="stat-label">Revenue</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${totalTransactions}</div>
-                <div class="stat-label">Transactions</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${totalItemsSold}</div>
-                <div class="stat-label">Items Sold</div>
-            </div>
-        </div>
-        
-        <div style="text-align:center; margin-bottom:20px;">
-            <button onclick="exportToExcel()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:15px 40px; border-radius:15px; font-weight:900; cursor:pointer; box-shadow:0 4px 15px rgba(16, 185, 129, 0.4); font-size:16px;">
-                <i class="fas fa-file-excel"></i> EXPORT TO EXCEL
-            </button>
-        </div>
-        
-        <div class="glass-panel">
-            <h3 style="margin-top:0; color:#1f2937; display:flex; justify-content:space-between; align-items:center;">
-                <span>Orders (${allOrders.length} total)</span>
-                <div>
-                    <span style="background:#dbeafe; color:#1e40af; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:700; margin-right:10px;">
-                        Kitchen: ${kitchenOrders.length}
-                    </span>
-                    <span style="background:#d1fae5; color:#065f46; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:700;">
-                        Manual: ${manualSales.length}
-                    </span>
-                </div>
-            </h3>
-            
-            <div style="max-height:500px; overflow-y:auto;">
-                <table class="inventory-table" id="sales-report-table">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Order Info</th>
-                            <th>Items</th>
-                            <th>Qty</th>
-                            <th>Revenue</th>
-                            <th>Source</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${allOrders.length === 0 ? 
-                            '<tr><td colspan="6" style="text-align:center; color:#9ca3af; padding:40px;">No orders found for this period</td></tr>' :
-                            allOrders.map(order => {
-                                const orderDate = new Date(order.time || order.created_at);
-                                const dateStr = orderDate.toLocaleDateString('en-GB');
-                                const timeStr = orderDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                                
-                                let locationDisplay = 'Unknown';
-                                if (order.type === 'Dine-In' && order.location) {
-                                    locationDisplay = order.location;
-                                } else if (order.type === 'Delivery') {
-                                    locationDisplay = 'Delivery';
-                                } else if (order.type === 'Takeaway') {
-                                    locationDisplay = 'Takeaway';
-                                } else if (order.location) {
-                                    locationDisplay = order.location;
-                                }
-                                
-                                let itemsList = '';
-                                let totalQty = 0;
-                                
-                                if (order.items) {
-                                    const lines = order.items.split('\n').filter(l => l.trim());
-                                    itemsList = lines.slice(0, 2).map(line => {
-                                        const match = line.match(/^(\d+)x\s+(.+)$/);
-                                        if (match) {
-                                            totalQty += parseInt(match[1]);
-                                            return match[2].trim().substring(0, 30) + (match[2].length > 30 ? '...' : '');
-                                        }
-                                        return line.trim().substring(0, 30);
-                                    }).join(', ');
-                                    if (lines.length > 2) itemsList += ` (+${lines.length - 2} more)`;
-                                } else if (order.itemName) {
-                                    itemsList = order.itemName;
-                                    totalQty = order.qty || 1;
-                                }
-                                
-                                return `
-                                <tr>
-                                    <td>
-                                        <div style="font-weight:700;">${dateStr}</div>
-                                        <div style="font-size:11px; color:#6b7280;">${timeStr}</div>
-                                    </td>
-                                    <td>
-                                        <div style="font-weight:700; color:var(--red);">${locationDisplay}</div>
-                                        <div style="font-size:10px; color:#9ca3af;">${order.id ? order.id.toString().slice(0,12) : 'N/A'}</div>
-                                    </td>
-                                    <td style="font-size:12px; max-width:250px; word-wrap:break-word; color:#4b5563;">${itemsList || 'N/A'}</td>
-                                    <td style="font-weight:700; text-align:center;">${totalQty}</td>
-                                    <td style="font-weight:700;">Rs ${order.total.toLocaleString()}</td>
-                                    <td>
-                                        <span style="background:${order.isKitchenOrder ? '#dbeafe' : '#d1fae5'}; color:${order.isKitchenOrder ? '#1e40af' : '#065f46'}; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;">
-                                            ${order.isKitchenOrder ? 'Kitchen' : 'Manual'}
-                                        </span>
-                                    </td>
-                                </tr>
-                                `;
-                            }).join('')
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
-// Helper function to set filter
-function setReportFilter(filter) {
-    window.reportDateFilter = filter;
-    if (filter !== 'custom') {
-        window.reportCustomStart = null;
-        window.reportCustomEnd = null;
-    }
-    renderReports();
-}
-
-// Helper function to apply custom date
-function applyCustomDate() {
-    const start = document.getElementById('custom-start').value;
-    const end = document.getElementById('custom-end').value;
-    
-    if (!start || !end) {
-        alert('Please select both start and end dates');
-        return;
-    }
-    
-    if (new Date(start) > new Date(end)) {
-        alert('Start date cannot be after end date');
-        return;
-    }
-    
-    window.reportCustomStart = start;
-    window.reportCustomEnd = end;
-    renderReports();
-}
-
-function toggleOrderDetails(orderId) {
-    const row = document.getElementById(`details-${orderId}`);
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
-
-function exportToExcel() {
-    // Get current filter dates
-    const now = new Date();
-    let startDate, endDate, label;
-    
-    // Helper functions for restaurant business hours (10 AM - 2 AM)
-    function getBusinessDayStart(date) {
-    const d = new Date(date);
-    const hour = d.getHours();
-    
-    // If it's between 12 AM (0) and 2 AM, we're still in previous day's business hours
-    // So we go back to yesterday's 10 AM
-    if (hour >= 0 && hour < 2) {
-        d.setDate(d.getDate() - 1);
-    }
-    // Otherwise (2 AM to 11:59 PM), we stay on current day
-    
-    d.setHours(10, 0, 0, 0);
-    return d;
-}
-
-function getBusinessDayStart(date) {
-    const d = new Date(date);
-    const hour = d.getHours();
-    
-    // If it's between 12 AM (0) and 2 AM, we're still in previous day's business hours
-    // So we go back to yesterday's 10 AM
-    if (hour >= 0 && hour < 2) {
-        d.setDate(d.getDate() - 1);
-    }
-    // Otherwise (2 AM to 11:59 PM), we stay on current day
-    
-    d.setHours(10, 0, 0, 0);
-    return d;
-}
-
-function getBusinessDayEnd(date) {
-    const d = new Date(date);
-    const hour = d.getHours();
-    
-    // If we're at/after 2 AM, business day ends at 2 AM tomorrow
-    if (hour >= 2) {
-        d.setDate(d.getDate() + 1);
-    }
-    // Otherwise (before 2 AM), it ends at 2 AM today
-    
-    d.setHours(2, 0, 0, 0);
-    return d;
-}
-
-function getPreviousBusinessDayStart(date) {
-    const d = getBusinessDayStart(date);
-    d.setDate(d.getDate() - 1);
-    return d;
-}
-
-function getPreviousBusinessDayEnd(date) {
-    const d = getBusinessDayStart(date);
-    d.setHours(2, 0, 0, 0);
-    return d;
-}
-    
-     switch(window.reportDateFilter) {
-        case 'today':
-            startDate = getBusinessDayStart(now);
-            endDate = getBusinessDayEnd(now);
-            label = 'Today (10 AM - 2 AM)';
-            break;
-        case 'yesterday':
-            startDate = getPreviousBusinessDayStart(now);
-            endDate = getPreviousBusinessDayEnd(now);
-            label = 'Yesterday (10 AM - 2 AM)';
-            break;
-        case 'week':
-            endDate = getBusinessDayEnd(now);
-            startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - 7);
-            startDate.setHours(10, 0, 0, 0);
-            label = 'Last 7 Days (10 AM - 2 AM)';
-            break;
-        case 'month':
-            endDate = getBusinessDayEnd(now);
-            startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - 30);
-            startDate.setHours(10, 0, 0, 0);
-            label = 'Last 30 Days (10 AM - 2 AM)';
-            break;
-        case 'custom':
-            if (window.reportCustomStart && window.reportCustomEnd) {
-                const customStart = new Date(window.reportCustomStart);
-                const customEnd = new Date(window.reportCustomEnd);
-                startDate = new Date(customStart);
-                startDate.setHours(10, 0, 0, 0);
-                endDate = new Date(customEnd);
-                endDate.setDate(endDate.getDate() + 1);
-                endDate.setHours(2, 0, 0, 0);
-            } else {
-                startDate = getBusinessDayStart(now);
-                endDate = getBusinessDayEnd(now);
-            }
-            label = 'Custom Range (10 AM - 2 AM)';
-            break;
-        case 'all':
-            startDate = new Date(2020, 0, 1, 10, 0, 0);
-            endDate = getBusinessDayEnd(now);
-            label = 'All Time (10 AM - 2 AM)';
-            break;
-        default:
-            startDate = getBusinessDayStart(now);
-            endDate = getBusinessDayEnd(now);
-            label = 'Today (10 AM - 2 AM)';
-    }
-    
-    // Fetch data and generate Excel
-    fetchDataAndExport(startDate, endDate, label);
-}
-
-async function fetchDataAndExport(startDate, endDate, label) {
-    const container = document.getElementById('inventory-content-area');
-    const originalContent = container.innerHTML;
-    container.innerHTML = '<div style="text-align:center; padding:40px;"><div style="width:50px; height:50px; border:4px solid #f0f0f0; border-top-color:#4f46e5; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div><p>Preparing Excel export...</p></div>';
-    
-    const startStr = startDate.toISOString();
-    const endStr = endDate.toISOString();
-    
-    let kitchenOrders = [];
-    let manualSales = [];
-    
-    // Fetch from Supabase
-    if (sb) {
-        try {
-            let query = sb
-                .from('kitchen_orders')
-                .select('*')
-                .gte('created_at', startStr)
-                .lte('created_at', endStr)
-                .order('created_at', { ascending: false });
-                
-            if (window.reportDateFilter === 'all') {
-                query = query.limit(5000);
-            }
-            
-            const { data: kOrders, error: kError } = await query;
-            if (!kError && kOrders) kitchenOrders = kOrders;
-        } catch (e) {
-            console.error('Error fetching kitchen orders:', e);
-        }
-    }
-    
-    // Filter manual sales
-    manualSales = inventoryData.sales.filter(s => {
-        const saleTime = new Date(s.time);
-        return saleTime >= startDate && saleTime <= endDate;
-    });
-    
-    // Combine all orders
-    const allOrders = [
-        ...kitchenOrders.map(o => ({
-            ...o,
-            isKitchenOrder: true,
-            time: o.created_at,
-            total: (o.subtotal || 0) + (o.delivery_fee || 0)
-        })),
-        ...manualSales.map(s => ({
-            ...s,
-            isKitchenOrder: false,
-            time: s.time,
-            total: s.total,
-            type: s.type || 'Direct Sale',
-            location: s.location || 'Counter',
-            status: 'COMPLETED'
-        }))
-    ];
-    
-    allOrders.sort((a, b) => new Date(b.time) - new Date(a.time));
-    
-    // Generate Excel
-    generateExcelFile(allOrders, kitchenOrders, manualSales, startDate, endDate, label);
-    container.innerHTML = originalContent;
-}
-
-function generateExcelFile(allOrders, kitchenOrders, manualSales, startDate, endDate, label) {
-    // Calculate totals
-    const totalRevenue = allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const totalKitchenRevenue = kitchenOrders.reduce((sum, o) => sum + ((o.subtotal || 0) + (o.delivery_fee || 0)), 0);
-    const totalManualRevenue = manualSales.reduce((sum, s) => sum + s.total, 0);
-    
-    // Count items
-    let totalItemsSold = 0;
-    kitchenOrders.forEach(order => {
-        const lines = (order.items || '').split('\n');
-        lines.forEach(line => {
-            const match = line.match(/^(\d+)x\s+/);
-            if (match) totalItemsSold += parseInt(match[1]);
-        });
-    });
-    manualSales.forEach(s => totalItemsSold += (s.qty || 1));
-    
-    // Payment summary
-    const paymentSummary = {};
-    manualSales.forEach(s => {
-        const method = s.payment || 'Cash';
-        paymentSummary[method] = (paymentSummary[method] || 0) + s.total;
-    });
-    
-    // Type summary
-    const typeSummary = {};
-    allOrders.forEach(o => {
-        const type = o.type || 'Unknown';
-        typeSummary[type] = (typeSummary[type] || 0) + (o.total || 0);
-    });
-    
-    // Build CSV
-    let csvContent = "\uFEFF"; // UTF-8 BOM
-    
-    // Header
-    csvContent += "OVEN X RESTAURANT - SALES REPORT\n";
-    csvContent += "═══════════════════════════════════════════════════════════════\n\n";
-    csvContent += "Report Period:," + label + "\n";
-    csvContent += "Business Hours:,10:00 AM - 2:00 AM (Next Day)\n";
-    csvContent += "Date Range:," + formatDateTime(startDate) + " to " + formatDateTime(endDate) + "\n";
-    csvContent += "Generated:," + formatDateTime(new Date()) + "\n";
-    csvContent += "Branch:,Multan\n\n";
-    
-    // Executive Summary
-    csvContent += "EXECUTIVE SUMMARY\n";
-    csvContent += "───────────────────────────────────────────────────────────────\n";
-    csvContent += "Metric,Value\n";
-    csvContent += "Total Revenue,Rs " + totalRevenue.toLocaleString() + "\n";
-    csvContent += "Kitchen Orders Revenue,Rs " + totalKitchenRevenue.toLocaleString() + "\n";
-    csvContent += "Direct Sales Revenue,Rs " + totalManualRevenue.toLocaleString() + "\n";
-    csvContent += "Total Transactions," + allOrders.length + "\n";
-    csvContent += "Kitchen Orders," + kitchenOrders.length + "\n";
-    csvContent += "Direct Sales," + manualSales.length + "\n";
-    csvContent += "Total Items Sold," + totalItemsSold + "\n";
-    csvContent += "Average Order Value,Rs " + (allOrders.length > 0 ? Math.round(totalRevenue / allOrders.length) : 0) + "\n\n";
-    
-    // Revenue by Type
-    csvContent += "REVENUE BY ORDER TYPE\n";
-    csvContent += "───────────────────────────────────────────────────────────────\n";
-    csvContent += "Order Type,Revenue,Percentage\n";
-    for (const [type, amount] of Object.entries(typeSummary)) {
-        const percentage = totalRevenue > 0 ? ((amount / totalRevenue) * 100).toFixed(1) : 0;
-        csvContent += type + ",Rs " + amount.toLocaleString() + "," + percentage + "%\n";
-    }
-    csvContent += "\n";
-    
-    // Payment Methods
-    csvContent += "PAYMENT METHODS\n";
-    csvContent += "───────────────────────────────────────────────────────────────\n";
-    csvContent += "Method,Amount,Percentage\n";
-    for (const [method, amount] of Object.entries(paymentSummary)) {
-        const percentage = totalManualRevenue > 0 ? ((amount / totalManualRevenue) * 100).toFixed(1) : 0;
-        csvContent += method + ",Rs " + amount.toLocaleString() + "," + percentage + "%\n";
-    }
-    csvContent += "\n";
-    
-    // Detailed Transactions
-    csvContent += "DETAILED TRANSACTIONS\n";
-    csvContent += "═══════════════════════════════════════════════════════════════\n";
-    csvContent += "Date,Time,Order ID,Type,Location,Items Summary,Qty,Subtotal,Delivery Fee,Total,Payment,Status,Source,Rider\n";
-    
-    allOrders.forEach(order => {
-        const date = new Date(order.time || order.created_at);
-        const dateStr = date.toLocaleDateString('en-GB');
-        const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        
-        let itemsSummary = '';
-        let qty = 0;
-        if (order.items) {
-            const lines = order.items.split('\n').filter(l => l.trim());
-            const mainItems = lines.slice(0, 3).map(line => {
-                const match = line.match(/^(\d+)x\s+(.+)$/);
-                if (match) {
-                    qty += parseInt(match[1]);
-                    return match[2].trim().substring(0, 25);
-                }
-                return line.trim().substring(0, 25);
-            }).join('; ');
-            itemsSummary = mainItems + (lines.length > 3 ? ` (+${lines.length - 3} more)` : '');
-        } else if (order.itemName) {
-            itemsSummary = order.itemName;
-            qty = order.qty || 1;
-        }
-        
-        itemsSummary = itemsSummary.replace(/"/g, '""');
-        const location = (order.location || order.table || 'N/A').replace(/"/g, '""');
-        
-        csvContent += dateStr + ",";
-        csvContent += timeStr + ",";
-        csvContent += (order.id ? order.id.toString().slice(0, 12) : 'N/A') + ",";
-        csvContent += (order.type || 'Unknown') + ",";
-        csvContent += "\"" + location + "\",";
-        csvContent += "\"" + itemsSummary + "\",";
-        csvContent += qty + ",";
-        csvContent += (order.subtotal || order.price * order.qty || 0) + ",";
-        csvContent += (order.delivery_fee || 0) + ",";
-        csvContent += (order.total || 0) + ",";
-        csvContent += (order.payment || 'Cash') + ",";
-        csvContent += (order.status || 'COMPLETED') + ",";
-        csvContent += (order.isKitchenOrder ? 'Kitchen POS' : 'Direct Sale') + ",";
-        csvContent += (order.rider || '-') + "\n";
-    });
-    
-    // Kitchen Orders Detail
-    csvContent += "\n\nKITCHEN ORDERS DETAIL\n";
-    csvContent += "═══════════════════════════════════════════════════════════════\n";
-    csvContent += "Order ID,Date,Time,Type,Location,Table,Full Items,Subtotal,Delivery Fee,Total,Status,Rider\n";
-    
-    kitchenOrders.forEach(order => {
-        const date = new Date(order.created_at);
-        const items = (order.items || '').replace(/\n/g, ' | ').replace(/"/g, '""');
-        
-        csvContent += (order.id ? order.id.toString().slice(0, 12) : 'N/A') + ",";
-        csvContent += date.toLocaleDateString('en-GB') + ",";
-        csvContent += date.toLocaleTimeString('en-GB') + ",";
-        csvContent += (order.type || 'Dine-In') + ",";
-        csvContent += "\"" + (order.location || '').replace(/"/g, '""') + "\",";
-        csvContent += (order.table || 'N/A') + ",";
-        csvContent += "\"" + items.substring(0, 500) + "\",";
-        csvContent += (order.subtotal || 0) + ",";
-        csvContent += (order.delivery_fee || 0) + ",";
-        csvContent += ((order.subtotal || 0) + (order.delivery_fee || 0)) + ",";
-        csvContent += (order.status || 'WAITING') + ",";
-        csvContent += (order.rider || 'Unassigned') + "\n";
-    });
-    
-    // Direct Sales Detail
-    csvContent += "\n\nDIRECT SALES DETAIL\n";
-    csvContent += "═══════════════════════════════════════════════════════════════\n";
-    csvContent += "Date,Time,Item,Category,Qty,Unit Price,Cost,Profit,Total,Payment,Staff\n";
-    
-    manualSales.forEach(sale => {
-        const date = new Date(sale.time);
-        const profit = ((sale.price || 0) - (sale.cost || 0)) * (sale.qty || 1);
-        
-        csvContent += date.toLocaleDateString('en-GB') + ",";
-        csvContent += date.toLocaleTimeString('en-GB') + ",";
-        csvContent += "\"" + (sale.itemName || 'Unknown').replace(/"/g, '""') + "\",";
-        csvContent += (sale.category || 'General') + ",";
-        csvContent += (sale.qty || 1) + ",";
-        csvContent += (sale.price || 0) + ",";
-        csvContent += (sale.cost || 0) + ",";
-        csvContent += profit + ",";
-        csvContent += (sale.total || 0) + ",";
-        csvContent += (sale.payment || 'Cash') + ",";
-        csvContent += (sale.staff || 'Admin') + "\n";
-    });
-    
-    // Footer
-    csvContent += "\n\n═══════════════════════════════════════════════════════════════\n";
-    csvContent += "End of Report - Oven X Restaurant Management System\n";
-    
-    // Download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const safeLabel = label.replace(/[^a-zA-Z0-9]/g, '_');
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", "OvenX_Sales_Report_" + safeLabel + "_" + timestamp + ".csv");
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    // Success notification
-    showExportSuccess(allOrders.length, totalRevenue);
-}
-
-function formatDateTime(date) {
-    return date.toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-    });
-}
-
-function showExportSuccess(count, revenue) {
-    playClick('thud');
-    
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed; top: 20px; right: 20px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white; padding: 20px 30px; border-radius: 15px;
-        font-weight: 900; z-index: 10001;
-        box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
-        animation: slideIn 0.4s ease; max-width: 350px;
-    `;
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <span style="font-size: 28px;">✅</span>
-            <span style="font-size: 18px;">Export Complete!</span>
-        </div>
-        <div style="font-size: 14px; opacity: 0.9; padding-left: 40px;">
-            ${count} transactions exported<br>
-            Total: <strong>Rs ${revenue.toLocaleString()}</strong>
-        </div>
-    `;
-    
-    if (!document.getElementById('export-animations')) {
-        const style = document.createElement('style');
-        style.id = 'export-animations';
-        style.textContent = `
-            @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-            @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.4s ease forwards';
-        setTimeout(() => toast.remove(), 400);
-    }, 4000);
-}
-
-async function syncKitchenOrdersForReports() {
-    if (!sb) {
-        alert("Database not connected");
-        return;
-    }
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    const { data: orders, error } = await sb
-        .from('kitchen_orders')
-        .select('*')
-        .eq('status', 'READY')
-        .gte('created_at', today + 'T00:00:00')
-        .lte('created_at', today + 'T23:59:59');
-    
-    if (error) {
-        console.error("Error:", error);
-        alert("Error fetching orders");
-        return;
-    }
-    
-    if (!orders || orders.length === 0) {
-        alert("No ready orders found today");
-        return;
-    }
-    
-    let processedCount = 0;
-    let totalRevenue = 0;
-    
-    orders.forEach(order => {
-        if (order.inventory_processed) return;
-        
-        // Parse items and build breakdown
-        const lines = order.items.split('\n');
-        let itemsBreakdown = [];
-        let orderTotal = 0;
-        
-        lines.forEach(line => {
-            // Match pattern: "2x Item Name [note]" or "2x Item Name"
-            const match = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.*)\])?$/);
-            if (match) {
-                const qty = parseInt(match[1]);
-                const itemName = match[2].trim();
-                const note = match[3] ? match[3].trim() : "";
-                
-                // CHECK IF THIS IS A DEAL - EXPAND IT
-                const deal = dealsData.find(d => itemName.toLowerCase().includes(d.name.toLowerCase().replace('🌙 ', '').trim()));
-                
-                if (deal) {
-                    // EXPAND DEAL COMPONENTS
-                    let dealComponents = [];
-                    
-                    // Add flavor selections (pizzas)
-                    if (deal.flavorsNeeded && note) {
-                        const flavorMatches = note.match(/(Pizza \d+|Flavor|Crown Flavor|Medium Pizza|Large Pizza):\s*([^,]+)/gi);
-                        if (flavorMatches) {
-                            flavorMatches.forEach(fm => {
-                                const parts = fm.split(':');
-                                if (parts.length === 2) {
-                                    const flavorName = parts[1].trim();
-                                    // Determine size from deal or context
-                                    let size = 'M';
-                                    if (deal.name.includes('Large')) size = 'L';
-                                    if (deal.name.includes('Medium')) size = 'M';
-                                    if (parts[0].includes('Large')) size = 'L';
-                                    
-                                    const fullItemName = `${flavorName} (${size})`;
-                                    const unitPrice = getItemPrice(flavorName, size) || Math.round(deal.price / deal.flavorsNeeded.length);
-                                    const revenue = unitPrice * 1; // 1 per flavor selection
-                                    
-                                    dealComponents.push({
-                                        name: fullItemName,
-                                        qty: 1,
-                                        unitPrice: unitPrice,
-                                        revenue: revenue
-                                    });
-                                    
-                                    // Deduct stock for this pizza
-                                    deductStock(fullItemName, 1);
-                                }
-                            });
-                        }
-                    }
-                    
-                    // Add fixed items (wings, drinks, fries, etc.)
-                    if (deal.fixedItems) {
-                        deal.fixedItems.forEach(fixedItem => {
-                            // Parse qty from fixed item string like "2x Zinger Burgers" or "1.5L Soft Drink"
-                            const fixedMatch = fixedItem.match(/^(\d+(?:\.\d+)?)?x?\s*(.+)$/i);
-                            const fixedQty = fixedMatch && fixedMatch[1] ? parseFloat(fixedMatch[1]) : 1;
-                            const fixedName = fixedMatch ? fixedMatch[2].trim() : fixedItem;
-                            
-                            const unitPrice = getItemPrice(fixedName) || 0;
-                            const revenue = unitPrice * fixedQty;
-                            
-                            dealComponents.push({
-                                name: fixedName,
-                                qty: fixedQty,
-                                unitPrice: unitPrice,
-                                revenue: revenue
-                            });
-                            
-                            // Deduct stock
-                            deductStock(fixedName, fixedQty);
-                        });
-                    }
-                    
-                    // If deal has Ramadan items
-                    if (deal.isRamadan && deal.fixedItems) {
-                        deal.fixedItems.forEach(item => {
-                            const cleanItem = item.replace(/^[^\w\s]+/, '').trim(); // Remove emoji
-                            deductStock(cleanItem, 1);
-                        });
-                    }
-                    
-                    // Add all components to breakdown
-                    itemsBreakdown.push(...dealComponents);
-                    
-                    // Calculate deal total
-                    const dealTotal = typeof deal.price === 'object' ? 
-                        (deal.price.Single || deal.price.Double || Object.values(deal.price)[0]) : 
-                        deal.price;
-                    orderTotal += dealTotal * qty;
-                    
-                } else {
-                    // REGULAR ITEM (not a deal)
-                    let unitPrice = 0;
-                    
-                    // Try to find price from menu data
-                    const menuPrice = getItemPrice(itemName);
-                    if (menuPrice) unitPrice = menuPrice;
-                    
-                    // If has size in name like "Item (M)"
-                    const sizeMatch = itemName.match(/\(([SML]|Small|Medium|Large|Reg|Regular)\)/i);
-                    if (sizeMatch && !menuPrice) {
-                        const baseName = itemName.replace(/\s*\([^)]+\)\s*$/, '').trim();
-                        unitPrice = getItemPrice(baseName, sizeMatch[1]) || 0;
-                    }
-                    
-                    const revenue = unitPrice * qty;
-                    orderTotal += revenue;
-                    
-                    itemsBreakdown.push({
-                        name: note ? `${itemName} [${note}]` : itemName,
-                        qty: qty,
-                        unitPrice: unitPrice,
-                        revenue: revenue
-                    });
-                    
-                    // Deduct stock
-                    deductStock(itemName, qty);
-                }
-            }
-        });
-        
-        // Determine type and location
-        let orderType = order.type || 'Dine-In';
-        let tableNum = null;
-        
-        if (order.location && order.location.toLowerCase().includes('table')) {
-            const tableMatch = order.location.match(/table\s*([a-z0-9]+)/i);
-            if (tableMatch) tableNum = tableMatch[1];
-        }
-        
-        // Add to sales with full breakdown
-        const sale = {
-            id: 'kitchen_' + order.id,
-            itemId: 'kitchen_order',
-            itemName: `Order #${order.id.slice(0,8)}`,
-            location: order.location,
-            type: orderType,
-            table: tableNum,
-            qty: itemsBreakdown.reduce((sum, i) => sum + i.qty, 0),
-            price: orderTotal,
-            cost: Math.round(orderTotal * 0.4),
-            total: (order.subtotal || orderTotal) + (order.delivery_fee || 0),
-            payment: 'Cash',
-            staff: 'Kitchen',
-            time: order.created_at,
-            isKitchenOrder: true,
-            itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : [{
-                name: order.items.substring(0, 50),
-                qty: 1,
-                unitPrice: order.subtotal || 0,
-                revenue: order.subtotal || 0
-            }]
-        };
-        
-        const exists = inventoryData.sales.find(s => s.id === sale.id);
-        if (!exists) {
-            inventoryData.sales.push(sale);
-            totalRevenue += sale.total;
-            processedCount++;
-        }
-        
-        // Mark as processed in database
-        sb.from('kitchen_orders').update({ inventory_processed: true }).eq('id', order.id);
-    });
-    
-    saveInventory();
-    renderReports();
-    alert(`Synced ${processedCount} orders!\nRevenue: Rs ${totalRevenue.toLocaleString()}`);
-}
-
-// Helper function to get item price from menuData
-function getItemPrice(itemName, size = null) {
-    for (let cat in menuData) {
-        const item = menuData[cat].find(i => {
-            const match = itemName.toLowerCase().includes(i.name.toLowerCase()) || 
-                         i.name.toLowerCase().includes(itemName.toLowerCase());
-            return match;
-        });
-        
-        if (item) {
-            if (typeof item.price === 'object') {
-                if (size) {
-                    const sizeKey = size === 'S' || size === 'Small' ? 'S' :
-                                   size === 'M' || size === 'Medium' || size === 'Med' ? 'M' :
-                                   size === 'L' || size === 'Large' ? 'L' : size;
-                    if (item.price[sizeKey]) return item.price[sizeKey];
-                }
-                return Object.values(item.price)[0];
-            }
-            return item.price;
-        }
-    }
-    return 0;
-}
-
-// Helper function to deduct stock
-function deductStock(itemName, qty) {
-    const inventoryItem = inventoryData.items.find(i => 
-        itemName.toLowerCase().includes(i.name.toLowerCase()) || 
-        i.name.toLowerCase().includes(itemName.toLowerCase())
-    );
-    
-    if (inventoryItem) {
-        inventoryItem.stock -= qty;
-        if (inventoryItem.stock < 0) inventoryItem.stock = 0;
-        inventoryItem.soldToday += qty;
-        inventoryItem.soldTotal += qty;
-    }
-}
-
-
-    // Inventory Actions
-    // ==========================================
-// FIXED REPORTS DATA AGGREGATION
-// ==========================================
-
-function updateReportsFromKitchenOrders() {
-    // Get today's date
-    const today = new Date().toDateString();
-    
-    // Filter kitchen orders from today that are served/completed
-    const todayOrders = inventoryData.kitchenOrders.filter(o => {
-        const orderDate = new Date(o.time).toDateString();
-        return orderDate === today && (o.status === 'served' || o.status === 'SERVED' || o.status === 'READY');
-    });
-    
-    // Calculate metrics from kitchen orders
-    let totalRevenue = 0;
-    let totalProfit = 0;
-    const itemCounts = {};
-    const staffSales = {};
-    
-    todayOrders.forEach(order => {
-        // Parse subtotal from order
-        const subtotal = order.subtotal || 0;
-        totalRevenue += subtotal;
-        
-        // Estimate profit (30% margin if no cost data)
-        const estimatedProfit = subtotal * 0.30;
-        totalProfit += estimatedProfit;
-        
-        // Count items
-        const lines = order.items.split('\n');
-        lines.forEach(line => {
-            const match = line.match(/(\d+)x\s+(.+)/);
-            if (match) {
-                const qty = parseInt(match[1]);
-                const itemName = match[2].split('[')[0].trim();
-                itemCounts[itemName] = (itemCounts[itemName] || 0) + qty;
-            }
-        });
-        
-        // Track by staff (if available, otherwise default)
-        const staff = order.staff || 'Kitchen';
-        staffSales[staff] = (staffSales[staff] || 0) + subtotal;
-    });
-    
-    // Also include manual sales from inventory system
-    const manualSales = inventoryData.sales.filter(s => new Date(s.time).toDateString() === today);
-    manualSales.forEach(sale => {
-        totalRevenue += sale.total;
-        totalProfit += ((sale.price - sale.cost) * sale.qty);
-        itemCounts[sale.itemName] = (itemCounts[sale.itemName] || 0) + sale.qty;
-        staffSales[sale.staff] = (staffSales[sale.staff] || 0) + sale.total;
-    });
-    
-    // Find best seller
-    let bestSeller = '-';
-    let maxCount = 0;
-    for (const [item, count] of Object.entries(itemCounts)) {
-        if (count > maxCount) {
-            maxCount = count;
-            bestSeller = item;
-        }
-    }
-    
-    // Update the DOM elements directly
-    const revenueEl = document.getElementById('report-revenue');
-    const profitEl = document.getElementById('report-profit');
-    const bestSellerEl = document.getElementById('report-best-seller');
-    const transactionsEl = document.getElementById('report-transactions');
-    
-    if (revenueEl) revenueEl.textContent = 'Rs ' + totalRevenue.toLocaleString();
-    if (profitEl) profitEl.textContent = 'Rs ' + Math.round(totalProfit).toLocaleString();
-    if (bestSellerEl) bestSellerEl.textContent = bestSeller;
-    if (transactionsEl) transactionsEl.textContent = todayOrders.length + manualSales.length;
-    
-    // Update charts if they exist
-    updateChartsData(itemCounts, todayOrders, manualSales);
-    
-    return {
-        revenue: totalRevenue,
-        profit: totalProfit,
-        bestSeller: bestSeller,
-        transactions: todayOrders.length + manualSales.length,
-        itemCounts: itemCounts,
-        staffSales: staffSales
-    };
-}
-
-function updateChartsData(itemCounts, kitchenOrders, manualSales) {
-    // Prepare data for charts
-    const labels = Object.keys(itemCounts).slice(0, 5);
-    const data = Object.values(itemCounts).slice(0, 5);
-    
-    // Update Sales Trend Chart
-    if (window.salesChartInstance) {
-        window.salesChartInstance.destroy();
-    }
-    
-    const salesCtx = document.getElementById('salesChart');
-    if (salesCtx) {
-        window.salesChartInstance = new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: ['9AM', '11AM', '1PM', '3PM', '5PM', '7PM', '9PM'],
-                datasets: [{
-                    label: 'Kitchen Orders',
-                    data: generateHourlyData(kitchenOrders),
-                    borderColor: 'rgb(79, 70, 229)',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }, {
-                    label: 'Direct Sales',
-                    data: generateHourlyData(manualSales),
-                    borderColor: 'rgb(243, 112, 33)',
-                    backgroundColor: 'rgba(243, 112, 33, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true }
-                }
-            }
-        });
-    }
-    
-    // Update Items Chart
-    if (window.itemsChartInstance) {
-        window.itemsChartInstance.destroy();
-    }
-    
-    const itemsCtx = document.getElementById('itemsChart');
-    if (itemsCtx && labels.length > 0) {
-        window.itemsChartInstance = new Chart(itemsCtx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: [
-                        'rgb(79, 70, 229)',
-                        'rgb(124, 58, 237)',
-                        'rgb(236, 72, 153)',
-                        'rgb(243, 112, 33)',
-                        'rgb(16, 185, 129)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-}
-
-function generateHourlyData(orders) {
-    const hourly = [0, 0, 0, 0, 0, 0, 0];
-    const hours = [9, 11, 13, 15, 17, 19, 21];
-    
-    orders.forEach(order => {
-        const orderHour = new Date(order.time || order.created_at).getHours();
-        for (let i = 0; i < hours.length; i++) {
-            if (orderHour >= hours[i] && orderHour < (hours[i+1] || 24)) {
-                hourly[i] += (order.subtotal || order.total || 0);
-                break;
-            }
-        }
-    });
-    
-    return hourly;
-}
-    function adjustStock(itemId, change) {
-        const item = inventoryData.items.find(i => i.id === itemId);
-        if (item) {
-            item.stock += change;
-            if (item.stock < 0) item.stock = 0;
-            saveInventory();
-            renderInventoryTab('stock');
-        }
-    }
-
-    function deleteInventoryItem(itemId) {
-        if (confirm('Delete this item from inventory?')) {
-            inventoryData.items = inventoryData.items.filter(i => i.id !== itemId);
-            saveInventory();
-            renderInventoryTab('stock');
-        }
-    }
-
-    function filterInventoryTable() {
-        const search = document.getElementById('inv-search').value.toLowerCase();
-        const category = document.getElementById('inv-category').value;
-        const rows = document.querySelectorAll('#inventory-table tbody tr');
-        
-        rows.forEach(row => {
-            const name = row.cells[0].textContent.toLowerCase();
-            const cat = row.cells[1].textContent;
-            const matchSearch = name.includes(search);
-            const matchCat = category === 'all' || cat.includes(category);
-            row.style.display = matchSearch && matchCat ? '' : 'none';
-        });
-    }
-
-    // Sales Functions
-    function adjustSaleQty(change) {
-        const input = document.getElementById('sale-qty');
-        let val = parseInt(input.value) + change;
-        if (val < 1) val = 1;
-        input.value = val;
-        updateSaleTotal();
-    }
-
-    function setPaymentMethod(method) {
-        document.getElementById('sale-payment').value = method;
-        document.querySelectorAll('.payment-btn').forEach(btn => {
-            if (btn.dataset.method === method) {
-                btn.classList.add('selected');
-                btn.style.borderColor = '#4f46e5';
-                btn.style.background = '#eef2ff';
-            } else {
-                btn.classList.remove('selected');
-                btn.style.borderColor = '#e5e7eb';
-                btn.style.background = 'white';
-            }
-        });
-    }
-
-    function updateSaleTotal() {
-        const select = document.getElementById('sale-item-select');
-        const option = select.options[select.selectedIndex];
-        if (!option.value) return;
-        
-        const price = parseFloat(option.dataset.price);
-        const qty = parseInt(document.getElementById('sale-qty').value);
-        const total = price * qty;
-        
-        document.getElementById('sale-subtotal').textContent = 'Rs ' + total;
-        document.getElementById('sale-total').textContent = 'Rs ' + total;
-    }
-
-    function processQuickSale() {
-        const select = document.getElementById('sale-item-select');
-        const option = select.options[select.selectedIndex];
-        if (!option.value) {
-            alert('Please select an item');
-            return;
-        }
-        
-        const itemId = option.value;
-        const item = inventoryData.items.find(i => i.id === itemId);
-        const qty = parseInt(document.getElementById('sale-qty').value);
-        const payment = document.getElementById('sale-payment').value;
-        
-        if (item.stock < qty) {
-            alert('Insufficient stock!');
-            return;
-        }
-        
-        // Deduct stock
-        item.stock -= qty;
-        item.soldToday += qty;
-        item.soldTotal += qty;
-        
-        // Record sale
-        const sale = {
-            id: Date.now(),
-            itemId: itemId,
-            itemName: item.name,
-            qty: qty,
-            price: item.price,
-            cost: item.cost,
-            total: item.price * qty,
-            payment: payment,
-            staff: 'Admin',
-            time: new Date()
-        };
-        
-        inventoryData.sales.push(sale);
-        saveInventory();
-        
-        // Reset form
-        document.getElementById('sale-item-select').value = '';
-        document.getElementById('sale-qty').value = 1;
-        setPaymentMethod('cash');
-        
-        alert('Sale completed! Stock updated.');
-        renderInventoryTab('sales');
-    }
-
-        
-
-    function filterKitchenOrders(filter) {
-        // Re-render with filter
-        const display = document.getElementById('kitchen-orders-display');
-        let filtered = inventoryData.kitchenOrders;
-        if (filter !== 'all') {
-            filtered = filtered.filter(o => o.status === filter);
-        }
-        
-        display.innerHTML = filtered.map(order => `
-            <div class="kitchen-order-card" style="border-left-color: ${order.status === 'pending' ? '#f59e0b' : order.status === 'preparing' ? '#3b82f6' : '#10b981'};">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div>
-                        <span style="background:${order.status === 'pending' ? '#fef3c7' : order.status === 'preparing' ? '#dbeafe' : '#d1fae5'}; 
-                            color:${order.status === 'pending' ? '#92400e' : order.status === 'preparing' ? '#1e40af' : '#065f46'}; 
-                            padding:4px 12px; border-radius:20px; font-size:12px; font-weight:900; text-transform:uppercase;">
-                            ${order.status}
-                        </span>
-                        <span style="margin-left:10px; font-weight:700; color:#1f2937;">${order.table || 'Delivery'}</span>
-                    </div>
-                    <div style="font-size:12px; color:#6b7280;">
-                        ${new Date(order.time).toLocaleTimeString()}
-                    </div>
-                </div>
-                <div style="font-size:14px; color:#4b5563; margin-bottom:10px; white-space:pre-wrap;">${order.items}</div>
-                ${order.status === 'ready' ? `
-                    <button onclick="serveOrderAndDeduct('${order.id}')" 
-                        style="width:100%; padding:10px; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color:white; border:none; border-radius:10px; font-weight:900; cursor:pointer;">
-                        <i class="fas fa-check"></i> SERVE & DEDUCT STOCK
-                    </button>
-                ` : ''}
-            </div>
-        `).join('');
-    }
-
-    function openAddItemModal() {
-        const name = prompt('Item Name:');
-        if (!name) return;
-        
-        const category = prompt('Category:', 'Food');
-        const cost = parseInt(prompt('Cost Price (Rs):', '100')) || 100;
-        const price = parseInt(prompt('Selling Price (Rs):', '200')) || 200;
-        const stock = parseInt(prompt('Initial Stock:', '50')) || 50;
-        
-        inventoryData.items.push({
-            id: 'inv_' + Math.random().toString(36).substr(2, 9),
-            name,
-            category,
-            cost,
-            price,
-            stock,
-            minStock: 10,
-            soldToday: 0,
-            soldTotal: 0
-        });
-        
-        saveInventory();
-        renderInventoryTab('stock');
-    }
 
     // ==========================================
     // EXISTING OVEN X CODE (PRESERVED)
@@ -3290,9 +1704,7 @@ function generateHourlyData(orders) {
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL';    let currentCalcData = null;
-    let inventoryAuthenticated = false;
-    const INVENTORY_PASSWORD = "ovenx123";
-    const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
+        const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
@@ -5208,9 +3620,489 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         }).subscribe();
     }
 
-    renderPublicMenu(); 
-    renderPublicDeals(); 
-    setupRealtimeNotifications();
+    // ══════════════════════════════════════════
+// ADMIN PANEL — EMBEDDED
+// ══════════════════════════════════════════
+
+let admState = { items:{}, deals:{} };
+let admHasUnsaved = false;
+let admActiveBranch = 'MULTAN';
+
+const ADM_BRANCHES = {
+  MULTAN: { id:'MULTAN', name:'Multan', emoji:'🍕', color:'#c0392b', cls:'multan' },
+  BWP:    { id:'BWP', name:'Bahawalpur', emoji:'🥩', color:'#5d3a1a', cls:'bwp' }
+};
+
+const ADM_PASSWORDS = { MULTAN:'multan@admin', BWP:'bwp@admin', SUPER:'ovenx@super' };
+
+function openAdminPanel() {
+  const entered = prompt('🔒 Enter Admin Password:');
+  if (!entered || !Object.values(ADM_PASSWORDS).includes(entered)) {
+    alert('❌ Wrong password. Access denied.');
+    return;
+  }
+  if (entered === ADM_PASSWORDS.MULTAN) admActiveBranch = 'MULTAN';
+  else if (entered === ADM_PASSWORDS.BWP) admActiveBranch = 'BWP';
+  else admActiveBranch = localStorage.getItem('ovenx_admin_branch') || 'MULTAN';
+
+  document.getElementById('admin-panel-overlay').classList.add('open');
+  setScrollLock(true);
+  admInitBranch(admActiveBranch);
+  admLoadState().then(() => {
+    admRenderAvailability();
+    admUpdateBadges();
+    admUpdateStats();
+  });
+}
+
+function closeAdminPanel() {
+  if (admHasUnsaved && !confirm('You have unsaved changes. Close anyway?')) return;
+  document.getElementById('admin-panel-overlay').classList.remove('open');
+  setScrollLock(false);
+  // Re-apply overrides to live menu after any saves
+  applyAdminOverrides().then(() => {
+    renderPublicMenu();
+    renderPublicDeals();
+  });
+}
+
+function admInitBranch(branchId) {
+  admActiveBranch = branchId;
+  localStorage.setItem('ovenx_admin_branch', branchId);
+  document.querySelectorAll('.adm-branch-btn').forEach(b => b.classList.remove('active','bwp'));
+  const btn = document.getElementById('adm-btn-' + branchId);
+  if (btn) { btn.classList.add('active'); if (branchId==='BWP') btn.classList.add('bwp'); }
+  const br = ADM_BRANCHES[branchId];
+  const ind = document.getElementById('adm-branch-ind');
+  if (ind) { ind.textContent=`${br.emoji} ${br.id}`; ind.className=`adm-branch-ind ${br.cls}`; }
+  const cn = document.getElementById('adm-branch-ctx-name');
+  if (cn) cn.textContent = br.name;
+}
+
+async function admSwitchBranch(branchId) {
+  if (admHasUnsaved && !confirm(`Unsaved changes for ${ADM_BRANCHES[admActiveBranch].name}.\nDiscard and switch?`)) return;
+  admInitBranch(branchId);
+  admHasUnsaved = false;
+  document.getElementById('adm-unsaved-dot').classList.remove('visible');
+  document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-cloud" style="opacity:0.5;"></i> Loading…`;
+  await admLoadState();
+  const ap = document.querySelector('.adm-panel.active');
+  if (ap) admSwitchPanel(ap.id.replace('adm-panel-',''));
+  admShowToast(ADM_BRANCHES[branchId].emoji, `Switched to ${ADM_BRANCHES[branchId].name}`, 'success');
+}
+
+function admShowLoader(msg) {
+  const el = document.getElementById('adm-loader');
+  document.getElementById('adm-loader-msg').textContent = msg;
+  el.classList.add('show');
+}
+function admHideLoader() {
+  document.getElementById('adm-loader').classList.remove('show');
+}
+
+async function admLoadState() {
+  admShowLoader('Loading menu data…');
+  admState = { items:{}, deals:{} };
+  try {
+    const { data, error } = await sb.from('menu_overrides').select('*').eq('branch', admActiveBranch);
+    if (error) throw error;
+    const dbMap = {};
+    (data||[]).forEach(r => { dbMap[r.item_name] = r; });
+    for (let cat in menuData) {
+      menuData[cat].forEach(item => {
+        const row = dbMap[item.name];
+        admState.items[item.name] = {
+          available: row ? row.available : true,
+          prices: row && row.prices ? row.prices : (typeof item.price==='object' ? {...item.price} : item.price),
+          image: row ? (row.image||'') : ''
+        };
+      });
+    }
+    dealsData.forEach(deal => {
+      const row = dbMap[deal.name];
+      admState.deals[deal.name] = {
+        available: row ? row.available : true,
+        price: row && row.prices && row.prices._flat ? row.prices._flat : deal.price,
+        image: row ? (row.image||deal.image) : deal.image
+      };
+    });
+    document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-database" style="color:#16a34a;"></i> Loaded from database`;
+  } catch(e) {
+    admShowToast('❌','Error loading from database','error');
+    for (let cat in menuData) {
+      menuData[cat].forEach(item => {
+        admState.items[item.name] = { available:true, prices: typeof item.price==='object'?{...item.price}:item.price, image:'' };
+      });
+    }
+    dealsData.forEach(deal => { admState.deals[deal.name] = {available:true,price:deal.price,image:deal.image}; });
+  }
+  admHideLoader();
+}
+
+async function admSaveAll() {
+  const btn = document.querySelector('.adm-save-btn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; btn.disabled = true;
+  admShowLoader('Saving changes…');
+  const rows = [];
+  for (let cat in menuData) {
+    menuData[cat].forEach(item => {
+      const s = admState.items[item.name];
+      if (!s) return;
+      rows.push({ branch:admActiveBranch, item_name:item.name, item_type:'menu', available:s.available, prices: typeof s.prices==='object'?s.prices:{_flat:s.prices}, image:s.image||null, updated_at:new Date().toISOString() });
+    });
+  }
+  dealsData.forEach(deal => {
+    const ds = admState.deals[deal.name];
+    if (!ds) return;
+    rows.push({ branch:admActiveBranch, item_name:deal.name, item_type:'deal', available:ds.available, prices:{_flat:ds.price}, image:ds.image||null, updated_at:new Date().toISOString() });
+  });
+  try {
+    for (let i=0; i<rows.length; i+=50) {
+      const { error } = await sb.from('menu_overrides').upsert(rows.slice(i,i+50), {onConflict:'branch,item_name'});
+      if (error) throw error;
+    }
+    admHasUnsaved = false;
+    document.getElementById('adm-unsaved-dot').classList.remove('visible');
+    const now = new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+    document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a;"></i> Saved at ${now}`;
+    admShowToast('✅',`${ADM_BRANCHES[admActiveBranch].name} saved!`,'success');
+  } catch(e) {
+    admShowToast('❌','Save failed','error');
+  }
+  admHideLoader();
+  btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> SAVE ALL'; btn.disabled = false;
+  admUpdateBadges(); admUpdateStats();
+}
+
+function admMarkUnsaved() {
+  admHasUnsaved = true;
+  document.getElementById('adm-unsaved-dot').classList.add('visible');
+  document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-circle" style="color:#e67e22;font-size:8px;"></i> Unsaved changes`;
+}
+
+function admSwitchPanel(id) {
+  document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.adm-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('adm-panel-'+id).classList.add('active');
+  document.getElementById('adm-nav-'+id).classList.add('active');
+  if (id==='availability') admRenderAvailability();
+  if (id==='prices') admRenderPrices();
+  if (id==='deals') admRenderDeals();
+  if (id==='preview') admRenderPreview();
+  admUpdateBadges();
+}
+
+// ── AVAILABILITY ──
+function admRenderAvailability(filterText='', catFilter='all') {
+  const container = document.getElementById('adm-avail-content');
+  const catSel = document.getElementById('adm-avail-cat');
+  if (catSel.options.length === 1) {
+    for (let cat in menuData) {
+      if (cat==='Pan/Premium') continue;
+      const opt = document.createElement('option'); opt.value=cat; opt.text=cat; catSel.appendChild(opt);
+    }
+  }
+  let html = '';
+  for (let cat in menuData) {
+    if (cat==='Pan/Premium') continue;
+    if (catFilter!=='all' && cat!==catFilter) continue;
+    const filtered = menuData[cat].filter(i => i.name.toLowerCase().includes(filterText.toLowerCase()));
+    if (!filtered.length) continue;
+    const availCount = filtered.filter(i => admState.items[i.name]?.available !== false).length;
+    html += `<div class="adm-cat-hdr">
+      <div class="adm-cat-lbl">${cat} <span style="font-size:11px;color:#9ca3af;font-weight:400;">(${availCount}/${filtered.length})</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="adm-cat-tog" onclick="admBatchToggle('${cat}',false)">Disable All</button>
+        <button class="adm-cat-tog" onclick="admBatchToggle('${cat}',true)">Enable All</button>
+      </div></div>
+    <div class="adm-avail-grid" style="margin-bottom:28px;">`;
+    filtered.forEach(item => {
+      const s = admState.items[item.name]||{available:true};
+      const isAvail = s.available !== false;
+      const priceStr = typeof item.price==='object' ? 'Rs '+Object.values(item.price)[0]+'+' : 'Rs '+item.price;
+      const imgUrl = s.image || admGetImg(item.name);
+      html += `<div class="adm-avail-item ${isAvail?'':'unavailable'}" id="adm-avail-${admSafeId(item.name)}">
+        <div class="adm-avail-out">OUT</div>
+        <div class="adm-avail-img" style="background-image:url('${imgUrl}')"></div>
+        <div class="adm-avail-info">
+          <div class="adm-avail-name">${item.name}${item.bwpOnly?'<span style="font-size:9px;background:rgba(93,58,26,0.5);color:#c9a227;padding:1px 6px;border-radius:20px;margin-left:4px;">BWP</span>':''}</div>
+          <div class="adm-avail-cat">${cat.replace(/[^\w\s]/g,'').trim()}</div>
+          <div class="adm-avail-price">${priceStr}</div>
+        </div>
+        <button class="adm-toggle" onclick="admToggleItem('${item.name}')"></button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html || '<div class="adm-empty"><div class="adm-empty-icon">🔍</div>No items match.</div>';
+  admUpdateStats();
+}
+
+function admFilterAvailability() {
+  admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
+}
+
+function admToggleItem(name) {
+  const s = admState.items[name]||{available:true};
+  admState.items[name] = {...s, available:!s.available};
+  admMarkUnsaved();
+  admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
+  admUpdateBadges();
+  admShowToast(admState.items[name].available?'✅':'🚫', `${name} ${admState.items[name].available?'enabled':'disabled'}`, admState.items[name].available?'success':'error');
+}
+
+function admBatchToggle(cat, val) {
+  for (let c in menuData) {
+    if (cat!=='all' && c!==cat) continue;
+    menuData[c].forEach(item => { admState.items[item.name] = {...(admState.items[item.name]||{}), available:val}; });
+  }
+  admMarkUnsaved();
+  admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
+  admUpdateBadges();
+  admShowToast(val?'✅':'🚫', `${cat==='all'?'All items':cat} ${val?'enabled':'disabled'}`, val?'success':'error');
+}
+
+function admUpdateStats() {
+  let avail=0, unavail=0, total=0;
+  for (let cat in menuData) { menuData[cat].forEach(item => { total++; if(admState.items[item.name]?.available!==false) avail++; else unavail++; }); }
+  const dealsOff = Object.values(admState.deals).filter(d => d.available===false).length;
+  document.getElementById('adm-stat-avail').textContent = avail;
+  document.getElementById('adm-stat-unavail').textContent = unavail;
+  document.getElementById('adm-stat-total').textContent = total;
+  document.getElementById('adm-stat-deals-off').textContent = dealsOff;
+}
+
+// ── PRICES ──
+function admRenderPrices(filterText='', catFilter='all') {
+  const tbody = document.getElementById('adm-price-tbody');
+  const catSel = document.getElementById('adm-price-cat');
+  if (catSel.options.length===1) {
+    for (let cat in menuData) {
+      if (cat==='Pan/Premium') continue;
+      const opt = document.createElement('option'); opt.value=cat; opt.text=cat; catSel.appendChild(opt);
+    }
+  }
+  tbody.innerHTML = ''; let count=0;
+  for (let cat in menuData) {
+    if (cat==='Pan/Premium') continue;
+    if (catFilter!=='all' && cat!==catFilter) continue;
+    menuData[cat].forEach(item => {
+      if (filterText && !item.name.toLowerCase().includes(filterText.toLowerCase())) return;
+      const s = admState.items[item.name]||{available:true,prices:{},image:''};
+      const isAvail = s.available!==false;
+      const imgUrl = s.image||admGetImg(item.name);
+      const tr = document.createElement('tr'); tr.id=`adm-row-${admSafeId(item.name)}`;
+      // thumb
+      const t1=document.createElement('td'); t1.innerHTML=`<div class="adm-thumb" style="background-image:url('${imgUrl}')"></div>`;
+      // name
+      const t2=document.createElement('td'); t2.innerHTML=`<div class="adm-row-name">${item.name}</div><div class="adm-row-cat">${cat.replace(/[^\w\s]/g,'').trim()}${item.bwpOnly?' · BWP':''}</div>`;
+      // prices
+      const t3=document.createElement('td');
+      let ph=`<div class="adm-price-wrap">`;
+      if (typeof item.price==='object') {
+        for (let sk in item.price) {
+          const cp=(s.prices&&s.prices[sk]!=null)?s.prices[sk]:item.price[sk];
+          ph+=`<div class="adm-price-wrap"><span class="adm-price-lbl">${sk}:</span><input type="number" class="adm-price-inp" value="${cp}" onchange="admUpdatePrice('${item.name}','${sk}',this.value)" oninput="admMarkRowChanged('${admSafeId(item.name)}')"></div>`;
+        }
+      } else {
+        const cp=(s.prices!=null&&typeof s.prices==='number')?s.prices:item.price;
+        ph+=`<input type="number" class="adm-price-inp" value="${cp}" onchange="admUpdatePrice('${item.name}',null,this.value)" oninput="admMarkRowChanged('${admSafeId(item.name)}')">`;
+      }
+      ph+=`</div>`; t3.innerHTML=ph;
+      // image
+      const t4=document.createElement('td');
+      t4.innerHTML=`<div style="display:flex;align-items:center;gap:6px;"><input type="text" class="adm-img-inp" placeholder="Paste image URL..." value="${s.image||''}" onchange="admUpdateImg('${item.name}',this.value)" oninput="admMarkRowChanged('${admSafeId(item.name)}')"><button class="adm-img-preview-btn" onclick="admPreviewImg('${item.name}')">👁️</button></div>`;
+      // status
+      const t5=document.createElement('td');
+      t5.innerHTML=`<button class="adm-tog-btn ${isAvail?'active':''}" onclick="admToggleItem('${item.name}');this.classList.toggle('active');"><span class="adm-status-dot ${isAvail?'on':'off'}"></span>${isAvail?'Live':'Off'}</button>`;
+      tr.append(t1,t2,t3,t4,t5); tbody.appendChild(tr); count++;
+    });
+  }
+  if (!count) tbody.innerHTML=`<tr><td colspan="5"><div class="adm-empty"><div class="adm-empty-icon">🔍</div>No items match.</div></td></tr>`;
+}
+
+function admFilterPrices() { admRenderPrices(document.getElementById('adm-price-search').value, document.getElementById('adm-price-cat').value); }
+
+function admUpdatePrice(name, sk, val) {
+  if (!admState.items[name]) admState.items[name]={available:true,prices:{},image:''};
+  const p=parseInt(val); if(isNaN(p)||p<0) return;
+  if (sk) { if(!admState.items[name].prices||typeof admState.items[name].prices!=='object') admState.items[name].prices={}; admState.items[name].prices[sk]=p; }
+  else admState.items[name].prices=p;
+  admMarkUnsaved();
+}
+
+function admUpdateImg(name, url) {
+  if (!admState.items[name]) admState.items[name]={available:true,prices:{},image:''};
+  admState.items[name].image=url.trim();
+  const row=document.getElementById(`adm-row-${admSafeId(name)}`);
+  if (row) { const th=row.querySelector('.adm-thumb'); if(th&&url.trim()) th.style.backgroundImage=`url('${url.trim()}')`; }
+  admMarkUnsaved();
+}
+
+function admMarkRowChanged(id) {
+  const row=document.getElementById(`adm-row-${id}`); if(row) row.classList.add('changed'); admMarkUnsaved();
+}
+
+function admPreviewImg(name) {
+  const s=admState.items[name]; window.open((s&&s.image)?s.image:admGetImg(name),'_blank');
+}
+
+// ── DEALS ──
+function admRenderDeals(filterText='') {
+  const grid=document.getElementById('adm-deal-grid'); grid.innerHTML='';
+  const filtered=dealsData.filter(d=>d.name.toLowerCase().includes(filterText.toLowerCase())||d.desc.toLowerCase().includes(filterText.toLowerCase()));
+  filtered.forEach(deal => {
+    const ds=admState.deals[deal.name]||{available:true,price:deal.price,image:deal.image};
+    const isAvail=ds.available!==false;
+    const card=document.createElement('div');
+    card.className=`adm-deal-card ${isAvail?'':'unavailable'}`; card.id=`adm-deal-${admSafeId(deal.name)}`;
+    card.innerHTML=`<div class="adm-deal-img-wrap"><img src="${ds.image||deal.image}" alt="${deal.name}" onerror="this.src='https://via.placeholder.com/300x140/eef0f3/999?text=No+Image'"><div class="adm-deal-off-overlay">DISABLED</div></div>
+    <div class="adm-deal-body">
+      <div class="adm-deal-name">${deal.name}</div>
+      <div class="adm-deal-desc">${deal.desc}</div>
+      <div class="adm-deal-price-row"><span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#9ca3af;">Rs</span>
+        <input type="number" class="adm-deal-price-inp" value="${ds.price}" onchange="admUpdateDealPrice('${deal.name}',this.value)" oninput="admMarkUnsaved()">
+      </div>
+      <input type="text" class="adm-deal-img-url" placeholder="Image URL..." value="${ds.image||deal.image}" onchange="admUpdateDealImg('${deal.name}',this.value)" oninput="admMarkUnsaved()">
+      <div style="height:10px;"></div>
+      <button class="adm-deal-tog-btn ${isAvail?'available':'unavailable'}" onclick="admToggleDeal('${deal.name}')">
+        ${isAvail?'✅ ACTIVE — Click to Disable':'🚫 DISABLED — Click to Enable'}
+      </button>
+    </div>`;
+    grid.appendChild(card);
+  });
+  if (!filtered.length) grid.innerHTML='<div class="adm-empty"><div class="adm-empty-icon">🔍</div>No deals match.</div>';
+  admUpdateBadges();
+}
+
+function admFilterDeals() { admRenderDeals(document.getElementById('adm-deal-search').value); }
+
+function admToggleDeal(name) {
+  const ds=admState.deals[name]||{available:true};
+  admState.deals[name]={...ds,available:!ds.available};
+  admMarkUnsaved();
+  admRenderDeals(document.getElementById('adm-deal-search').value);
+  admUpdateBadges();
+  admShowToast(admState.deals[name].available?'✅':'🚫',`${name} ${admState.deals[name].available?'enabled':'disabled'}`,admState.deals[name].available?'success':'error');
+}
+
+function admUpdateDealPrice(name, val) {
+  const p=parseInt(val); if(isNaN(p)||p<0) return;
+  admState.deals[name]={...(admState.deals[name]||{}),price:p}; admMarkUnsaved();
+}
+
+function admUpdateDealImg(name, url) {
+  admState.deals[name]={...(admState.deals[name]||{}),image:url.trim()};
+  const card=document.getElementById(`adm-deal-${admSafeId(name)}`);
+  if(card&&url.trim()){const img=card.querySelector('img');if(img)img.src=url.trim();}
+  admMarkUnsaved();
+}
+
+function admBatchDeals(val) {
+  dealsData.forEach(d=>{admState.deals[d.name]={...(admState.deals[d.name]||{}),available:val};});
+  admMarkUnsaved(); admRenderDeals(document.getElementById('adm-deal-search').value); admUpdateBadges();
+  admShowToast(val?'✅':'🚫',`All deals ${val?'enabled':'disabled'}`,val?'success':'error');
+}
+
+// ── PREVIEW ──
+function admRenderPreview() {
+  const c=document.getElementById('adm-preview-content');
+  let disabled=[], disDeals=[], modPrices=[];
+  for (let cat in menuData) menuData[cat].forEach(item=>{ if(admState.items[item.name]?.available===false) disabled.push(item.name); });
+  dealsData.forEach(d=>{ if(admState.deals[d.name]?.available===false) disDeals.push(d.name); });
+  for (let cat in menuData) menuData[cat].forEach(item=>{
+    const s=admState.items[item.name]; if(!s) return;
+    let changed=false;
+    if(typeof item.price==='object'&&typeof s.prices==='object'){for(let k in item.price){if(s.prices[k]!=null&&s.prices[k]!==item.price[k])changed=true;}}
+    else if(typeof item.price==='number'&&typeof s.prices==='number'){if(s.prices!==item.price)changed=true;}
+    if(changed) modPrices.push({name:item.name,orig:item.price,saved:s.prices});
+  });
+  let html=`<div class="adm-stats-row" style="margin-bottom:24px;">
+    <div class="adm-stat green"><div class="adm-stat-val">${Object.values(admState.items).filter(i=>i.available!==false).length}</div><div class="adm-stat-lbl">Active Items</div></div>
+    <div class="adm-stat red"><div class="adm-stat-val">${disabled.length}</div><div class="adm-stat-lbl">Hidden Items</div></div>
+    <div class="adm-stat orange"><div class="adm-stat-val">${dealsData.length-disDeals.length}</div><div class="adm-stat-lbl">Active Deals</div></div>
+    <div class="adm-stat gold"><div class="adm-stat-val">${disDeals.length}</div><div class="adm-stat-lbl">Deals Off</div></div>
+  </div>`;
+  if(disabled.length) html+=`<div class="adm-card" style="margin-bottom:16px;"><div class="adm-card-hdr"><div class="adm-card-title"><div class="adm-card-ico red"><i class="fas fa-eye-slash"></i></div>Hidden Items (${disabled.length})</div></div><div class="adm-card-body"><div style="display:flex;flex-wrap:wrap;gap:8px;">${disabled.map(n=>`<div style="background:rgba(192,57,43,0.08);border:1px solid #fecaca;padding:6px 14px;border-radius:20px;font-size:13px;color:#c0392b;display:flex;align-items:center;gap:8px;">🚫 ${n}<button onclick="admToggleItem('${n}')" style="background:none;border:none;cursor:pointer;color:rgba(192,57,43,0.5);font-size:12px;">✕</button></div>`).join('')}</div></div></div>`;
+  if(disDeals.length) html+=`<div class="adm-card" style="margin-bottom:16px;"><div class="adm-card-hdr"><div class="adm-card-title"><div class="adm-card-ico org"><i class="fas fa-tag"></i></div>Disabled Deals (${disDeals.length})</div></div><div class="adm-card-body"><div style="display:flex;flex-wrap:wrap;gap:8px;">${disDeals.map(n=>`<div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);padding:6px 14px;border-radius:20px;font-size:13px;color:#e67e22;display:flex;align-items:center;gap:8px;">🚫 ${n}<button onclick="admToggleDeal('${n}')" style="background:none;border:none;cursor:pointer;color:rgba(230,126,34,0.5);font-size:12px;">✕</button></div>`).join('')}</div></div></div>`;
+  if(modPrices.length) html+=`<div class="adm-card"><div class="adm-card-hdr"><div class="adm-card-title"><div class="adm-card-ico org"><i class="fas fa-pen"></i></div>Modified Prices (${modPrices.length})</div></div><div class="adm-card-body">${modPrices.map(mp=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #e8eaee;"><div style="font-weight:600;">${mp.name}</div><div style="display:flex;gap:16px;font-size:13px;"><span style="color:#9ca3af;text-decoration:line-through;">${typeof mp.orig==='object'?Object.entries(mp.orig).map(([k,v])=>`${k}:Rs${v}`).join(' / '):'Rs'+mp.orig}</span><span style="color:#e67e22;font-weight:700;">${typeof mp.saved==='object'?Object.entries(mp.saved).map(([k,v])=>`${k}:Rs${v}`).join(' / '):'Rs'+mp.saved}</span></div></div>`).join('')}</div></div>`;
+  if(!disabled.length&&!disDeals.length&&!modPrices.length) html+=`<div class="adm-empty" style="padding:80px 20px;"><div class="adm-empty-icon">✅</div><div style="color:#16a34a;font-size:18px;font-weight:600;">Everything is live & unchanged</div></div>`;
+  c.innerHTML=html;
+}
+
+// ── HELPERS ──
+function admUpdateBadges() {
+  let u=0; for(let c in menuData) menuData[c].forEach(item=>{if(admState.items[item.name]?.available===false)u++;});
+  document.getElementById('adm-cnt-unavail').textContent=u||'0';
+  document.getElementById('adm-cnt-deals').textContent=dealsData.length;
+}
+
+function admSafeId(name) { return name.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+function admShowToast(icon, msg, type='success') {
+  const t=document.getElementById('adm-toast');
+  document.getElementById('adm-toast-icon').textContent=icon;
+  document.getElementById('adm-toast-msg').textContent=msg;
+  t.className='adm-toast '+type; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+const admImgMap = {
+  "plain fries":"https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
+  "loaded fries":"https://www.carolynscooking.com/wp-content/uploads/2024/01/Loaded-Bacon-Cheese-Fries-3.jpg",
+  "zinger":"https://fantabulosity.com/wp-content/uploads/2021/10/Crispy-Chicken-Burger-34.jpg",
+  "chicken tikka":"https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
+  "extreme":"https://www.thecandidcooks.com/wp-content/uploads/2022/08/spicy-sausage-pepper-pizza-feature.jpg",
+  "bbq":"https://bluebowlrecipes.com/wp-content/uploads/2019/05/barbecue-chicken-pizza-0917.jpg",
+  "alfredo":"https://www.gimmesomeoven.com/wp-content/uploads/2020/04/Alfredo-Sauce-9.jpg",
+  "chipotle wrap":"https://www.dontgobaconmyheart.co.uk/wp-content/uploads/2019/06/bbq-chicken-wrap.jpg",
+  "coke":"https://dialacoke.com/media/catalog/product/cache/ea9fd91bf69f7931ab0fc6320db4b8ac/c/o/coke-pet-350ml.jpg",
+  "default":"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=60"
+};
+function admGetImg(name) {
+  const lower=name.toLowerCase();
+  for(let key in admImgMap){if(lower.includes(key))return admImgMap[key];}
+  // fallback to main app imgMap
+  if(typeof imgMap!=='undefined'){for(let key in imgMap){if(lower.includes(key))return imgMap[key];}}
+  return admImgMap['default'];
+}
+
+// ── applyAdminOverrides ── called on load and on close
+async function applyAdminOverrides() {
+  if (!sb || !activeBranch) return;
+  try {
+    const { data, error } = await sb.from('menu_overrides').select('*').eq('branch', activeBranch.id);
+    if (error || !data) return;
+    const dbMap = {};
+    data.forEach(r => { dbMap[r.item_name] = r; });
+    for (let cat in menuData) {
+      menuData[cat] = menuData[cat].filter(item => {
+        const r = dbMap[item.name];
+        if (!r) return true;
+        if (r.available === false) return false;
+        if (r.prices) {
+          if (typeof item.price==='object' && typeof r.prices==='object' && !r.prices._flat)
+            for (let k in r.prices) item.price[k] = r.prices[k];
+          else if (r.prices._flat) item.price = r.prices._flat;
+        }
+        if (r.image) { window._adminImgOverrides=window._adminImgOverrides||{}; window._adminImgOverrides[item.name]=r.image; }
+        return true;
+      });
+    }
+    for (let i=dealsData.length-1; i>=0; i--) {
+      const r=dbMap[dealsData[i].name];
+      if (!r) continue;
+      if (r.available===false){dealsData.splice(i,1);continue;}
+      if (r.prices?._flat) dealsData[i].price=r.prices._flat;
+      if (r.image) dealsData[i].image=r.image;
+    }
+  } catch(e) { console.error('applyAdminOverrides:',e); }
+}
+applyAdminOverrides().then(() => {
+  renderPublicMenu(); 
+  renderPublicDeals(); 
+});
+setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
     // ── LANDING PAGE LOGIC ──
@@ -5271,7 +4163,6 @@ initLandingPage();
             { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
             { id: 'admin-login-overlay', close: closeAdminLogin },
             { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
-            { id: 'inventory-panel-overlay', close: closeInventoryPanel },
             { id: 'flavor-overlay', close: closeModals },
             { id: 'size-overlay', close: closeModals },
             { id: 'modal-overlay', close: closeModals },
@@ -5312,6 +4203,7 @@ initLandingPage();
         <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
     </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
