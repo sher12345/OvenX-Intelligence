@@ -3383,10 +3383,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
         const isBWP = activeBranch && activeBranch.id === 'BWP';
     const br = activeBranch || BRANCH_CONFIG.MULTAN;
     const filteredDeals = dealsData.filter(d => {
-        if (d.bwpOnly && !isBWP) return false;
-        if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
-        return true;
-    });
+    if (d.bwpOnly && !isBWP) return false;
+    if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
+    if (!isItemAvailable(d.name)) return false;
+    return true;
+});
     const sortedDeals = [...filteredDeals].sort((a, b) => {
         if (a.isRamadan) return -1;
         if (b.isRamadan) return 1;
@@ -3472,9 +3473,10 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             if (cat === "Pan/Premium") continue;
             const isBWP = activeBranch && activeBranch.id === 'BWP';
             const filteredItems = menuData[cat].filter(item => {
-                if (item.bwpOnly && !isBWP) return false;
-                return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
-            });
+    if (item.bwpOnly && !isBWP) return false;
+    if (!isItemAvailable(item.name)) return false;
+    return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
+});
             if (filteredItems.length > 0) {
                 let title = document.createElement('div'); 
                 title.className = 'section-title'; 
@@ -3562,7 +3564,8 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     let b = document.createElement('div'); 
                     b.className = 'btn btn-3d'; 
                     b.style.backgroundImage = `url('${fBg}')`;
-                    b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof item.price === 'object' ? 'PICK SIZE' : 'Rs '+item.price}</div></div>`;
+                    const displayPrice = getItemPrice(item);
+b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
                     b.onclick = () => openItemSheet(item, fBg); 
                     grid.appendChild(b);
                 }); 
@@ -3595,6 +3598,23 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     
     function setupRealtimeNotifications() {
         if(!sb) return;
+        // ── MENU SYNC LISTENER ── re-renders menu when admin makes changes
+    sb.channel('menu-sync-' + (activeBranch ? activeBranch.id : 'all'))
+    .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'menu_sync'
+    }, async (payload) => {
+        if (!activeBranch) return;
+        if (payload.new && payload.new.branch !== activeBranch.id) return;
+        // Re-fetch overrides and re-render silently
+        await applyAdminOverrides();
+        const menuVisible = document.getElementById('menu-container').style.display !== 'none';
+        const dealsVisible = document.getElementById('deals-container').style.display !== 'none';
+        if (menuVisible) renderPublicMenu();
+        if (dealsVisible) renderPublicDeals();
+    })
+    .subscribe();
         
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
@@ -3659,7 +3679,6 @@ function closeAdminPanel() {
   if (admHasUnsaved && !confirm('You have unsaved changes. Close anyway?')) return;
   document.getElementById('admin-panel-overlay').classList.remove('open');
   setScrollLock(false);
-  // Re-apply overrides to live menu after any saves
   applyAdminOverrides().then(() => {
     renderPublicMenu();
     renderPublicDeals();
@@ -3766,7 +3785,9 @@ async function admSaveAll() {
     const now = new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
     document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a;"></i> Saved at ${now}`;
     admShowToast('✅',`${ADM_BRANCHES[admActiveBranch].name} saved!`,'success');
-  } catch(e) {
+    // Broadcast menu change signal
+    await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
+    } catch(e) {
     admShowToast('❌','Save failed','error');
   }
   admHideLoader();
@@ -4068,36 +4089,38 @@ function admGetImg(name) {
 }
 
 // ── applyAdminOverrides ── called on load and on close
+let _overrideMap = {}; // global cache of DB overrides
+
 async function applyAdminOverrides() {
   if (!sb || !activeBranch) return;
   try {
     const { data, error } = await sb.from('menu_overrides').select('*').eq('branch', activeBranch.id);
     if (error || !data) return;
-    const dbMap = {};
-    data.forEach(r => { dbMap[r.item_name] = r; });
-    for (let cat in menuData) {
-      menuData[cat] = menuData[cat].filter(item => {
-        const r = dbMap[item.name];
-        if (!r) return true;
-        if (r.available === false) return false;
-        if (r.prices) {
-          if (typeof item.price==='object' && typeof r.prices==='object' && !r.prices._flat)
-            for (let k in r.prices) item.price[k] = r.prices[k];
-          else if (r.prices._flat) item.price = r.prices._flat;
-        }
-        if (r.image) { window._adminImgOverrides=window._adminImgOverrides||{}; window._adminImgOverrides[item.name]=r.image; }
-        return true;
-      });
-    }
-    for (let i=dealsData.length-1; i>=0; i--) {
-      const r=dbMap[dealsData[i].name];
-      if (!r) continue;
-      if (r.available===false){dealsData.splice(i,1);continue;}
-      if (r.prices?._flat) dealsData[i].price=r.prices._flat;
-      if (r.image) dealsData[i].image=r.image;
-    }
-  } catch(e) { console.error('applyAdminOverrides:',e); }
+    _overrideMap = {};
+    data.forEach(r => { _overrideMap[r.item_name] = r; });
+    window._adminImgOverrides = window._adminImgOverrides || {};
+    data.forEach(r => { if (r.image) window._adminImgOverrides[r.item_name] = r.image; });
+  } catch(e) { console.error('applyAdminOverrides:', e); }
 }
+
+function isItemAvailable(itemName) {
+  const r = _overrideMap[itemName];
+  if (!r) return true;
+  return r.available !== false;
+}
+
+function getItemPrice(item) {
+  const r = _overrideMap[item.name];
+  if (!r || !r.prices) return item.price;
+  if (typeof item.price === 'object' && typeof r.prices === 'object' && !r.prices._flat) {
+    const merged = {...item.price};
+    for (let k in r.prices) merged[k] = r.prices[k];
+    return merged;
+  }
+  if (r.prices._flat) return r.prices._flat;
+  return item.price;
+}
+        
 applyAdminOverrides().then(() => {
   renderPublicMenu(); 
   renderPublicDeals(); 
