@@ -2168,7 +2168,8 @@ document.getElementById('sheet-img').style.backgroundImage = `url('${sheetImg}')
   arBtn.id = 'sheet-ar-btn';
   arBtn.className = 'ar-trigger-btn';
   arBtn.innerHTML = '<span>🔮</span><span>View in AR — Place on Your Table</span><span class="ar-badge">AR</span>';
-  arBtn.onclick = () => openAR({ name: item.name, image: imgUrl, price: item.price });
+  const arImgUrl = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : imgUrl;
+arBtn.onclick = () => openAR({ name: item.name, image: arImgUrl, price: item.price });
   document.querySelector('.sheet-add-btn').insertAdjacentElement('beforebegin', arBtn);
   
     
