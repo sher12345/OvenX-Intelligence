@@ -1856,8 +1856,9 @@ body {
         window._forcedOrderType = null;
     } else {
         document.getElementById('gateway-screen').style.display = 'flex';
-        applyAdminOverrides();
-renderLoyaltyCard();
+applyAdminOverrides().then(() => {
+    renderLoyaltyCard();
+});
         if (window._pendingTab) {
             document.getElementById('gateway-screen').style.display = 'none';
             document.getElementById('top-sticky-container').style.display = 'flex';
@@ -2339,7 +2340,24 @@ function exitToGateway() {
     document.getElementById('branch-selector-screen').style.display = 'none';
     document.getElementById('landing-page').style.display = 'block';
     setScrollLock(false); 
-}    function switchTab(tab) { playClick('pop'); if(tab === 'menu') { document.getElementById('menu-container').style.display = 'block'; document.getElementById('deals-container').style.display = 'none'; document.getElementById('tab-menu').classList.add('active'); document.getElementById('tab-deals').classList.remove('active'); document.getElementById('menu-controls').style.display = 'block'; renderPublicMenu(); } else { document.getElementById('menu-container').style.display = 'none'; document.getElementById('deals-container').style.display = 'block'; document.getElementById('tab-deals').classList.add('active'); document.getElementById('tab-menu').classList.remove('active'); document.getElementById('menu-controls').style.display = 'none'; renderPublicDeals(); } }
+}    function switchTab(tab) { 
+    playClick('pop'); 
+    if(tab === 'menu') { 
+        document.getElementById('menu-container').style.display = 'block'; 
+        document.getElementById('deals-container').style.display = 'none'; 
+        document.getElementById('tab-menu').classList.add('active'); 
+        document.getElementById('tab-deals').classList.remove('active'); 
+        document.getElementById('menu-controls').style.display = 'block'; 
+        applyAdminOverrides().then(() => renderPublicMenu());
+    } else { 
+        document.getElementById('menu-container').style.display = 'none'; 
+        document.getElementById('deals-container').style.display = 'block'; 
+        document.getElementById('tab-deals').classList.add('active'); 
+        document.getElementById('tab-menu').classList.remove('active'); 
+        document.getElementById('menu-controls').style.display = 'none'; 
+        applyAdminOverrides().then(() => renderPublicDeals());
+    } 
+}
 
     function openOrderFlow(item) {
         playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
@@ -5229,6 +5247,7 @@ initLandingPage();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
