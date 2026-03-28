@@ -3789,7 +3789,8 @@ const overrideImg = (window._adminImgOverrides && window._adminImgOverrides[item
 b.style.backgroundImage = `url('${overrideImg || fBg}')`;
                     const displayPrice = getItemPrice(item);
 b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
-                    b.onclick = () => openItemSheet(item, fBg); 
+                    const finalImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : fBg;
+b.onclick = () => openItemSheet(item, finalImg); 
                     grid.appendChild(b);
                 }); 
                 mC.appendChild(grid);
