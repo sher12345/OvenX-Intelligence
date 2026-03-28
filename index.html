@@ -1331,7 +1331,7 @@ body {
     </div>
 </div>
 
-<div id="deals-container" class="deals-container"><div id="deals-list"></div></div>
+<div id="deals-container" class="deals-container" style="display:none;"><div id="deals-list"></div></div>
 <div class="container" id="menu-container" style="display:none;"></div>
 
 <div id="cart-bar">
@@ -1856,8 +1856,8 @@ body {
         setScrollLock(true);
         window._forcedOrderType = null;
     } else {
-        await applyAdminOverrides();
-document.getElementById('gateway-screen').style.display = 'flex';
+        document.getElementById('gateway-screen').style.display = 'flex';
+        applyAdminOverrides();
 renderLoyaltyCard();
         if (window._pendingTab) {
             document.getElementById('gateway-screen').style.display = 'none';
@@ -3605,66 +3605,36 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     }
 
     function renderPublicDeals() {
-    const list = document.getElementById('deals-list'); 
+    const list = document.getElementById('deals-list');
     list.innerHTML = '';
-
-        const isBWP = activeBranch && activeBranch.id === 'BWP';
+    const isBWP = activeBranch && activeBranch.id === 'BWP';
     const br = activeBranch || BRANCH_CONFIG.MULTAN;
     const filteredDeals = dealsData.filter(d => {
-    if (d.bwpOnly && !isBWP) return false;
-    if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
-    if (!isItemAvailable(d.name)) return false;
-    return true;
-});
+        if (d.bwpOnly && !isBWP) return false;
+        if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
+        if (!isItemAvailable(d.name)) return false;
+        return true;
+    });
     const sortedDeals = [...filteredDeals].sort((a, b) => {
         if (a.isRamadan) return -1;
         if (b.isRamadan) return 1;
         if (a.bwpOnly && !b.bwpOnly) return -1;
         return 0;
     });
-    
     sortedDeals.forEach(deal => {
-        const card = document.createElement('div'); 
-        
-        if (deal.isRamadan) {
-            card.className = "deal-card ramadan-card";
-            card.innerHTML = `
-                <div class="ramadan-badge">🌙 RAMADAN SPECIAL</div>
-                <div class="deal-img-top" style="background-image: url('${deal.image}'); border-bottom: 3px solid var(--ramadan-green);"></div>
-                <div class="deal-info-box">
-                    <div class="deal-title ramadan-title"><span class="ramadan-crescent">🌙</span>${deal.name.replace('🌙 ', '')}</div>
-                    <div class="ramadan-items">
-                        <b>Includes:</b><br>
-                        ${deal.fixedItems.join('<br>')}
-                    </div>
-                    <span class="deal-desc" style="color: var(--ramadan-green); font-weight: 600;">${deal.ramadanNote}</span>
-                    <span class="deal-price ramadan-price">Rs ${typeof deal.price === 'object' ? deal.price.Single + ' / ' + deal.price.Double : deal.price}</span>
-                </div>
-            `;
-            const btn = document.createElement('button'); 
-            btn.className = "next-btn btn-3d ramadan-btn"; 
-            btn.style.cssText = "margin-bottom:0; margin-top: 10px;";
-            
-            if (typeof deal.price === 'object') {
-                btn.innerHTML = "🌙 SELECT SIZE";
-            } else {
-                btn.innerHTML = "🌙 ADD TO BAG";
-            }
-            
-            btn.onclick = () => openOrderFlow(deal); 
-            card.querySelector('.deal-info-box').appendChild(btn);
-        } else if (deal.bwpOnly) {
+        const card = document.createElement('div');
+        const imgUrl = (window._adminImgOverrides && window._adminImgOverrides[deal.name]) ? window._adminImgOverrides[deal.name] : deal.image;
+        if (deal.bwpOnly) {
             card.className = "deal-card steak-deal-card";
             card.innerHTML = `
                 <div class="steak-deal-badge">🥩 BWP EXCLUSIVE</div>
                 <div class="deal-badge" style="background:#5d3a1a; box-shadow:0 4px 0px #3d2010;">${deal.badge || 'BWP'}</div>
-                <div class="deal-img-top" style="background-image: url('${(window._adminImgOverrides && window._adminImgOverrides[deal.name]) ? window._adminImgOverrides[deal.name] : deal.image}')">
+                <div class="deal-img-top" style="background-image:url('${imgUrl}');"></div>
                 <div class="deal-info-box">
                     <div class="deal-title" style="color:#5d3a1a;">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
                     <span class="deal-price" style="color:#5d3a1a;">Rs ${deal.price}</span>
-                </div>
-            `;
+                </div>`;
             const btn = document.createElement('button');
             btn.className = "next-btn btn-3d steak-btn";
             btn.style.cssText = "margin-bottom:0;";
@@ -3675,18 +3645,17 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             card.className = "deal-card";
             card.innerHTML = `
                 <div class="deal-badge">${deal.badge || 'HOT'}</div>
-                <div class="deal-img-top" style="background-image: url('${(window._adminImgOverrides && window._adminImgOverrides[deal.name]) ? window._adminImgOverrides[deal.name] : deal.image}')">
+                <div class="deal-img-top" style="background-image:url('${imgUrl}');"></div>
                 <div class="deal-info-box">
                     <div class="deal-title">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
                     <span class="deal-price">Rs ${deal.price}</span>
-                </div>
-            `;
-            const btn = document.createElement('button'); 
-            btn.className = "next-btn btn-3d"; 
-            btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;"; 
+                </div>`;
+            const btn = document.createElement('button');
+            btn.className = "next-btn btn-3d";
+            btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;";
             btn.innerText = "ADD TO BAG";
-            btn.onclick = () => openOrderFlow(deal); 
+            btn.onclick = () => openOrderFlow(deal);
             card.querySelector('.deal-info-box').appendChild(btn);
         }
         list.appendChild(card);
@@ -5080,10 +5049,7 @@ function getItemPrice(item) {
   return item.price;
 }
         
-applyAdminOverrides().then(() => {
-  renderPublicMenu(); 
-  renderPublicDeals(); 
-});
+applyAdminOverrides();
 setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
     if(savedOrderId) initCustomerTracking(savedOrderId);
@@ -5238,5 +5204,6 @@ initLandingPage();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
