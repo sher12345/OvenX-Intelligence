@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1144,7 +1145,7 @@ body {
       </div>
     </div>
     <div class="lp-hero-img">
-      <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80" alt="Food">
+      <img src="https://i.postimg.cc/C1MHbX23/pomelli-image-(2).png">
     </div>
   </section>
 
@@ -1189,13 +1190,33 @@ body {
   <div class="lp-branches" id="lp-branches">
     <div class="lp-section-label">Our Locations</div>
     <div class="lp-section-title">Find Us Near You</div>
-    <div class="lp-branch-grid">
+    <div class="lp-branch-grid" style="grid-template-columns: 1fr 1fr 1fr;">
       <div class="lp-branch-card">
         <div class="lp-branch-tag lp-tag-multan">🍕 Multan</div>
         <div class="lp-branch-city">Multan</div>
         <div class="lp-branch-addr">Shop #12, Gulgasht Colony, Multan<br>📞 0300-145-0301</div>
         <button class="lp-branch-btn" onclick="enterFromLandingBranch('MULTAN')">Order from Multan →</button>
       </div>
+
+      <div style="
+        background: linear-gradient(135deg, rgba(192,57,43,0.15) 0%, rgba(230,126,34,0.1) 100%);
+        border: 2px solid rgba(230,126,34,0.4);
+        border-radius: 24px;
+        padding: 34px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      ">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(230,126,34,0.2);border:2px solid rgba(230,126,34,0.5);display:flex;align-items:center;justify-content:center;font-size:26px;">📞</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#e67e22;">Customer Care</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:white;letter-spacing:1px;">0300-245-0301</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;">Available during restaurant hours<br>for order support &amp; queries</div>
+        <a href="tel:03002450301" style="display:inline-block;margin-top:8px;background:#e67e22;color:white;padding:11px 22px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 0px #a04000;">Call Now →</a>
+      </div>
+
       <div class="lp-branch-card">
         <div class="lp-branch-tag lp-tag-bwp">🥩 Bahawalpur</div>
         <div class="lp-branch-city">Bahawalpur</div>
@@ -1625,6 +1646,15 @@ body {
         <span class="adm-nav-cnt org" id="adm-cnt-deals">0</span>
       </div>
       <div class="adm-nav-div"></div>
+      <span class="adm-nav-lbl">Content</span>
+      <div class="adm-nav-item" id="adm-nav-items" onclick="admSwitchPanel('items')">
+        <span>➕</span> Add / Remove Items
+        <span class="adm-nav-cnt org" id="adm-cnt-custom">0</span>
+      </div>
+      <div class="adm-nav-item" id="adm-nav-customdeals" onclick="admSwitchPanel('customdeals')">
+        <span>🔥</span> Add / Remove Deals
+      </div>
+      <div class="adm-nav-div"></div>
       <span class="adm-nav-lbl">Info</span>
       <div class="adm-nav-item" id="adm-nav-preview" onclick="admSwitchPanel('preview')">
         <span>👁️</span> Live Preview
@@ -1687,6 +1717,124 @@ body {
         <div class="adm-deal-grid" id="adm-deal-grid"></div>
       </div>
 
+<!-- ADD / REMOVE ITEMS -->
+      <div class="adm-panel" id="adm-panel-items">
+        <div class="adm-page-title">Add / Remove Items</div>
+        <div class="adm-page-sub">Add new menu items or remove existing ones. Changes apply after Save.</div>
+
+        <div class="adm-card" style="margin-bottom:20px;">
+          <div class="adm-card-hdr">
+            <div class="adm-card-title"><div class="adm-card-ico grn"><i class="fas fa-plus"></i></div> Add New Item</div>
+          </div>
+          <div class="adm-card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Item Name *</label>
+                <input type="text" id="new-item-name" class="adm-search" placeholder="e.g. Spicy Chicken Pizza" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Category *</label>
+                <select id="new-item-cat" class="adm-select" style="width:100%;">
+                  <option value="">-- Select Category --</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Price (Rs) *</label>
+                <input type="number" id="new-item-price" class="adm-search" placeholder="e.g. 599" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Image URL</label>
+                <input type="text" id="new-item-img" class="adm-search" placeholder="https://..." style="width:100%;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Has Multiple Sizes?</label>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#444;cursor:pointer;">
+                  <input type="radio" name="size-type" value="single" checked onchange="toggleSizeInputs(false)"> Single Price
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#444;cursor:pointer;">
+                  <input type="radio" name="size-type" value="multi" onchange="toggleSizeInputs(true)"> Multiple Sizes
+                </label>
+              </div>
+            </div>
+            <div id="multi-size-inputs" style="display:none;background:#f7f8fa;border:1px solid #e2e5ea;border-radius:8px;padding:14px;margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Size Prices</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;" id="size-price-grid">
+                <div><label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Small (S)</label><input type="number" id="sz-S" class="adm-price-inp" placeholder="0" style="width:100%;"></div>
+                <div><label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Medium (M)</label><input type="number" id="sz-M" class="adm-price-inp" placeholder="0" style="width:100%;"></div>
+                <div><label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Large (L)</label><input type="number" id="sz-L" class="adm-price-inp" placeholder="0" style="width:100%;"></div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Description (optional)</label>
+              <textarea id="new-item-desc" class="adm-search" placeholder="Short description shown in item detail sheet..." style="width:100%;height:70px;resize:vertical;font-family:'Barlow',sans-serif;"></textarea>
+            </div>
+            <button onclick="admAddNewItem()" style="background:#16a34a;color:white;border:none;padding:10px 24px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-plus"></i> ADD TO MENU
+            </button>
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-hdr">
+            <div class="adm-card-title"><div class="adm-card-ico red"><i class="fas fa-list"></i></div> Custom Items <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">(added by admin)</span></div>
+            <input type="text" class="adm-search" id="custom-item-search" placeholder="Search..." oninput="admRenderCustomItems()" style="max-width:220px;">
+          </div>
+          <div class="adm-card-body" id="custom-items-list">
+            <p style="color:#9ca3af;text-align:center;padding:20px;">No custom items yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD / REMOVE DEALS -->
+      <div class="adm-panel" id="adm-panel-customdeals">
+        <div class="adm-page-title">Add / Remove Deals</div>
+        <div class="adm-page-sub">Create new deals or remove existing custom deals.</div>
+
+        <div class="adm-card" style="margin-bottom:20px;">
+          <div class="adm-card-hdr">
+            <div class="adm-card-title"><div class="adm-card-ico grn"><i class="fas fa-fire"></i></div> Add New Deal</div>
+          </div>
+          <div class="adm-card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Deal Name *</label>
+                <input type="text" id="new-deal-name" class="adm-search" placeholder="e.g. Super Saver Deal" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Price (Rs) *</label>
+                <input type="number" id="new-deal-price" class="adm-search" placeholder="e.g. 1499" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Badge Label</label>
+                <input type="text" id="new-deal-badge" class="adm-search" placeholder="e.g. HOT DEAL" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Image URL</label>
+                <input type="text" id="new-deal-img" class="adm-search" placeholder="https://..." style="width:100%;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">What's Included (description) *</label>
+              <textarea id="new-deal-desc" class="adm-search" placeholder="e.g. 1x Large Pizza + 2x Zingers + 1L Drink" style="width:100%;height:70px;resize:vertical;font-family:'Barlow',sans-serif;"></textarea>
+            </div>
+            <button onclick="admAddNewDeal()" style="background:#e67e22;color:white;border:none;padding:10px 24px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-fire"></i> ADD DEAL
+            </button>
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-hdr">
+            <div class="adm-card-title"><div class="adm-card-ico org"><i class="fas fa-tags"></i></div> Custom Deals <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">(added by admin)</span></div>
+          </div>
+          <div class="adm-card-body" id="custom-deals-list">
+            <p style="color:#9ca3af;text-align:center;padding:20px;">No custom deals yet.</p>
+          </div>
+        </div>
+      </div>
+      
       <!-- PREVIEW -->
       <div class="adm-panel" id="adm-panel-preview">
         <div class="adm-page-title">Live Preview</div>
@@ -5177,6 +5325,307 @@ initLandingPage();
     });
 
     history.pushState(null, null, window.location.pathname);
+    // ══════════════════════════════════════════
+// CUSTOM ITEMS & DEALS MANAGER
+// ══════════════════════════════════════════
+
+let customItems = [];
+let customDeals = [];
+
+async function admLoadCustomData() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('custom_menu_items').select('*').eq('branch', admActiveBranch);
+    customItems = data || [];
+    const { data: dd } = await sb.from('custom_deals').select('*').eq('branch', admActiveBranch);
+    customDeals = dd || [];
+    updateCustomCount();
+  } catch(e) { console.error('admLoadCustomData:', e); }
+}
+
+function updateCustomCount() {
+  const el = document.getElementById('adm-cnt-custom');
+  if (el) el.textContent = customItems.length || '0';
+}
+
+function toggleSizeInputs(show) {
+  document.getElementById('multi-size-inputs').style.display = show ? 'block' : 'none';
+  document.getElementById('new-item-price').disabled = show;
+  document.getElementById('new-item-price').style.opacity = show ? '0.4' : '1';
+}
+
+// Populate category dropdown
+function admPopulateCatDropdown() {
+  const sel = document.getElementById('new-item-cat');
+  if (!sel) { console.warn('Category select not found'); return; }
+  sel.innerHTML = '<option value="">-- Select Category --</option>';
+  const cats = Object.keys(menuData).filter(c => c !== 'Pan/Premium');
+  console.log('Categories found:', cats);
+  cats.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat; opt.text = cat;
+    sel.appendChild(opt);
+  });
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__'; newOpt.text = '+ New Category...';
+  sel.appendChild(newOpt);
+}
+
+async function admAddNewItem() {
+  const name = document.getElementById('new-item-name').value.trim();
+  let cat = document.getElementById('new-item-cat').value;
+  const imgUrl = document.getElementById('new-item-img').value.trim();
+  const desc = document.getElementById('new-item-desc').value.trim();
+  const isMulti = document.querySelector('input[name="size-type"]:checked').value === 'multi';
+
+  if (!name) { admShowToast('❌', 'Item name is required', 'error'); return; }
+  if (!cat) { admShowToast('❌', 'Please select a category', 'error'); return; }
+
+  // Handle new category
+  if (cat === '__new__') {
+    cat = prompt('Enter new category name:');
+    if (!cat) return;
+  }
+
+  let price;
+  if (isMulti) {
+    price = {};
+    const S = parseInt(document.getElementById('sz-S').value);
+    const M = parseInt(document.getElementById('sz-M').value);
+    const L = parseInt(document.getElementById('sz-L').value);
+    if (S > 0) price['S'] = S;
+    if (M > 0) price['M'] = M;
+    if (L > 0) price['L'] = L;
+    if (Object.keys(price).length === 0) { admShowToast('❌', 'Enter at least one size price', 'error'); return; }
+  } else {
+    price = parseInt(document.getElementById('new-item-price').value);
+    if (!price || price <= 0) { admShowToast('❌', 'Valid price is required', 'error'); return; }
+  }
+
+  admShowLoader('Adding item...');
+
+  const newItem = { name, category: cat, price: JSON.stringify(price), image: imgUrl, description: desc, branch: admActiveBranch, available: true };
+
+  try {
+    if (sb) {
+      const { data, error } = await sb.from('custom_menu_items').insert([newItem]).select();
+      if (error) throw error;
+      newItem.id = data[0].id;
+    }
+
+    // Add to live menuData immediately
+    if (!menuData[cat]) menuData[cat] = [];
+    const liveItem = { name, price: isMulti ? price : price, _custom: true, _customId: newItem.id };
+    if (imgUrl) imgMap[name.toLowerCase()] = imgUrl;
+    menuData[cat].push(liveItem);
+    if (desc) itemDescriptions[name] = desc;
+    admState.items[name] = { available: true, prices: price, image: imgUrl };
+
+    customItems.push({ ...newItem, price: JSON.stringify(price) });
+    updateCustomCount();
+
+    // Clear inputs
+    document.getElementById('new-item-name').value = '';
+    document.getElementById('new-item-price').value = '';
+    document.getElementById('new-item-img').value = '';
+    document.getElementById('new-item-desc').value = '';
+    document.getElementById('sz-S').value = '';
+    document.getElementById('sz-M').value = '';
+    document.getElementById('sz-L').value = '';
+
+    admRenderCustomItems();
+    admShowToast('✅', `"${name}" added to ${cat}!`, 'success');
+    admMarkUnsaved();
+
+    // Broadcast sync
+    if (sb) await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
+
+  } catch(e) {
+    admShowToast('❌', 'Failed to save item', 'error');
+    console.error(e);
+  }
+  admHideLoader();
+}
+
+function admRenderCustomItems() {
+  const container = document.getElementById('custom-items-list');
+  if (!container) return;
+  const search = (document.getElementById('custom-item-search')?.value || '').toLowerCase();
+  const filtered = customItems.filter(i => i.name.toLowerCase().includes(search));
+
+  if (!filtered.length) {
+    container.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:20px;">No custom items yet. Add one above!</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="adm-price-table">
+      <thead><tr><th style="width:52px;"></th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th style="width:80px;">Action</th></tr></thead>
+      <tbody>
+        ${filtered.map(item => {
+          const priceObj = (() => { try { return JSON.parse(item.price); } catch(e) { return item.price; } })();
+          const priceStr = typeof priceObj === 'object' ? Object.entries(priceObj).map(([k,v]) => `${k}:Rs${v}`).join(' / ') : 'Rs ' + priceObj;
+          const imgUrl = item.image || 'https://via.placeholder.com/40x40/eef0f3/999?text=No+Img';
+          return `<tr>
+            <td><div class="adm-thumb" style="background-image:url('${imgUrl}')"></div></td>
+            <td><div class="adm-row-name">${item.name}</div></td>
+            <td><div class="adm-row-cat">${item.category}</div></td>
+            <td style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#e67e22;font-weight:700;">${priceStr}</td>
+            <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${item.available!==false ? 'background:#f0fdf4;color:#16a34a;' : 'background:#fff5f5;color:#c0392b;'}">${item.available!==false ? 'Live' : 'Off'}</span></td>
+            <td><button onclick="admRemoveCustomItem('${item.id}','${item.name}','${item.category}')" style="background:#fff5f5;color:#c0392b;border:1px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;">REMOVE</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function admRemoveCustomItem(id, name, cat) {
+  if (!confirm(`Remove "${name}" from the menu?`)) return;
+  admShowLoader('Removing item...');
+  try {
+    if (sb && id) await sb.from('custom_menu_items').delete().eq('id', id);
+    // Remove from live menuData
+    if (menuData[cat]) menuData[cat] = menuData[cat].filter(i => i.name !== name);
+    delete admState.items[name];
+    delete itemDescriptions[name];
+    customItems = customItems.filter(i => i.id !== id);
+    updateCustomCount();
+    admRenderCustomItems();
+    admShowToast('🗑️', `"${name}" removed`, 'success');
+    if (sb) await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
+  } catch(e) { admShowToast('❌', 'Failed to remove', 'error'); }
+  admHideLoader();
+}
+
+async function admAddNewDeal() {
+  const name = document.getElementById('new-deal-name').value.trim();
+  const price = parseInt(document.getElementById('new-deal-price').value);
+  const badge = document.getElementById('new-deal-badge').value.trim() || 'NEW';
+  const imgUrl = document.getElementById('new-deal-img').value.trim();
+  const desc = document.getElementById('new-deal-desc').value.trim();
+
+  if (!name) { admShowToast('❌', 'Deal name is required', 'error'); return; }
+  if (!price || price <= 0) { admShowToast('❌', 'Valid price is required', 'error'); return; }
+  if (!desc) { admShowToast('❌', 'Description is required', 'error'); return; }
+
+  admShowLoader('Adding deal...');
+const newDeal = { name, price, badge, image: imgUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80', deal_desc: desc, branch: admActiveBranch, available: true };
+  try {
+    if (sb) {
+      const { data, error } = await sb.from('custom_deals').insert([newDeal]).select();
+      if (error) throw error;
+      newDeal.id = data[0].id;
+    }
+
+    // Add to live dealsData immediately
+    dealsData.push({ name, price, badge, image: newDeal.image, desc, _custom: true, _customId: newDeal.id });
+    admState.deals[name] = { available: true, price, image: newDeal.image };
+    customDeals.push(newDeal);
+
+    document.getElementById('new-deal-name').value = '';
+    document.getElementById('new-deal-price').value = '';
+    document.getElementById('new-deal-badge').value = '';
+    document.getElementById('new-deal-img').value = '';
+    document.getElementById('new-deal-desc').value = '';
+
+    admRenderCustomDeals();
+    admShowToast('✅', `Deal "${name}" added!`, 'success');
+    admMarkUnsaved();
+    if (sb) await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
+
+  } catch(e) {
+    admShowToast('❌', 'Failed to save deal', 'error');
+    console.error(e);
+  }
+  admHideLoader();
+}
+
+function admRenderCustomDeals() {
+  const container = document.getElementById('custom-deals-list');
+  if (!container) return;
+  if (!customDeals.length) {
+    container.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:20px;">No custom deals yet. Add one above!</p>';
+    return;
+  }
+  container.innerHTML = `<div class="adm-deal-grid">
+    ${customDeals.map(deal => `
+      <div class="adm-deal-card">
+        <div class="adm-deal-img-wrap"><img src="${deal.image}" alt="${deal.name}" onerror="this.src='https://via.placeholder.com/300x140/eef0f3/999?text=No+Image'"></div>
+        <div class="adm-deal-body">
+          <div class="adm-deal-name">${deal.name}</div>
+          <div class="adm-deal-desc">${deal.deal_desc}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#e67e22;margin:8px 0;">Rs ${deal.price}</div>
+          <button onclick="admRemoveCustomDeal('${deal.id}','${deal.name}')" style="width:100%;padding:9px;border:none;border-radius:6px;background:#fff5f5;color:#c0392b;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:1.5px solid #fecaca;">🗑️ REMOVE DEAL</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+async function admRemoveCustomDeal(id, name) {
+  if (!confirm(`Remove deal "${name}"?`)) return;
+  admShowLoader('Removing deal...');
+  try {
+    if (sb && id) await sb.from('custom_deals').delete().eq('id', id);
+    const idx = dealsData.findIndex(d => d.name === name && d._custom);
+    if (idx !== -1) dealsData.splice(idx, 1);
+    delete admState.deals[name];
+    customDeals = customDeals.filter(d => d.id !== id);
+    admRenderCustomDeals();
+    admShowToast('🗑️', `Deal "${name}" removed`, 'success');
+    if (sb) await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
+  } catch(e) { admShowToast('❌', 'Failed to remove deal', 'error'); }
+  admHideLoader();
+}
+
+// Hook into existing admSwitchPanel
+const _origAdmSwitchPanel = admSwitchPanel;
+admSwitchPanel = function(id) {
+  _origAdmSwitchPanel(id);
+  if (id === 'items') { 
+    setTimeout(() => {
+      admPopulateCatDropdown(); 
+      admRenderCustomItems(); 
+    }, 100);
+  }
+  if (id === 'customdeals') admRenderCustomDeals();
+};
+
+// Hook into existing admSwitchBranch to reload custom data
+const _origAdmSwitchBranch = admSwitchBranch;
+admSwitchBranch = async function(branchId) {
+  await _origAdmSwitchBranch(branchId);
+  await admLoadCustomData();
+};
+
+// Load custom data on panel open — hook into openAdminPanel
+const _origOpenAdminPanel = openAdminPanel;
+openAdminPanel = function() {
+  _origOpenAdminPanel();
+  admLoadCustomData();
+};
+
+// Also load custom items from DB into live menuData on app load
+async function loadCustomItemsIntoMenu() {
+  if (!sb || !activeBranch) return;
+  try {
+    const { data: items } = await sb.from('custom_menu_items').select('*').eq('branch', activeBranch.id).eq('available', true);
+    (items || []).forEach(item => {
+      const priceObj = (() => { try { return JSON.parse(item.price); } catch(e) { return parseInt(item.price); } })();
+      if (!menuData[item.category]) menuData[item.category] = [];
+      if (!menuData[item.category].find(i => i.name === item.name)) {
+        menuData[item.category].push({ name: item.name, price: priceObj, _custom: true });
+      }
+      if (item.image) imgMap[item.name.toLowerCase()] = item.image;
+      if (item.description) itemDescriptions[item.name] = item.description;
+    });
+    const { data: deals } = await sb.from('custom_deals').select('*').eq('branch', activeBranch.id).eq('available', true);
+    (deals || []).forEach(deal => {
+      if (!dealsData.find(d => d.name === deal.name)) {
+dealsData.push({ name: deal.name, price: deal.price, badge: deal.badge || 'NEW', image: deal.image, desc: deal.deal_desc, _custom: true });      }
+    });
+  } catch(e) { console.error('loadCustomItemsIntoMenu:', e); }
+}
+loadCustomItemsIntoMenu();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
@@ -5247,6 +5696,7 @@ initLandingPage();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
