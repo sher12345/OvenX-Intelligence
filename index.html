@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,9 +72,17 @@ body {
             100% { transform: translate(1px, -2px) rotate(-1deg); }
         }
         @keyframes glow-pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(201, 162, 39, 0.6); }
-            50% { box-shadow: 0 0 40px rgba(201, 162, 39, 0.9); }
-        }
+    0%, 100% { box-shadow: 0 0 20px rgba(201, 162, 39, 0.6); }
+    50% { box-shadow: 0 0 40px rgba(201, 162, 39, 0.9); }
+}
+@keyframes tracker-pulse {
+    0%,100%{box-shadow:0 4px 20px rgba(192,57,43,0.5);}
+    50%{box-shadow:0 4px 30px rgba(192,57,43,0.85),0 0 0 6px rgba(192,57,43,0.15);}
+}
+@keyframes ready-bounce {
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08);}
+}
         .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
         .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
@@ -1851,18 +1858,118 @@ body {
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
 <div id="overlay-screen"><button class="header-back-btn btn-3d" id="checkout-back-btn" onclick="closeCheckout()" style="margin-bottom:20px; padding:12px 25px;">← BACK</button><div id="checkout-content"></div></div>
 
-<!-- LIVE TRACKING OVERLAY -->
-<div id="tracking-overlay">
-    <div class="modal">
-        <span id="track-icon" class="tracking-status-icon">📩</span>
-        <h2 id="track-main-status" style="color:var(--red); font-weight:900; margin-bottom:5px;">Order Sent!</h2>
-        <p id="track-sub-status" style="font-weight:bold; color:#777;">Waiting for confirmation...</p>
-        <div style="margin:30px 0; text-align:left; padding-left:15%;">
-            <div id="step-waiting" class="tracking-step active">✅ Sent to Kitchen</div>
-            <div id="step-preparing" class="tracking-step">🔘 Chef is Preparing</div>
-            <div id="step-ready" class="tracking-step">🔘 Food is Ready!</div>
+<!-- FLOATING TRACKER BUTTON -->
+<div id="float-tracker-btn" onclick="openTrackingSheet()" style="
+    display:none; position:fixed; bottom:90px; left:18px; z-index:1500;
+    background:linear-gradient(135deg,#c0392b,#e05c2b); color:white;
+    border:none; border-radius:50px; padding:12px 18px;
+    box-shadow:0 4px 20px rgba(192,57,43,0.5);
+    font-family:'Outfit',sans-serif; font-weight:800; font-size:13px;
+    cursor:pointer; display:none; align-items:center; gap:8px;
+    animation:tracker-pulse 2s infinite;
+">
+    <span id="float-tracker-icon" style="font-size:20px;">📩</span>
+    <div>
+        <div id="float-tracker-status" style="font-size:12px;opacity:0.85;letter-spacing:0.5px;">YOUR ORDER</div>
+        <div id="float-tracker-label" style="font-size:13px;font-weight:900;">Sent to Kitchen</div>
+    </div>
+    <div id="float-tracker-dot" style="width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pulsedot 1.5s infinite;margin-left:4px;"></div>
+</div>
+
+<!-- TRACKING BOTTOM SHEET -->
+<div id="tracking-overlay" style="display:none;"></div>
+<div id="track-sheet-backdrop" onclick="closeTrackingSheet()" style="
+    position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    z-index:9200;display:none;backdrop-filter:blur(6px);
+"></div>
+<div id="track-sheet" style="
+    position:fixed;bottom:0;left:0;width:100%;
+    background:white;border-radius:28px 28px 0 0;
+    z-index:9201;transform:translateY(100%);
+    transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);
+    max-height:92vh;overflow-y:auto;
+    box-shadow:0 -10px 40px rgba(0,0,0,0.3);
+    font-family:'Outfit',sans-serif;
+">
+    <!-- Handle -->
+    <div style="width:40px;height:4px;background:#e0e0e0;border-radius:2px;margin:14px auto 0;"></div>
+    
+    <!-- Header -->
+    <div id="track-header-bar" style="
+        background:linear-gradient(135deg,#c0392b,#e05c2b);
+        margin:16px 20px 0;border-radius:20px;padding:20px;color:white;
+        text-align:center;position:relative;overflow:hidden;
+    ">
+        <div id="track-header-bg-anim" style="
+            position:absolute;inset:0;opacity:0.1;
+            background:radial-gradient(circle at 30% 50%,white 0%,transparent 60%);
+        "></div>
+        <div id="track-big-icon" style="font-size:52px;margin-bottom:8px;line-height:1;">📩</div>
+        <div id="track-big-status" style="font-size:22px;font-weight:900;margin-bottom:4px;letter-spacing:0.3px;">Sent to Kitchen!</div>
+        <div id="track-big-sub" style="font-size:13px;opacity:0.85;font-weight:500;">Waiting for the team to confirm...</div>
+    </div>
+
+    <!-- Countdown Timer -->
+    <div id="track-timer-box" style="
+        margin:16px 20px 0;background:#fff9f5;
+        border:2px solid #ffe0cc;border-radius:16px;
+        padding:14px 18px;display:flex;align-items:center;gap:14px;
+    ">
+        <div style="font-size:28px;">⏱️</div>
+        <div style="flex:1;">
+            <div style="font-size:11px;font-weight:700;color:#999;letter-spacing:1.5px;text-transform:uppercase;">Estimated Ready In</div>
+            <div id="track-countdown" style="font-size:26px;font-weight:900;color:var(--red);font-family:monospace;">25:00</div>
         </div>
-        <button onclick="clearTracking()" class="btn-3d" style="width:100%; padding:15px; border-radius:20px; background:#eee; font-weight:900;">CLOSE TRACKER</button>
+        <div id="track-timer-status" style="
+            background:#fff;border:2px solid #f0ece8;
+            border-radius:12px;padding:8px 12px;text-align:center;
+        ">
+            <div id="track-order-type-badge" style="font-size:11px;font-weight:900;color:var(--orange);letter-spacing:1px;text-transform:uppercase;"></div>
+        </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <div style="margin:16px 20px 0;padding:18px;background:#f9f7f5;border-radius:16px;">
+        <div id="track-step-1" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;transition:all 0.4s;">
+            <div id="track-dot-1" style="width:42px;height:42px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all 0.4s;">📩</div>
+            <div>
+                <div style="font-weight:800;font-size:15px;color:#333;">Order Sent</div>
+                <div style="font-size:12px;color:#999;margin-top:2px;">Kitchen received your order</div>
+            </div>
+        </div>
+        <div style="width:2px;height:20px;background:#e0e0e0;margin-left:20px;margin-bottom:16px;border-radius:2px;" id="track-line-1"></div>
+        <div id="track-step-2" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;opacity:0.4;transition:all 0.4s;">
+            <div id="track-dot-2" style="width:42px;height:42px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all 0.4s;">👨‍🍳</div>
+            <div>
+                <div style="font-weight:800;font-size:15px;color:#333;">Preparing</div>
+                <div style="font-size:12px;color:#999;margin-top:2px;">Chef is cooking your food</div>
+            </div>
+        </div>
+        <div style="width:2px;height:20px;background:#e0e0e0;margin-left:20px;margin-bottom:16px;border-radius:2px;" id="track-line-2"></div>
+        <div id="track-step-3" style="display:flex;align-items:center;gap:14px;opacity:0.4;transition:all 0.4s;">
+            <div id="track-dot-3" style="width:42px;height:42px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all 0.4s;">✅</div>
+            <div>
+                <div style="font-weight:800;font-size:15px;color:#333;">Ready!</div>
+                <div style="font-size:12px;color:#999;margin-top:2px;">Your food is hot and ready</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div id="track-order-summary" style="margin:16px 20px 0;padding:16px;border:2px solid #f0ece8;border-radius:16px;"></div>
+
+    <!-- Dismiss -->
+    <div style="padding:16px 20px 36px;display:flex;gap:10px;">
+        <button onclick="closeTrackingSheet()" style="
+            flex:1;padding:14px;border-radius:14px;
+            background:#f5f0ed;color:#666;border:none;
+            font-weight:700;font-size:14px;font-family:'Outfit',sans-serif;cursor:pointer;
+        ">Close ✕</button>
+        <button onclick="clearTracking()" style="
+            flex:1;padding:14px;border-radius:14px;
+            background:#ffebee;color:#c0392b;border:2px solid #fecaca;
+            font-weight:700;font-size:14px;font-family:'Outfit',sans-serif;cursor:pointer;
+        ">Dismiss Order 🗑️</button>
     </div>
 </div>
 
@@ -2634,66 +2741,232 @@ function createFlavorButton(f, categoryLabel) {
         setScrollLock(false); 
     }
 
-    function initCustomerTracking(orderId) {
-        if(!orderId) return;
-        localStorage.setItem('ovenx_last_order_id', orderId);
-        document.getElementById('tracking-overlay').style.display = 'flex';
-        setScrollLock(true);
+    let _trackChannel = null;
+let _trackCountdownInterval = null;
+let _trackOrderData = null;
 
-        sb.from('kitchen_orders').select('status').eq('id', orderId).single()
-        .then(({data}) => { if(data) updateTrackingUI(data.status); });
+function initCustomerTracking(orderId, orderObj) {
+    if (!orderId) return;
+    localStorage.setItem('ovenx_last_order_id', orderId);
+    if (orderObj) localStorage.setItem('ovenx_last_order_data', JSON.stringify(orderObj));
 
-        sb.channel(`track-${orderId}`)
-        .on('postgres_changes', 
-            { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'kitchen_orders', 
-                filter: `id=eq.${orderId}` 
-            }, 
-            (payload) => {
-                updateTrackingUI(payload.new.status);
-            })
+    // Show floating button
+    const btn = document.getElementById('float-tracker-btn');
+    btn.style.display = 'flex';
+
+    // Load order data
+    _trackOrderData = orderObj || JSON.parse(localStorage.getItem('ovenx_last_order_data') || '{}');
+
+    // Fetch current status
+    if (sb) {
+        sb.from('kitchen_orders').select('*').eq('id', orderId).single()
+        .then(({data}) => { if (data) { _trackOrderData = data; updateTrackingUI(data.status, data); } });
+
+        // Subscribe to real-time updates
+        if (_trackChannel) sb.removeChannel(_trackChannel);
+        _trackChannel = sb.channel(`track-${orderId}`)
+        .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public',
+            table: 'kitchen_orders', filter: `id=eq.${orderId}`
+        }, (payload) => {
+            _trackOrderData = payload.new;
+            updateTrackingUI(payload.new.status, payload.new);
+            // Push notification
+            sendTrackNotification(payload.new.status);
+            // Sound + vibration
+            playClick('thud');
+            if (navigator.vibrate) navigator.vibrate([200, 100, 300]);
+        })
         .subscribe();
     }
 
-    function updateTrackingUI(status) {
-        const icon = document.getElementById('track-icon');
-        const main = document.getElementById('track-main-status');
-        const sub = document.getElementById('track-sub-status');
-        const sWait = document.getElementById('step-waiting');
-        const sPrep = document.getElementById('step-preparing');
-        const sReady = document.getElementById('step-ready');
-        
-        document.querySelectorAll('.tracking-step').forEach(s => s.classList.remove('active'));
-        
-        sWait.innerHTML = "✅ Sent to Kitchen";
-        sPrep.innerHTML = "🔘 Chef is Preparing";
-        sReady.innerHTML = "🔘 Food is Ready!";
+    startCountdown(orderId);
+    updateFloatBtn('WAITING');
+}
 
-        sWait.classList.add('active');
-        
-        if(status === 'PREPARING') { 
-            window.navigator.vibrate([200, 100, 200]); 
-            icon.innerText = "👨‍🍳"; 
-            main.innerText = "Chef is Cooking!"; 
-            sub.innerText = "Your dough is being tossed right now!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sPrep.classList.add('active'); 
-        } 
-        else if(status === 'READY') { 
-            window.navigator.vibrate([500, 110, 500]); 
-            icon.innerText = "🔥"; 
-            main.innerText = "Order Ready!"; 
-            sub.innerText = "Freshly baked and hot!"; 
-            sPrep.innerHTML = "✅ Chef is Preparing";
-            sReady.innerHTML = "✅ Food is Ready!";
-            sPrep.classList.add('active'); 
-            sReady.classList.add('active');
+function startCountdown(orderId) {
+    if (_trackCountdownInterval) clearInterval(_trackCountdownInterval);
+    const stored = localStorage.getItem('ovenx_order_time_' + orderId);
+    const orderTime = stored ? parseInt(stored) : Date.now();
+    if (!stored) localStorage.setItem('ovenx_order_time_' + orderId, orderTime);
+    const TOTAL = 25 * 60 * 1000;
+
+    _trackCountdownInterval = setInterval(() => {
+        const elapsed = Date.now() - orderTime;
+        const remaining = Math.max(0, TOTAL - elapsed);
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        const el = document.getElementById('track-countdown');
+        if (el) {
+            el.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+            el.style.color = remaining < 5*60000 ? '#e67e22' : remaining === 0 ? '#c0392b' : 'var(--red)';
         }
-    } 
+        if (remaining === 0 && _trackCountdownInterval) {
+            clearInterval(_trackCountdownInterval);
+            const el2 = document.getElementById('track-countdown');
+            if (el2) el2.textContent = 'Overdue!';
+        }
+    }, 1000);
+}
 
-    function clearTracking() { localStorage.removeItem('ovenx_last_order_id'); document.getElementById('tracking-overlay').style.display = 'none'; setScrollLock(false); }
+function updateTrackingUI(status, orderData) {
+    // Update floating button
+    updateFloatBtn(status);
+
+    // Update header
+    const icons = { WAITING: '📩', PREPARING: '👨‍🍳', READY: '🔥' };
+    const titles = { WAITING: 'Sent to Kitchen!', PREPARING: 'Being Prepared!', READY: '🎉 Ready to Serve!' };
+    const subs = { WAITING: 'Waiting for the team to confirm...', PREPARING: 'Your food is being cooked right now!', READY: 'Hot & fresh — come pick it up!' };
+
+    const bigIcon = document.getElementById('track-big-icon');
+    const bigStatus = document.getElementById('track-big-status');
+    const bigSub = document.getElementById('track-big-sub');
+    const headerBar = document.getElementById('track-header-bar');
+
+    if (bigIcon) bigIcon.textContent = icons[status] || '📩';
+    if (bigStatus) bigStatus.textContent = titles[status] || 'Order Placed';
+    if (bigSub) bigSub.textContent = subs[status] || '';
+
+    if (headerBar) {
+        if (status === 'READY') {
+            headerBar.style.background = 'linear-gradient(135deg,#16a34a,#22c55e)';
+            headerBar.style.animation = 'ready-bounce 1s infinite';
+        } else if (status === 'PREPARING') {
+            headerBar.style.background = 'linear-gradient(135deg,#1d4ed8,#3b82f6)';
+            headerBar.style.animation = 'none';
+        } else {
+            headerBar.style.background = 'linear-gradient(135deg,#c0392b,#e05c2b)';
+            headerBar.style.animation = 'none';
+        }
+    }
+
+    // Update steps
+    const steps = ['track-step-1','track-step-2','track-step-3'];
+    const dots = ['track-dot-1','track-dot-2','track-dot-3'];
+    const lines = ['track-line-1','track-line-2'];
+    const activeColors = ['#c0392b','#1d4ed8','#16a34a'];
+
+    const activeIdx = status === 'WAITING' ? 0 : status === 'PREPARING' ? 1 : 2;
+
+    steps.forEach((sid, i) => {
+        const el = document.getElementById(sid);
+        const dot = document.getElementById(dots[i]);
+        if (!el || !dot) return;
+        if (i <= activeIdx) {
+            el.style.opacity = '1';
+            dot.style.background = activeColors[Math.min(i, activeColors.length-1)];
+            dot.style.boxShadow = `0 0 12px ${activeColors[Math.min(i, activeColors.length-1)]}55`;
+            dot.style.transform = i === activeIdx ? 'scale(1.15)' : 'scale(1)';
+        } else {
+            el.style.opacity = '0.35';
+            dot.style.background = '#e0e0e0';
+            dot.style.boxShadow = 'none';
+            dot.style.transform = 'scale(1)';
+        }
+    });
+
+    lines.forEach((lid, i) => {
+        const el = document.getElementById(lid);
+        if (el) el.style.background = i < activeIdx ? activeColors[i] : '#e0e0e0';
+    });
+
+    // Order type badge
+    if (orderData) {
+        const badge = document.getElementById('track-order-type-badge');
+        if (badge) badge.textContent = orderData.type || '';
+        renderOrderSummary(orderData);
+    }
+
+    // Stop countdown when ready
+    if (status === 'READY' && _trackCountdownInterval) {
+        clearInterval(_trackCountdownInterval);
+        const el = document.getElementById('track-countdown');
+        if (el) { el.textContent = 'READY! 🔥'; el.style.color = '#16a34a'; }
+    }
+}
+
+function renderOrderSummary(orderData) {
+    const el = document.getElementById('track-order-summary');
+    if (!el || !orderData) return;
+    const total = (orderData.subtotal || 0) + (orderData.delivery_fee || 0);
+    el.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:#999;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Order Details</div>
+        <div style="font-size:13px;color:#444;white-space:pre-wrap;line-height:1.6;margin-bottom:12px;">${orderData.items || ''}</div>
+        ${total > 0 ? `<div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f0ece8;font-weight:900;font-size:15px;"><span style="color:#666;">Total</span><span style="color:var(--red);">Rs ${total}</span></div>` : ''}
+    `;
+}
+
+function updateFloatBtn(status) {
+    const btn = document.getElementById('float-tracker-btn');
+    const icon = document.getElementById('float-tracker-icon');
+    const label = document.getElementById('float-tracker-label');
+    const dot = document.getElementById('float-tracker-dot');
+    if (!btn) return;
+
+    btn.style.display = 'flex';
+
+    if (status === 'PREPARING') {
+        icon.textContent = '👨‍🍳';
+        label.textContent = 'Being Prepared';
+        btn.style.background = 'linear-gradient(135deg,#1d4ed8,#3b82f6)';
+        dot.style.background = '#fbbf24';
+        dot.style.boxShadow = '0 0 8px #fbbf24';
+    } else if (status === 'READY') {
+        icon.textContent = '🔥';
+        label.textContent = 'Food is Ready!';
+        btn.style.background = 'linear-gradient(135deg,#16a34a,#22c55e)';
+        dot.style.background = '#ffffff';
+        dot.style.boxShadow = '0 0 10px white';
+        btn.style.animation = 'tracker-pulse 0.8s infinite';
+    } else {
+        icon.textContent = '📩';
+        label.textContent = 'Sent to Kitchen';
+        btn.style.background = 'linear-gradient(135deg,#c0392b,#e05c2b)';
+        dot.style.background = '#4ade80';
+        dot.style.boxShadow = '0 0 8px #4ade80';
+    }
+}
+
+function sendTrackNotification(status) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const msgs = {
+        PREPARING: { title: '👨‍🍳 Kitchen Update!', body: 'Your order is now being prepared!' },
+        READY: { title: '🔥 Order Ready!', body: 'Your food is hot and ready — come get it!' }
+    };
+    const m = msgs[status];
+    if (m) new Notification(m.title, { body: m.body, icon: 'https://cdn-icons-png.flaticon.com/512/5973/5973307.png', tag: 'order-status', requireInteraction: true });
+}
+
+function openTrackingSheet() {
+    document.getElementById('track-sheet-backdrop').style.display = 'block';
+    document.getElementById('track-sheet').style.transform = 'translateY(0)';
+    setScrollLock(true);
+
+    // Refresh data
+    const orderId = localStorage.getItem('ovenx_last_order_id');
+    if (orderId && sb) {
+        sb.from('kitchen_orders').select('*').eq('id', orderId).single()
+        .then(({data}) => { if (data) { _trackOrderData = data; updateTrackingUI(data.status, data); } });
+    }
+}
+
+function closeTrackingSheet() {
+    document.getElementById('track-sheet-backdrop').style.display = 'none';
+    document.getElementById('track-sheet').style.transform = 'translateY(100%)';
+    setScrollLock(false);
+}
+
+function clearTracking() {
+    const orderId = localStorage.getItem('ovenx_last_order_id');
+    localStorage.removeItem('ovenx_last_order_id');
+    localStorage.removeItem('ovenx_last_order_data');
+    if (orderId) localStorage.removeItem('ovenx_order_time_' + orderId);
+    if (_trackChannel) { sb.removeChannel(_trackChannel); _trackChannel = null; }
+    if (_trackCountdownInterval) { clearInterval(_trackCountdownInterval); _trackCountdownInterval = null; }
+    document.getElementById('float-tracker-btn').style.display = 'none';
+    closeTrackingSheet();
+    setScrollLock(false);
+}
 
     function checkUpsell(item) {
         const itemName = item.name.toLowerCase();
@@ -2845,8 +3118,8 @@ if (orderType === 'Takeaway') {
 // Dine-in: no phone, no name needed    
     let orderId = null;
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
-
-    let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
+if (orderId) initCustomerTracking(orderId, orderObj);
+let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
     let bonus = "";
     if(localStorage.getItem('ovenx_member_name')) {
         if(stamps >= 10) {
@@ -5243,7 +5516,7 @@ function getItemPrice(item) {
 applyAdminOverrides();
 setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
-    if(savedOrderId) initCustomerTracking(savedOrderId);
+if (savedOrderId) initCustomerTracking(savedOrderId, null);
     // ── LANDING PAGE LOGIC ──
 function initLandingPage() {
     const params = new URLSearchParams(window.location.search);
