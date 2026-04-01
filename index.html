@@ -5047,6 +5047,7 @@ const ADM_BRANCHES = {
 const ADM_PASSWORDS = { MULTAN:'multan@admin', BWP:'bwp@admin', SUPER:'ovenx@super' };
 
 function openAdminPanel() {
+  window._admAvailLoaded = false; // ← ADD THIS
   const entered = prompt('🔒 Enter Admin Password:');
   if (!entered || !Object.values(ADM_PASSWORDS).includes(entered)) {
     alert('❌ Wrong password. Access denied.');
@@ -5055,7 +5056,6 @@ function openAdminPanel() {
   if (entered === ADM_PASSWORDS.MULTAN) admActiveBranch = 'MULTAN';
   else if (entered === ADM_PASSWORDS.BWP) admActiveBranch = 'BWP';
   else admActiveBranch = localStorage.getItem('ovenx_admin_branch') || 'MULTAN';
-
   document.getElementById('admin-panel-overlay').classList.add('open');
   setScrollLock(true);
   admInitBranch(admActiveBranch);
@@ -5090,6 +5090,7 @@ function admInitBranch(branchId) {
 }
 
 async function admSwitchBranch(branchId) {
+  window._admAvailLoaded = false; // ← ADD THIS
   if (admHasUnsaved && !confirm(`Unsaved changes for ${ADM_BRANCHES[admActiveBranch].name}.\nDiscard and switch?`)) return;
   admInitBranch(branchId);
   admHasUnsaved = false;
@@ -5205,43 +5206,75 @@ function admSwitchPanel(id) {
 }
 
 // ── AVAILABILITY ──
-function admRenderAvailability(filterText='', catFilter='all') {
+async function admRenderAvailability(filterText='', catFilter='all') {
   const container = document.getElementById('adm-avail-content');
   const catSel = document.getElementById('adm-avail-cat');
-  if (catSel.options.length === 1) {
-    for (let cat in menuData) {
-      if (cat==='Pan/Premium') continue;
-      const opt = document.createElement('option'); opt.value=cat; opt.text=cat; catSel.appendChild(opt);
-    }
+
+  if (!window._admAvailLoaded) {
+    await admLoadCustomData();
+    window._admAvailLoaded = true;
   }
-  let html = '';
+
+  // Build merged category map: hardcoded + custom
+  const mergedCats = {};
   for (let cat in menuData) {
-    if (cat==='Pan/Premium') continue;
-    if (catFilter!=='all' && cat!==catFilter) continue;
-    const filtered = menuData[cat].filter(i => i.name.toLowerCase().includes(filterText.toLowerCase()));
+    if (cat === 'Pan/Premium') continue;
+    if (!mergedCats[cat]) mergedCats[cat] = [];
+    menuData[cat].forEach(item => {
+      mergedCats[cat].push({ ...item, _source: 'hardcoded' });
+    });
+  }
+  customItems.forEach(ci => {
+    const priceObj = (() => { try { return JSON.parse(ci.price); } catch(e) { return parseInt(ci.price) || 0; } })();
+    if (!mergedCats[ci.category]) mergedCats[ci.category] = [];
+    if (!mergedCats[ci.category].find(i => i.name === ci.name)) {
+      mergedCats[ci.category].push({ name: ci.name, price: priceObj, _source: 'custom', _customId: ci.id });
+    }
+    if (!admState.items[ci.name]) {
+      admState.items[ci.name] = { available: ci.available !== false, prices: priceObj, image: ci.image || '' };
+    }
+  });
+
+  // Rebuild category dropdown fresh
+  catSel.innerHTML = '<option value="all">All Categories</option>';
+  Object.keys(mergedCats).forEach(cat => {
+    const opt = document.createElement('option'); opt.value = cat; opt.text = cat; catSel.appendChild(opt);
+  });
+
+  let html = '';
+  for (let cat in mergedCats) {
+    if (catFilter !== 'all' && cat !== catFilter) continue;
+    const filtered = mergedCats[cat].filter(i =>
+      i.name.toLowerCase().includes((filterText || '').toLowerCase())
+    );
     if (!filtered.length) continue;
     const availCount = filtered.filter(i => admState.items[i.name]?.available !== false).length;
     html += `<div class="adm-cat-hdr">
       <div class="adm-cat-lbl">${cat} <span style="font-size:11px;color:#9ca3af;font-weight:400;">(${availCount}/${filtered.length})</span></div>
       <div style="display:flex;gap:8px;">
-        <button class="adm-cat-tog" onclick="admBatchToggle('${cat}',false)">Disable All</button>
-        <button class="adm-cat-tog" onclick="admBatchToggle('${cat}',true)">Enable All</button>
+        <button class="adm-cat-tog" onclick="admBatchToggleCat('${cat}',false)">Disable All</button>
+        <button class="adm-cat-tog" onclick="admBatchToggleCat('${cat}',true)">Enable All</button>
       </div></div>
     <div class="adm-avail-grid" style="margin-bottom:28px;">`;
     filtered.forEach(item => {
-      const s = admState.items[item.name]||{available:true};
+      const s = admState.items[item.name] || { available: true };
       const isAvail = s.available !== false;
-      const priceStr = typeof item.price==='object' ? 'Rs '+Object.values(item.price)[0]+'+' : 'Rs '+item.price;
+      const priceStr = typeof item.price === 'object' ? 'Rs ' + Object.values(item.price)[0] + '+' : 'Rs ' + item.price;
       const imgUrl = s.image || admGetImg(item.name);
-      html += `<div class="adm-avail-item ${isAvail?'':'unavailable'}" id="adm-avail-${admSafeId(item.name)}">
+      const isCustom = item._source === 'custom';
+      html += `<div class="adm-avail-item ${isAvail ? '' : 'unavailable'}" id="adm-avail-${admSafeId(item.name)}">
         <div class="adm-avail-out">OUT</div>
         <div class="adm-avail-img" style="background-image:url('${imgUrl}')"></div>
         <div class="adm-avail-info">
-          <div class="adm-avail-name">${item.name}${item.bwpOnly?'<span style="font-size:9px;background:rgba(93,58,26,0.5);color:#c9a227;padding:1px 6px;border-radius:20px;margin-left:4px;">BWP</span>':''}</div>
+          <div class="adm-avail-name">
+            ${item.name}
+            ${isCustom ? '<span style="font-size:9px;background:rgba(99,102,241,0.15);color:#6366f1;padding:1px 6px;border-radius:20px;margin-left:4px;border:1px solid rgba(99,102,241,0.3);">CUSTOM</span>' : ''}
+            ${item.bwpOnly ? '<span style="font-size:9px;background:rgba(93,58,26,0.5);color:#c9a227;padding:1px 6px;border-radius:20px;margin-left:4px;">BWP</span>' : ''}
+          </div>
           <div class="adm-avail-cat">${cat.replace(/[^\w\s]/g,'').trim()}</div>
           <div class="adm-avail-price">${priceStr}</div>
         </div>
-        <button class="adm-toggle" onclick="admToggleItem('${item.name}')"></button>
+        <button class="adm-toggle" onclick="admToggleItem('${item.name}', ${isCustom ? `'${item._customId}'` : 'null'})"></button>
       </div>`;
     });
     html += `</div>`;
@@ -5250,17 +5283,36 @@ function admRenderAvailability(filterText='', catFilter='all') {
   admUpdateStats();
 }
 
+function admBatchToggleCat(cat, val) {
+  if (menuData[cat]) {
+    menuData[cat].forEach(item => {
+      admState.items[item.name] = { ...(admState.items[item.name] || {}), available: val };
+    });
+  }
+  customItems.filter(ci => ci.category === cat).forEach(ci => {
+    admState.items[ci.name] = { ...(admState.items[ci.name] || {}), available: val };
+    if (sb && ci.id) sb.from('custom_menu_items').update({ available: val }).eq('id', ci.id).then(() => {});
+  });
+  admMarkUnsaved();
+  admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
+  admUpdateBadges();
+  admShowToast(val ? '✅' : '🚫', `${cat} items ${val ? 'enabled' : 'disabled'}`, val ? 'success' : 'error');
+}
+
 function admFilterAvailability() {
   admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
 }
 
-function admToggleItem(name) {
-  const s = admState.items[name]||{available:true};
-  admState.items[name] = {...s, available:!s.available};
+function admToggleItem(name, customId) {
+  const s = admState.items[name] || { available: true };
+  admState.items[name] = { ...s, available: !s.available };
+  if (customId && customId !== 'null' && sb) {
+    sb.from('custom_menu_items').update({ available: admState.items[name].available }).eq('id', customId).then(() => {});
+  }
   admMarkUnsaved();
   admRenderAvailability(document.getElementById('adm-avail-search').value, document.getElementById('adm-avail-cat').value);
   admUpdateBadges();
-  admShowToast(admState.items[name].available?'✅':'🚫', `${name} ${admState.items[name].available?'enabled':'disabled'}`, admState.items[name].available?'success':'error');
+  admShowToast(admState.items[name].available ? '✅' : '🚫', `${name} ${admState.items[name].available ? 'enabled' : 'disabled'}`, admState.items[name].available ? 'success' : 'error');
 }
 
 function admBatchToggle(cat, val) {
@@ -5969,6 +6021,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
