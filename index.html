@@ -1216,8 +1216,12 @@ body {
       <p>Pizza, burgers, steaks & more — made fresh in our kitchen and delivered straight to your door.</p>
       
 <div class="lp-hero-btns">
-<button class="lp-btn-primary" onclick="enterFromLanding()">Order Now</button>    <a class="lp-btn-secondary" href="#lp-menu">View Menu</a>
+    <button class="lp-btn-primary" onclick="enterFromLanding()">Order Now</button>
+    <a class="lp-btn-secondary" href="#lp-menu">View Menu</a>
 </div>
+<button onclick="claimDiscount()" style="margin-top:14px; width:53%; max-width:400px; background:linear-gradient(135deg,#c0392b,#e67e22); color:white; border:none; padding:16px 28px; border-radius:12px; font-size:15px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 6px 0px #922b21; font-family:'Outfit',sans-serif;">
+    Claim My 10% Discount
+</button>
 
 <div style="
     margin-top: 40px;
@@ -2794,8 +2798,47 @@ function exitToGateway() {
         if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
         else if (item.price && typeof item.price === 'object') {
             const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
-            for (let s in item.price) { let sBtn = document.createElement('div'); sBtn.className = 'btn btn-3d'; sBtn.innerHTML = `<div class="item-label-box"><div>${s}</div><div class="price-tag">Rs ${item.price[s]}</div></div>`; sBtn.onclick = function() { playClick('pop'); selectedItem.name += " (" + s + ")"; selectedItem.price = item.price[s]; document.getElementById('size-overlay').style.display = 'none'; openQtyModal(); }; sizeGrid.appendChild(sBtn); }
-            document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
+const sizeImages = {
+    S: 'https://i.imgur.com/8mZNMhK.png',
+    M: 'https://i.imgur.com/8mZNMhK.png',
+    L: 'https://i.imgur.com/8mZNMhK.png',
+};
+const sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', Med: 'Medium', Large: 'Large', Reg: 'Regular' };
+const sizeInches = { S: '6"', M: '9"', L: '12"', Med: '9"', Large: '12"', Reg: 'Regular', Reg: 'Reg' };
+
+for (let s in item.price) {
+    let sBtn = document.createElement('div');
+    sBtn.style.cssText = `
+        background: white; border: 3px solid #f0ece8; border-radius: 20px;
+        padding: 16px 10px; text-align: center; cursor: pointer;
+        transition: all 0.2s; display: flex; flex-direction: column;
+        align-items: center; gap: 8px; position: relative; overflow: hidden;
+    `;
+    const imgUrl = window._adminImgOverrides && window._adminImgOverrides[item.name] ? window._adminImgOverrides[item.name] : (imgMap[item.name.toLowerCase()] || Object.values(imgMap)[0]);
+    const inches = sizeInches[s] || s;
+    const label = sizeLabels[s] || s;
+    const scale = s === 'S' || s === 'Reg' ? '0.55' : s === 'M' || s === 'Med' ? '0.75' : '1.0';
+    
+    sBtn.innerHTML = `
+        <div style="width:90px; height:90px; display:flex; align-items:center; justify-content:center; position:relative;">
+            <img src="${imgUrl}" style="width:${parseFloat(scale)*90}px; height:${parseFloat(scale)*90}px; object-fit:cover; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.15);" onerror="this.style.display='none'">
+        </div>
+        <div style="font-weight:900; font-size:15px; color:#1a1a1a;">${label}</div>
+        <div style="font-size:11px; color:#999; font-weight:600;">${inches}</div>
+        <div style="background:var(--orange); color:white; padding:4px 14px; border-radius:20px; font-size:13px; font-weight:800;">Rs ${item.price[s]}</div>
+    `;
+    sBtn.onmouseover = () => sBtn.style.borderColor = 'var(--orange)';
+    sBtn.onmouseout = () => sBtn.style.borderColor = '#f0ece8';
+    sBtn.onclick = function() {
+        playClick('pop');
+        selectedItem.name += " (" + s + ")";
+        selectedItem.price = item.price[s];
+        document.getElementById('size-overlay').style.display = 'none';
+        openQtyModal();
+    };
+    sizeGrid.appendChild(sBtn);
+}
+document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
         } else { openQtyModal(); }
     }
     
@@ -3287,6 +3330,7 @@ let orderObj = {
     subtotal: foodTotal + sc - deliveryDiscount,
     delivery_fee: delCharge,
     discount: deliveryDiscount,
+    discount_claimed: window._discountClaimed === true,
     branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
 };
 
@@ -3986,8 +4030,9 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 let priceHtml = ""; 
 if (o.subtotal) {
     const hasDiscount = o.discount && o.discount > 0;
-const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';  const sourceBadge = `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
-    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
+const sourceBadge = o.discount_claimed 
+    ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
+    : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
         ${hasDiscount ? discountBadge : ''}
         ${o.type === 'Delivery' ? sourceBadge : ''}
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
@@ -5793,6 +5838,10 @@ function enterFromLanding() {
     document.getElementById('landing-page').style.display = 'none';
     initBranchSelector();
 }
+function claimDiscount() {
+    window._discountClaimed = true;
+    enterFromLanding();
+}
 
 function enterFromLandingBranch(branchId) {
     document.getElementById('landing-page').style.display = 'none';
@@ -6228,6 +6277,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
