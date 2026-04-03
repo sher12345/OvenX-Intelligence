@@ -4030,9 +4030,11 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 let priceHtml = ""; 
 if (o.subtotal) {
     const hasDiscount = o.discount && o.discount > 0;
-const sourceBadge = o.discount_claimed 
-    ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
-    : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
+    const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
+    const sourceBadge = o.discount_claimed 
+        ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
+        : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
+    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
         ${hasDiscount ? discountBadge : ''}
         ${o.type === 'Delivery' ? sourceBadge : ''}
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
