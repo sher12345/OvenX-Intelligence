@@ -829,9 +829,9 @@ body {
 .lp-nav-links a:hover { color: white; }
 .lp-cta-btn { background: #e67e22; color: white; padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: background 0.2s; }
 .lp-cta-btn:hover { background: #a04000; }
-.lp-hero { min-height: 100vh; display: flex; align-items: center; position: relative; overflow: hidden; padding: 80px 40px; }
+.lp-hero { min-height: 100vh; display: flex; align-items: center; position: relative; overflow: hidden; padding: 80px 40px; box-sizing: border-box; }
 .lp-hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 50%, rgba(192,57,43,0.25) 0%, transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(230,126,34,0.15) 0%, transparent 50%), #0d0000; }
-.lp-hero-content { position: relative; z-index: 2; max-width: 580px; }
+.lp-hero-content { position: relative; z-index: 2; max-width: 560px; width: 100%; box-sizing: border-box; }
 .lp-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(192,57,43,0.2); border: 1px solid rgba(192,57,43,0.4); padding: 7px 16px; border-radius: 30px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #e67e22; margin-bottom: 24px; }
 .lp-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #e67e22; animation: lp-pulse 2s infinite; }
 @keyframes lp-pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
@@ -889,10 +889,16 @@ body {
 .lp-footer-col a:hover { color: white; }
 .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 .lp-footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.3); }
+@media(max-width:900px){
+  .lp-hero-img { width: 42%; opacity: 0.5; }
+  .lp-hero-content { max-width: 100%; }
+}
 @media(max-width:768px){
+  .delivery-discount-grid { grid-template-columns: 1fr !important; }
+  .lp-hero-content { max-width: 100% !important; }
   .lp-nav { padding: 14px 20px; }
   .lp-nav-links { display: none; }
-  .lp-hero { padding: 80px 20px 60px; }
+  .lp-hero { padding: 80px 18px 60px !important; box-sizing: border-box; }
   .lp-hero-img { display: none; }
   .lp-stats-grid { grid-template-columns: repeat(2,1fr); }
   .lp-section, .lp-branches { padding: 60px 20px; }
@@ -903,6 +909,7 @@ body {
   .lp-footer { padding: 40px 20px 24px; }
   .lp-footer-links { gap: 24px; }
 }
+
 /* ══ TRIGGER BUTTON ══ */
 .ar-trigger-btn {
   display:flex; align-items:center; justify-content:center; gap:10px;
@@ -1130,15 +1137,76 @@ body {
 <!-- LANDING PAGE -->
 <div id="landing-page">
 
-  <nav class="lp-nav">
-    <div class="lp-logo">OVEN <span>X</span></div>
+<div style="
+    background: linear-gradient(90deg, #8b0000 0%, #c0392b 25%, #e05c2b 50%, #c0392b 75%, #8b0000 100%);
+    background-size: 200% 100%;
+    animation: shimmer-bar 3s linear infinite;
+    padding: 11px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+">
+    <style>
+        @keyframes shimmer-bar {
+            0% { background-position: 200% center; }
+            100% { background-position: -200% center; }
+        }
+        @keyframes rotate-msg {
+    0%, 25% { opacity: 1; transform: translateY(0); }
+    30%, 95% { opacity: 0; transform: translateY(-12px); }
+    100% { opacity: 0; transform: translateY(12px); }
+}
+@keyframes rotate-msg-2 {
+    0%, 28% { opacity: 0; transform: translateY(12px); }
+    33%, 58% { opacity: 1; transform: translateY(0); }
+    63%, 100% { opacity: 0; transform: translateY(-12px); }
+}
+@keyframes rotate-msg-3 {
+    0%, 61% { opacity: 0; transform: translateY(12px); }
+    66%, 91% { opacity: 1; transform: translateY(0); }
+    96%, 100% { opacity: 0; transform: translateY(-12px); }
+}
+        .ann-shine {
+            position: absolute; top: 0; left: -100%;
+            width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            animation: ann-shine-move 2.5s ease-in-out infinite;
+        }
+        @keyframes ann-shine-move {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+    </style>
+    <div class="ann-shine"></div>
+    <div style="position:relative; height:22px; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; animation: rotate-msg 12s ease-in-out infinite; display:flex; align-items:center; gap:8px;">
+            <span style="color:white; font-size:13px; font-weight:800; letter-spacing:0.5px;">
+                10% OFF on all Delivery orders — Order through our website
+            </span>
+            <span style="background:rgba(255,255,255,0.2); color:#ffdd88; font-size:10px; font-weight:900; padding:2px 8px; border-radius:20px; letter-spacing:1px; border:1px solid rgba(255,255,255,0.25);">EXCLUSIVE</span>
+        </div>
+        <div style="position:absolute; animation: rotate-msg-2 12s ease-in-out infinite; display:flex; align-items:center; gap:8px;">
+            <span style="color:white; font-size:13px; font-weight:800; letter-spacing:0.5px;">
+                Applies to all menu items — Burgers, Pizzas, Pasta, Wraps & more
+            </span>
+        </div>
+        <div style="position:absolute; animation: rotate-msg-3 12s ease-in-out infinite; display:flex; align-items:center; gap:8px;">
+            <span style="color:white; font-size:13px; font-weight:800; letter-spacing:0.5px;">
+                Deals & Combos excluded — Discount on food only, not delivery charges
+            </span>
+        </div>
+    </div>
+</div>
+<nav class="lp-nav">
+      <div class="lp-logo">OVEN <span>X</span></div>
     <ul class="lp-nav-links">
       <li><a href="#lp-menu">Menu</a></li>
       <li><a href="#lp-deals">Deals</a></li>
       <li><a href="#lp-branches">Branches</a></li>
     </ul>
-    <button class="lp-cta-btn" onclick="enterFromLanding()">Order Now →</button>
-  </nav>
+<button class="lp-cta-btn" onclick="enterFromLanding()">Order Now</button>
+</nav>
 
   <section class="lp-hero">
     <div class="lp-hero-bg"></div>
@@ -1146,10 +1214,75 @@ body {
       <div class="lp-badge">Now in Multan & Bahawalpur</div>
       <h1>Crafted<br>With <span>Fire</span><br>& Flavor</h1>
       <p>Pizza, burgers, steaks & more — made fresh in our kitchen and delivered straight to your door.</p>
-      <div class="lp-hero-btns">
-        <button class="lp-btn-primary" onclick="enterFromLanding()">Order Now 🔥</button>
-        <a class="lp-btn-secondary" href="#lp-menu">View Menu</a>
-      </div>
+      
+<div class="lp-hero-btns">
+<button class="lp-btn-primary" onclick="enterFromLanding()">Order Now</button>    <a class="lp-btn-secondary" href="#lp-menu">View Menu</a>
+</div>
+
+<div style="
+    margin-top: 40px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(192,57,43,0.25);
+    border-radius: 20px;
+    padding: 24px 22px;
+    max-width: 100%;
+    width: 100%;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+">
+    <div style="position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#c0392b,#e67e22,#c0392b,transparent);"></div>
+    
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+            <div style="width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,#c0392b,#e67e22); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
+            <div>
+                <div style="color:white; font-size:18px; font-weight:900; letter-spacing:0.3px; line-height:1.2;">Exclusive Delivery Discount</div>
+                <div style="color:rgba(255,255,255,0.4); font-size:12px; font-weight:500; margin-top:3px; letter-spacing:1px; text-transform:uppercase;">Website Orders Only</div>
+            </div>
+        </div>
+        <div style="background:linear-gradient(135deg,#c0392b,#e67e22); color:white; font-size:11px; font-weight:900; padding:6px 16px; border-radius:30px; letter-spacing:2px; text-transform:uppercase; white-space:nowrap;">10% OFF</div>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,0.06); margin-bottom:24px;"></div>
+
+    <p style="color:rgba(255,255,255,0.75); font-size:14px; line-height:1.8; margin:0 0 24px; font-weight:400;">
+        As a thank you for ordering directly through our website, we are offering an exclusive 
+        <span style="color:white; font-weight:700;">10% discount on all delivery orders</span> placed here. 
+        No coupon codes, no hassle — the discount is applied automatically at checkout.
+    </p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;" class="delivery-discount-grid">
+        <div style="background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.2); border-radius:12px; padding:16px;">
+            <div style="font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#4ade80; margin-bottom:10px;">What's Included</div>
+            <div style="color:rgba(255,255,255,0.65); font-size:12px; line-height:1.8;">
+                All regular menu items<br>
+                Burgers &amp; Sandwiches<br>
+                Pizzas &amp; Pasta<br>
+                Wraps, Rolls &amp; Starters<br>
+                Drinks &amp; Steaks
+            </div>
+        </div>
+        <div style="background:rgba(192,57,43,0.08); border:1px solid rgba(192,57,43,0.2); border-radius:12px; padding:16px;">
+            <div style="font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#f87171; margin-bottom:10px;">What's Excluded</div>
+            <div style="color:rgba(255,255,255,0.65); font-size:12px; line-height:1.8;">
+                All Deals &amp; Combo packages<br>
+                Delivery charges<br>
+                Phone &amp; walk-in orders<br>
+                Dine-In &amp; Takeaway orders
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.5px;">Discount applied automatically — no code required</span>
+        <span style="color:#e67e22; font-size:11px; font-weight:700; letter-spacing:0.5px;">ovenxpakistan.com</span>
+    </div>
+</div>
+
     </div>
     <div class="lp-hero-img">
       <img src="https://i.postimg.cc/C1MHbX23/pomelli-image-(2).png">
@@ -1161,7 +1294,7 @@ body {
       <div><div class="lp-stat-num">2</div><div class="lp-stat-label">Branches</div></div>
       <div><div class="lp-stat-num">50+</div><div class="lp-stat-label">Menu Items</div></div>
       <div><div class="lp-stat-num">13</div><div class="lp-stat-label">Hot Deals</div></div>
-      <div><div class="lp-stat-num">⭐ 4.8</div><div class="lp-stat-label">Rating</div></div>
+      <div><div class="lp-stat-num">4.8</div><div class="lp-stat-label">Avg Rating</div></div>
     </div>
   </div>
 
@@ -1169,12 +1302,12 @@ body {
     <div class="lp-section-label">What We Serve</div>
     <div class="lp-section-title">Something for<br>Every Craving</div>
     <div class="lp-categories">
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍕</span><div class="lp-cat-name">Pizzas</div><div class="lp-cat-desc">Pan, Premium, Deep Dish, Extreme & Craft your own</div></div>
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍔</span><div class="lp-cat-name">Burgers</div><div class="lp-cat-desc">Fried & Grilled — from classic Zingers to bold Grilled stacks</div></div>
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🥩</span><div class="lp-cat-name">Steaks</div><div class="lp-cat-desc">Mexican, Moroccan, Pepper & more — BWP exclusive</div></div>
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍝</span><div class="lp-cat-name">Pasta</div><div class="lp-cat-desc">Alfredo, Flaming, Fire Kissed & X-Special</div></div>
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🌯</span><div class="lp-cat-name">Wraps & Rolls</div><div class="lp-cat-desc">Chipotle, BBQ, Behari, Peri Peri & more</div></div>
-      <div class="lp-cat-card" onclick="enterFromLanding()"><span class="lp-cat-icon">🍟</span><div class="lp-cat-name">Starters</div><div class="lp-cat-desc">Wings, Fries, Nuggets, Cheese Sticks & more</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Pizzas</div><div class="lp-cat-desc">Pan, Premium, Deep Dish, Extreme & Craft your own</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Burgers</div><div class="lp-cat-desc">Fried & Grilled — from classic Zingers to bold Grilled stacks</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Steaks</div><div class="lp-cat-desc">Mexican, Moroccan, Pepper & more — BWP exclusive</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Pasta</div><div class="lp-cat-desc">Alfredo, Flaming, Fire Kissed & X-Special</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Wraps & Rolls</div><div class="lp-cat-desc">Chipotle, BBQ, Behari, Peri Peri & more</div></div>
+      <div class="lp-cat-card" onclick="enterFromLanding()"><div class="lp-cat-name">Starters</div><div class="lp-cat-desc">Wings, Fries, Nuggets, Cheese Sticks & more</div></div>
     </div>
   </div>
 
@@ -1199,10 +1332,10 @@ body {
     <div class="lp-section-title">Find Us Near You</div>
     <div class="lp-branch-grid" style="grid-template-columns: 1fr 1fr 1fr;">
       <div class="lp-branch-card">
-        <div class="lp-branch-tag lp-tag-multan">🍕 Multan</div>
+        <div class="lp-branch-tag lp-tag-multan">Multan</div>
         <div class="lp-branch-city">Multan</div>
-        <div class="lp-branch-addr">Shop #12, Gulgasht Colony, Multan<br>📞 0300-145-0301</div>
-        <button class="lp-branch-btn" onclick="enterFromLandingBranch('MULTAN')">Order from Multan →</button>
+        <div class="lp-branch-addr">Shop #12, Gulgasht Colony, Multan<br>0300-145-0301</div>
+        <button class="lp-branch-btn" onclick="enterFromLandingBranch('MULTAN')">Order from Multan</button>
       </div>
 
       <div style="
@@ -1217,18 +1350,20 @@ body {
         justify-content: center;
         gap: 12px;
       ">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(230,126,34,0.2);border:2px solid rgba(230,126,34,0.5);display:flex;align-items:center;justify-content:center;font-size:26px;">📞</div>
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(230,126,34,0.2);border:2px solid rgba(230,126,34,0.5);display:flex;align-items:center;justify-content:center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.29 6.29l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
         <div style="font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#e67e22;">Customer Care</div>
         <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:white;letter-spacing:1px;">0300-245-0301</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;">Available during restaurant hours<br>for order support &amp; queries</div>
-        <a href="tel:03002450301" style="display:inline-block;margin-top:8px;background:#e67e22;color:white;padding:11px 22px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 0px #a04000;">Call Now →</a>
+        <a href="tel:03002450301" style="display:inline-block;margin-top:8px;background:#e67e22;color:white;padding:11px 22px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 0px #a04000;">Call Now</a>
       </div>
 
       <div class="lp-branch-card">
-        <div class="lp-branch-tag lp-tag-bwp">🥩 Bahawalpur</div>
+        <div class="lp-branch-tag lp-tag-bwp">Bahawalpur</div>
         <div class="lp-branch-city">Bahawalpur</div>
-        <div class="lp-branch-addr">Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony<br>📞 0300-345-0301</div>
-        <button class="lp-branch-btn" onclick="enterFromLandingBranch('BWP')">Order from BWP →</button>
+        <div class="lp-branch-addr">Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony<br>0300-345-0301</div>
+        <button class="lp-branch-btn" onclick="enterFromLandingBranch('BWP')">Order from Bahawalpur</button>
       </div>
     </div>
   </div>
@@ -1256,7 +1391,7 @@ body {
           <div class="lp-footer-col">
             <h4>Follow Us</h4>
             <a href="https://www.instagram.com/ovenxpakistan/" target="_blank">Instagram</a>
-<a href="https://www.facebook.com/p/OvenX-Pakistan-61557715508382/" target="_blank">Facebook</a>
+            <a href="https://www.facebook.com/p/OvenX-Pakistan-61557715508382/" target="_blank">Facebook</a>
           </div>
         </div>
       </div>
@@ -3084,8 +3219,19 @@ function validateAndSubmitOrder() {
     finalSubmitOrder();
 }
         async function finalSubmitOrder() {
-    playClick('thud'); const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-    const grand = foodTotal + sc + delCharge;
+    playClick('thud'); 
+    const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+    
+    // 10% discount on delivery — menu items only, excludes deals/combos
+    const isDealItem = (name) => dealsData.some(d => name.includes(d.name));
+    let deliveryDiscount = 0;
+    if (orderType === 'Delivery') {
+        const eligibleTotal = cart.filter(i => !isDealItem(i.name)).reduce((s, i) => s + (i.price * i.qty), 0);
+        deliveryDiscount = Math.round(eligibleTotal * 0.10);
+    }
+    
+    const grand = foodTotal + sc + delCharge - deliveryDiscount;
     const itemsText = cart.map(i => {
         let detail = i.qty + "x " + i.name;
         if (i.note) detail += " [" + i.note + "]"; 
@@ -3098,8 +3244,9 @@ let orderObj = {
     location: orderType === 'Dine-In' ? "Table " + tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
     items: itemsText, 
     status: 'WAITING', 
-    subtotal: foodTotal + sc, 
+    subtotal: foodTotal + sc - deliveryDiscount,
     delivery_fee: delCharge,
+    discount: deliveryDiscount,
     branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
 };
 
@@ -3153,8 +3300,7 @@ if (orderType === 'Takeaway') {
     customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
 }
 // Dine-in: no phone needed
-const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
-
+const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
     // ============================================
     // NEW: Dual WhatsApp for Delivery Orders
     // ============================================
@@ -3478,7 +3624,8 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     delCharge = parseFloat(fee) || 0; 
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); 
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; 
-    const grand = foodTotal + delCharge + sc;
+    const disc = orderType === 'Delivery' ? Math.round(cart.filter(i => !dealsData.some(d => i.name.includes(d.name))).reduce((s,i) => s+(i.price*i.qty),0)*0.10) : 0;
+const grand = foodTotal + delCharge + sc - disc;
     
     const summaryHTML = cart.map((i, idx) => `
         <div class="summary-item">
@@ -3532,14 +3679,12 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
 }
     
     document.getElementById('checkout-content').innerHTML = `
-        <div class="chat-bubble">${summaryBubbleContent}</div>
-        ${summaryHTML}
-        ${customerInfoHtml}
         <div class="chat-bubble">
             Subtotal: Rs ${foodTotal}
             ${sc > 0 ? '<br>S.C: Rs '+sc : ''}
             ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
-            <br><hr>Total: <b>Rs ${grand}</b>
+            ${(()=>{ if(orderType!=='Delivery') return ''; const eligible=cart.filter(i=>!dealsData.some(d=>i.name.includes(d.name))).reduce((s,i)=>s+(i.price*i.qty),0); const disc=Math.round(eligible*0.10); return disc>0?`<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount: -Rs ${disc}</span>`:''; })()}
+            <br><hr>Total: <b>Rs ${(()=>{ const disc=orderType==='Delivery'?Math.round(cart.filter(i=>!dealsData.some(d=>i.name.includes(d.name))).reduce((s,i)=>s+(i.price*i.qty),0)*0.10):0; return foodTotal+sc+delCharge-disc; })()}</b>
         </div>
         <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>
     `;
@@ -3788,7 +3933,18 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                     } 
                 }
                 let priceHtml = ""; 
-                if (o.subtotal) priceHtml = `<div class="price-box"><div>Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div><div style="color:var(--red); font-size:18px;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div></div>`;
+if (o.subtotal) {
+    const hasDiscount = o.discount && o.discount > 0;
+const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';  const sourceBadge = `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
+    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
+        ${hasDiscount ? discountBadge : ''}
+        ${o.type === 'Delivery' ? sourceBadge : ''}
+        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div>
+            <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div>
+        </div>
+    </div>`;
+}
                 let riderHtml = ""; 
                 if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
@@ -6021,6 +6177,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
