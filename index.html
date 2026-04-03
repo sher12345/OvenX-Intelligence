@@ -4361,8 +4361,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             btn.className = "next-btn btn-3d steak-btn";
             btn.style.cssText = "margin-bottom:0;";
             btn.innerText = "🥩 ADD TO BAG";
-            btn.onclick = () => openOrderFlow(deal);
-            card.querySelector('.deal-info-box').appendChild(btn);
+btn.onclick = () => {
+    const overriddenDeal = {...deal, price: admState.deals[deal.name]?.price || deal.price};
+    openOrderFlow(overriddenDeal);
+};
+card.querySelector('.deal-info-box').appendChild(btn);
         } else {
             card.className = "deal-card";
             card.innerHTML = `
@@ -4377,8 +4380,11 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             btn.className = "next-btn btn-3d";
             btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;";
             btn.innerText = "ADD TO BAG";
-            btn.onclick = () => openOrderFlow(deal);
-            card.querySelector('.deal-info-box').appendChild(btn);
+btn.onclick = () => {
+    const overriddenDeal = {...deal, price: admState.deals[deal.name]?.price || deal.price};
+    openOrderFlow(overriddenDeal);
+};
+card.querySelector('.deal-info-box').appendChild(btn);
         }
         list.appendChild(card);
     });
@@ -4488,8 +4494,10 @@ b.style.backgroundImage = `url('${overrideImg || fBg}')`;
                     const displayPrice = getItemPrice(item);
 b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
                     const finalImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : fBg;
-b.onclick = () => openItemSheet(item, finalImg); 
-                    grid.appendChild(b);
+b.onclick = () => {
+    const overriddenItem = {...item, price: getItemPrice(item)};
+    openItemSheet(overriddenItem, finalImg);
+};                    grid.appendChild(b);
                 }); 
                 mC.appendChild(grid);
             }
@@ -6284,6 +6292,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
