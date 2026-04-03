@@ -1450,19 +1450,20 @@ body {
 
     <!-- OVEN X CLUB CARD -->
     <div id="loyalty-display" style="display:none;" class="loyalty-card">
-        <div class="loyalty-header">
-            <span class="gold-label">OVEN X CLUB</span>
-            <span id="club-member-name" style="color:white; font-weight:900;"></span>
-        </div>
-        <div class="stamp-grid-container">
-            <div class="stamp-row" id="stamp-row-1"></div>
-            <div class="stamp-row" id="stamp-row-2"></div>
-        </div>
-        <p id="loyalty-msg" class="loyalty-footer"></p>
+    <div class="loyalty-header">
+        <span class="gold-label">OVEN X CLUB</span>
+        <span id="club-member-name" style="color:white; font-weight:900;"></span>
     </div>
+    <div class="stamp-grid-container">
+        <div class="stamp-row" id="stamp-row-1"></div>
+        <div class="stamp-row" id="stamp-row-2"></div>
+    </div>
+    <p id="loyalty-msg" class="loyalty-footer"></p>
+    <button onclick="recoverStamps()" style="margin-top:15px; background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:8px 18px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; width:100%;">Lost your stamps? Recover here</button>
+</div>
     
-    <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
-
+<button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
+<button id="recover-stamps-btn" onclick="recoverStamps()" style="display:none; background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:10px 22px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; margin-top:-15px; width:85%; max-width:340px;">Already a member? Recover Stamps</button><button id="recover-stamps-btn" onclick="recoverStamps()" style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.2); padding:10px 22px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; margin-top:-15px; display:none;">🔄 Recover My Stamps</button>
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
@@ -2611,10 +2612,12 @@ function proceedFromSheet() {
         const name = localStorage.getItem('ovenx_member_name');
         const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
         if(!name) {
-            document.getElementById('join-club-btn').style.display = 'block';
-            document.getElementById('loyalty-display').style.display = 'none';
-            return;
-        }
+    document.getElementById('join-club-btn').style.display = 'block';
+    document.getElementById('recover-stamps-btn').style.display = 'block';
+    document.getElementById('loyalty-display').style.display = 'none';
+    return;
+}
+document.getElementById('recover-stamps-btn').style.display = 'none';
         document.getElementById('join-club-btn').style.display = 'none';
         document.getElementById('loyalty-display').style.display = 'block';
         document.getElementById('club-member-name').innerText = name.toUpperCase();
@@ -2643,25 +2646,62 @@ function proceedFromSheet() {
     }
 
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
+    async function recoverStamps() {
+    const phone = prompt("Enter your registered WhatsApp number:");
+    if (!phone) return;
     
-    async function saveClubProfile() {
-        const n = document.getElementById('clubName').value;
-        const p = document.getElementById('clubPhone').value;
-        if(!n || !p) return alert("Enter your name and WhatsApp number!");
-        
-        if(sb) {
-            await sb.from('gold_club_members').insert([{ name: n, phone: p }]);
-        }
-
-        localStorage.setItem('ovenx_member_name', n);
-        localStorage.setItem('ovenx_member_phone', p);
-        localStorage.setItem('ovenx_stamps', 0);
-        
-        document.getElementById('loyalty-setup-overlay').style.display = 'none';
-        setScrollLock(false);
-        renderLoyaltyCard();
-        alert("Welcome to the Club, " + n + "! 👑");
+    const { data, error } = await sb.from('gold_club_members')
+        .select('*').eq('phone', phone).single();
+    
+    if (error || !data) {
+        alert("No account found with this number. Please register first!");
+        return;
     }
+    
+    localStorage.setItem('ovenx_member_name', data.name);
+    localStorage.setItem('ovenx_member_phone', data.phone);
+    localStorage.setItem('ovenx_stamps', data.stamps || 0);
+    
+    document.getElementById('join-club-btn').style.display = 'none';
+    document.getElementById('recover-stamps-btn').style.display = 'none';
+    renderLoyaltyCard();
+    alert("Welcome back " + data.name + "! Your " + (data.stamps || 0) + " stamps have been restored 🔥");
+}
+    async function saveClubProfile() {
+    const n = document.getElementById('clubName').value;
+    const p = document.getElementById('clubPhone').value;
+    if(!n || !p) return alert("Enter your name and WhatsApp number!");
+    
+    if(sb) {
+        // Check if member already exists
+        const { data: existing } = await sb.from('gold_club_members')
+            .select('*').eq('phone', p).single();
+        
+        if(existing) {
+            // Member exists — restore their stamps
+            localStorage.setItem('ovenx_member_name', existing.name);
+            localStorage.setItem('ovenx_member_phone', existing.phone);
+            localStorage.setItem('ovenx_stamps', existing.stamps || 0);
+            document.getElementById('loyalty-setup-overlay').style.display = 'none';
+            setScrollLock(false);
+            renderLoyaltyCard();
+            alert("Welcome back, " + existing.name + "! You have " + (existing.stamps || 0) + " stamps 🔥");
+            return;
+        }
+        
+        // New member — insert
+        await sb.from('gold_club_members').insert([{ name: n, phone: p, stamps: 0 }]);
+    }
+
+    localStorage.setItem('ovenx_member_name', n);
+    localStorage.setItem('ovenx_member_phone', p);
+    localStorage.setItem('ovenx_stamps', 0);
+    
+    document.getElementById('loyalty-setup-overlay').style.display = 'none';
+    setScrollLock(false);
+    renderLoyaltyCard();
+    alert("Welcome to the Club, " + n + "! 👑");
+}
 
     function enterApp(target) { 
     playClick('thud'); 
@@ -3269,14 +3309,25 @@ if (orderId) initCustomerTracking(orderId, orderObj);
 let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
     let bonus = "";
     if(localStorage.getItem('ovenx_member_name')) {
-        if(stamps >= 10) {
-            const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-            bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-            localStorage.setItem('ovenx_stamps', 0);
-        } else if(foodTotal >= 1000) {
-            localStorage.setItem('ovenx_stamps', stamps + 1);
+    if(stamps >= 10) {
+        const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
+        bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+        localStorage.setItem('ovenx_stamps', 0);
+        // Sync reset to Supabase
+        if(sb) {
+            const phone = localStorage.getItem('ovenx_member_phone');
+            await sb.from('gold_club_members').update({ stamps: 0 }).eq('phone', phone);
+        }
+    } else if(foodTotal >= 1000) {
+        const newStamps = stamps + 1;
+        localStorage.setItem('ovenx_stamps', newStamps);
+        // Sync to Supabase
+        if(sb) {
+            const phone = localStorage.getItem('ovenx_member_phone');
+            await sb.from('gold_club_members').update({ stamps: newStamps }).eq('phone', phone);
         }
     }
+}
 
     let headerInfo = `*OVEN X - ${window.carPlateNumber ? 'CAR DINE' : orderType.toUpperCase()} ORDER*`; 
 
