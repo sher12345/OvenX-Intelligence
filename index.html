@@ -2765,6 +2765,14 @@ function confirmCarDine() {
     orderType = 'Takeaway';
     document.getElementById('welcome-overlay').style.display = 'none';
     setScrollLock(false);
+    
+    // ← THE FIX: proceed to menu or summary
+    if (cart.length > 0) {
+        document.getElementById('overlay-screen').style.display = 'block';
+        setScrollLock(true);
+        renderFinalSummary(0);
+    }
+    // If no items yet, customer browses menu normally — cart bar will trigger checkout
 }
 function exitToGateway() { 
     playClick('pop'); 
@@ -3279,26 +3287,21 @@ function clearTracking() {
 
 function validateAndSubmitOrder() {
     if (orderType === 'Takeaway') {
-        if (!window.carPlateNumber) {
-            const name = document.getElementById('takeawayName').value.trim();
-            const phone = document.getElementById('takeawayPhone').value.trim();
-            
-            if (!name) {
-                alert("Please enter your name!");
-                document.getElementById('takeawayName').focus();
-                return;
-            }
-            if (!phone) {
-                alert("Please enter your phone number!");
-                document.getElementById('takeawayPhone').focus();
-                return;
-            }
-            
-            window.takeawayCustomerName = name;
-            window.takeawayCustomerPhone = phone;
+        if (window.carPlateNumber) {
+            finalSubmitOrder();
+            return;
         }
+        if (window.takeawayCustomerName && window.takeawayCustomerPhone) {
+            finalSubmitOrder();
+            return;
+        }
+        const nameEl = document.getElementById('takeawayName');
+        const phoneEl = document.getElementById('takeawayPhone');
+        if (nameEl && !nameEl.value.trim()) { alert("Please enter your name!"); nameEl.focus(); return; }
+        if (phoneEl && !phoneEl.value.trim()) { alert("Please enter your phone number!"); phoneEl.focus(); return; }
+        if (nameEl) window.takeawayCustomerName = nameEl.value.trim();
+        if (phoneEl) window.takeawayCustomerPhone = phoneEl.value.trim();
     }
-    
     finalSubmitOrder();
 }
         async function finalSubmitOrder() {
