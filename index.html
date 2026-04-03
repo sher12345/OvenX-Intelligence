@@ -3720,7 +3720,7 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); 
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; 
     const disc = orderType === 'Delivery' ? Math.round(cart.filter(i => !dealsData.some(d => i.name.includes(d.name))).reduce((s,i) => s+(i.price*i.qty),0)*0.10) : 0;
-const grand = foodTotal + delCharge + sc - disc;
+    const grand = foodTotal + delCharge + sc - disc;
     
     const summaryHTML = cart.map((i, idx) => `
         <div class="summary-item">
@@ -3743,45 +3743,47 @@ const grand = foodTotal + delCharge + sc - disc;
         }
     }
     if (orderType === 'Takeaway') {
-    if (window.carPlateNumber) {
-        summaryBubbleContent += `<br><small style="color:var(--red);">🚗 Car Dine Order</small>`;
-    } else {
-        summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Takeaway Order</small>`;
+        if (window.carPlateNumber) {
+            summaryBubbleContent += `<br><small style="color:var(--red);">🚗 Car Dine Order</small>`;
+        } else {
+            summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Takeaway Order</small>`;
+        }
     }
-}
     
-    // Build customer info inputs for Takeaway
     let customerInfoHtml = '';
     if (orderType === 'Takeaway') {
-    if (window.carPlateNumber) {
-        customerInfoHtml = `
-            <div class="chat-bubble" style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px solid var(--orange);">
-                <b>🚗 Car Dine</b><br>
-                <small>👤 ${window.takeawayCustomerName}</small><br>
-                <small>📞 ${window.takeawayCustomerPhone}</small><br>
-                <small>🚗 ${window.carPlateNumber}</small>
-            </div>
-        `;
-    } else {
-        customerInfoHtml = `
-            <div class="chat-bubble" style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px solid var(--orange);">
-                <b>👤 Customer Details</b>
-                <input type="text" id="takeawayName" placeholder="Enter your name" class="big-input" style="margin-top:10px; margin-bottom:10px;">
-                <input type="tel" id="takeawayPhone" placeholder="📞 Enter phone number (e.g. 0300-1234567)" class="big-input" maxlength="15">
-            </div>
-        `;
+        if (window.carPlateNumber) {
+            customerInfoHtml = `
+                <div class="chat-bubble" style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px solid var(--orange);">
+                    <b>🚗 Car Dine</b><br>
+                    <small>👤 ${window.takeawayCustomerName}</small><br>
+                    <small>📞 ${window.takeawayCustomerPhone}</small><br>
+                    <small>🚗 ${window.carPlateNumber}</small>
+                </div>
+            `;
+        } else {
+            customerInfoHtml = `
+                <div class="chat-bubble" style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px solid var(--orange);">
+                    <b>👤 Customer Details</b>
+                    <input type="text" id="takeawayName" placeholder="Enter your name" class="big-input" style="margin-top:10px; margin-bottom:10px;">
+                    <input type="tel" id="takeawayPhone" placeholder="📞 Enter phone number (e.g. 0300-1234567)" class="big-input" maxlength="15">
+                </div>
+            `;
+        }
     }
-}
     
     document.getElementById('checkout-content').innerHTML = `
+        <div class="chat-bubble">${summaryBubbleContent}</div>
+        ${summaryHTML}
+        ${customerInfoHtml}
         <div class="chat-bubble">
             Subtotal: Rs ${foodTotal}
-            ${sc > 0 ? '<br>S.C: Rs '+sc : ''}
+            ${sc > 0 ? '<br>S.C (7%): Rs '+sc : ''}
             ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
-            ${(()=>{ if(orderType!=='Delivery') return ''; const eligible=cart.filter(i=>!dealsData.some(d=>i.name.includes(d.name))).reduce((s,i)=>s+(i.price*i.qty),0); const disc=Math.round(eligible*0.10); return disc>0?`<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount: -Rs ${disc}</span>`:''; })()}
-            <br><hr>Total: <b>Rs ${(()=>{ const disc=orderType==='Delivery'?Math.round(cart.filter(i=>!dealsData.some(d=>i.name.includes(d.name))).reduce((s,i)=>s+(i.price*i.qty),0)*0.10):0; return foodTotal+sc+delCharge-disc; })()}</b>
+            ${disc > 0 ? `<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount: -Rs ${disc}</span>` : ''}
+            <br><hr>Total: <b>Rs ${grand}</b>
         </div>
-        <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP</button>
+        <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP 📱</button>
     `;
 }
 
@@ -6279,6 +6281,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
