@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1593,7 +1594,7 @@ body {
                             </div>
                         </div>
                         <div style="background:rgba(255,255,255,0.2); padding:8px 15px; border-radius:10px;">
-                            <p style="font-size:11px; margin:0;">Rs. 17/km</p>
+                            <p style="font-size:11px; margin:0;">Rs. 19/km</p>
                         </div>
                     </div>
                     
@@ -2254,6 +2255,7 @@ body {
 applyAdminOverrides().then(() => {
     renderLoyaltyCard();
 });
+loadCustomItemsIntoMenu();
         if (window._pendingTab) {
             document.getElementById('gateway-screen').style.display = 'none';
             document.getElementById('top-sticky-container').style.display = 'flex';
@@ -2320,7 +2322,7 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
-    const PRICE_PER_KM = 17;
+    const PRICE_PER_KM = 19;
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -3869,7 +3871,7 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
                 </div>
                 <div class="meta-row">
                     <span>Round: ${calc.distance_round_trip.toFixed(2)} km</span>
-                    <span>Rate: Rs 17/km</span>
+                    <span>Rate: Rs 19/km</span>
                 </div>
             </div>
         `;
@@ -4355,8 +4357,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 <div class="deal-info-box">
                     <div class="deal-title" style="color:#5d3a1a;">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
-                    <span class="deal-price" style="color:#5d3a1a;">Rs ${deal.price}</span>
-                </div>`;
+<span class="deal-price" style="color:#5d3a1a;">Rs ${_overrideMap[deal.name]?.prices?._flat || deal.price}</span>                </div>`;
             const btn = document.createElement('button');
             btn.className = "next-btn btn-3d steak-btn";
             btn.style.cssText = "margin-bottom:0;";
@@ -4374,7 +4375,7 @@ card.querySelector('.deal-info-box').appendChild(btn);
                 <div class="deal-info-box">
                     <div class="deal-title">${deal.name}</div>
                     <span class="deal-desc">${deal.desc || ''}</span>
-                    <span class="deal-price">Rs ${deal.price}</span>
+                    <span class="deal-price">Rs ${_overrideMap[deal.name]?.prices?._flat || deal.price}</span>
                 </div>`;
             const btn = document.createElement('button');
             btn.className = "next-btn btn-3d";
@@ -6292,6 +6293,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
