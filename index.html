@@ -1992,7 +1992,7 @@ body {
     </main>
   </div>
 </div>
-<div id="flavor-overlay"><div class="modal"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
+<div id="flavor-overlay"><div class="modal" style="width:92%; max-width:420px; max-height:88vh; overflow-y:auto;"><h3 id="flavor-title" style="color:var(--red); font-weight:900;">Pick Flavor</h3><div class="grid" id="flavor-grid"></div><button onclick="closeModals()" style="margin-top:25px; border:none; background:none; color:#bbb; font-weight:900;">CANCEL</button></div></div>
 <div id="welcome-overlay"><div class="modal"><h2 style="color:var(--red); font-weight:900;">HEY THERE! 👋</h2><p id="welcome-msg">Where do you want your food?</p><div class="input-group" id="service-options-container"></div></div></div>
 <div id="modal-overlay"><div class="modal"><h3 id="modal-item-name" style="color:var(--red); font-weight:900; margin-top:0;"></h3><p style="font-weight:bold; color:#777;">How many?</p><div class="qty-btns"><button class="qty-btn btn-3d" onclick="setQty(1)">1</button><button class="qty-btn btn-3d" onclick="setQty(2)">2</button><button class="qty-btn btn-3d" onclick="setQty(3)">3</button><button class="qty-btn btn-3d" onclick="setQty(4)">4</button><button class="qty-btn btn-3d active" onclick="setQty(5)">5+</button></div><textarea id="special-note" placeholder="Any special notes?"></textarea><div style="margin-top:25px; display:flex; gap:12px;"><button onclick="closeModals()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">BACK</button><button onclick="addToCartFinal()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO BAG</button></div></div></div>
 <div id="size-overlay"><div class="modal"><h3 style="font-weight:900;">Select Size</h3><div class="grid" id="size-grid"></div><button onclick="closeModals()" style="margin-top:20px; border:none; background:none; color:gray; font-weight:900;">CANCEL</button></div></div>
@@ -2370,6 +2370,12 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         ]
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
+    menuData["Rolls 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
+    i.name.includes('Roll') || i.name === 'Donar Kabab'
+);
+menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
+    i.name.includes('Wrap') || i.name === 'Crunch Wrap'
+);
 
     const dealsData = [
         { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/1899hanoiFinal_1025.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
@@ -2906,45 +2912,56 @@ document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(tr
 // Helper function to create flavor buttons - NO PRICES ANYWHERE
 function createFlavorButton(f, categoryLabel) {
     const b = document.createElement('div');
-    b.className = 'btn btn-3d';
-    b.style.position = "relative";
-    b.style.background = "white";
-    b.style.border = "3px solid " + (categoryLabel === "Pan" ? "#f37021" : categoryLabel === "Premium" ? "#d4af37" : "#eee");
-    
-    // Category badge only - NO PRICE
+    b.style.cssText = `
+        background: #f5f5f5; border: 3px solid #eee; border-radius: 16px;
+        padding: 10px; text-align: center; cursor: pointer;
+        transition: all 0.2s; display: flex; flex-direction: column;
+        align-items: center; gap: 8px; position: relative;
+    `;
+
+    // Smart image lookup — same logic as renderPublicMenu
+    let imgUrl = imgMap["pizza"];
+    const n = f.name.toLowerCase();
+    for (let key in imgMap) {
+        if (n.includes(key.toLowerCase())) { imgUrl = imgMap[key]; break; }
+    }
+    if (window._adminImgOverrides && window._adminImgOverrides[f.name]) {
+        imgUrl = window._adminImgOverrides[f.name];
+    }
+
     let badge = "";
     if (categoryLabel) {
-        const badgeColor = categoryLabel === "Pan" ? "#f37021" : "#d4af37";
-        badge = `<span style="position: absolute; top: 5px; right: 5px; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; text-transform: uppercase;">${categoryLabel}</span>`;
+        const badgeColor = categoryLabel === "Pan" ? "#f37021" : categoryLabel === "Premium" ? "#d4af37" : "#e67e22";
+        badge = `<div style="position:absolute; top:6px; right:6px; background:${badgeColor}; color:white; padding:2px 7px; border-radius:8px; font-size:9px; font-weight:900; text-transform:uppercase;">${categoryLabel}</div>`;
     }
-    
-    // Simple display - just name, no price
-    const flavorImg = (window._adminImgOverrides && window._adminImgOverrides[f.name]) ? window._adminImgOverrides[f.name] : (imgMap[f.name.toLowerCase()] || Object.values(imgMap)[0]);
-b.style.backgroundImage = `url('${flavorImg}')`;
-b.innerHTML = `
-    <div class="item-label-box" style="padding: 15px 10px;">
+
+    b.innerHTML = `
         ${badge}
-        <div style="font-weight: 800; font-size: 14px;">${f.name}</div>
-    </div>
-`;
-    
-    b.onclick = function() { 
-        b.classList.add('size-feedback'); 
-        playClick('pop'); 
-        setTimeout(() => { 
+        <img src="${imgUrl}" style="width:90px; height:90px; object-fit:cover; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.15);" onerror="this.style.display='none'">
+        <div style="font-weight:800; font-size:13px; color:#1a1a1a; text-align:center; line-height:1.3;">${f.name}</div>
+    `;
+
+    b.onmouseover = () => b.style.borderColor = 'var(--orange)';
+    b.onmouseout = () => b.style.borderColor = '#eee';
+
+    b.onclick = function() {
+        b.style.borderColor = 'var(--orange)';
+        b.style.background = '#fff9f5';
+        playClick('pop');
+        setTimeout(() => {
             const categoryPrefix = categoryLabel ? `[${categoryLabel}] ` : "";
-            dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${categoryPrefix}${f.name}`); 
-            currentFlavorStep++; 
+            dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${categoryPrefix}${f.name}`);
+            currentFlavorStep++;
             if (currentFlavorStep < selectedItem.flavorsNeeded.length) {
-                startFlavorSelection(); 
-            } else { 
-                document.getElementById('flavor-overlay').style.display = 'none'; 
-                selectedItem.flavorNotes = dealChoices.join(", "); 
-                openQtyModal(); 
-            } 
-        }, 100); 
+                startFlavorSelection();
+            } else {
+                document.getElementById('flavor-overlay').style.display = 'none';
+                selectedItem.flavorNotes = dealChoices.join(", ");
+                openQtyModal();
+            }
+        }, 100);
     };
-    
+
     return b;
 }
     
@@ -6221,7 +6238,18 @@ async function loadCustomItemsIntoMenu() {
     const { data: deals } = await sb.from('custom_deals').select('*').eq('branch', activeBranch.id).eq('available', true);
     (deals || []).forEach(deal => {
       if (!dealsData.find(d => d.name === deal.name)) {
-dealsData.push({ name: deal.name, price: deal.price, badge: deal.badge || 'NEW', image: deal.image, desc: deal.deal_desc, _custom: true });      }
+        const flavorMap = {
+          'Solo Inferno':  { flavorsNeeded: [{label: 'Pizza Flavor', cat: 'Pan Pizza 🍕'}], fixedItems: ['1x Buddy Drink', '2x Wings'] },
+          'The Roll Out':  { flavorsNeeded: [{label: 'Roll 1', cat: 'Rolls 🌯'}, {label: 'Roll 2', cat: 'Rolls 🌯'}], fixedItems: ['2x Buddy Drink'] },
+          'Double Crunch': { flavorsNeeded: [{label: 'Wrap 1', cat: 'Wraps 🌯'}, {label: 'Wrap 2', cat: 'Wraps 🌯'}], fixedItems: ['2x Buddy Drink'] },
+          'Flame & Fame':  { flavorsNeeded: [{label: 'Grilled Burger 1', cat: 'Grilled Burger ♨️'}, {label: 'Grilled Burger 2', cat: 'Grilled Burger ♨️'}], fixedItems: ['2x Buddy Drink'] },
+          'The X Bite':    { fixedItems: ['1x Zinger Burger', '1x Buddy Drink', '2x Wings'] },
+          'Triple Blaze':  { fixedItems: ['3x Zinger Burger', '1L Drink'] },
+          'Zinger Rush':   { fixedItems: ['1x Zinger Burger', '1x Coke Buddy'] },
+        };
+        const extra = flavorMap[deal.name] || {};
+        dealsData.push({ name: deal.name, price: deal.price, badge: deal.badge || 'NEW', image: deal.image, desc: deal.deal_desc, _custom: true, ...extra });
+      }
     });
   } catch(e) { console.error('loadCustomItemsIntoMenu:', e); }
 }
@@ -6296,6 +6324,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
