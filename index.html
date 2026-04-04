@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2920,12 +2921,14 @@ function createFlavorButton(f, categoryLabel) {
     }
     
     // Simple display - just name, no price
-    b.innerHTML = `
-        <div class="item-label-box" style="padding: 15px 10px;">
-            ${badge}
-            <div style="font-weight: 800; font-size: 14px;">${f.name}</div>
-        </div>
-    `;
+    const flavorImg = (window._adminImgOverrides && window._adminImgOverrides[f.name]) ? window._adminImgOverrides[f.name] : (imgMap[f.name.toLowerCase()] || Object.values(imgMap)[0]);
+b.style.backgroundImage = `url('${flavorImg}')`;
+b.innerHTML = `
+    <div class="item-label-box" style="padding: 15px 10px;">
+        ${badge}
+        <div style="font-weight: 800; font-size: 14px;">${f.name}</div>
+    </div>
+`;
     
     b.onclick = function() { 
         b.classList.add('size-feedback'); 
@@ -4363,7 +4366,8 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             btn.style.cssText = "margin-bottom:0;";
             btn.innerText = "🥩 ADD TO BAG";
 btn.onclick = () => {
-    const overriddenDeal = {...deal, price: admState.deals[deal.name]?.price || deal.price};
+    const overriddenPrice = _overrideMap[deal.name]?.prices?._flat || admState.deals[deal.name]?.price || deal.price;
+    const overriddenDeal = {...deal, price: overriddenPrice};
     openOrderFlow(overriddenDeal);
 };
 card.querySelector('.deal-info-box').appendChild(btn);
@@ -4382,7 +4386,8 @@ card.querySelector('.deal-info-box').appendChild(btn);
             btn.style.cssText = "background:var(--orange); box-shadow:0 6px 0px var(--dark-orange); margin-bottom:0;";
             btn.innerText = "ADD TO BAG";
 btn.onclick = () => {
-    const overriddenDeal = {...deal, price: admState.deals[deal.name]?.price || deal.price};
+    const overriddenPrice = _overrideMap[deal.name]?.prices?._flat || admState.deals[deal.name]?.price || deal.price;
+    const overriddenDeal = {...deal, price: overriddenPrice};
     openOrderFlow(overriddenDeal);
 };
 card.querySelector('.deal-info-box').appendChild(btn);
@@ -6293,6 +6298,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
