@@ -3454,8 +3454,19 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     }
     
     function updateCartBar() { const totalItems = cart.reduce((s, i) => s + i.qty, 0); const totalPrice = cart.reduce((s, i) => s + (i.price * i.qty), 0); document.getElementById('cart-count').innerText = `ITEMS: ${totalItems}`; document.getElementById('cart-total').innerText = `Rs ${totalPrice}`; document.getElementById('cart-bar').style.display = totalItems > 0 ? 'flex' : 'none'; }
-    function removeItem(idx) { playClick('pop'); cart.splice(idx, 1); updateCartBar(); if(cart.length === 0) { document.getElementById('overlay-screen').style.display = 'none'; setScrollLock(false); } else renderFinalSummary(delCharge); }
-    
+function removeItem(idx) { 
+    playClick('pop'); 
+    cart.splice(idx, 1); 
+    updateCartBar(); 
+    if(cart.length === 0) { 
+        document.getElementById('overlay-screen').style.display = 'none'; 
+        setScrollLock(false);
+        orderType = "";
+        window.carPlateNumber = null;
+        window.takeawayCustomerName = null;
+        window.takeawayCustomerPhone = null;
+    } else renderFinalSummary(delCharge); 
+}    
     function startCheckout() {
     playClick('thud');
     document.getElementById('overlay-screen').style.display = 'block';
@@ -3473,11 +3484,15 @@ const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n
     
 
     function closeCheckout() {
-        playClick('pop');
-        document.getElementById('overlay-screen').style.display = 'none';
-        setScrollLock(false);
-        chkStep = 1;
-    }
+    playClick('pop');
+    document.getElementById('overlay-screen').style.display = 'none';
+    setScrollLock(false);
+    chkStep = 1;
+    orderType = "";
+    window.carPlateNumber = null;
+    window.takeawayCustomerName = null;
+    window.takeawayCustomerPhone = null;
+}
     
     function renderServiceTypeStep() { 
         chkStep = 1; 
@@ -6246,6 +6261,7 @@ async function loadCustomItemsIntoMenu() {
           'The X Bite':    { fixedItems: ['1x Zinger Burger', '1x Buddy Drink', '2x Wings'] },
           'Triple Blaze':  { fixedItems: ['3x Zinger Burger', '1L Drink'] },
           'Zinger Rush':   { fixedItems: ['1x Zinger Burger', '1x Coke Buddy'] },
+          'The Duo Hit': { fixedItems: ['2x Zinger Burger', '1x Reg Fries', '2x Buddy Drink'] },
         };
         const extra = flavorMap[deal.name] || {};
         dealsData.push({ name: deal.name, price: deal.price, badge: deal.badge || 'NEW', image: deal.image, desc: deal.deal_desc, _custom: true, ...extra });
@@ -6324,6 +6340,7 @@ loadCustomItemsIntoMenu();
     <button id="ar-add-btn" onclick="addFromAR()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
