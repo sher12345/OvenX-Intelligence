@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5466,6 +5467,7 @@ async function admSaveAll() {
     });
   }
   dealsData.forEach(deal => {
+    if (deal._custom) return;
     const ds = admState.deals[deal.name];
     if (!ds) return;
     rows.push({ branch:admActiveBranch, item_name:deal.name, item_type:'deal', available:ds.available, prices:{_flat:ds.price}, image:ds.image||null, updated_at:new Date().toISOString() });
