@@ -6167,7 +6167,7 @@ function admRenderCustomDeals() {
   container.innerHTML = `<div class="adm-deal-grid">
     ${customDeals.map(deal => `
       <div class="adm-deal-card">
-        <div class="adm-deal-img-wrap"><img src="${deal.image}" alt="${deal.name}" onerror="this.src='https://via.placeholder.com/300x140/eef0f3/999?text=No+Image'"></div>
+        <div class="adm-deal-img-wrap"><img src="${admState.deals[deal.name]?.image || deal.image}" alt="${deal.name}" onerror="this.src='https://via.placeholder.com/300x140/eef0f3/999?text=No+Image'"></div>
         <div class="adm-deal-body">
           <div class="adm-deal-name">${deal.name}</div>
           <div class="adm-deal-desc">${deal.deal_desc}</div>
