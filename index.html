@@ -1467,7 +1467,6 @@ body {
 </div>
     
 <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
-<button id="recover-stamps-btn" onclick="recoverStamps()" style="display:none; background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:10px 22px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; margin-top:-15px; width:85%; max-width:340px;">Already a member? Recover Stamps</button><button id="recover-stamps-btn" onclick="recoverStamps()" style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.2); padding:10px 22px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; margin-top:-15px; display:none;">🔄 Recover My Stamps</button>
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
@@ -2371,10 +2370,10 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
     menuData["Rolls 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
-    i.name.includes('Roll') || i.name === 'Donar Kabab'
+    i.name.includes('Roll')
 );
 menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
-    i.name.includes('Wrap') || i.name === 'Crunch Wrap'
+    i.name.includes('Wrap') || i.name === 'Crunch Wrap' || i.name === 'Donar Kabab'
 );
 
     const dealsData = [
@@ -3225,7 +3224,14 @@ function clearTracking() {
             icon.innerText = "🍯"; document.getElementById('upsell-desc').innerHTML = "Add a <span style='color:var(--red); font-weight:900;'>Dip Sauce</span> for only <span style='color:var(--orange); font-weight:900;'>Rs 50</span>!";            document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(false);
             overlay.style.display = 'flex'; setScrollLock(true);
         } else if (itemName.includes('club sandwich') || itemName.includes('burger')) {
-            icon.innerText = "🍟🥤"; document.getElementById('upsell-desc').innerHTML = "Make it a <span style='color:var(--red); font-weight:900;'>Combo Meal</span>!<br>Add Regular Fries + Buddy Drink for <span style='color:var(--orange); font-weight:900;'>Rs 360</span>.";            overlay.style.display = 'flex'; setScrollLock(true);
+    icon.innerText = "🍟🥤"; document.getElementById('upsell-desc').innerHTML = "Make it a <span style='color:var(--red); font-weight:900;'>Combo Meal</span>!<br>Add Regular Fries + Buddy Drink for <span style='color:var(--orange); font-weight:900;'>Rs 360</span>.";
+    document.getElementById('upsell-yes-btn').onclick = () => { 
+        addUpsellToCart('Regular Fries', 230); 
+        addUpsellToCart('Buddy Drink', 130); 
+        document.getElementById('upsell-overlay').style.display='none'; 
+        setScrollLock(false); 
+    };
+    overlay.style.display = 'flex'; setScrollLock(true);
         } else if (itemName.includes('wings')) {
             icon.innerText = "🍗🔥"; document.getElementById('upsell-desc').innerHTML = "Make it a <span style='color:var(--red); font-weight:900;'>Wings Combo</span>!<br>Add Sauce + Buddy Drink for only <span style='color:var(--orange); font-weight:900;'>Rs 180</span>.";
             document.getElementById('upsell-yes-btn').onclick = () => showDipFlavorGrid(true);
@@ -5877,7 +5883,6 @@ async function applyAdminOverrides() {
     data.forEach(r => { _overrideMap[r.item_name] = r; });
     window._adminImgOverrides = window._adminImgOverrides || {};
     data.forEach(r => { if (r.image) window._adminImgOverrides[r.item_name] = r.image; });
-    console.log('Image overrides loaded:', window._adminImgOverrides); // ← ADD THIS
   } catch(e) { console.error('applyAdminOverrides:', e); }
 }
 
@@ -6022,7 +6027,6 @@ function admPopulateCatDropdown() {
   if (!sel) { console.warn('Category select not found'); return; }
   sel.innerHTML = '<option value="">-- Select Category --</option>';
   const cats = Object.keys(menuData).filter(c => c !== 'Pan/Premium');
-  console.log('Categories found:', cats);
   cats.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat; opt.text = cat;
