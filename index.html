@@ -5483,19 +5483,25 @@ async function admSaveAll() {
     admShowToast('✅',`${ADM_BRANCHES[admActiveBranch].name} saved!`,'success');
     // Broadcast menu change signal
     await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
-    } catch(e) {
+  } catch(e) {
     admShowToast('❌','Save failed','error');
   }
+
   // Save custom deals back to custom_deals table
-for (const deal of customDeals) {
-    const ds = admState.deals[deal.name];
-    if (!ds) continue;
-    await sb.from('custom_deals').update({
-        price: ds.price,
-        image: ds.image || deal.image,
-        available: ds.available !== false
-    }).eq('id', deal.id).eq('branch', admActiveBranch);
-}
+  try {
+    for (const deal of customDeals) {
+        const ds = admState.deals[deal.name];
+        if (!ds) continue;
+        await sb.from('custom_deals').update({
+            price: ds.price,
+            image: ds.image || deal.image,
+            available: ds.available !== false
+        }).eq('id', deal.id).eq('branch', admActiveBranch);
+    }
+  } catch(e) {
+    console.error('Custom deals save error:', e);
+  }
+
   admHideLoader();
   btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> SAVE ALL'; btn.disabled = false;
   admUpdateBadges(); admUpdateStats();
