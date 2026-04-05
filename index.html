@@ -6228,6 +6228,8 @@ async function admRemoveCustomDeal(id, name) {
   admShowLoader('Removing deal...');
   try {
     if (sb && id) await sb.from('custom_deals').delete().eq('id', id);
+    // Also clean up menu_overrides
+    if (sb) await sb.from('menu_overrides').delete().eq('item_name', name).eq('branch', admActiveBranch);
     const idx = dealsData.findIndex(d => d.name === name && d._custom);
     if (idx !== -1) dealsData.splice(idx, 1);
     delete admState.deals[name];
@@ -6287,7 +6289,7 @@ async function loadCustomItemsIntoMenu() {
           'Solo Inferno':  { flavorsNeeded: [{label: 'Pizza Flavor', cat: 'Pan Pizza 🍕'}], fixedItems: ['1x Buddy Drink', '2x Wings'] },
           'The Roll Out':  { flavorsNeeded: [{label: 'Roll 1', cat: 'Rolls 🌯'}, {label: 'Roll 2', cat: 'Rolls 🌯'}], fixedItems: ['2x Buddy Drink'] },
           'Double Crunch': { flavorsNeeded: [{label: 'Wrap 1', cat: 'Wraps 🌯'}, {label: 'Wrap 2', cat: 'Wraps 🌯'}], fixedItems: ['2x Buddy Drink'] },
-          'Flame & Fame':  { flavorsNeeded: [{label: 'Grilled Burger 1', cat: 'Grilled Burger ♨️'}, {label: 'Grilled Burger 2', cat: 'Grilled Burger ♨️'}], fixedItems: ['2x Buddy Drink'] },
+          'Flame & Fame': { fixedItems: ['2x CM Grilled Burger', '2x Buddy Drink'] },
           'The X Bite':    { fixedItems: ['1x Zinger Burger', '1x Buddy Drink', '2x Wings'] },
           'Triple Blaze':  { fixedItems: ['3x Zinger Burger', '1L Drink'] },
           'Zinger Rush':   { fixedItems: ['1x Zinger Burger', '1x Coke Buddy'] },
