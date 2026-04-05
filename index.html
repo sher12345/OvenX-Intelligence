@@ -5341,6 +5341,8 @@ function addFromAR(){
 let admState = { items:{}, deals:{} };
 let admHasUnsaved = false;
 let admActiveBranch = 'MULTAN';
+let customItems = [];
+let customDeals = [];
 
 const ADM_BRANCHES = {
   MULTAN: { id:'MULTAN', name:'Multan', emoji:'🍕', color:'#c0392b', cls:'multan' },
@@ -5457,23 +5459,35 @@ async function admSaveAll() {
   const btn = document.querySelector('.adm-save-btn');
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; btn.disabled = true;
   admShowLoader('Saving changes…');
+  
   const rows = [];
   for (let cat in menuData) {
+    if (cat === 'Pan/Premium' || cat === 'Rolls 🌯' || cat === 'Wraps 🌯') continue;
     menuData[cat].forEach(item => {
       const s = admState.items[item.name];
       if (!s) return;
-      rows.push({ branch:admActiveBranch, item_name:item.name, item_type:'menu', available:s.available, prices: typeof s.prices==='object'?s.prices:{_flat:s.prices}, image:s.image||null, updated_at:new Date().toISOString() });
+      rows.push({ branch:admActiveBranch, item_name:item.name, item_type:'menu', available:s.available, prices: typeof s.prices==='object'?s.prices:{_flat:s.prices}, image:s.image||null });
     });
   }
   dealsData.forEach(deal => {
     if (deal._custom) return;
     const ds = admState.deals[deal.name];
     if (!ds) return;
-    rows.push({ branch:admActiveBranch, item_name:deal.name, item_type:'deal', available:ds.available, prices:{_flat:ds.price}, image:ds.image||null, updated_at:new Date().toISOString() });
+    rows.push({ branch:admActiveBranch, item_name:deal.name, item_type:'deal', available:ds.available, prices:{_flat:ds.price}, image:ds.image||null });
   });
+
+  // Deduplicate rows by branch+item_name
+  const seen = new Set();
+  const uniqueRows = rows.filter(row => {
+    const key = row.branch + '|' + row.item_name;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   try {
-    for (let i=0; i<rows.length; i+=50) {
-      const { error } = await sb.from('menu_overrides').upsert(rows.slice(i,i+50), {onConflict:'branch,item_name'});
+    for (let i=0; i<uniqueRows.length; i+=50) {
+      const { error } = await sb.from('menu_overrides').upsert(uniqueRows.slice(i,i+50), {onConflict:'branch,item_name'});
       if (error) throw error;
     }
     admHasUnsaved = false;
@@ -5481,9 +5495,9 @@ async function admSaveAll() {
     const now = new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
     document.getElementById('adm-save-label').innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a;"></i> Saved at ${now}`;
     admShowToast('✅',`${ADM_BRANCHES[admActiveBranch].name} saved!`,'success');
-    // Broadcast menu change signal
     await sb.from('menu_sync').upsert([{ branch: admActiveBranch, updated_at: new Date().toISOString() }], { onConflict: 'branch' });
   } catch(e) {
+    console.error('Save error:', e.message, e.details, e.hint);
     admShowToast('❌','Save failed','error');
   }
 
@@ -5978,8 +5992,7 @@ initLandingPage();
 // CUSTOM ITEMS & DEALS MANAGER
 // ══════════════════════════════════════════
 
-let customItems = [];
-let customDeals = [];
+
 
 async function admLoadCustomData() {
   if (!sb) return;
