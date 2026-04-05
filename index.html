@@ -2133,16 +2133,22 @@ body {
     // ══════════════════════════════════════════
     const BRANCH_CONFIG = {
         MULTAN: {
-            id: 'MULTAN',
-            name: 'Multan',
-            address: 'Shop #12, Gulgasht Colony, Multan',
-            lat: 30.2197, lng: 71.4711,
-            phone: '923001450301',
-            cc_phone: '923002450301',
-            riders: ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"],
-            inventoryPassword: 'ovenx123',
-            excludedDeals: []
-        },
+    id: 'MULTAN',
+    name: 'Multan',
+    address: 'Shop #12, Gulgasht Colony, Multan',
+    lat: 30.2197, lng: 71.4711,
+    phone: '923001450301',
+    cc_phone: '923002450301',
+    riders: ["Ramzan", "Abdurehman", "Atif", "Ehsan"],
+    riderPhones: {
+        "Ramzan":     "923196206229",
+        "Abdurehman": "923286001660",
+        "Atif":       "923047373321",
+        "Ehsan":      "923193157142"
+    },
+    inventoryPassword: 'ovenx123',
+    excludedDeals: []
+},
         BWP: {
     id: 'BWP',
     name: 'Bahawalpur',
@@ -4028,17 +4034,64 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
         created_at: createdAt
     };
     
-    const message = encodeURIComponent(formatCCMessage(order));
-    const url = `https://wa.me/${CUSTOMER_CARE_NUMBER}?text=${message}`;
+    // Get rider info from the order card
+    const card = btnElement.closest('.kitchen-card');
+    const riderBtns = card ? card.querySelectorAll('.rider-btn.selected') : [];
+    const riderName = riderBtns.length > 0 ? riderBtns[0].innerText.trim() : null;
     
-    window.open(url, '_blank');
+    // Get branch from order location tag
+    const branchTag = card ? card.querySelector('.order-branch-tag') : null;
+    const orderBranch = branchTag ? branchTag.textContent.trim() : 'MULTAN';
+    const branchConfig = BRANCH_CONFIG[orderBranch] || BRANCH_CONFIG.MULTAN;
+    
+    // Get rider phone
+    const riderPhone = riderName && branchConfig.riderPhones ? branchConfig.riderPhones[riderName] : null;
+    
+    if (!riderName) {
+        alert('⚠️ Please assign a rider first before notifying the customer!');
+        return;
+    }
+    
+    if (!riderPhone) {
+        alert(`⚠️ No phone number found for rider "${riderName}". Please update riderPhones in BRANCH_CONFIG.`);
+        return;
+    }
+    
+    // Get customer phone from order
+    const customerPhone = order.location; // fallback
+    // We need to find actual customer phone from the card
+    const phoneEl = card ? card.querySelector('[style*="color:var(--orange)"]') : null;
+    const rawPhone = phoneEl ? phoneEl.textContent.replace('📞', '').trim() : null;
+    
+    if (!rawPhone) {
+        alert('⚠️ No customer phone number found on this order!');
+        return;
+    }
+    
+    // Format customer phone for WhatsApp
+    let customerWA = rawPhone.replace(/\D/g, '');
+    if (customerWA.startsWith('0')) customerWA = '92' + customerWA.slice(1);
+    if (!customerWA.startsWith('92')) customerWA = '92' + customerWA;
+    
+    // Format rider phone for display
+    const riderDisplay = riderPhone.replace('92', '0').replace(/(\d{4})(\d{7})/, '$1-$2');
+    
+    const message = encodeURIComponent(
+        `🍕 *OvenX Order Update*\n\n` +
+        `Your order is on the way! 🏍️\n\n` +
+        `*Rider:* ${riderName}\n` +
+        `*Rider's Number:* ${riderDisplay}\n\n` +
+        `You can call or WhatsApp your rider directly for live updates.\n\n` +
+        `Thank you for ordering from *Oven X*! 🔥`
+    );
+    
+    window.open(`https://wa.me/${customerWA}?text=${message}`, '_blank');
     
     if (btnElement) {
         const originalText = btnElement.innerHTML;
-        btnElement.innerHTML = '✅ OPENED!';
+        btnElement.innerHTML = '✅ SENT!';
         btnElement.style.background = '#28a745';
         btnElement.disabled = true;
-        
         setTimeout(() => {
             btnElement.innerHTML = originalText;
             btnElement.style.background = '#25D366';
@@ -4121,7 +4174,7 @@ ${priceHtml}
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">📱 SEND TO CC</button>` : ''}                </div>
+${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
                 ${riderHtml}
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
