@@ -4085,13 +4085,13 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
     const riderDisplay = riderPhone.replace('92', '0').replace(/(\d{4})(\d{7})/, '$1-$2');
     
     const message = encodeURIComponent(
-        `🍕 *OvenX Order Update*\n\n` +
-        `Your order is on the way! 🏍️\n\n` +
-        `*Rider:* ${riderName}\n` +
-        `*Rider's Number:* ${riderDisplay}\n\n` +
-        `You can call or WhatsApp your rider directly for live updates.\n\n` +
-        `Thank you for ordering from *Oven X*! 🔥`
-    );
+    `*OvenX Order Update*\n\n` +
+    `Your order is on the way!\n\n` +
+    `*Rider:* ${riderName}\n` +
+    `*Rider's Number:* ${riderDisplay}\n\n` +
+    `You can call or WhatsApp your rider directly for live updates.\n\n` +
+    `Thank you for ordering from *Oven X*!`
+);
     
     window.open(`https://wa.me/${customerWA}?text=${message}`, '_blank');
     
