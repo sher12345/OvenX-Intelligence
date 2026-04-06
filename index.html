@@ -2203,6 +2203,8 @@ body {
     }
 
     function initBranchSelector() {
+    // Force Chrome to show something immediately
+    document.getElementById('branch-selector-screen').style.display = 'flex';
     try {
         const p = new URLSearchParams(window.location.search);
         if (p.has('branch')) {
