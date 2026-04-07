@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3352,13 +3353,36 @@ function validateAndSubmitOrder() {
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
     
-    // 10% discount on delivery — menu items only, excludes deals/combos
-    const isDealItem = (name) => dealsData.some(d => name.includes(d.name));
-    let deliveryDiscount = 0;
-    if (orderType === 'Delivery') {
-        const eligibleTotal = cart.filter(i => !isDealItem(i.name)).reduce((s, i) => s + (i.price * i.qty), 0);
-        deliveryDiscount = Math.round(eligibleTotal * 0.10);
-    }
+    // === 10% DELIVERY DISCOUNT — FOOD ONLY (Excludes Deals + All Drinks) ===
+const isDealItem = (name) => dealsData.some(d => 
+    name.toLowerCase().includes(d.name.toLowerCase())
+);
+
+const drinkKeywords = [
+    "coke", "sprite", "cola", "buddy", "1 liter", "1.5l", "1.5 l", 
+    "water", "margarita", "lemonade", "pina colada", "red rose", 
+    "fresh lime", "blue lagoon", "mint", "drink", "next cola"
+];
+
+let deliveryDiscount = 0;
+
+if (orderType === 'Delivery') {
+    const eligibleTotal = cart
+        .filter(item => {
+            const n = item.name.toLowerCase();
+
+            // Exclude Deals / Combos
+            if (isDealItem(n)) return false;
+
+            // Exclude Drinks
+            if (drinkKeywords.some(kw => n.includes(kw))) return false;
+
+            return true;   // Regular food item → eligible for 10%
+        })
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+    deliveryDiscount = Math.round(eligibleTotal * 0.10);
+}
     
     const grand = foodTotal + sc + delCharge - deliveryDiscount;
     const itemsText = cart.map(i => {
@@ -3778,9 +3802,25 @@ function removeItem(idx) {
     function renderFinalSummary(fee) {
     chkStep = 3; 
     delCharge = parseFloat(fee) || 0; 
-    const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0); 
-    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0; 
-    const disc = orderType === 'Delivery' ? Math.round(cart.filter(i => !dealsData.some(d => i.name.includes(d.name))).reduce((s,i) => s+(i.price*i.qty),0)*0.10) : 0;
+    const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+
+// 10% Delivery Discount — Food only (Excludes Deals + Drinks)
+let disc = 0;
+if (orderType === 'Delivery') {
+    const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+
+    const eligible = cart
+        .filter(i => {
+            const n = i.name.toLowerCase();
+            if (dealsData.some(d => n.includes(d.name.toLowerCase()))) return false;
+            if (drinkKeywords.some(kw => n.includes(kw))) return false;
+            return true;
+        })
+        .reduce((s, i) => s + (i.price * i.qty), 0);
+
+    disc = Math.round(eligible * 0.10);
+}
     const grand = foodTotal + delCharge + sc - disc;
     
     const summaryHTML = cart.map((i, idx) => `
@@ -3841,7 +3881,7 @@ function removeItem(idx) {
             Subtotal: Rs ${foodTotal}
             ${sc > 0 ? '<br>S.C (7%): Rs '+sc : ''}
             ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
-            ${disc > 0 ? `<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount: -Rs ${disc}</span>` : ''}
+            ${disc > 0 ? `<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount (Food only): -Rs ${disc}</span>` : ''}
             <br><hr>Total: <b>Rs ${grand}</b>
         </div>
         <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP 📱</button>
@@ -6442,4 +6482,5 @@ loadCustomItemsIntoMenu();
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
