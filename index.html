@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4537,119 +4536,122 @@ card.querySelector('.deal-info-box').appendChild(btn);
 }
 
     function renderPublicMenu(filterText = "") {
-        const mC = document.getElementById('menu-container'); 
-        mC.innerHTML = ""; 
-        const search = filterText.toLowerCase();
-        for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue;
-            const isBWP = activeBranch && activeBranch.id === 'BWP';
-            const filteredItems = menuData[cat].filter(item => {
-    if (item.bwpOnly && !isBWP) return false;
-    if (!isItemAvailable(item.name)) return false;
-    return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
-});
-            if (filteredItems.length > 0) {
-                let title = document.createElement('div'); 
-                title.className = 'section-title'; 
-                title.innerText = cat; 
-                title.id = "cat-" + cat.replace(/\s+/g, '-'); 
-                mC.appendChild(title);
-                let grid = document.createElement('div'); 
-                grid.className = 'grid';
-                filteredItems.forEach(item => {
-    let fBg = imgMap["pizza"];
-    let itemNameLower = item.name.toLowerCase();
-    
-    if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
-    else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
-    else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
-    else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
-    else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
-    else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
-    else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
-    else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
-    else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
-    else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
-    else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
-    else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
-    else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
-    else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
-    else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
-    else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
-    else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
-    else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
-    else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
-    else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
-    else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
-    else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
-    else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
-    else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
-    else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
-    else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
-    else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
-    else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
-    else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
-    else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
-    else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
-    else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
-    else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
-    else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
-    else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
-    else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
-    else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
-    else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
-    else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
-    else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
-    else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
-    else if (itemNameLower.includes('behari roll')) fBg = imgMap["behari roll"];
-    else if (itemNameLower.includes('peri peri wrap') || itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
-    else if (itemNameLower.includes('doner') || itemNameLower.includes('donar')) fBg = imgMap["doner"];
-    else if (itemNameLower.includes('cordon blue')) fBg = imgMap["cordon blue"];
-    else if (itemNameLower.includes('tarragon')) fBg = imgMap["tarragon"];
-    else if (itemNameLower.includes('moroccan')) fBg = imgMap["moroccan"];
-    else if (itemNameLower.includes('mushroom steak')) fBg = imgMap["mushroom steak"];
-    else if (itemNameLower.includes('mexican steak')) fBg = imgMap["mexican steak"];
-    else if (itemNameLower.includes('stuffed jalapeno steak')) fBg = imgMap["stuffed jalapeno steak"];
-    else if (itemNameLower.includes('pepper steak')) fBg = imgMap["pepper steak"];
-    else if (itemNameLower.includes('mint margarita')) fBg = imgMap["mint margarita"];
-    else if (itemNameLower.includes('lemonade')) fBg = imgMap["lemonade"];
-    else if (itemNameLower.includes('pina colada')) fBg = imgMap["pina colada"];
-    else if (itemNameLower.includes('red rose')) fBg = imgMap["red rose"];
-    else if (itemNameLower.includes('fresh lime')) fBg = imgMap["fresh lime"];
-    else if (itemNameLower.includes('blue lagoon')) fBg = imgMap["blue lagoon"];
-    else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
-        if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
-        else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
-        else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
-        else fBg = imgMap["oven baked wings"];
-    }
-    else {
-        for (let key in imgMap) {
-            if (itemNameLower.includes(key.toLowerCase())) {
-                fBg = imgMap[key];
-                break;
-            }
+    const mC = document.getElementById('menu-container'); 
+    mC.innerHTML = ""; 
+    const search = filterText.toLowerCase();
+    for (let cat in menuData) {
+        // SKIP hidden/combined categories - they shouldn't appear in main menu
+        if (cat === "Pan/Premium" || cat === "Rolls 🌯" || cat === "Wraps 🌯") continue;
+        
+        const isBWP = activeBranch && activeBranch.id === 'BWP';
+        const filteredItems = menuData[cat].filter(item => {
+            if (item.bwpOnly && !isBWP) return false;
+            if (!isItemAvailable(item.name)) return false;
+            return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
+        });
+        if (filteredItems.length > 0) {
+            let title = document.createElement('div'); 
+            title.className = 'section-title'; 
+            title.innerText = cat; 
+            title.id = "cat-" + cat.replace(/\s+/g, '-'); 
+            mC.appendChild(title);
+            let grid = document.createElement('div'); 
+            grid.className = 'grid';
+            filteredItems.forEach(item => {
+                let fBg = imgMap["pizza"];
+                let itemNameLower = item.name.toLowerCase();
+                
+                if (itemNameLower.includes('plain fries')) fBg = imgMap["plain fries"];
+                else if (itemNameLower.includes('loaded fries')) fBg = imgMap["loaded fries"];
+                else if (itemNameLower.includes('pizza fries')) fBg = imgMap["pizza fries"];
+                else if (itemNameLower.includes('dragon')) fBg = imgMap["dragon shots"];
+                else if (itemNameLower.includes('cheese sticks')) fBg = imgMap["cheese sticks"];
+                else if (itemNameLower.includes('meat sticks')) fBg = imgMap["meat sticks"];
+                else if (itemNameLower.includes('nuggets')) fBg = imgMap["nuggets"];
+                else if (itemNameLower.includes('zinger') && !itemNameLower.includes('roll')) fBg = imgMap["zinger"];
+                else if (itemNameLower.includes('chicken patty')) fBg = imgMap["chicken patty"];
+                else if (itemNameLower.includes('mighty')) fBg = imgMap["mighty"];
+                else if (itemNameLower.includes('chipotle') && itemNameLower.includes('burger')) fBg = imgMap["chipotle"];
+                else if (itemNameLower.includes('crispy jalapeno')) fBg = imgMap["crispy jalapeno"];
+                else if (itemNameLower.includes('stuff jalapeno')) fBg = imgMap["stuff jalapeno"];
+                else if (itemNameLower.includes('peri') && itemNameLower.includes('grilled')) fBg = imgMap["peri peri grilled"];
+                else if (itemNameLower.includes('smokey') || itemNameLower.includes('smoky')) fBg = imgMap["smokey grilled"];
+                else if (itemNameLower.includes('jalapeno blaze')) fBg = imgMap["jalapeno blaze"];
+                else if (itemNameLower.includes('mexi')) fBg = imgMap["mexi fiesta"];
+                else if (itemNameLower.includes('health')) fBg = imgMap["health harvest"];
+                else if (itemNameLower.includes('khameera')) fBg = imgMap["khameera"];
+                else if (itemNameLower.includes('club sandwich')) fBg = imgMap["club sandwich"];
+                else if (itemNameLower.includes('tikka')) fBg = imgMap["chicken tikka"];
+                else if (itemNameLower.includes('fajita')) fBg = imgMap["chicken fajita"];
+                else if (itemNameLower.includes('supreme')) fBg = imgMap["chicken supreme"];
+                else if (itemNameLower.includes('cheese lover')) fBg = imgMap["cheese lover"];
+                else if (itemNameLower.includes('veg lover')) fBg = imgMap["veg lover"];
+                else if (itemNameLower.includes('sicilian')) fBg = imgMap["sicilian"];
+                else if (itemNameLower.includes('bbq') && itemNameLower.includes('pizza')) fBg = imgMap["bbq"];
+                else if (itemNameLower.includes('creamy dreamy')) fBg = imgMap["creamy dreamy"];
+                else if (itemNameLower.includes('deep dish') || itemNameLower.includes('mild butter')) fBg = imgMap["mild butter"];
+                else if (itemNameLower.includes('extreme')) fBg = imgMap["extreme peri"];
+                else if (itemNameLower.includes('crown crust')) fBg = imgMap["crown crust"];
+                else if (itemNameLower.includes('cheese crust')) fBg = imgMap["cheese crust"];
+                else if (itemNameLower.includes('crusti thin')) fBg = imgMap["crusti thin"];
+                else if (itemNameLower.includes('calzone')) fBg = imgMap["calzone"];
+                else if (itemNameLower.includes('alfredo')) fBg = imgMap["alfredo"];
+                else if (itemNameLower.includes('chipotle wrap')) fBg = imgMap["chipotle wrap"];
+                else if (itemNameLower.includes('bbq wrap')) fBg = imgMap["bbq wrap"];
+                else if (itemNameLower.includes('crunch wrap')) fBg = imgMap["crunch wrap"];
+                else if (itemNameLower.includes('zingeratha')) fBg = imgMap["zingeratha"];
+                else if (itemNameLower.includes('paratha roll')) fBg = imgMap["paratha"];
+                else if (itemNameLower.includes('malai roll')) fBg = imgMap["malai"];
+                else if (itemNameLower.includes('behari roll')) fBg = imgMap["behari roll"];
+                else if (itemNameLower.includes('peri peri wrap') || itemNameLower.includes('peri wrap')) fBg = imgMap["peri wrap"];
+                else if (itemNameLower.includes('doner') || itemNameLower.includes('donar')) fBg = imgMap["doner"];
+                else if (itemNameLower.includes('cordon blue')) fBg = imgMap["cordon blue"];
+                else if (itemNameLower.includes('tarragon')) fBg = imgMap["tarragon"];
+                else if (itemNameLower.includes('moroccan')) fBg = imgMap["moroccan"];
+                else if (itemNameLower.includes('mushroom steak')) fBg = imgMap["mushroom steak"];
+                else if (itemNameLower.includes('mexican steak')) fBg = imgMap["mexican steak"];
+                else if (itemNameLower.includes('stuffed jalapeno steak')) fBg = imgMap["stuffed jalapeno steak"];
+                else if (itemNameLower.includes('pepper steak')) fBg = imgMap["pepper steak"];
+                else if (itemNameLower.includes('mint margarita')) fBg = imgMap["mint margarita"];
+                else if (itemNameLower.includes('lemonade')) fBg = imgMap["lemonade"];
+                else if (itemNameLower.includes('pina colada')) fBg = imgMap["pina colada"];
+                else if (itemNameLower.includes('red rose')) fBg = imgMap["red rose"];
+                else if (itemNameLower.includes('fresh lime')) fBg = imgMap["fresh lime"];
+                else if (itemNameLower.includes('blue lagoon')) fBg = imgMap["blue lagoon"];
+                else if (itemNameLower.includes('wings') || itemNameLower.includes('wing')) {
+                    if (itemNameLower.includes('peri')) fBg = imgMap["peri-peri wings"];
+                    else if (itemNameLower.includes('hot')) fBg = imgMap["hot wings"];
+                    else if (itemNameLower.includes('honey')) fBg = imgMap["honey chili wings"];
+                    else fBg = imgMap["oven baked wings"];
+                }
+                else {
+                    for (let key in imgMap) {
+                        if (itemNameLower.includes(key.toLowerCase())) {
+                            fBg = imgMap[key];
+                            break;
+                        }
+                    }
+                }
+                
+                let b = document.createElement('div'); 
+                b.className = 'btn btn-3d';
+                // Use admin override image if available
+                const overrideImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : null;
+                b.style.backgroundImage = `url('${overrideImg || fBg}')`;
+                const displayPrice = getItemPrice(item);
+                b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
+                const finalImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : fBg;
+                b.onclick = () => {
+                    const overriddenItem = {...item, price: getItemPrice(item)};
+                    openItemSheet(overriddenItem, finalImg);
+                };
+                grid.appendChild(b);
+            }); 
+            mC.appendChild(grid);
         }
-    }
-                    
-                    let b = document.createElement('div'); 
-b.className = 'btn btn-3d';
-// Use admin override image if available
-const overrideImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : null;
-b.style.backgroundImage = `url('${overrideImg || fBg}')`;
-                    const displayPrice = getItemPrice(item);
-b.innerHTML = `<div class="item-label-box"><div>${item.name}</div><div class="price-tag">${typeof displayPrice === 'object' ? 'PICK SIZE' : 'Rs '+displayPrice}</div></div>`;
-                    const finalImg = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : fBg;
-b.onclick = () => {
-    const overriddenItem = {...item, price: getItemPrice(item)};
-    openItemSheet(overriddenItem, finalImg);
-};                    grid.appendChild(b);
-                }); 
-                mC.appendChild(grid);
-            }
-        } 
-        renderCategoryBar();
-    }
+    } 
+    renderCategoryBar();
+}
     
     function renderCategoryBar() {
         const bar = document.getElementById('category-bar'); 
@@ -6482,5 +6484,6 @@ loadCustomItemsIntoMenu();
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
