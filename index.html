@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4654,23 +4656,25 @@ card.querySelector('.deal-info-box').appendChild(btn);
 }
     
     function renderCategoryBar() {
-        const bar = document.getElementById('category-bar'); 
-        bar.innerHTML="";
+    const bar = document.getElementById('category-bar'); 
+    bar.innerHTML="";
+    
+    for (let cat in menuData) {
+        // SKIP hidden/combined categories - don't show in pills
+        if (cat === "Pan/Premium" || cat === "Rolls 🌯" || cat === "Wraps 🌯") continue; 
         
-                for (let cat in menuData) {
-            if (cat === "Pan/Premium") continue; 
-            const pill = document.createElement('div'); 
-            pill.className = "cat-pill"; 
-            pill.innerText = cat;
-            pill.onclick = () => { 
-                document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); 
-                pill.classList.add('active'); 
-                const t = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); 
-                if(t) t.scrollIntoView({ behavior: 'smooth' }); 
-            }; 
-            bar.appendChild(pill);
-        }
+        const pill = document.createElement('div'); 
+        pill.className = "cat-pill"; 
+        pill.innerText = cat;
+        pill.onclick = () => { 
+            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); 
+            pill.classList.add('active'); 
+            const t = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); 
+            if(t) t.scrollIntoView({ behavior: 'smooth' }); 
+        }; 
+        bar.appendChild(pill);
     }
+}
 
     function handleSearch(val) { renderPublicMenu(val); if (val === "") document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); }
     // ════════════════════════════════════════════════════════
