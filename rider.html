@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#c0392b">
+<title>OvenX Rider — Live Tracking</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+    --red: #c0392b;
+    --dark-red: #922b21;
+    --orange: #e67e22;
+    --dark-orange: #a04000;
+    --green: #25D366;
+    --dark-green: #1a9648;
+    --bg: #0d0000;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: white;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ── SPLASH ── */
+#splash {
+    position: fixed; inset: 0; z-index: 1000;
+    background: radial-gradient(ellipse at top, #2d0a0a 0%, #0d0000 70%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px; padding: 30px;
+    transition: opacity 0.5s, transform 0.5s;
+}
+#splash.hidden { opacity: 0; pointer-events: none; transform: scale(1.05); }
+
+.splash-logo {
+    font-size: 52px; font-weight: 900;
+    letter-spacing: -2px; color: white;
+}
+.splash-logo span { color: var(--orange); }
+.splash-sub {
+    font-size: 11px; font-weight: 700; letter-spacing: 4px;
+    text-transform: uppercase; color: rgba(255,255,255,0.3);
+    margin-top: -10px;
+}
+.rider-badge {
+    background: rgba(230,126,34,0.15);
+    border: 1px solid rgba(230,126,34,0.4);
+    color: var(--orange);
+    padding: 8px 20px; border-radius: 30px;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.order-info-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 20px 24px;
+    width: 100%; max-width: 360px;
+    text-align: center;
+}
+.order-info-card .label {
+    font-size: 10px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; color: rgba(255,255,255,0.4);
+    margin-bottom: 8px;
+}
+.order-info-card .value {
+    font-size: 22px; font-weight: 900; color: white;
+}
+.order-info-card .sub {
+    font-size: 13px; color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+}
+
+.start-btn {
+    width: 100%; max-width: 360px;
+    padding: 20px;
+    background: var(--red);
+    color: white; border: none; border-radius: 16px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 6px 0px var(--dark-red);
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.start-btn:active { transform: translateY(4px); box-shadow: 0 2px 0px var(--dark-red); }
+.start-btn.green { background: var(--green); box-shadow: 0 6px 0px var(--dark-green); }
+.start-btn.green:active { box-shadow: 0 2px 0px var(--dark-green); }
+
+/* ── ACTIVE TRACKING SCREEN ── */
+#tracking-screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+#rider-map {
+    flex: 1;
+    height: 45vh;
+    min-height: 280px;
+}
+
+.tracking-panel {
+    background: #0d0000;
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.status-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pulse-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 10px #4ade80;
+    flex-shrink: 0;
+    animation: pulse-dot 1.5s infinite;
+}
+.pulse-dot.red { background: var(--red); box-shadow: 0 0 10px var(--red); }
+.pulse-dot.orange { background: var(--orange); box-shadow: 0 0 10px var(--orange); }
+
+@keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.status-text .title {
+    font-size: 15px; font-weight: 700; color: white;
+}
+.status-text .sub {
+    font-size: 12px; color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+.stat-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+}
+.stat-box .num {
+    font-size: 22px; font-weight: 900;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+}
+.stat-box .lbl {
+    font-size: 10px; font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-top: 3px;
+}
+
+.stop-btn {
+    width: 100%;
+    padding: 18px;
+    background: rgba(192,57,43,0.15);
+    color: var(--red);
+    border: 2px solid rgba(192,57,43,0.3);
+    border-radius: 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.stop-btn:active { background: rgba(192,57,43,0.3); }
+
+.update-log {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+    font-weight: 500;
+}
+
+/* ── ERROR STATE ── */
+#error-screen {
+    display: none;
+    position: fixed; inset: 0; z-index: 900;
+    background: radial-gradient(ellipse at top, #2d0a0a 0%, #0d0000 70%);
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px; padding: 30px; text-align: center;
+}
+.error-icon { font-size: 64px; }
+.error-title { font-size: 22px; font-weight: 900; color: white; }
+.error-msg { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; max-width: 300px; }
+
+/* Map customization */
+.leaflet-container { background: #1a0a00 !important; }
+.rider-map-pin {
+    background: var(--red);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 15px rgba(192,57,43,0.8);
+    animation: map-pulse 1.5s infinite;
+}
+@keyframes map-pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(192,57,43,0.6); }
+    50% { box-shadow: 0 0 25px rgba(192,57,43,1), 0 0 0 8px rgba(192,57,43,0.15); }
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH / START SCREEN -->
+<div id="splash">
+    <div class="splash-logo">OVEN <span>X</span></div>
+    <div class="splash-sub">Rider Portal</div>
+    <div class="rider-badge">🏍️ Delivery Rider</div>
+
+    <div class="order-info-card" id="order-card">
+        <div class="label">Your Assignment</div>
+        <div class="value" id="splash-order-id">Loading...</div>
+        <div class="sub" id="splash-rider-name">Checking order...</div>
+    </div>
+
+    <div class="order-info-card" style="background:rgba(37,211,102,0.08); border-color:rgba(37,211,102,0.2);">
+        <div class="label" style="color:rgba(37,211,102,0.6);">How This Works</div>
+        <div style="font-size:13px; color:rgba(255,255,255,0.6); line-height:1.7; margin-top:8px;">
+            Tap START below to share your live location.<br>
+            The customer will see you moving on a map.<br>
+            Stop tracking when you've delivered the order.
+        </div>
+    </div>
+
+    <button class="start-btn green" onclick="startTracking()">
+        <span>🟢</span> START LIVE TRACKING
+    </button>
+    <button class="start-btn" style="background:rgba(255,255,255,0.08); box-shadow:none; border:1px solid rgba(255,255,255,0.15);" onclick="window.close()">
+        Cancel
+    </button>
+</div>
+
+<!-- ACTIVE TRACKING SCREEN -->
+<div id="tracking-screen">
+    <div id="rider-map"></div>
+    <div class="tracking-panel">
+
+        <div class="status-card">
+            <div class="pulse-dot" id="status-dot"></div>
+            <div class="status-text">
+                <div class="title" id="status-title">Broadcasting Location</div>
+                <div class="sub" id="status-sub">Customer can see you live</div>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="num" id="stat-updates">0</div>
+                <div class="lbl">Updates</div>
+            </div>
+            <div class="stat-box">
+                <div class="num" id="stat-accuracy">—</div>
+                <div class="lbl">Accuracy</div>
+            </div>
+            <div class="stat-box">
+                <div class="num" id="stat-time">00:00</div>
+                <div class="lbl">Active</div>
+            </div>
+        </div>
+
+        <div class="status-card" id="order-detail-card" style="border-color:rgba(230,126,34,0.3); background:rgba(230,126,34,0.08);">
+            <span style="font-size:24px;">📦</span>
+            <div class="status-text">
+                <div class="title" id="detail-order">Order #—</div>
+                <div class="sub" id="detail-customer">Delivering to customer</div>
+            </div>
+        </div>
+
+        <div class="update-log" id="update-log">Waiting for GPS signal...</div>
+
+        <button class="stop-btn" onclick="stopTracking()">
+            ⏹ STOP & MARK DELIVERED
+        </button>
+    </div>
+</div>
+
+<!-- ERROR SCREEN -->
+<div id="error-screen">
+    <div class="error-icon">📍</div>
+    <div class="error-title">Location Access Needed</div>
+    <div class="error-msg" id="error-msg">Please allow location access to start tracking. Your customers need to see where you are!</div>
+    <button class="start-btn" onclick="startTracking()" style="max-width:300px; margin-top:10px;">
+        TRY AGAIN
+    </button>
+</div>
+
+<script>
+const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Parse URL params
+const params = new URLSearchParams(window.location.search);
+const orderId   = params.get('order') || 'DEMO';
+const riderName = params.get('rider') || 'Rider';
+const branch    = params.get('branch') || 'MULTAN';
+
+// State
+let map, riderMarker, watchId;
+let updateCount = 0, startTime = null, timerInterval = null;
+let isTracking = false;
+let lastLat = null, lastLng = null;
+
+// Init splash info
+document.getElementById('splash-order-id').textContent = 'Order #' + orderId.slice(0,8).toUpperCase();
+document.getElementById('splash-rider-name').textContent = '🏍️ ' + riderName + ' — ' + branch;
+document.getElementById('detail-order').textContent = 'Order #' + orderId.slice(0,8).toUpperCase();
+
+// ── START TRACKING ──
+async function startTracking() {
+    if (!navigator.geolocation) {
+        showError("Your browser doesn't support GPS. Please use Chrome on Android.");
+        return;
+    }
+
+    // Get first fix
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+        // Set status active in DB
+        await sb.from('rider_locations').upsert([{
+            order_id: orderId,
+            rider_name: riderName,
+            branch: branch,
+            lat: lat,
+            lng: lng,
+            accuracy: Math.round(accuracy),
+            is_active: true,
+            updated_at: new Date().toISOString()
+        }], { onConflict: 'order_id' });
+
+        // Hide splash, show tracking
+        document.getElementById('splash').classList.add('hidden');
+        setTimeout(() => {
+            document.getElementById('splash').style.display = 'none';
+            document.getElementById('tracking-screen').style.display = 'flex';
+            initMap(lat, lng);
+            startBroadcasting();
+        }, 500);
+
+    }, (err) => {
+        showError(getGeoError(err));
+    }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ── INIT MAP ──
+function initMap(lat, lng) {
+    map = L.map('rider-map', {
+        center: [lat, lng],
+        zoom: 16,
+        zoomControl: false,
+        attributionControl: false
+    });
+
+    // Dark map tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+    }).addTo(map);
+
+    // Rider marker (pulsing red dot)
+    const riderIcon = L.divIcon({
+        className: '',
+        html: `<div class="rider-map-pin"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    riderMarker = L.marker([lat, lng], { icon: riderIcon }).addTo(map);
+    lastLat = lat; lastLng = lng;
+}
+
+// ── BROADCAST GPS ──
+function startBroadcasting() {
+    isTracking = true;
+    startTime = Date.now();
+
+    // Start timer
+    timerInterval = setInterval(updateTimer, 1000);
+
+    // Watch position
+    watchId = navigator.geolocation.watchPosition(async (pos) => {
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+        // Update map
+        if (riderMarker) riderMarker.setLatLng([lat, lng]);
+        if (map) map.setView([lat, lng], map.getZoom(), { animate: true, pan: { duration: 0.5 } });
+
+        // Update Supabase
+        const { error } = await sb.from('rider_locations').upsert([{
+            order_id: orderId,
+            rider_name: riderName,
+            branch: branch,
+            lat: lat,
+            lng: lng,
+            accuracy: Math.round(accuracy),
+            is_active: true,
+            updated_at: new Date().toISOString()
+        }], { onConflict: 'order_id' });
+
+        if (!error) {
+            updateCount++;
+            lastLat = lat; lastLng = lng;
+
+            // Update UI
+            document.getElementById('stat-updates').textContent = updateCount;
+            document.getElementById('stat-accuracy').textContent = Math.round(accuracy) + 'm';
+            document.getElementById('update-log').textContent =
+                '📍 Last update: ' + new Date().toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('status-dot').className = 'pulse-dot';
+            document.getElementById('status-title').textContent = 'Broadcasting Location';
+            document.getElementById('status-sub').textContent = 'Customer can see you live · ' + updateCount + ' updates sent';
+        }
+
+    }, (err) => {
+        document.getElementById('status-dot').className = 'pulse-dot orange';
+        document.getElementById('status-title').textContent = 'GPS Signal Weak';
+        document.getElementById('status-sub').textContent = 'Trying to reacquire signal...';
+    }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    });
+}
+
+// ── TIMER ──
+function updateTimer() {
+    if (!startTime) return;
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('stat-time').textContent = mins + ':' + secs;
+}
+
+// ── STOP TRACKING ──
+async function stopTracking() {
+    if (!confirm('Mark order as delivered and stop tracking?')) return;
+
+    isTracking = false;
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    if (timerInterval) clearInterval(timerInterval);
+
+    // Mark inactive in DB
+    await sb.from('rider_locations').update({
+        is_active: false,
+        updated_at: new Date().toISOString()
+    }).eq('order_id', orderId);
+
+    // Show delivered state
+    document.getElementById('status-dot').className = 'pulse-dot';
+    document.getElementById('status-dot').style.background = '#4ade80';
+    document.getElementById('status-dot').style.boxShadow = '0 0 10px #4ade80';
+    document.getElementById('status-dot').style.animation = 'none';
+    document.getElementById('status-title').textContent = '✅ Order Delivered!';
+    document.getElementById('status-sub').textContent = 'Tracking stopped. Great work!';
+
+    setTimeout(() => {
+        alert('✅ Order marked as delivered! You can close this page.');
+    }, 500);
+}
+
+// ── ERROR ──
+function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-screen').style.display = 'flex';
+}
+
+function getGeoError(err) {
+    switch(err.code) {
+        case err.PERMISSION_DENIED: return "Location access was denied. Please go to your browser settings and allow location for this site, then try again.";
+        case err.POSITION_UNAVAILABLE: return "Location information is unavailable. Make sure your GPS is turned on.";
+        case err.TIMEOUT: return "Location request timed out. Please check your GPS signal and try again.";
+        default: return "An unknown error occurred. Please try again.";
+    }
+}
+
+// Keep screen awake (where supported)
+if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').catch(() => {});
+}
+</script>
+</body>
+</html>
