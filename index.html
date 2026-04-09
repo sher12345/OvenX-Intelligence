@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2359,33 +2357,32 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
         "Platters 🍱": [{name: "Khameera Sandwich Platter", price: 699}, {name: "Calzone Platter", price: 899}, {name: "Behari Platter", price: 949}],
         "Pasta 🍝": [{name: "Alfredo Pasta", price: 749}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
         "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
-        "Bar Menu 🥤": [
-            {name: "Coke Buddy", price: 130},
-            {name: "Sprite Buddy", price: 130},
-            {name: "Coke 1 Liter", price: 190},
-            {name: "Next Cola 1 Liter", price: 170},
-            {name: "Coke 1.5L", price: 230},
-            {name: "Sprite 1.5L", price: 230},
-            {name: "Water Small", price: 99},
-            {name: "Water Large", price: 170},
-            // BWP Moctails — hidden at Multan
-            {name: "Mint Margarita", price: 249, bwpOnly: true},
-            {name: "Lemonade", price: 249, bwpOnly: true},
-            {name: "Pina Colada", price: 349, bwpOnly: true},
-            {name: "Red Rose", price: 220, bwpOnly: true},
-            {name: "Fresh Lime", price: 220, bwpOnly: true},
-            {name: "Blue Lagoon", price: 220, bwpOnly: true}
-        ],
-        // BWP Steaks — never shown at Multan
         "Steaks 🥩": [
-            {name: "Mexican Steak", price: 1549, bwpOnly: true},
-            {name: "Moroccan Steak", price: 1549, bwpOnly: true},
-            {name: "Tarragon Steak", price: 1549, bwpOnly: true},
-            {name: "Mushroom Steak", price: 1549, bwpOnly: true},
-            {name: "Cordon Blue Steak", price: 1549, bwpOnly: true},
-            {name: "Stuffed Jalapeno Steak", price: 1549, bwpOnly: true},
-            {name: "Pepper Steak", price: 1499, bwpOnly: true}
-        ]
+    {name: "Mexican Steak", price: 1549, bwpOnly: true},
+    {name: "Moroccan Steak", price: 1549, bwpOnly: true},
+    {name: "Tarragon Steak", price: 1549, bwpOnly: true},
+    {name: "Mushroom Steak", price: 1549, bwpOnly: true},
+    {name: "Cordon Blue Steak", price: 1549, bwpOnly: true},
+    {name: "Stuffed Jalapeno Steak", price: 1549, bwpOnly: true},
+    {name: "Pepper Steak", price: 1499, bwpOnly: true}
+],
+"Bar Menu 🥤": [
+    {name: "Coke Buddy", price: 130},
+    {name: "Sprite Buddy", price: 130},
+    {name: "Coke 1 Liter", price: 190},
+    {name: "Next Cola 1 Liter", price: 170},
+    {name: "Coke 1.5L", price: 230},
+    {name: "Sprite 1.5L", price: 230},
+    {name: "Water Small", price: 99},
+    {name: "Water Large", price: 170},
+    // BWP Moctails — hidden at Multan
+    {name: "Mint Margarita", price: 249, bwpOnly: true},
+    {name: "Lemonade", price: 249, bwpOnly: true},
+    {name: "Pina Colada", price: 349, bwpOnly: true},
+    {name: "Red Rose", price: 220, bwpOnly: true},
+    {name: "Fresh Lime", price: 220, bwpOnly: true},
+    {name: "Blue Lagoon", price: 220, bwpOnly: true}
+],
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
     menuData["Rolls 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
@@ -2827,53 +2824,73 @@ function exitToGateway() {
 }
 
     function openOrderFlow(item) {
-        playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
-        if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
-        else if (item.price && typeof item.price === 'object') {
-            const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
-const sizeImages = {
-    S: 'https://i.imgur.com/8mZNMhK.png',
-    M: 'https://i.imgur.com/8mZNMhK.png',
-    L: 'https://i.imgur.com/8mZNMhK.png',
-};
-const sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', Med: 'Medium', Large: 'Large', Reg: 'Regular' };
-const sizeInches = { S: '6"', M: '9"', L: '12"', Med: '9"', Large: '12"', Reg: 'Regular', Reg: 'Reg' };
+    playClick('pop'); selectedItem = JSON.parse(JSON.stringify(item)); dealChoices = []; currentFlavorStep = 0;
+    if (selectedItem.flavorsNeeded) { startFlavorSelection(); } 
+    else if (item.price && typeof item.price === 'object') {
+        const sizeGrid = document.getElementById('size-grid'); sizeGrid.innerHTML = '';
 
-for (let s in item.price) {
-    let sBtn = document.createElement('div');
-    sBtn.style.cssText = `
-        background: white; border: 3px solid #f0ece8; border-radius: 20px;
-        padding: 16px 10px; text-align: center; cursor: pointer;
-        transition: all 0.2s; display: flex; flex-direction: column;
-        align-items: center; gap: 8px; position: relative; overflow: hidden;
-    `;
-    const imgUrl = window._adminImgOverrides && window._adminImgOverrides[item.name] ? window._adminImgOverrides[item.name] : (imgMap[item.name.toLowerCase()] || Object.values(imgMap)[0]);
-    const inches = sizeInches[s] || s;
-    const label = sizeLabels[s] || s;
-    const scale = s === 'S' || s === 'Reg' ? '0.55' : s === 'M' || s === 'Med' ? '0.75' : '1.0';
-    
-    sBtn.innerHTML = `
-        <div style="width:90px; height:90px; display:flex; align-items:center; justify-content:center; position:relative;">
-            <img src="${imgUrl}" style="width:${parseFloat(scale)*90}px; height:${parseFloat(scale)*90}px; object-fit:cover; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.15);" onerror="this.style.display='none'">
-        </div>
-        <div style="font-weight:900; font-size:15px; color:#1a1a1a;">${label}</div>
-        <div style="font-size:11px; color:#999; font-weight:600;">${inches}</div>
-        <div style="background:var(--orange); color:white; padding:4px 14px; border-radius:20px; font-size:13px; font-weight:800;">Rs ${item.price[s]}</div>
-    `;
-    sBtn.onmouseover = () => sBtn.style.borderColor = 'var(--orange)';
-    sBtn.onmouseout = () => sBtn.style.borderColor = '#f0ece8';
-    sBtn.onclick = function() {
-        playClick('pop');
-        selectedItem.name += " (" + s + ")";
-        selectedItem.price = item.price[s];
-        document.getElementById('size-overlay').style.display = 'none';
-        openQtyModal();
-    };
-    sizeGrid.appendChild(sBtn);
+        const sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', Med: 'Medium', Large: 'Large', Reg: 'Regular' };
+
+        const itemNameLower = item.name.toLowerCase();
+        const isWings   = itemNameLower.includes('wing');
+        const isNuggets = itemNameLower.includes('nugget');
+        const isFries   = itemNameLower.includes('fries');
+        const isPizza   = itemNameLower.includes('pizza') || itemNameLower.includes('crust');
+
+        const sizeSubLabels = (() => {
+            if (isWings)   return { M: '6 pcs',     L: '12 pcs',    Reg: '6 pcs',     Large: '12 pcs'   };
+            if (isNuggets) return { M: '6 pcs',     L: '12 pcs'                                          };
+            if (isFries)   return { Reg: 'Sm. Box',  Large: 'Lg. Box', S: 'Sm. Box', L: 'Lg. Box'       };
+            if (isPizza)   return { S: '6"', M: '9"', L: '12"', Med: '9"', Large: '12"'                  };
+            return         { S: 'Sm. Portion', M: 'Md. Portion', L: 'Lg. Portion', Med: 'Md. Portion', Large: 'Lg. Portion', Reg: 'Regular' };
+        })();
+
+        // Scale: wings/nuggets same size visually, others keep pizza scaling
+        const getScale = (s) => {
+            if (isWings || isNuggets || isFries) {
+                return s === 'M' || s === 'Reg' || s === 'S' ? '0.7' : '1.0';
+            }
+            return s === 'S' || s === 'Reg' ? '0.55' : s === 'M' || s === 'Med' ? '0.75' : '1.0';
+        };
+
+        for (let s in item.price) {
+            let sBtn = document.createElement('div');
+            sBtn.style.cssText = `
+                background: white; border: 3px solid #f0ece8; border-radius: 20px;
+                padding: 16px 10px; text-align: center; cursor: pointer;
+                transition: all 0.2s; display: flex; flex-direction: column;
+                align-items: center; gap: 8px; position: relative; overflow: hidden;
+            `;
+            const imgUrl = window._adminImgOverrides && window._adminImgOverrides[item.name]
+                ? window._adminImgOverrides[item.name]
+                : (imgMap[item.name.toLowerCase()] || Object.values(imgMap)[0]);
+
+            const subLabel = sizeSubLabels[s] || s;
+            const label    = sizeLabels[s] || s;
+            const scale    = getScale(s);
+
+            sBtn.innerHTML = `
+                <div style="width:90px; height:90px; display:flex; align-items:center; justify-content:center; position:relative;">
+                    <img src="${imgUrl}" style="width:${parseFloat(scale)*90}px; height:${parseFloat(scale)*90}px; object-fit:cover; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.15);" onerror="this.style.display='none'">
+                </div>
+                <div style="font-weight:900; font-size:15px; color:#1a1a1a;">${label}</div>
+                <div style="font-size:11px; color:#999; font-weight:600;">${subLabel}</div>
+                <div style="background:var(--orange); color:white; padding:4px 14px; border-radius:20px; font-size:13px; font-weight:800;">Rs ${item.price[s]}</div>
+            `;
+            sBtn.onmouseover = () => sBtn.style.borderColor = 'var(--orange)';
+            sBtn.onmouseout  = () => sBtn.style.borderColor = '#f0ece8';
+            sBtn.onclick = function() {
+                playClick('pop');
+                selectedItem.name += " (" + s + ")";
+                selectedItem.price = item.price[s];
+                document.getElementById('size-overlay').style.display = 'none';
+                openQtyModal();
+            };
+            sizeGrid.appendChild(sBtn);
+        }
+        document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
+    } else { openQtyModal(); }
 }
-document.getElementById('size-overlay').style.display = 'flex'; setScrollLock(true);
-        } else { openQtyModal(); }
-    }
     
     function startFlavorSelection() {
     const step = selectedItem.flavorsNeeded[currentFlavorStep];
@@ -4657,20 +4674,28 @@ card.querySelector('.deal-info-box').appendChild(btn);
     
     function renderCategoryBar() {
     const bar = document.getElementById('category-bar'); 
-    bar.innerHTML="";
+    bar.innerHTML = "";
+    const isBWP = activeBranch && activeBranch.id === 'BWP';
     
     for (let cat in menuData) {
-        // SKIP hidden/combined categories - don't show in pills
-        if (cat === "Pan/Premium" || cat === "Rolls 🌯" || cat === "Wraps 🌯") continue; 
+        if (cat === "Pan/Premium" || cat === "Rolls 🌯" || cat === "Wraps 🌯") continue;
         
+        // Hide Steaks pill at Multan — it's BWP exclusive
+        if (cat === "Steaks 🥩" && !isBWP) continue;
+
         const pill = document.createElement('div'); 
         pill.className = "cat-pill"; 
         pill.innerText = cat;
         pill.onclick = () => { 
             document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active')); 
             pill.classList.add('active'); 
-            const t = document.getElementById("cat-" + cat.replace(/\s+/g, '-')); 
-            if(t) t.scrollIntoView({ behavior: 'smooth' }); 
+            const targetId = "cat-" + cat.replace(/\s+/g, '-');
+            const t = document.getElementById(targetId); 
+            if (t) {
+                const stickyHeight = document.getElementById('top-sticky-container').offsetHeight;
+                const elementTop = t.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo({ top: elementTop - stickyHeight - 10, behavior: 'smooth' });
+            }
         }; 
         bar.appendChild(pill);
     }
