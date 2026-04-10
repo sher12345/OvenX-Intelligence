@@ -3412,7 +3412,7 @@ if (orderType === 'Delivery') {
 // Build order object for database
 let orderObj = { 
     type: orderType, 
-    location: orderType === 'Dine-In' ? "Table " + tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
+    location: orderType === 'Dine-In' ? tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
     items: itemsText, 
     status: 'WAITING', 
     subtotal: foodTotal + sc - deliveryDiscount,
