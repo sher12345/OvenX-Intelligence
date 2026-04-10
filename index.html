@@ -4257,196 +4257,111 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     }
 
             async function printOrderData(id, type) {
-        if (!sb) return alert("Database connection error");
-        const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
-        if (error || !o) return alert("Error loading order.");
+    if (!sb) return alert("Database connection error");
+    const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
+    if (error || !o) return alert("Error loading order.");
 
-        const printArea = document.getElementById('print-area');
-        const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
-            day: 'numeric', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: true
-        }).replace(',', '');
+    const printArea = document.getElementById('print-area');
+    const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
+    }).replace(',', '');
 
-        const delFee = o.delivery_fee || 0;
-        
-        const getMenuItemPrice = (itemName) => {
-            const sizeMatch = itemName.match(/\(([^)]+)\)/);
-            const size = sizeMatch ? sizeMatch[1] : null;
-            const baseName = itemName.replace(/\s*\([^)]+\)\s*$/, '').trim();
-            
-            for (let cat in menuData) {
-                const item = menuData[cat].find(i => i.name === baseName || baseName.includes(i.name) || i.name.includes(baseName));
-                if (item) {
-                    if (typeof item.price === 'object') {
-                        if (size && item.price[size]) return item.price[size];
-                        const sizeMap = { 'Med': 'M', 'Medium': 'M', 'Large': 'L', 'Regular': 'Reg' };
-                        if (size && sizeMap[size] && item.price[sizeMap[size]]) return item.price[sizeMap[size]];
-                        return Object.values(item.price)[0];
-                    }
-                    return item.price;
-                }
-            }
-            return null;
-        };
+    // Exact same values shown in kitchen panel
+    const subtotal = o.subtotal || 0;
+    const delFee = o.delivery_fee || 0;
+    const discount = o.discount || 0;
+    const grandTotal = subtotal + delFee;
 
-        const getDealPrice = (dealName) => {
-            const deal = dealsData.find(d => dealName.includes(d.name));
-            return deal ? deal.price : null;
-        };
-
-        let itemsHtml = "";
-        let calculatedFoodSub = 0;
-        
-        const lines = o.items.split('\n');
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-            
-            const mainMatch = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.*)\])?$/);
-            
-            if (mainMatch) {
-                const qty = parseInt(mainMatch[1]);
-                const name = mainMatch[2].trim();
-                const note = mainMatch[3] || "";
-                
-                let unitPrice = 0;
-                let lineTotal = 0;
-                
-                const dealPrice = getDealPrice(name);
-                
-                if (dealPrice !== null) {
-                    unitPrice = dealPrice;
-                    lineTotal = qty * unitPrice;
-                    
-                    itemsHtml += `
-                        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                            <span>${qty} x ${name}</span>
-                            <span>${lineTotal}</span>
-                        </div>
-                    `;
-                    
-                    let j = i + 1;
-                    while (j < lines.length && !lines[j].match(/^\d+x\s+/)) {
-                        const detailLine = lines[j].trim();
-                        if (detailLine && !detailLine.startsWith('Note:')) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #555;">↳ ${detailLine}</div>`;
-                        }
-                        j++;
-                    }
-                    
-                    if (note) {
-                        itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                    }
-                    
-                } else {
-                    const menuPrice = getMenuItemPrice(name);
-                    
-                    if (menuPrice !== null) {
-                        unitPrice = menuPrice;
-                        lineTotal = qty * unitPrice;
-                        
-                        itemsHtml += `
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                                <span>${qty} x ${name}</span>
-                                <span>${lineTotal}</span>
-                            </div>
-                        `;
-                        
-                        if (note) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                        }
-                    } else {
-                        itemsHtml += `
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
-                                <span>${qty} x ${name}</span>
-                                <span>-</span>
-                            </div>
-                        `;
-                        if (note) {
-                            itemsHtml += `<div style="font-size: 11px; padding-left: 15px; color: #444;">↳ ${note}</div>`;
-                        }
-                    }
-                }
-                
-                calculatedFoodSub += lineTotal;
-                
-            } else if (!line.match(/^(Pizza|Includes|Flavor|Note):/i)) {
-                itemsHtml += `<div style="font-size: 13px; color: #666; margin-top: 5px;">${line}</div>`;
-            }
-        }
-
-        const foodSub = calculatedFoodSub > 0 ? calculatedFoodSub : (o.subtotal || 0);
-        const serviceCharge = (o.type === 'Dine-In') ? Math.round(foodSub * 0.07) : 0;
-        const grandTotal = foodSub + serviceCharge + delFee;
-
-        if (type === 'front') {
-            printArea.innerHTML = `
-                <div style="text-align: center; font-family: 'Courier New', Courier, monospace; color: black; padding: 10px;">
-                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">*** PROVE BILL ***</div>
-                    <div style="margin-bottom: 10px;">
-                        <h1 style="margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 900;">OVEN <span style="color: #000;">X</span></h1>
-                        <div style="font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; display: inline-block; padding: 2px 10px; margin-top: 2px;">${(activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase()} BRANCH</div>
-                    </div>
-                    <div style="font-size: 12px; margin-bottom: 10px; line-height: 1.4;">
-                        ${(activeBranch || BRANCH_CONFIG.MULTAN).address}<br>
-                        Phone: 0${(activeBranch || BRANCH_CONFIG.MULTAN).phone.slice(2)}<br>
-                        -----------------------------------
-                    </div>
-                    <div style="text-align: left; font-size: 13px; line-height: 1.5;">
-                        <b>Bill No:</b> ${o.id.slice(0, 8).toUpperCase()}<br>
-                        <b>Date  :</b> ${dateTime}<br>
-                        <b>Table :</b> ${o.location}<br>
-                        <b>Type  :</b> ${o.type}
-                    </div>
-                    <div style="border-bottom: 2px solid #000; margin: 10px 0 5px 0;"></div>
-                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
-                        <span>Item Description</span>
-                        <span>Price</span>
-                    </div>
-                    <div style="border-bottom: 1px solid #000; margin-bottom: 5px;"></div>
-                    <div style="text-align: left;">${itemsHtml}</div>
-                    <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
-                    <div style="font-size: 14px; line-height: 1.6;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Net Total:</span> <span>Rs ${foodSub}</span>
-                        </div>
-                        ${serviceCharge > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Service Charges (7%):</span> <span>Rs ${serviceCharge}</span></div>` : ""}
-                        ${delFee > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Delivery Fee:</span> <span>Rs ${delFee}</span></div>` : ""}
-                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
-                            <span>Grand Total:</span> <span>Rs ${grandTotal}</span>
-                        </div>
-                    </div>
-                    <div style="border-bottom: 1px dashed #000; margin: 15px 0 10px 0;"></div>
-                    <div style="font-size: 14px; font-weight: bold;">
-                        CASH RECEIVED: Rs ${grandTotal}<br>
-                        CASH REFUND: Rs 0
-                    </div>
-                    <div style="margin-top: 20px; font-size: 12px;">
-                        <b>Thank You For Visiting Us!</b><br>
-                        Official System: OvenX.pk
+    if (type === 'front') {
+        printArea.innerHTML = `
+            <div style="text-align:center;font-family:'Courier New',Courier,monospace;color:black;padding:10px;">
+                <div style="font-weight:bold;font-size:12px;margin-bottom:5px;">*** CUSTOMER RECEIPT ***</div>
+                <div style="margin-bottom:10px;">
+                    <h1 style="margin:0;font-size:32px;letter-spacing:2px;font-weight:900;">OVEN X</h1>
+                    <div style="font-size:12px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;display:inline-block;padding:2px 10px;margin-top:2px;">
+                        ${(activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase()} BRANCH
                     </div>
                 </div>
-            `;
-        } else {
-            printArea.innerHTML = `
-                <div style="text-align: center; font-family: sans-serif; color: black;">
-                    <h2 style="margin: 0; border-bottom: 2px solid #000;">KITCHEN TICKET</h2>
-                    <h1 style="margin: 5px 0;">${o.location}</h1>
-                    <div style="font-size: 18px; font-weight: bold; background: #000; color: #fff;">${o.type.toUpperCase()}</div>
-                    <div style="text-align: left; font-size: 20px; font-weight: bold; margin-top: 15px; white-space: pre-wrap;">${o.items}</div>
-                    <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 10px;">
-                        Time: ${new Date(o.created_at).toLocaleTimeString()}
+                <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">
+                    ${(activeBranch || BRANCH_CONFIG.MULTAN).address}<br>
+                    Phone: 0${(activeBranch || BRANCH_CONFIG.MULTAN).phone.slice(2)}<br>
+                    -----------------------------------
+                </div>
+                <div style="text-align:left;font-size:13px;line-height:1.6;">
+                    <b>Bill No:</b> ${o.id.slice(0,8).toUpperCase()}<br>
+                    <b>Date  :</b> ${dateTime}<br>
+                    <b>Table :</b> ${o.location}<br>
+                    <b>Type  :</b> ${o.type}
+                    ${o.phone ? `<br><b>Phone :</b> ${o.phone}` : ''}
+                    ${o.customer_name ? `<br><b>Name  :</b> ${o.customer_name}` : ''}
+                </div>
+                <div style="border-bottom:2px solid #000;margin:10px 0 5px;"></div>
+                <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;">
+                    <span>Item Description</span><span>Price</span>
+                </div>
+                <div style="border-bottom:1px solid #000;margin-bottom:5px;"></div>
+                
+                <!-- Items exactly as stored -->
+                <div style="text-align:left;font-size:14px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">${o.items}</div>
+                
+                <div style="border-bottom:1px dashed #000;margin:10px 0;"></div>
+                <div style="font-size:14px;line-height:1.8;text-align:left;">
+                    <div style="display:flex;justify-content:space-between;">
+                        <span>Shop:</span><span>Rs ${subtotal}</span>
+                    </div>
+                    ${discount > 0 ? `
+                    <div style="display:flex;justify-content:space-between;font-weight:bold;">
+                        <span>10% Delivery Discount:</span><span>-Rs ${discount}</span>
+                    </div>` : ''}
+                    ${delFee > 0 ? `
+                    <div style="display:flex;justify-content:space-between;">
+                        <span>Delivery Fee:</span><span>Rs ${delFee}</span>
+                    </div>` : ''}
+                    <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:bold;margin-top:6px;border-top:2px solid #000;padding-top:5px;">
+                        <span>GRAND TOTAL:</span><span>Rs ${grandTotal}</span>
                     </div>
                 </div>
-            `;
-        }
-
-        setTimeout(() => {
-            window.print();
-            printArea.innerHTML = "";
-        }, 400);
+                <div style="border-bottom:1px dashed #000;margin:12px 0 10px;"></div>
+                <div style="font-size:14px;font-weight:bold;">
+                    CASH RECEIVED: Rs ${grandTotal}<br>
+                    CASH REFUND  : Rs 0
+                </div>
+                ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">🎉 10% website discount applied — saved Rs ${discount}</div>` : ''}
+                <div style="margin-top:16px;font-size:12px;">
+                    <b>Thank You For Visiting Us!</b><br>
+                    theovenx.com
+                </div>
+            </div>`;
+    } else {
+        printArea.innerHTML = `
+            <div style="text-align:center;font-family:sans-serif;color:black;">
+                <h2 style="margin:0;border-bottom:2px solid #000;">KITCHEN TICKET</h2>
+                <h1 style="margin:5px 0;font-size:28px;">${o.location}</h1>
+                <div style="font-size:20px;font-weight:bold;background:#000;color:#fff;padding:4px;">
+                    ${o.type.toUpperCase()}
+                </div>
+                ${o.phone ? `<div style="font-size:16px;margin-top:6px;">📞 ${o.phone}</div>` : ''}
+                <div style="text-align:left;font-size:20px;font-weight:bold;margin-top:12px;white-space:pre-wrap;line-height:1.7;">
+                    ${o.items}
+                </div>
+                <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
+                    <b>Shop: Rs ${subtotal}</b><br>
+                    ${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
+                    ${delFee > 0 ? `<span>Del: Rs ${delFee}</span><br>` : ''}
+                    <b style="font-size:20px;">Total: Rs ${grandTotal}</b>
+                </div>
+                <div style="margin-top:10px;font-size:13px;color:#666;">
+                    ${new Date(o.created_at).toLocaleTimeString()}
+                </div>
+            </div>`;
     }
+
+    setTimeout(() => {
+        window.print();
+        printArea.innerHTML = "";
+    }, 400);
+}
 
     function renderAuditUI(orders) {
     const div = document.getElementById('rider-audit-selection'); 
