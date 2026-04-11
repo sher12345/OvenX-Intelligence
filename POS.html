@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -632,42 +633,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <button class="pay-method-btn"           id="pm-split"     onclick="selectPayMethod('split')">✂️ Split</button>
     </div>
     <!-- Cash section -->
-    <div id="cash-pay-section">
-      <div class="pay-input-row">
-        <div class="pay-label">Cash Received</div>
-        <input class="pay-input" type="number" id="cash-received" placeholder="0" oninput="calcChange()">
-      </div>
-      <div class="pay-change-box">
-        <div class="pay-change-label">Change Due</div>
-        <div class="pay-change-amount" id="change-due">Rs 0</div>
-      </div>
-    </div>
-    <!-- Split section -->
-    <div id="split-pay-section" style="display:none;">
-      <div class="pay-input-row">
-        <div class="pay-label">Cash Part</div>
-        <input class="pay-input" type="number" id="split-cash" placeholder="0" oninput="calcSplit()">
-      </div>
-      <div class="pay-input-row">
-        <div class="pay-label">Card Part</div>
-        <input class="pay-input" type="number" id="split-card" placeholder="0" oninput="calcSplit()">
-      </div>
-      <div class="pay-change-box" id="pay-change-box">
-  <div class="pay-change-label" id="pay-change-label">CHANGE DUE</div>
-  <div class="pay-change-amount" id="change-due">Rs 0</div>
-</div>
-    </div>
-    <button class="pay-complete-btn" onclick="completePayment()">✅ COMPLETE SALE & PRINT</button>
-    <button class="modal-cancel" style="width:100%;margin-top:8px;" onclick="closeModal('pay-modal')">Cancel</button>
+<div id="cash-pay-section">
+  <div class="pay-input-row">
+    <div class="pay-label">Cash Received</div>
+    <input class="pay-input" type="number" id="cash-received" placeholder="0" oninput="calcChange()">
+  </div>
+  <div class="pay-change-box" id="pay-change-box">
+    <div class="pay-change-label" id="pay-change-label">CHANGE DUE</div>
+    <div class="pay-change-amount" id="change-due">Rs 0</div>
   </div>
 </div>
-
+    <!-- Split section -->
+    <div id="split-pay-section" style="display:none;">
+  <div class="pay-input-row">
+    <div class="pay-label">Cash Part</div>
+    <input class="pay-input" type="number" id="split-cash" placeholder="0" oninput="calcSplit()">
+  </div>
+  <div class="pay-input-row">
+    <div class="pay-label">Card Part</div>
+    <input class="pay-input" type="number" id="split-card" placeholder="0" oninput="calcSplit()">
+  </div>
+  <div class="pay-change-box" id="split-balance-box">
+    <div class="pay-change-label">REMAINING</div>
+    <div class="pay-change-amount" id="split-remaining">Rs 0</div>
+  </div>
+</div>
+<button class="pay-complete-btn" onclick="completePayment()">✅ COMPLETE SALE & PRINT</button>
+<button class="modal-cancel" style="width:100%;margin-top:8px;" onclick="closeModal('pay-modal')">Cancel</button>
+</div>
+</div>
 <!-- SPLIT BILL MODAL -->
 <div class="modal-backdrop" id="split-modal">
   <div class="modal-box" style="max-width:440px;">
     <div class="modal-title">✂️ Split Bill</div>
     <div class="modal-sub">How do you want to split?</div>
-
     <!-- Mode selector -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
       <button id="split-mode-items-btn" onclick="setSplitMode('items')"
@@ -928,7 +927,7 @@ async function pollWebOrders() {
     const { data } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
-      .in('status', ['WAITING', 'PREPARING'])
+      .in('status', ['WAITING', 'PREPARING', 'READY'])
       .order('created_at', { ascending: false })
       .limit(50);
     if (!data) return;
@@ -964,7 +963,7 @@ async function pollWebOrders() {
         id: order.id,
         webOrderId: order.id,
         fromWeb: true,
-        confirmed: order.status === 'PREPARING',
+        confirmed: order.status === 'PREPARING' || order.status === 'READY',
         rawItems: order.items,
         subtotal: order.subtotal,
         customerName: order.customer_name || '',
@@ -2083,8 +2082,8 @@ async function completePayment() {
   saveTodaySales();
   if (!currentOrder.id) await sendToKitchen();
   if (currentOrder.id && sb) {
-    try { await sb.from('kitchen_orders').update({ status: 'READY' }).eq('id', currentOrder.id); } catch(e) {}
-  }
+  try { await sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id); } catch(e) {}
+}
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   closeModal('pay-modal');
   printReceipt(sale);
