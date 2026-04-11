@@ -77,6 +77,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .table-cell.late{background:rgba(192,57,43,0.25);border-color:#ff0000;animation:shake-cell .3s infinite;}
 /* NEW: pending confirmation from web order */
 .table-cell.pending-confirm{background:rgba(212,175,55,0.15);border-color:var(--gold);animation:pulse-warn 1.5s infinite;}
+.table-cell.paid-takeaway{background:rgba(39,174,96,0.15);border-color:var(--green);}
+.table-cell.paid-takeaway .table-timer{color:var(--green);}
+.table-cell.paid-takeaway .table-name{color:var(--green);}
 @keyframes pulse-warn{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes shake-cell{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
 .table-icon{font-size:19px;}
@@ -496,31 +499,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       </div>
 
       <div class="order-footer">
-        <div class="order-totals" id="order-totals"></div>
-        <div class="order-actions">
-          <button class="oa-btn oa-void" onclick="voidCurrentOrder()">🗑️ Void</button>
-          <button class="oa-btn oa-print" onclick="printKitchenTicket()">🖨️ Kitchen</button>
-          <button class="oa-btn oa-recall" onclick="openRecallModal()">+ Add</button>
-          <button class="oa-btn oa-split" onclick="openSplitModal()">✂️ Split</button>
-          <button class="oa-btn" style="background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3);" onclick="changeTablePrompt()">🔀 Move</button>
-        </div>
-        <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-  <button class="oa-btn" style="background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);font-size:13px;padding:13px;" onclick="printBillOnly()">🖨️ Print Bill</button>
-  <button class="oa-btn oa-pay" style="font-size:13px;padding:13px;" onclick="openPayModal()">✅ Collect & Clear</button>
-</div>
-      </div>
-    </div>
-    <div class="order-right">
-      <div class="menu-panel-header">
-        <input class="menu-search" id="menu-search" placeholder="🔍 Search items..." oninput="filterMenu(this.value)">
-        <button class="refresh-btn" onclick="document.getElementById('menu-search').value='';filterMenu('')">Clear</button>
-      </div>
-      <div class="menu-body">
-        <div class="cat-sidebar" id="cat-sidebar"></div>
-        <div class="items-grid-wrap" id="items-grid-wrap"></div>
-      </div>
-    </div>
+  <div class="order-totals" id="order-totals"></div>
+  <div class="order-actions">
+    <button class="oa-btn oa-void" onclick="voidCurrentOrder()">🗑️ Void</button>
+    <button class="oa-btn oa-print" onclick="printKitchenTicket()">🖨️ Kitchen</button>
+    <button class="oa-btn oa-recall" onclick="openRecallModal()">+ Add</button>
+    <button class="oa-btn oa-split" onclick="openSplitModal()">✂️ Split</button>
+    <button class="oa-btn" style="background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3);" onclick="changeTablePrompt()">🔀 Move</button>
   </div>
+  <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <button class="oa-btn" style="background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);font-size:13px;padding:13px;" onclick="printBillOnly()">🖨️ Print Bill</button>
+    <button class="oa-btn oa-pay" style="font-size:13px;padding:13px;display:block;" id="collect-btn" onclick="openPayModal()">✅ Collect & Clear</button>
+  </div>
+  <div id="takeaway-paid-btn-wrap" style="display:none;margin-top:6px;">
+    <button class="oa-btn" style="width:100%;padding:13px;font-size:14px;background:var(--green);color:white;box-shadow:0 3px 0 var(--dark-green);" onclick="markTakeawayPaid()">💵 Collect Payment & Print Slip</button>
+  </div>
+</div>
+</div>
+<div class="order-right">
+  <div class="menu-panel-header">
+    <input class="menu-search" id="menu-search" placeholder="🔍 Search items..." oninput="filterMenu(this.value)">
+    <button class="refresh-btn" onclick="document.getElementById('menu-search').value='';filterMenu('')">Clear</button>
+  </div>
+  <div class="menu-body">
+    <div class="cat-sidebar" id="cat-sidebar"></div>
+    <div class="items-grid-wrap" id="items-grid-wrap"></div>
+  </div>
+</div>
+</div>
 
   <!-- DELIVERY -->
   <div class="pos-view" id="view-delivery">
@@ -915,7 +921,7 @@ async function pollWebOrders() {
     const { data } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
-      .eq('status', 'WAITING')
+      .in('status', ['WAITING', 'PREPARING'])
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -960,7 +966,7 @@ async function pollWebOrders() {
         id: order.id,
         webOrderId: order.id,
         fromWeb: true,
-        confirmed: false,
+        confirmed: order.status === 'PREPARING',
         rawItems: order.items,
         subtotal: order.subtotal,
         customerName: order.customer_name || '',
@@ -1067,6 +1073,9 @@ async function confirmAndPrintSlip() {
   if (tableOrders[currentOrder.table]) tableOrders[currentOrder.table].confirmed = true;
   pendingWebOrders = pendingWebOrders.filter(p => p.id !== currentOrder.webOrderId);
   updatePendingBadges();
+  if (sb && currentOrder.webOrderId) {
+    try { await sb.from('kitchen_orders').update({ status: 'PREPARING' }).eq('id', currentOrder.webOrderId); } catch(e) {}
+  }
   document.getElementById('pending-banner').classList.remove('show');
   printKitchenTicket();
   showToast('Confirmed & printed! ✅', 'success');
@@ -1094,8 +1103,18 @@ function switchViewDirect(v) {
 }
 
 function backToTables() {
-  saveTableOrder();
+  if (currentOrder.items.length && !currentOrder.id && !currentOrder.fromWeb) {
+    const confirm = window.confirm('You have unpaid items. Save table or discard?');
+    if (!confirm) {
+      if (currentOrder.table) delete tableOrders[currentOrder.table];
+    } else {
+      saveTableOrder();
+    }
+  } else {
+    saveTableOrder();
+  }
   switchView('tables');
+  renderTableMap();
 }
 
 function fullRefresh() {
@@ -1132,8 +1151,11 @@ function renderTableMap() {
         if (mins >= 30) cell.classList.add('late');
         else if (mins >= 20) cell.classList.add('warning');
         // Gold = web order not yet confirmed by cashier
-        if (order.fromWeb && !order.confirmed) cell.classList.add('pending-confirm');
-        timer = fmtSeconds(elapsed);
+if (order.fromWeb && !order.confirmed) {
+  cell.classList.add('pending-confirm'); // gold pulsing — not yet confirmed
+} else if (order.fromWeb && order.confirmed) {
+  cell.classList.add('occupied'); // solid red with timer — confirmed and active
+}        timer = fmtSeconds(elapsed);
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
       const {grand} = order ? getOrderTotal(order.items, order.type, order.scEnabled!==undefined?order.scEnabled:true, order.scPct||7) : {grand:0};
@@ -1223,7 +1245,16 @@ function openOrderView(tname, type) {
   delFields.style.display = type==='Delivery' ? 'block' : 'none';
   document.getElementById('delivery-address').value = currentOrder.deliveryAddress || '';
   document.getElementById('delivery-charge').value = currentOrder.deliveryCharge !== undefined ? currentOrder.deliveryCharge : 0;
+// Show correct payment button based on type
+const isTakeaway = type === 'Takeaway';
+document.getElementById('takeaway-paid-btn-wrap').style.display = isTakeaway ? 'block' : 'none';
+document.getElementById('collect-btn').style.display = isTakeaway ? 'none' : 'block';
 
+// If already paid, show hand over button instead
+if (currentOrder.paid && isTakeaway) {
+  document.getElementById('takeaway-paid-btn-wrap').innerHTML =
+    '<button class="oa-btn" style="width:100%;padding:13px;font-size:14px;background:var(--surface2);color:var(--green);border:2px solid var(--green);" onclick="handOverTakeaway()">✅ Handed Over — Clear Table</button>';
+}
   // Discount
   document.getElementById('disc-amount').value = currentOrder.discAmount || 0;
   discType = currentOrder.discType || 'flat';
@@ -1795,6 +1826,97 @@ function printBillOnly() {
 // ══════════════════════════════════
 // PAYMENT
 // ══════════════════════════════════
+function handOverTakeaway() {
+  if (currentOrder.table) delete tableOrders[currentOrder.table];
+  if (currentOrder.id && sb) {
+    sb.from('kitchen_orders').update({ status: 'READY' }).eq('id', currentOrder.id).catch(() => {});
+  }
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Order handed over ✅', 'success');
+}
+function printTakeawaySlip(sale) {
+  const br = BRANCHES[activeBranch];
+  const food = sale.items.reduce((s,i) => s + i.price * i.qty, 0);
+  const itemsText = sale.items.map(i =>
+    i.qty + 'x ' + i.name + (i.note ? '\n   > ' + i.note : '') + '   Rs ' + (i.price * i.qty)
+  ).join('\n');
+
+  document.getElementById('print-area').innerHTML =
+    '<div style="font-family:\'Courier New\',monospace;color:black;padding:8px;width:72mm;text-align:center;">' +
+      '<h1 style="margin:0;font-size:22px;font-weight:900;letter-spacing:3px;">OVEN X</h1>' +
+      '<div style="font-size:9px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:3px 0;">' + br.name.toUpperCase() + ' — ' + sale.type.toUpperCase() + '</div>' +
+      '<div style="font-size:40px;font-weight:900;border:3px solid #000;margin:8px auto;padding:6px;width:fit-content;min-width:80px;">🎫 #' + sale.billNo + '</div>' +
+      '<div style="font-size:11px;margin-bottom:4px;">' + new Date(sale.time).toLocaleTimeString('en-PK', {hour:'2-digit',minute:'2-digit',hour12:true}) + '</div>' +
+      (sale.customerName ? '<div style="font-size:13px;font-weight:bold;">👤 ' + sale.customerName + '</div>' : '') +
+      (sale.customerPhone ? '<div style="font-size:12px;">📞 ' + sale.customerPhone + '</div>' : '') +
+      '<div style="border-top:1px dashed #000;margin:6px 0;"></div>' +
+      '<div style="text-align:left;font-size:12px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">' + itemsText + '</div>' +
+      '<div style="border-top:1px dashed #000;margin:6px 0;"></div>' +
+      '<div style="text-align:right;font-size:12px;line-height:1.8;">' +
+        '<div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ' + food + '</span></div>' +
+        (sale.disc > 0 ? '<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ' + sale.disc + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid #000;padding-top:3px;">' +
+          '<span>TOTAL:</span><span>Rs ' + sale.total + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;">Paid via: ' + sale.method.toUpperCase() + '</div>' +
+      '</div>' +
+      '<div style="margin-top:8px;font-size:11px;font-weight:bold;border:2px dashed #000;padding:5px;">Please keep this slip — show when collecting order</div>' +
+    '</div>';
+
+  setTimeout(function() { window.print(); document.getElementById('print-area').innerHTML = ''; }, 300);
+}
+function markTakeawayPaid() {
+  if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
+  const pct = 0; // no SC for takeaway
+  const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const { grand, disc } = getOrderTotal(currentOrder.items, currentOrder.type, false, 0, discAmt, discType, 0);
+
+  // Ask payment method
+  const method = prompt('Payment method?\n1. Cash\n2. Card\n3. JazzCash\n4. Bank\n5. FoodPanda\n\nType number:');
+  const methodMap = { '1':'cash','2':'card','3':'jazzcash','4':'bank','5':'foodpanda' };
+  const payM = methodMap[method] || 'cash';
+
+  const tokenNo = String(billCounter).padStart(3,'0');
+  const sale = {
+    billNo: tokenNo,
+    table: currentOrder.table, type: currentOrder.type,
+    items: [...currentOrder.items],
+    total: grand, method: payM,
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+    sc: 0, disc, scPct: 0, discType, discAmount: discAmt,
+    cashReceived: 0, splitCash: 0, splitCard: 0
+  };
+
+  // Mark as paid in state
+  currentOrder.paid = true;
+  currentOrder.payMethod = payM;
+  currentOrder.tokenNo = tokenNo;
+  if (tableOrders[currentOrder.table]) {
+    tableOrders[currentOrder.table].paid = true;
+    tableOrders[currentOrder.table].payMethod = payM;
+    tableOrders[currentOrder.table].tokenNo = tokenNo;
+  }
+
+  completedOrders.push(sale);
+  const cashPart = payM === 'cash' ? grand : 0;
+  cashInHand += cashPart;
+  salesTotal += grand;
+  billCounter++;
+  localStorage.setItem('pos_billno_' + todayKey(), billCounter);
+  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+  document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
+  saveTodaySales();
+
+  printTakeawaySlip(sale);
+  saveTableOrder();
+  renderTableMap();
+  showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
+}
 function openPayModal() {
   if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
   const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
