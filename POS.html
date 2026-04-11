@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -406,7 +407,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         </div>
         <div style="display:flex;gap:7px;align-items:center;">
           <button class="refresh-btn" onclick="fullRefresh()">↻ Refresh</button>
-          <button class="nav-btn" style="background:var(--gold);color:#000;" onclick="openPendingModal()">⚡ Web Orders <span id="pending-count-btn"></span></button>
           <button class="nav-btn" style="background:var(--red);color:white;" onclick="openNewOrder(null,'Delivery')">+ Delivery</button>
           <button class="nav-btn" style="background:var(--surface2);color:var(--text2);" onclick="openNewOrder(null,'Takeaway')">+ Takeaway</button>
         </div>
@@ -499,15 +499,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <div class="order-totals" id="order-totals"></div>
         <div class="order-actions">
           <button class="oa-btn oa-void" onclick="voidCurrentOrder()">🗑️ Void</button>
-          <button class="oa-btn oa-send" onclick="sendToKitchen()">📲 Send</button>
           <button class="oa-btn oa-print" onclick="printKitchenTicket()">🖨️ Kitchen</button>
           <button class="oa-btn oa-recall" onclick="openRecallModal()">+ Add</button>
           <button class="oa-btn oa-split" onclick="openSplitModal()">✂️ Split</button>
           <button class="oa-btn" style="background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3);" onclick="changeTablePrompt()">🔀 Move</button>
         </div>
-        <div style="margin-top:5px;">
-          <button class="oa-btn oa-pay" style="width:100%;font-size:15px;padding:13px;" onclick="openPayModal()">💳 Collect Payment & Print Bill</button>
-        </div>
+        <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+  <button class="oa-btn" style="background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);font-size:13px;padding:13px;" onclick="printBillOnly()">🖨️ Print Bill</button>
+  <button class="oa-btn oa-pay" style="font-size:13px;padding:13px;" onclick="openPayModal()">✅ Collect & Clear</button>
+</div>
       </div>
     </div>
     <div class="order-right">
@@ -607,20 +607,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
 <!-- PAYMENT MODAL -->
 <div class="modal-backdrop" id="pay-modal">
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+  <div class="modal-box" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <div class="modal-title">Collect Payment</div>
-      <div style="font-size:13px;color:var(--text3);">Bill <span id="pay-bill-no" style="color:var(--orange);font-weight:700;"></span></div>
+      <div style="font-size:12px;color:var(--text3);">Bill <span id="pay-bill-no" style="color:var(--orange);font-weight:700;"></span></div>
     </div>
     <div class="pay-total-display">
       <div class="pay-total-label">Grand Total</div>
       <div class="pay-total-amount" id="pay-grand-total">Rs 0</div>
     </div>
-    <div class="pay-method-grid">
-      <button class="pay-method-btn selected" id="pm-cash" onclick="selectPayMethod('cash')">💵 Cash</button>
-      <button class="pay-method-btn" id="pm-card" onclick="selectPayMethod('card')">💳 Card</button>
-      <button class="pay-method-btn" id="pm-split" onclick="selectPayMethod('split')">✂️ Split</button>
+    <div class="pay-method-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px;">
+      <button class="pay-method-btn selected" id="pm-cash"      onclick="selectPayMethod('cash')">💵 Cash</button>
+      <button class="pay-method-btn"           id="pm-card"      onclick="selectPayMethod('card')">💳 Card</button>
+      <button class="pay-method-btn"           id="pm-bank"      onclick="selectPayMethod('bank')">🏦 Bank</button>
+      <button class="pay-method-btn"           id="pm-jazzcash"  onclick="selectPayMethod('jazzcash')">📱 JazzCash</button>
+      <button class="pay-method-btn"           id="pm-foodpanda" onclick="selectPayMethod('foodpanda')">🐼 FoodPanda</button>
+      <button class="pay-method-btn"           id="pm-split"     onclick="selectPayMethod('split')">✂️ Split</button>
     </div>
+    <!-- Cash section -->
     <div id="cash-pay-section">
       <div class="pay-input-row">
         <div class="pay-label">Cash Received</div>
@@ -631,6 +635,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <div class="pay-change-amount" id="change-due">Rs 0</div>
       </div>
     </div>
+    <!-- Split section -->
     <div id="split-pay-section" style="display:none;">
       <div class="pay-input-row">
         <div class="pay-label">Cash Part</div>
@@ -640,53 +645,102 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <div class="pay-label">Card Part</div>
         <input class="pay-input" type="number" id="split-card" placeholder="0" oninput="calcSplit()">
       </div>
-      <div class="pay-change-box" id="split-balance-box">
-        <div class="pay-change-label">Remaining</div>
-        <div class="pay-change-amount" id="split-remaining">Rs 0</div>
-      </div>
+      <div class="pay-change-box" id="pay-change-box">
+  <div class="pay-change-label" id="pay-change-label">CHANGE DUE</div>
+  <div class="pay-change-amount" id="change-due">Rs 0</div>
+</div>
     </div>
     <button class="pay-complete-btn" onclick="completePayment()">✅ COMPLETE SALE & PRINT</button>
-    <button class="modal-cancel" style="width:100%;margin-top:7px;" onclick="closeModal('pay-modal')">Cancel</button>
+    <button class="modal-cancel" style="width:100%;margin-top:8px;" onclick="closeModal('pay-modal')">Cancel</button>
   </div>
 </div>
 
 <!-- SPLIT BILL MODAL -->
 <div class="modal-backdrop" id="split-modal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:440px;">
     <div class="modal-title">✂️ Split Bill</div>
-    <div class="modal-sub">Select items to split into a separate bill</div>
-    <div id="split-items-list"></div>
-    <div class="split-subtotal" id="split-subtotal">Rs 0</div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal('split-modal')">Cancel</button>
-      <button class="modal-confirm" onclick="applySplitBill()">Split These Items</button>
-    </div>
-  </div>
-</div>
+    <div class="modal-sub">How do you want to split?</div>
 
-<!-- PENDING WEB ORDERS MODAL -->
-<div class="modal-backdrop" id="pending-modal">
-  <div class="modal-box">
-    <div class="modal-title">⚡ Pending Web/QR Orders</div>
-    <div class="modal-sub">These orders were placed by customers and need your confirmation before printing</div>
-    <div id="pending-orders-list"></div>
-    <div class="modal-actions" style="margin-top:12px;">
-      <button class="modal-cancel" onclick="closeModal('pending-modal')">Close</button>
+    <!-- Mode selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
+      <button id="split-mode-items-btn" onclick="setSplitMode('items')"
+        style="padding:14px;border-radius:12px;border:2px solid var(--orange);background:rgba(230,126,34,0.15);color:var(--orange);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">
+        🍽️ By Items
+      </button>
+      <button id="split-mode-amount-btn" onclick="setSplitMode('amount')"
+        style="padding:14px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">
+        💰 By Amount
+      </button>
+    </div>
+
+    <!-- By Items -->
+    <div id="split-items-section">
+      <div id="split-items-list"></div>
+      <div class="split-subtotal" id="split-subtotal">Rs 0</div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:7px;">Payment Method</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;" id="split-items-methods">
+          <button class="pay-method-btn selected" id="spm-cash"      onclick="selectSplitMethod('cash')">💵 Cash</button>
+          <button class="pay-method-btn"           id="spm-card"      onclick="selectSplitMethod('card')">💳 Card</button>
+          <button class="pay-method-btn"           id="spm-bank"      onclick="selectSplitMethod('bank')">🏦 Bank</button>
+          <button class="pay-method-btn"           id="spm-jazzcash"  onclick="selectSplitMethod('jazzcash')">📱 JazzCash</button>
+          <button class="pay-method-btn"           id="spm-foodpanda" onclick="selectSplitMethod('foodpanda')">🐼 FoodPanda</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal('split-modal')">Cancel</button>
+        <button class="modal-confirm" onclick="applySplitByItems()">Print Split Bill</button>
+      </div>
+    </div>
+
+    <!-- By Amount -->
+    <div id="split-amount-section" style="display:none;">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">ORDER TOTAL</div>
+        <div style="font-size:28px;font-weight:800;color:var(--orange);" id="split-order-total">Rs 0</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <span style="font-size:14px;color:var(--text2);font-weight:600;white-space:nowrap;">Split between</span>
+        <button onclick="changeSplitPeople(-1)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;cursor:pointer;">−</button>
+        <span id="split-people-count" style="font-size:24px;font-weight:800;min-width:30px;text-align:center;">2</span>
+        <button onclick="changeSplitPeople(1)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;cursor:pointer;">+</button>
+        <span style="font-size:14px;color:var(--text2);font-weight:600;">people</span>
+      </div>
+      <div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:12px;text-align:center;margin-bottom:16px;">
+        <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:3px;">EACH PERSON PAYS</div>
+        <div style="font-size:32px;font-weight:900;color:var(--green);" id="split-per-person">Rs 0</div>
+      </div>
+      <!-- Per-person payment method -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:7px;">Each Person Pays Via</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+          <button class="pay-method-btn selected" id="sam-cash"      onclick="selectSplitAmtMethod('cash')">💵 Cash</button>
+          <button class="pay-method-btn"           id="sam-card"      onclick="selectSplitAmtMethod('card')">💳 Card</button>
+          <button class="pay-method-btn"           id="sam-bank"      onclick="selectSplitAmtMethod('bank')">🏦 Bank</button>
+          <button class="pay-method-btn"           id="sam-jazzcash"  onclick="selectSplitAmtMethod('jazzcash')">📱 JazzCash</button>
+          <button class="pay-method-btn"           id="sam-foodpanda" onclick="selectSplitAmtMethod('foodpanda')">🐼 FoodPanda</button>
+          <button class="pay-method-btn"           id="sam-mixed"     onclick="selectSplitAmtMethod('mixed')">🔀 Mixed</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal('split-modal')">Cancel</button>
+        <button class="modal-confirm" onclick="applySplitByAmount()">Print Split Bills</button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- RECALL MODAL -->
 <div class="modal-backdrop" id="recall-modal">
-  <div class="modal-box">
-    <div class="modal-title">+ Add / Recall Item</div>
-    <div class="modal-sub">Add a quick item or note to the current order</div>
-    <input class="recall-input" type="text" id="recall-name" placeholder="Item name (e.g. Extra Sauce)">
-    <input class="recall-input" type="number" id="recall-price" placeholder="Price (Rs)">
-    <input class="recall-input" type="number" id="recall-qty" placeholder="Qty" value="1">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-title">🔍 Add Item</div>
+    <div class="modal-sub">Search menu to add to current order</div>
+    <input class="recall-input" type="text" id="recall-search"
+      placeholder="Type item name e.g. Zinger, Wings, Pizza..."
+      oninput="recallSearch(this.value)" autocomplete="off">
+    <div id="recall-results" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;"></div>
     <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal('recall-modal')">Cancel</button>
-      <button class="modal-confirm" onclick="doRecall()">Add to Order</button>
+      <button class="modal-cancel" onclick="closeModal('recall-modal')">Close</button>
     </div>
   </div>
 </div>
@@ -1353,6 +1407,10 @@ function addItemToOrder(item, price, qty=1, note='') {
 
 function saveTableOrder() {
   if (currentOrder.table) {
+    if (!currentOrder.items.length && !currentOrder.fromWeb) {
+      delete tableOrders[currentOrder.table];
+      return;
+    }
     currentOrder.scEnabled = scEnabled;
     currentOrder.scPct = getSCPct();
     currentOrder.discAmount = parseFloat(document.getElementById('disc-amount').value) || 0;
@@ -1459,57 +1517,214 @@ function changeTablePrompt() {
 // ══════════════════════════════════
 // RECALL / ADD ITEM MODAL
 // ══════════════════════════════════
-function openRecallModal() { document.getElementById('recall-name').value=''; document.getElementById('recall-price').value=''; document.getElementById('recall-qty').value='1'; document.getElementById('recall-modal').classList.add('open'); }
-function doRecall() {
-  const name = document.getElementById('recall-name').value.trim();
-  const price = parseFloat(document.getElementById('recall-price').value) || 0;
-  const qty = parseInt(document.getElementById('recall-qty').value) || 1;
-  if (!name) { showToast('Enter item name','error'); return; }
-  addItemToOrder({ n:name, p:price }, price, qty, '[RECALL]');
+function openRecallModal() {
+  document.getElementById('recall-modal').classList.add('open');
+  document.getElementById('recall-search').value = '';
+  document.getElementById('recall-results').innerHTML = '';
+  document.getElementById('recall-search').focus();
+}
+
+function recallSearch(val) {
+  const results = document.getElementById('recall-results');
+  if (!val || val.length < 2) { results.innerHTML = ''; return; }
+  const matches = [];
+  for (let cat in menuData) {
+    menuData[cat].forEach(item => {
+      if (item.n.toLowerCase().includes(val.toLowerCase()) && (!item.bwp || activeBranch === 'BWP')) {
+        matches.push({ name: item.n, price: item.p, cat });
+      }
+    });
+  }
+  dealsData.forEach(d => {
+    if (d.n.toLowerCase().includes(val.toLowerCase())) {
+      matches.push({ name: d.n, price: d.p, cat: 'Deals' });
+    }
+  });
+  if (!matches.length) {
+    results.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">No items found</div>';
+    return;
+  }
+  results.innerHTML = matches.map(m => {
+    const priceStr = typeof m.price === 'object'
+      ? Object.entries(m.price).map(([sz, pr]) =>
+          `<span onclick="recallAddItem('${m.name} (${sz})',${pr})" style="display:inline-block;padding:3px 10px;margin:2px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-size:12px;color:var(--orange);">${sz} Rs ${pr}</span>`
+        ).join('')
+      : `<span onclick="recallAddItem('${m.name}',${m.price})" style="display:inline-block;padding:3px 10px;margin:2px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-size:12px;color:var(--orange);">Rs ${m.price}</span>`;
+    return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${m.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${m.cat}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;">${priceStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function recallAddItem(name, price) {
+  addItemToOrder({ n: name, p: price }, price, 1, '');
   closeModal('recall-modal');
 }
 
 // ══════════════════════════════════
 // SPLIT BILL
 // ══════════════════════════════════
+let splitItemMethod = 'cash';
+let splitAmtMethod = 'cash';
+let splitPeople = 2;
+let splitMode = 'items';
+
 function openSplitModal() {
-  if (!currentOrder.items.length) { showToast('No items to split','error'); return; }
-  const list = document.getElementById('split-items-list');
-  list.innerHTML = currentOrder.items.map((item,idx) => `
-    <div class="split-item-row">
-      <input type="checkbox" class="split-item-check" id="spl-${idx}" onchange="updateSplitTotal()">
-      <label for="spl-${idx}" class="split-item-name" style="cursor:pointer;">${item.qty}x ${item.name}</label>
-      <span class="split-item-price">Rs ${item.price*item.qty}</span>
-    </div>
-  `).join('');
+  if (!currentOrder.items.length) { showToast('No items to split', 'error'); return; }
+  splitPeople = 2;
+  splitItemMethod = 'cash';
+  splitAmtMethod = 'cash';
+  setSplitMode('items');
+
+  // Populate items list
+  var list = document.getElementById('split-items-list');
+  list.innerHTML = currentOrder.items.map(function(item, idx) {
+    return '<div class="split-item-row">' +
+      '<input type="checkbox" class="split-item-check" id="spl-' + idx + '" onchange="updateSplitTotal()">' +
+      '<label for="spl-' + idx + '" class="split-item-name" style="cursor:pointer;">' + item.qty + 'x ' + item.name + '</label>' +
+      '<span class="split-item-price">Rs ' + (item.price * item.qty) + '</span>' +
+    '</div>';
+  }).join('');
   document.getElementById('split-subtotal').textContent = 'Rs 0';
+
+  // Populate order total for amount mode
+  var pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  var scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
+  var discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  var delCharge = getDelCharge();
+  var totals = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+  document.getElementById('split-order-total').textContent = 'Rs ' + totals.grand;
+  document.getElementById('split-people-count').textContent = '2';
+  document.getElementById('split-per-person').textContent = 'Rs ' + Math.ceil(totals.grand / 2);
+
+  // Reset method buttons
+  ['cash','card','bank','jazzcash','foodpanda'].forEach(function(m) {
+    var el = document.getElementById('spm-' + m);
+    if (el) el.classList.toggle('selected', m === 'cash');
+  });
+  ['cash','card','bank','jazzcash','foodpanda','mixed'].forEach(function(m) {
+    var el = document.getElementById('sam-' + m);
+    if (el) el.classList.toggle('selected', m === 'cash');
+  });
+
   document.getElementById('split-modal').classList.add('open');
 }
 
+function setSplitMode(mode) {
+  splitMode = mode;
+  document.getElementById('split-items-section').style.display = mode === 'items' ? 'block' : 'none';
+  document.getElementById('split-amount-section').style.display = mode === 'amount' ? 'block' : 'none';
+  var itemsBtn = document.getElementById('split-mode-items-btn');
+  var amtBtn = document.getElementById('split-mode-amount-btn');
+  itemsBtn.style.borderColor = mode === 'items' ? 'var(--orange)' : 'var(--border)';
+  itemsBtn.style.background = mode === 'items' ? 'rgba(230,126,34,0.15)' : 'var(--surface2)';
+  itemsBtn.style.color = mode === 'items' ? 'var(--orange)' : 'var(--text2)';
+  amtBtn.style.borderColor = mode === 'amount' ? 'var(--orange)' : 'var(--border)';
+  amtBtn.style.background = mode === 'amount' ? 'rgba(230,126,34,0.15)' : 'var(--surface2)';
+  amtBtn.style.color = mode === 'amount' ? 'var(--orange)' : 'var(--text2)';
+}
+
+function selectSplitMethod(m) {
+  splitItemMethod = m;
+  ['cash','card','bank','jazzcash','foodpanda'].forEach(function(id) {
+    var el = document.getElementById('spm-' + id);
+    if (el) el.classList.toggle('selected', id === m);
+  });
+}
+
+function selectSplitAmtMethod(m) {
+  splitAmtMethod = m;
+  ['cash','card','bank','jazzcash','foodpanda','mixed'].forEach(function(id) {
+    var el = document.getElementById('sam-' + id);
+    if (el) el.classList.toggle('selected', id === m);
+  });
+}
+
+function changeSplitPeople(d) {
+  splitPeople = Math.max(2, splitPeople + d);
+  document.getElementById('split-people-count').textContent = splitPeople;
+  var total = parseInt(document.getElementById('split-order-total').textContent.replace('Rs ','')) || 0;
+  document.getElementById('split-per-person').textContent = 'Rs ' + Math.ceil(total / splitPeople);
+}
+
 function updateSplitTotal() {
-  let total = 0;
-  currentOrder.items.forEach((item,idx) => {
-    if (document.getElementById('spl-'+idx)?.checked) total += item.price*item.qty;
+  var total = 0;
+  currentOrder.items.forEach(function(item, idx) {
+    var cb = document.getElementById('spl-' + idx);
+    if (cb && cb.checked) total += item.price * item.qty;
   });
   document.getElementById('split-subtotal').textContent = 'Rs ' + total;
 }
 
-function applySplitBill() {
-  const selected = [];
-  const remaining = [];
-  currentOrder.items.forEach((item,idx) => {
-    if (document.getElementById('spl-'+idx)?.checked) selected.push(item);
+function applySplitByItems() {
+  var selected = [];
+  var remaining = [];
+  currentOrder.items.forEach(function(item, idx) {
+    var cb = document.getElementById('spl-' + idx);
+    if (cb && cb.checked) selected.push(item);
     else remaining.push(item);
   });
-  if (!selected.length) { showToast('Select items to split','error'); return; }
-  // Print split bill first
-  const splitSale = { table:currentOrder.table+' (Split)', type:currentOrder.type, items:selected, total:selected.reduce((s,i)=>s+i.price*i.qty,0), method:'—', time:new Date(), staff:currentStaff, branch:activeBranch };
-  printReceipt(splitSale, true);
-  // Remove split items from current order
+  if (!selected.length) { showToast('Select at least one item', 'error'); return; }
+
+var selectedFood = selected.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
+var totalFood = currentOrder.items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
+var scRate = (currentOrder.type === 'Dine-In' && scEnabled) ? (getSCPct() / 100) : 0;
+var proportion = totalFood > 0 ? selectedFood / totalFood : 1;
+var pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+var discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+var fullTotals = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType, getDelCharge());
+var splitTotal = Math.ceil(fullTotals.grand * proportion);  var splitSale = {
+    billNo: 'SPL', table: currentOrder.table, type: currentOrder.type,
+    items: selected, total: splitTotal, method: splitItemMethod,
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+sc: Math.ceil(fullTotals.grand * proportion) - selectedFood, disc: 0, scPct: getSCPct(), discType: 'flat', discAmount: 0,
+splitCash: 0, splitCard: 0
+  };
+  printReceipt(splitSale);
   currentOrder.items = remaining;
-  saveTableOrder(); renderOrderItems();
+  saveTableOrder();
+  renderOrderItems();
   closeModal('split-modal');
-  showToast('Split bill printed', 'success');
+  showToast('Split bill printed — ' + selected.length + ' item(s) removed', 'success');
+}
+
+function applySplitByAmount() {
+  var total = parseInt(document.getElementById('split-order-total').textContent.replace('Rs ','')) || 0;
+  var perPerson = Math.ceil(total / splitPeople);
+  var method = splitAmtMethod;
+
+  // Print one receipt per person
+  for (var i = 1; i <= splitPeople; i++) {
+    var isLast = i === splitPeople;
+    // Last person gets remainder to avoid rounding overage
+    var thisAmount = isLast ? (total - perPerson * (splitPeople - 1)) : perPerson;
+    var splitSale = {
+      billNo: 'SPL-' + i + '/' + splitPeople,
+      table: currentOrder.table, type: currentOrder.type,
+      items: currentOrder.items,
+      total: thisAmount, method: method === 'mixed' ? 'cash' : method,
+      time: new Date(), staff: currentStaff, branch: activeBranch,
+      customerName: currentOrder.customerName || '',
+      customerPhone: currentOrder.customerPhone || '',
+      deliveryAddress: '', deliveryCharge: 0,
+      sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+      splitCash: 0, splitCard: 0
+    };
+    // Stagger prints slightly so printer doesn't jam
+    (function(sale) {
+      setTimeout(function() { printReceipt(sale); }, (i - 1) * 800);
+    })(splitSale);
+  }
+
+  closeModal('split-modal');
+  showToast('Printing ' + splitPeople + ' split bills of Rs ' + perPerson + ' each', 'success');
 }
 
 // ══════════════════════════════════
@@ -1548,25 +1763,55 @@ async function sendToKitchen() {
     saveTableOrder(); showToast('Sent to kitchen! 🔥','success');
   } catch(e) { showToast('Kitchen send failed — saved locally','error'); console.error(e); }
 }
+function printBillOnly() {
+  if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
+  const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
+  const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const delCharge = getDelCharge();
+  const { food, sc, grand, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+  const bill = {
+    billNo: String(billCounter).padStart(3,'0') + '-PRE',
+    table: currentOrder.table,
+    type: currentOrder.type,
+    items: [...currentOrder.items],
+    total: grand,
+    method: '—',
+    time: new Date(),
+    staff: currentStaff,
+    branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: currentOrder.type === 'Delivery' ? (document.getElementById('delivery-address').value || '') : '',
+    deliveryCharge: delCharge,
+    sc, disc, scPct: pct, discType, discAmount: discAmt,
+    splitCash: 0, splitCard: 0
+  };
+  printReceipt(bill);
+  // Table stays open — nothing cleared
+  showToast('Bill printed — table still open', 'success');
+}
 
 // ══════════════════════════════════
 // PAYMENT
 // ══════════════════════════════════
 function openPayModal() {
-  if (!currentOrder.items.length) { showToast('No items in order','error'); return; }
-  const pct = getSCPct();
+  if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
+  const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const delCharge = getDelCharge();
-  const {grand} = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType, delCharge);
+  const { grand } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
   document.getElementById('pay-grand-total').textContent = 'Rs ' + grand;
   document.getElementById('pay-bill-no').textContent = String(billCounter).padStart(3,'0');
   document.getElementById('cash-received').value = '';
   document.getElementById('change-due').textContent = 'Rs 0';
-  document.getElementById('split-cash').value = ''; document.getElementById('split-card').value = '';
+  document.getElementById('split-cash').value = '';
+  document.getElementById('split-card').value = '';
   payMethod = 'cash';
-  document.getElementById('pm-cash').classList.add('selected');
-  document.getElementById('pm-card').classList.remove('selected');
-  document.getElementById('pm-split').classList.remove('selected');
+  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(m => {
+    document.getElementById('pm-'+m).classList.toggle('selected', m === 'cash');
+  });
   document.getElementById('cash-pay-section').style.display = 'block';
   document.getElementById('split-pay-section').style.display = 'none';
   document.getElementById('pay-modal').classList.add('open');
@@ -1574,17 +1819,35 @@ function openPayModal() {
 
 function selectPayMethod(m) {
   payMethod = m;
-  document.getElementById('pm-cash').classList.toggle('selected', m==='cash');
-  document.getElementById('pm-card').classList.toggle('selected', m==='card');
-  document.getElementById('pm-split').classList.toggle('selected', m==='split');
-  document.getElementById('cash-pay-section').style.display = m==='cash'?'block':'none';
-  document.getElementById('split-pay-section').style.display = m==='split'?'block':'none';
+  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(id => {
+    document.getElementById('pm-'+id).classList.toggle('selected', id === m);
+  });
+  document.getElementById('cash-pay-section').style.display = m === 'cash' ? 'block' : 'none';
+  document.getElementById('split-pay-section').style.display = m === 'split' ? 'block' : 'none';
 }
 
 function calcChange() {
   const grand = parseInt(document.getElementById('pay-grand-total').textContent.replace('Rs ','')) || 0;
   const received = parseFloat(document.getElementById('cash-received').value) || 0;
-  document.getElementById('change-due').textContent = 'Rs ' + Math.max(0, received - grand);
+  const diff = received - grand;
+  const box = document.getElementById('pay-change-box');
+  const label = document.getElementById('pay-change-label');
+  const amount = document.getElementById('change-due');
+  if (diff >= 0) {
+    box.style.background = 'rgba(39,174,96,0.1)';
+    box.style.borderColor = 'rgba(39,174,96,0.3)';
+    label.style.color = 'var(--green)';
+    amount.style.color = 'var(--green)';
+    label.textContent = 'CHANGE DUE';
+    amount.textContent = 'Rs ' + diff;
+  } else {
+    box.style.background = 'rgba(192,57,43,0.1)';
+    box.style.borderColor = 'rgba(192,57,43,0.3)';
+    label.style.color = 'var(--red)';
+    amount.style.color = 'var(--red)';
+    label.textContent = 'STILL NEEDED';
+    amount.textContent = 'Rs ' + Math.abs(diff);
+  }
 }
 
 function calcSplit() {
@@ -1598,54 +1861,53 @@ function calcSplit() {
 
 async function completePayment() {
   const grand = parseInt(document.getElementById('pay-grand-total').textContent.replace('Rs ','')) || 0;
-
   if (payMethod === 'cash') {
     const received = parseFloat(document.getElementById('cash-received').value) || 0;
-    if (received < grand) { showToast('Cash received is less than total','error'); return; }
+    if (received < grand) { showToast('Cash received is less than total', 'error'); return; }
   }
   if (payMethod === 'split') {
     const c = parseFloat(document.getElementById('split-cash').value) || 0;
     const k = parseFloat(document.getElementById('split-card').value) || 0;
-    if (c+k < grand) { showToast('Total paid is less than bill amount','error'); return; }
+    if (c + k < grand) { showToast('Total paid is less than bill amount', 'error'); return; }
   }
-
-  const pct = getSCPct();
+  const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const {sc, disc} = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType);
-
-  const delChargeVal = getDelCharge();
+  const delCharge = getDelCharge();
+  const { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
   const billNo = String(billCounter).padStart(3,'0');
   const sale = {
-    billNo, table:currentOrder.table, type:currentOrder.type, items:[...currentOrder.items],
-    total:grand, method:payMethod, time:new Date(), staff:currentStaff, branch:activeBranch,
-    customerName:currentOrder.customerName||'', customerPhone:currentOrder.customerPhone||'',
-    deliveryAddress: currentOrder.type==='Delivery'?(document.getElementById('delivery-address').value||currentOrder.deliveryAddress||''):'',
-    deliveryCharge: delChargeVal,
-    sc, disc, scPct:pct, discType, discAmount:discAmt,
-    splitCash: payMethod==='split'?(parseFloat(document.getElementById('split-cash').value)||0):0,
-    splitCard: payMethod==='split'?(parseFloat(document.getElementById('split-card').value)||0):0
+    billNo, table: currentOrder.table, type: currentOrder.type, items: [...currentOrder.items],
+    total: grand, method: payMethod, time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: currentOrder.type === 'Delivery' ? (document.getElementById('delivery-address').value || '') : '',
+    deliveryCharge: delCharge,
+    sc, disc, scPct: pct, discType, discAmount: discAmt,
+    cashReceived: payMethod === 'cash' ? (parseFloat(document.getElementById('cash-received').value) || 0) : 0,
+    splitCash: payMethod === 'split' ? (parseFloat(document.getElementById('split-cash').value) || 0) : 0,
+    splitCard: payMethod === 'split' ? (parseFloat(document.getElementById('split-card').value) || 0) : 0,
   };
-
   completedOrders.push(sale);
-  const cashPart = payMethod==='cash'?grand:(payMethod==='split'?sale.splitCash:0);
+  const cashPart = payMethod === 'cash' ? grand : payMethod === 'split' ? sale.splitCash : 0;
   cashInHand += cashPart;
   salesTotal += grand;
   billCounter++;
-  localStorage.setItem('pos_billno_'+todayKey(), billCounter);
+  localStorage.setItem('pos_billno_' + todayKey(), billCounter);
   document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
-
   if (!currentOrder.id) await sendToKitchen();
   if (currentOrder.id && sb) {
-    try { await sb.from('kitchen_orders').update({status:'READY'}).eq('id', currentOrder.id); } catch(e) {}
+    try { await sb.from('kitchen_orders').update({ status: 'READY' }).eq('id', currentOrder.id); } catch(e) {}
   }
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   closeModal('pay-modal');
-  printReceipt(sale, false);
-  currentOrder = { table:null, type:'Dine-In', items:[], id:null };
-  switchView('tables'); renderTableMap();
-  showToast(`Bill #${billNo} — Rs ${grand} collected 💰`, 'success');
+  printReceipt(sale);
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Bill #' + billNo + ' — Rs ' + grand + ' collected 💰', 'success');
 }
 
 // ══════════════════════════════════
@@ -1673,41 +1935,60 @@ function printKitchenTicket() {
 
 function printReceipt(sale, isSplit=false) {
   const br = BRANCHES[activeBranch];
-  const itemsText = sale.items.map(i=>`${i.qty}x ${i.name}  Rs ${i.price*i.qty}`).join('\n');
-  const changeAmt = sale.method==='cash' ? Math.max(0,0) : 0; // change handled at pay time
+  const food = sale.items.reduce((s,i) => s + i.price * i.qty, 0);
+  const itemsText = sale.items.map(i =>
+    `${i.qty}x ${i.name}${i.note ? '\n   > '+i.note : ''}   Rs ${i.price * i.qty}`
+  ).join('\n');
+  const methodLabel = {
+    cash:'CASH', card:'CARD', bank:'BANK TRANSFER',
+    jazzcash:'JAZZCASH', foodpanda:'FOODPANDA',
+    split:'SPLIT', 'split-bill':'SPLIT BILL'
+  }[sale.method] || sale.method.toUpperCase();
+
+  const changeAmt = sale.method==='cash'
+    ? Math.max(0, (parseFloat(document.getElementById('cash-received')?.value)||0) - sale.total)
+    : 0;
+
   document.getElementById('print-area').innerHTML = `
-    <div style="text-align:center;font-family:'Courier New',monospace;color:black;padding:5px;">
-      <h1 style="margin:0;font-size:20px;font-weight:900;letter-spacing:2px;">OVEN X</h1>
-      <div style="font-size:11px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">${br.name.toUpperCase()} BRANCH</div>
-      <div style="font-size:11px;margin-bottom:4px;">${br.address}</div>
-      <div style="border-bottom:1px dashed #000;margin-bottom:4px;"></div>
-      <div style="text-align:left;font-size:12px;line-height:1.5;">
-        <b>Bill No:</b> ${isSplit?'(Split)':sale.billNo||'—'}<br>
-        <b>Date  :</b> ${new Date(sale.time).toLocaleString('en-PK')}<br>
-        <b>Table :</b> ${(sale.table||'').replace('-',' ')}<br>
-        <b>Type  :</b> ${sale.type}<br>
-        <b>Staff :</b> ${sale.staff}
-        ${sale.customerName?`<br><b>Name  :</b> ${sale.customerName}`:''}
-        ${sale.customerPhone?`<br><b>Phone :</b> ${sale.customerPhone}`:''}
-        ${sale.deliveryAddress?`<br><b>Addr  :</b> ${sale.deliveryAddress}`:''}
+    <div style="font-family:'Courier New',monospace;color:black;padding:5px;width:72mm;">
+      <div style="text-align:center;">
+        <h1 style="margin:0;font-size:22px;font-weight:900;letter-spacing:3px;">OVEN X</h1>
+        <div style="font-size:9px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:3px 0;">${br.name.toUpperCase()} BRANCH</div>
+        <div style="font-size:9px;margin-bottom:5px;">${br.address}</div>
       </div>
-      <div style="border-bottom:1px solid #000;margin:4px 0;"></div>
-      <div style="text-align:left;font-size:13px;font-weight:bold;white-space:pre-wrap;line-height:1.7;">${itemsText}</div>
       <div style="border-bottom:1px dashed #000;margin:4px 0;"></div>
-      <div style="text-align:right;font-size:13px;line-height:1.7;">
-        <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ${sale.items.reduce((s,i)=>s+i.price*i.qty,0)}</span></div>
-        ${sale.sc>0?`<div style="display:flex;justify-content:space-between;"><span>SC (${sale.scPct}%):</span><span>Rs ${sale.sc}</span></div>`:''}
-        ${(sale.deliveryCharge||0)>0?`<div style="display:flex;justify-content:space-between;"><span>Delivery Charge:</span><span>Rs ${sale.deliveryCharge}</span></div>`:''}
-        ${sale.disc>0?`<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ${sale.disc}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;border-top:1px solid #000;padding-top:3px;">
+      <div style="font-size:11px;line-height:1.6;">
+        <b>Bill#  :</b> ${sale.billNo||'—'}<br>
+        <b>Date   :</b> ${new Date(sale.time).toLocaleString('en-PK')}<br>
+        <b>Table  :</b> ${(sale.table||'').replace(/-/g,' ')}<br>
+        <b>Type   :</b> ${sale.type}<br>
+        <b>Staff  :</b> ${sale.staff}
+        ${sale.customerName ? `<br><b>Name   :</b> ${sale.customerName}` : ''}
+        ${sale.customerPhone ? `<br><b>Phone  :</b> ${sale.customerPhone}` : ''}
+        ${sale.deliveryAddress ? `<br><b>Addr   :</b> ${sale.deliveryAddress}` : ''}
+      </div>
+      <div style="border-bottom:1px solid #000;margin:5px 0;"></div>
+      <div style="font-size:12px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">${itemsText}</div>
+      <div style="border-bottom:1px dashed #000;margin:5px 0;"></div>
+      <div style="font-size:12px;line-height:1.8;">
+        <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ${food}</span></div>
+        ${sale.sc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Service Charge (${sale.scPct}%):</span><span>Rs ${sale.sc}</span></div>` : ''}
+        ${(sale.deliveryCharge||0)>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Charge:</span><span>Rs ${sale.deliveryCharge}</span></div>` : ''}
+        ${sale.disc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ${sale.disc}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid #000;padding-top:3px;margin-top:3px;">
           <span>TOTAL:</span><span>Rs ${sale.total}</span>
         </div>
-        ${sale.method==='split'?`<div style="font-size:12px;color:#444;">Cash: Rs ${sale.splitCash} / Card: Rs ${sale.splitCard}</div>`:
-          `<div style="font-size:12px;color:#444;">Paid: ${sale.method.toUpperCase()}</div>`}
+        ${sale.method==='split' ? `<div style="font-size:10px;margin-top:2px;">Cash: Rs ${sale.splitCash}  |  Card: Rs ${sale.splitCard}</div>` : ''}
+        <div style="font-size:11px;margin-top:2px;">Paid via: ${methodLabel}</div>
+        ${sale.method==='cash' && sale.cashReceived ? `<div style="display:flex;justify-content:space-between;"><span>Cash Received:</span><span>Rs ${sale.cashReceived}</span></div>` : ''}
+${sale.method==='cash' && sale.cashReceived ? `<div style="display:flex;justify-content:space-between;font-weight:700;"><span>Change Returned:</span><span>Rs ${Math.max(0, sale.cashReceived - sale.total)}</span></div>` : ''}
       </div>
-      <div style="margin-top:7px;font-size:11px;">Thank you! Visit again 🙏<br>theovenx.com</div>
+      <div style="border-top:1px dashed #000;margin-top:6px;padding-top:5px;text-align:center;font-size:10px;">
+        Thank you for dining with us! 🙏<br>theovenx.com
+      </div>
     </div>`;
-  setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
+
+  setTimeout(() => { window.print(); document.getElementById('print-area').innerHTML = ''; }, 300);
 }
 
 // ══════════════════════════════════
@@ -2031,5 +2312,6 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
