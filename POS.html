@@ -927,7 +927,7 @@ async function pollWebOrders() {
     const { data } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
-      .in('status', ['WAITING', 'PREPARING', 'READY'])
+      .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In)')
       .order('created_at', { ascending: false })
       .limit(50);
     if (!data) return;
@@ -954,6 +954,13 @@ async function pollWebOrders() {
       const existing = tableOrders[tableId];
       if (existing && existing.webOrderId === order.id) return;
       if (existing && !existing.fromWeb) return;
+
+      // Takeaway/Car Dine only clears via POS manually.
+      // Never auto-reload onto an empty TK slot if status is READY.
+      if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
+          && order.status === 'READY'
+          && !existing) return;
+
       const parsedItems = parseItemsFromText(order.items || '');
       tableOrders[tableId] = {
         table: tableId,
@@ -1155,17 +1162,20 @@ function renderTableMap() {
       const cell = document.createElement('div'); cell.className = 'table-cell';
       let timer = '—';
       if (order) {
-        cell.classList.add('occupied');
         const elapsed = Math.floor((Date.now() - order.startTime) / 1000);
         const mins = Math.floor(elapsed/60);
-        if (mins >= 30) cell.classList.add('late');
-        else if (mins >= 20) cell.classList.add('warning');
-        // Gold = web order not yet confirmed by cashier
-if (order.fromWeb && !order.confirmed) {
-  cell.classList.add('pending-confirm'); // gold pulsing — not yet confirmed
-} else if (order.fromWeb && order.confirmed) {
-  cell.classList.add('occupied'); // solid red with timer — confirmed and active
-}        timer = fmtSeconds(elapsed);
+
+        if (order.fromWeb && !order.confirmed) {
+          cell.classList.add('pending-confirm'); // gold pulsing — unconfirmed web order
+        } else if (order.paid && order.type === 'Takeaway') {
+          cell.classList.add('paid-takeaway'); // green — takeaway paid, waiting handover
+        } else {
+          cell.classList.add('occupied'); // solid red
+          if (mins >= 30) cell.classList.add('late');
+          else if (mins >= 20) cell.classList.add('warning');
+        }
+
+        timer = fmtSeconds(elapsed);
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
       const {grand} = order ? getOrderTotal(order.items, order.type, order.scEnabled!==undefined?order.scEnabled:true, order.scPct||7) : {grand:0};
@@ -1565,9 +1575,9 @@ function renderOrderTotals() {
 function voidCurrentOrder() {
   if (!currentOrder.items.length) { switchView('tables'); return; }
   const reason = prompt('Void reason? (required)');
-  if (reason === null) return; // cancelled
+  if (reason === null) return;
   if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
-  
+
   const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
   completedOrders.push({
     billNo: 'VOID',
@@ -1584,31 +1594,57 @@ function voidCurrentOrder() {
   });
   saveTodaySales();
 
-  if (currentOrder.table) delete tableOrders[currentOrder.table];
-  if (currentOrder.id && sb) {
-    sb.from('kitchen_orders').delete().eq('id', currentOrder.id).catch(() => {});
-  }
+  const tableToDelete = currentOrder.table;
+  const idToDelete = currentOrder.id;
+
+  // Clear table and order first
+  if (tableToDelete) delete tableOrders[tableToDelete];
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+
+  // Then navigate
   switchView('tables');
   renderTableMap();
   showToast('Order voided — ' + reason, 'error');
-}
 
-function changeTablePrompt() {
-  const newTable = prompt('Move to table (e.g. A-3, B-1, TK-2):');
-  if (!newTable || !ALL_TABLE_IDS.includes(newTable)) { showToast('Invalid table ID','error'); return; }
-  if (tableOrders[newTable]) { showToast('That table is already occupied','error'); return; }
-  const oldTable = currentOrder.table;
-  if (oldTable) delete tableOrders[oldTable];
-  currentOrder.table = newTable;
-  saveTableOrder();
-  document.getElementById('order-table-name').textContent = newTable.replace('-',' ');
-  showToast('Moved to ' + newTable, 'success');
+  // Delete from DB in background — don't block UI
+  if (idToDelete && sb) {
+    sb.from('kitchen_orders').update({ status: 'VOIDED' }).eq('id', idToDelete).catch(() => {});
+  }
 }
 
 // ══════════════════════════════════
 // RECALL / ADD ITEM MODAL
 // ══════════════════════════════════
+function voidCurrentOrder() {
+  if (!currentOrder.items.length) { switchView('tables'); return; }
+  const reason = prompt('Void reason? (required)');
+  if (reason === null) return;
+  if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
+  const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
+  completedOrders.push({
+    billNo: 'VOID', table: currentOrder.table, type: currentOrder.type,
+    items: [...currentOrder.items], total: -food, method: 'void',
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+    sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+    cashReceived: 0, splitCash: 0, splitCard: 0,
+    returnReason: reason
+  });
+  saveTodaySales();
+  const tableToDelete = currentOrder.table;
+  const idToDelete = currentOrder.id;
+  if (tableToDelete) delete tableOrders[tableToDelete];
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Order voided — ' + reason, 'error');
+  if (idToDelete && sb) {
+    sb.from('kitchen_orders').update({ status: 'VOIDED' }).eq('id', idToDelete).catch(() => {});
+  }
+}
+
 function openRecallModal() {
   document.getElementById('recall-modal').classList.add('open');
   document.getElementById('recall-search').value = '';
@@ -1890,8 +1926,8 @@ function printBillOnly() {
 function handOverTakeaway() {
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   if (currentOrder.id && sb) {
-    sb.from('kitchen_orders').update({ status: 'READY' }).eq('id', currentOrder.id).catch(() => {});
-  }
+sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id).catch(() => {});
+}
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
   switchView('tables');
   renderTableMap();
@@ -1973,9 +2009,13 @@ function markTakeawayPaid() {
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
 
-  printTakeawaySlip(sale);
-  saveTableOrder();
-  renderTableMap();
+  // Mark as PAID in Supabase so it never reappears
+if (currentOrder.id && sb) {
+  sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id).catch(() => {});
+}
+printTakeawaySlip(sale);
+saveTableOrder();
+renderTableMap();
   showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
 }
 function openPayModal() {
