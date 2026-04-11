@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,6 +117,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .oir-price{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--orange);white-space:nowrap;}
 .oir-del{width:22px;height:22px;border-radius:6px;background:rgba(192,57,43,0.15);border:none;color:var(--red);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
 .oir-del:hover{background:var(--red);color:white;}
+.oir-return{width:26px;height:26px;border-radius:7px;background:rgba(142,68,173,0.15);border:none;color:#bb77ff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
+.oir-return:hover{background:#8e44ad;color:white;}
 .order-empty{text-align:center;padding:36px 18px;color:var(--text3);}
 .order-empty-icon{font-size:32px;margin-bottom:8px;opacity:.4;}
 
@@ -905,8 +906,14 @@ function startClock() {
 
 // Poll Supabase every 15s for new web/QR orders placed on tables
 function startLiveReload() {
+  if (liveReloadInterval) clearInterval(liveReloadInterval);
   liveReloadInterval = setInterval(pollWebOrders, 15000);
-  pollWebOrders(); // immediate first run
+  setInterval(() => {
+    if (document.getElementById('view-delivery').classList.contains('active')) {
+      renderDeliveryView();
+    }
+  }, 30000);
+  pollWebOrders();
 }
 
 // ══════════════════════════════════
@@ -924,22 +931,16 @@ async function pollWebOrders() {
       .in('status', ['WAITING', 'PREPARING'])
       .order('created_at', { ascending: false })
       .limit(50);
-
     if (!data) return;
-
     const newPending = [];
     data.forEach(order => {
       const loc = (order.location || '').trim();
       const orderType = order.type || 'Dine-In';
-
-      // Matches "A1" = "A-1", "B2" = "B-2" etc
       let tableId = ALL_TABLE_IDS.find(t => {
         const tNorm = t.toLowerCase().replace(/-/g, '');
         const locNorm = loc.toLowerCase().replace(/-/g, '').replace(/^table\s*/i, '').trim();
         return tNorm === locNorm;
       });
-
-      // Takeaway / Car Dine → assign to next free TK slot
       if (!tableId && (
         orderType === 'Takeaway' ||
         loc.toLowerCase() === 'takeaway' ||
@@ -950,13 +951,10 @@ async function pollWebOrders() {
           !tableOrders[t] || tableOrders[t].webOrderId === order.id
         );
       }
-
       if (!tableId) return;
-
       const existing = tableOrders[tableId];
       if (existing && existing.webOrderId === order.id) return;
       if (existing && !existing.fromWeb) return;
-
       const parsedItems = parseItemsFromText(order.items || '');
       tableOrders[tableId] = {
         table: tableId,
@@ -974,15 +972,28 @@ async function pollWebOrders() {
         scEnabled: orderType === 'Dine-In',
         scPct: 7
       };
-
       if (!newPending.find(p => p.id === order.id)) {
         newPending.push({ ...order, tableId });
       }
     });
-
     pendingWebOrders = newPending;
     updatePendingBadges();
     renderTableMap();
+
+    // Update delivery badge
+    if (sb) {
+      sb.from('kitchen_orders')
+        .select('id')
+        .eq('branch', activeBranch)
+        .eq('type', 'Delivery')
+        .eq('status', 'WAITING')
+        .then(({data}) => {
+          const badge = document.getElementById('badge-delivery');
+          const count = (data||[]).length;
+          if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
+          else badge.classList.remove('show');
+        });
+    }
   } catch(e) { console.error('pollWebOrders:', e); }
 }
 
@@ -1459,24 +1470,30 @@ function saveTableOrder() {
 function renderOrderItems() {
   const list = document.getElementById('order-items-list');
   if (!currentOrder.items.length) {
-    list.innerHTML = '<div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:13px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>';
+    list.innerHTML = '<div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:11px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>';
     renderOrderTotals(); return;
   }
+  const isAdmin = currentStaff === 'Admin' || currentStaff === 'Manager';
   list.innerHTML = '';
   currentOrder.items.forEach((item, idx) => {
-    const row = document.createElement('div'); row.className = 'order-item-row';
+    const row = document.createElement('div');
+    row.className = 'order-item-row';
     row.innerHTML = `
       <div class="oir-qty">${item.qty}x</div>
       <div style="flex:1;min-width:0;">
         <div class="oir-name">${item.name}</div>
         ${item.note ? `<div class="oir-note">${item.note}</div>` : ''}
+        ${item.returned ? `<div style="font-size:10px;color:#bb77ff;">↩ Returned: ${item.returnReason||''}</div>` : ''}
       </div>
-      <div class="oir-price">Rs ${item.price * item.qty}</div>
+      <div class="oir-price" style="${item.returned?'text-decoration:line-through;opacity:0.4;':''}">Rs ${item.price * item.qty}</div>
       <div style="display:flex;flex-direction:column;gap:3px;">
-        <button class="oir-del" onclick="changeItemQty(${idx},1)" style="background:rgba(39,174,96,0.15);color:var(--green);">+</button>
-        <button class="oir-del" onclick="changeItemQty(${idx},-1)" style="background:rgba(255,255,255,0.05);color:var(--text2);">−</button>
+        ${!item.returned ? `
+          <button class="oir-del" onclick="changeItemQty(${idx},1)" style="background:rgba(39,174,96,0.15);color:var(--green);">+</button>
+          <button class="oir-del" onclick="changeItemQty(${idx},-1)" style="background:rgba(255,255,255,0.05);color:var(--text2);">−</button>
+        ` : ''}
       </div>
-      <button class="oir-del" onclick="removeItem(${idx})" title="Remove">✕</button>
+      ${!item.returned ? `<button class="oir-return" onclick="returnItem(${idx})" title="Return item">↩</button>` : ''}
+      ${isAdmin && !item.returned ? `<button class="oir-del" onclick="removeItem(${idx})" title="Delete">✕</button>` : ''}
     `;
     list.appendChild(row);
   });
@@ -1489,9 +1506,35 @@ function changeItemQty(idx, d) {
   saveTableOrder(); renderOrderItems();
 }
 function removeItem(idx) { currentOrder.items.splice(idx,1); saveTableOrder(); renderOrderItems(); }
-
+function returnItem(idx) {
+  const item = currentOrder.items[idx];
+  const reason = prompt('Return reason for "' + item.name + '"?\n(e.g. Wrong item, Customer changed mind, Quality issue)');
+  if (reason === null) return; // cancelled
+  currentOrder.items[idx].returned = true;
+  currentOrder.items[idx].returnReason = reason || 'No reason given';
+  // Log the return
+  const returnLog = {
+    billNo: 'RTN',
+    table: currentOrder.table, type: currentOrder.type,
+    items: [{ ...item, qty: item.qty }],
+    total: -(item.price * item.qty),
+    method: 'return',
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+    sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+    cashReceived: 0, splitCash: 0, splitCard: 0,
+    returnReason: reason || 'No reason given'
+  };
+  completedOrders.push(returnLog);
+  saveTodaySales();
+  saveTableOrder();
+  renderOrderItems();
+  showToast('↩ ' + item.name + ' marked as returned', 'success');
+}
 function getOrderTotal(items, type, _scEnabled, _scPct, _discAmount, _discType, _delCharge) {
-  const food = items.reduce((s,i) => s+(i.price*i.qty), 0);
+  const food = items.reduce((s,i) => s + (i.returned ? 0 : i.price*i.qty), 0);
   const usesSC = (_scEnabled !== undefined ? _scEnabled : scEnabled) && type==='Dine-In';
   const pct = (_scPct !== undefined ? _scPct : getSCPct());
   const sc = usesSC ? Math.round(food * pct / 100) : 0;
@@ -1522,15 +1565,34 @@ function renderOrderTotals() {
 
 function voidCurrentOrder() {
   if (!currentOrder.items.length) { switchView('tables'); return; }
-  if (!confirm('Void this order? This cannot be undone.')) return;
+  const reason = prompt('Void reason? (required)');
+  if (reason === null) return; // cancelled
+  if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
+  
+  const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
+  completedOrders.push({
+    billNo: 'VOID',
+    table: currentOrder.table, type: currentOrder.type,
+    items: [...currentOrder.items],
+    total: -food, method: 'void',
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+    sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+    cashReceived: 0, splitCash: 0, splitCard: 0,
+    returnReason: reason
+  });
+  saveTodaySales();
+
   if (currentOrder.table) delete tableOrders[currentOrder.table];
-  // If it had a DB record, delete it
   if (currentOrder.id && sb) {
-    sb.from('kitchen_orders').delete().eq('id', currentOrder.id).then(() => {}).catch(()=>{});
+    sb.from('kitchen_orders').delete().eq('id', currentOrder.id).catch(() => {});
   }
-  currentOrder = { table:null, type:'Dine-In', items:[], id:null };
-  switchView('tables'); renderTableMap();
-  showToast('Order voided', 'error');
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Order voided — ' + reason, 'error');
 }
 
 function changeTablePrompt() {
@@ -2036,23 +2098,53 @@ async function completePayment() {
 // PRINT
 // ══════════════════════════════════
 function printKitchenTicket() {
-  if (!currentOrder.items.length) { showToast('No items to print','error'); return; }
-  const itemsText = currentOrder.items.map(i=>`${i.qty}x ${i.name}${i.note?'\n   ↳ '+i.note:''}`).join('\n');
+  if (!currentOrder.items.length) { showToast('No items to print', 'error'); return; }
+  
+  // Save table as occupied
+  saveTableOrder();
+  
+  const itemsText = currentOrder.items.map(i =>
+    `${i.qty}x ${i.name}${i.note ? '\n   ↳ ' + i.note : ''}`
+  ).join('\n');
   const custName = document.getElementById('order-customer-name').value;
   const custPhone = document.getElementById('order-customer-phone').value;
-  const delAddr = currentOrder.type==='Delivery' ? (document.getElementById('delivery-address').value||currentOrder.deliveryAddress||'') : '';
-  const delCharge = currentOrder.type==='Delivery' ? (parseFloat(document.getElementById('delivery-charge').value)||currentOrder.deliveryCharge||0) : 0;
+  const delAddr = currentOrder.type === 'Delivery'
+    ? (document.getElementById('delivery-address').value || currentOrder.deliveryAddress || '') : '';
+  const delCharge = currentOrder.type === 'Delivery'
+    ? (parseFloat(document.getElementById('delivery-charge').value) || currentOrder.deliveryCharge || 0) : 0;
+  const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
+  const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const { grand } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+
+  // Send to DB if not already sent
+  if (!currentOrder.id) sendToKitchen();
+
   document.getElementById('print-area').innerHTML = `
-    <div style="text-align:center;font-family:'Courier New',monospace;color:black;padding:6px;">
-      <h2 style="font-size:16px;font-weight:900;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:7px;">KITCHEN TICKET${currentOrder.fromWeb?' ⚡ WEB':''}</h2>
-      <div style="font-size:15px;font-weight:900;background:#000;color:#fff;padding:4px;">${currentOrder.type.toUpperCase()} — ${(currentOrder.table||'').replace('-',' ')}</div>
-      ${custName?`<div style="font-size:12px;margin-top:4px;font-weight:bold;">👤 ${custName}${custPhone?' · '+custPhone:''}</div>`:''}
-      ${delAddr?`<div style="font-size:13px;margin-top:3px;text-align:left;border:1px dashed #000;padding:4px;">📍 ${delAddr}</div>`:''}
-      <div style="text-align:left;font-size:14px;font-weight:bold;margin-top:9px;white-space:pre-wrap;line-height:1.7;">${itemsText}</div>
-      ${delCharge>0?`<div style="margin-top:5px;font-size:12px;font-weight:bold;text-align:right;">Del. Charge: Rs ${delCharge}</div>`:''}
-      <div style="margin-top:9px;border-top:1px solid #000;padding-top:5px;font-size:13px;">${new Date().toLocaleTimeString()} | ${currentStaff}</div>
+    <div style="text-align:center;font-family:'Courier New',monospace;color:black;padding:8px;">
+      <h2 style="font-size:18px;font-weight:900;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px;">
+        KITCHEN TICKET${currentOrder.fromWeb ? ' ⚡ WEB' : ''}
+      </h2>
+      <div style="font-size:16px;font-weight:900;background:#000;color:#fff;padding:5px;">
+        ${currentOrder.type.toUpperCase()} — ${(currentOrder.table || '').replace(/-/g,' ')}
+      </div>
+      ${custName ? `<div style="font-size:13px;margin-top:5px;font-weight:bold;">👤 ${custName}${custPhone ? ' · ' + custPhone : ''}</div>` : ''}
+      ${delAddr ? `<div style="font-size:11px;margin-top:3px;text-align:left;border:1px dashed #000;padding:4px;">📍 ${delAddr}</div>` : ''}
+      <div style="text-align:left;font-size:14px;font-weight:bold;margin-top:9px;white-space:pre-wrap;line-height:1.8;">${itemsText}</div>
+      ${delCharge > 0 ? `<div style="margin-top:5px;font-size:12px;font-weight:bold;text-align:right;">Del. Charge: Rs ${delCharge}</div>` : ''}
+      <div style="margin-top:9px;border-top:1px solid #000;padding-top:5px;font-size:11px;">
+        ${new Date().toLocaleTimeString()} | ${currentStaff} | Total: Rs ${grand}
+      </div>
     </div>`;
-  setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
+
+  setTimeout(() => {
+    window.print();
+    document.getElementById('print-area').innerHTML = '';
+    // Go back to tables after printing
+    switchView('tables');
+    renderTableMap();
+    showToast('Kitchen ticket printed 🔥', 'success');
+  }, 300);
 }
 
 function printReceipt(sale, isSplit=false) {
@@ -2140,17 +2232,19 @@ async function renderDeliveryView() {
 
   if (!orders.length) { grid.innerHTML='<div style="color:var(--text3);padding:36px;text-align:center;font-size:12px;grid-column:1/-1;">No delivery orders.</div>'; return; }
 
-  const now = new Date(); grid.innerHTML = '';
-  orders.forEach(o => {
+ const now = new Date(); grid.innerHTML = '';
+  orders.forEach((o, index) => {
     const created = new Date(o.created_at||o.time);
     const elapsed = Math.floor((now-created)/1000);
     const total = (o.subtotal||0)+(o.delivery_fee||0);
     const statusMap = { WAITING:'sb-waiting', PREPARING:'sb-preparing', READY:'sb-ready', OUT:'sb-out' };
+    const isNew = elapsed < 180;
     const card = document.createElement('div');
-    card.className = `delivery-card status-${(o.status||'waiting').toLowerCase()}`;
+    card.className = `delivery-card status-${(o.status||'waiting').toLowerCase()}${isNew ? ' delivery-new' : ''}`;
     card.innerHTML = `
+      ${isNew ? '<div style="display:inline-block;background:var(--red);color:white;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;margin-bottom:6px;animation:pulse-warn 1s infinite;letter-spacing:1px;">🔴 NEW ORDER</div>' : ''}
       <div class="dc-header">
-        <div><div class="dc-id">#${(o.id||'').toString().slice(0,8).toUpperCase()}</div><div class="dc-timer">${fmtSeconds(elapsed)}</div></div>
+        <div><div class="dc-id">#${orders.length - index} &nbsp;·&nbsp; ${(o.id||'').toString().slice(0,8).toUpperCase()}</div><div class="dc-timer">${fmtSeconds(elapsed)}</div></div>
         <span class="status-badge ${statusMap[o.status]||'sb-waiting'}">${o.status||'WAITING'}</span>
       </div>
       <div class="dc-location">📍 ${o.location||'—'}</div>
@@ -2308,7 +2402,7 @@ function renderCashView() {
       <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
       <td>${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
       <td>${(o.table||o.type||'').replace('-',' ')} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
-      <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.items.map(i=>i.qty+'x '+i.name).join(', ')}</td>
+      <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.method==='return' ? '↩ '+(o.returnReason||'Return') : o.items.map(i=>i.qty+'x '+i.name).join(', ')}</td>
       <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
       <td style="text-align:right;font-weight:700;color:${o.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(o.total)}</td>
     </tr>
@@ -2335,6 +2429,10 @@ function renderClosingReport() {
   const delivery = sales.filter(o=>o.type==='Delivery');
   const discGiven = sales.reduce((s,o)=>s+(o.disc||0),0);
   const scCollected = sales.reduce((s,o)=>s+(o.sc||0),0);
+  const returns = completedOrders.filter(o => o.method === 'return');
+const returnTotal = returns.reduce((s,o) => s + Math.abs(o.total), 0);
+const voids = completedOrders.filter(o => o.method === 'void');
+const voidTotal = voids.reduce((s,o) => s + Math.abs(o.total), 0);
   const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
   const avg = sales.length>0?Math.round(total/sales.length):0;
 
@@ -2355,6 +2453,8 @@ function renderClosingReport() {
       <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,o)=>s+o.total,0)}</span></div>
       <div class="cb-row"><span>SC Collected</span><span class="cb-row-val">Rs ${scCollected}</span></div>
       <div class="cb-row"><span>Discounts Given</span><span class="cb-row-val" style="color:var(--red);">Rs ${discGiven}</span></div>
+      <div class="cb-row"><span>Returns (${returns.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${returnTotal}</span></div>
+      <div class="cb-row"><span>Voids (${voids.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${voidTotal}</span></div>
     </div>
     <div class="cb-section">
       <div class="cb-head">Cash Reconciliation</div>
