@@ -907,12 +907,24 @@ function startClock() {
 // Poll Supabase every 15s for new web/QR orders placed on tables
 function startLiveReload() {
   if (liveReloadInterval) clearInterval(liveReloadInterval);
+
+  // Real-time subscription
+  if (sb) {
+    sb.channel('kitchen-orders-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'kitchen_orders',
+        filter: `branch=eq.${activeBranch}`
+      }, (payload) => {
+        console.log('Realtime:', payload.eventType);
+        pollWebOrders();
+      })
+      .subscribe();
+  }
+
+  // Fallback poll every 15s
   liveReloadInterval = setInterval(pollWebOrders, 15000);
-  setInterval(() => {
-    if (document.getElementById('view-delivery').classList.contains('active')) {
-      renderDeliveryView();
-    }
-  }, 30000);
   pollWebOrders();
 }
 
@@ -925,22 +937,38 @@ function startLiveReload() {
 async function pollWebOrders() {
   if (!sb) return;
   try {
-    const { data } = await sb.from('kitchen_orders')
+    const { data, error } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
       .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In)')
       .order('created_at', { ascending: false })
-      .limit(50);
-    if (!data) return;
+      .limit(100);
+
+    if (error || !data) return;
+
+    // Build set of active order IDs from DB
+    const dbOrderIds = new Set(data.map(o => o.id));
+
+    // Remove any orders from table map that are no longer active in DB
+for (const tname in tableOrders) {
+  const order = tableOrders[tname];
+  if (order.id && !dbOrderIds.has(order.id)) {
+    delete tableOrders[tname];
+  }
+}
+
     const newPending = [];
+
     data.forEach(order => {
       const loc = (order.location || '').trim();
       const orderType = order.type || 'Dine-In';
+
       let tableId = ALL_TABLE_IDS.find(t => {
         const tNorm = t.toLowerCase().replace(/-/g, '');
         const locNorm = loc.toLowerCase().replace(/-/g, '').replace(/^table\s*/i, '').trim();
         return tNorm === locNorm;
       });
+
       if (!tableId && (
         orderType === 'Takeaway' ||
         loc.toLowerCase() === 'takeaway' ||
@@ -951,13 +979,14 @@ async function pollWebOrders() {
           !tableOrders[t] || tableOrders[t].webOrderId === order.id
         );
       }
+
       if (!tableId) return;
+
       const existing = tableOrders[tableId];
       if (existing && existing.webOrderId === order.id) return;
       if (existing && !existing.fromWeb) return;
 
-      // Takeaway/Car Dine only clears via POS manually.
-      // Never auto-reload onto an empty TK slot if status is READY.
+      // Takeaway READY — don't auto-reload onto empty slot
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
           && order.status === 'READY'
           && !existing) return;
@@ -979,28 +1008,29 @@ async function pollWebOrders() {
         scEnabled: orderType === 'Dine-In',
         scPct: 7
       };
-      if (!newPending.find(p => p.id === order.id)) {
+
+      if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
         newPending.push({ ...order, tableId });
       }
     });
+
     pendingWebOrders = newPending;
     updatePendingBadges();
     renderTableMap();
 
     // Update delivery badge
-    if (sb) {
-      sb.from('kitchen_orders')
-        .select('id')
-        .eq('branch', activeBranch)
-        .eq('type', 'Delivery')
-        .eq('status', 'WAITING')
-        .then(({data}) => {
-          const badge = document.getElementById('badge-delivery');
-          const count = (data||[]).length;
-          if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
-          else badge.classList.remove('show');
-        });
-    }
+    sb.from('kitchen_orders')
+      .select('id')
+      .eq('branch', activeBranch)
+      .eq('type', 'Delivery')
+      .eq('status', 'WAITING')
+      .then(({ data }) => {
+        const badge = document.getElementById('badge-delivery');
+        const count = (data || []).length;
+        if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
+        else badge.classList.remove('show');
+      });
+
   } catch(e) { console.error('pollWebOrders:', e); }
 }
 
