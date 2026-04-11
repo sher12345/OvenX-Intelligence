@@ -4,32 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Oven X POS v2</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --red:#c0392b;--dark-red:#922b21;--orange:#e67e22;--dark-orange:#a04000;
   --green:#27ae60;--dark-green:#1e8449;--blue:#2980b9;--dark-blue:#1a5c80;
   --purple:#8e44ad;
-  --bg:#1a1a1a;--surface:#242424;--surface2:#2e2e2e;--surface3:#383838;
-  --border:rgba(255,255,255,0.08);--text:#f0f0f0;--text2:#aaa;--text3:#666;
+  --bg:#111318;--surface:#1c1f27;--surface2:#242830;--surface3:#2e3340;
+  --border:rgba(255,255,255,0.07);--text:#f0f0f0;--text2:#9aa0b0;--text3:#555d70;
   --gold:#d4af37;
+  --font:'Outfit',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;height:100vh;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;overflow:hidden;font-size:15px;}
 
 /* ── LOGIN ── */
 #login-screen{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 40%,#2a0a0a,#0d0d0d);display:flex;align-items:center;justify-content:center;z-index:9999;}
 .login-box{background:#1e1e1e;border:1px solid rgba(192,57,43,0.3);border-radius:24px;padding:48px 40px;width:400px;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6);}
-.login-logo{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;color:white;letter-spacing:-1px;margin-bottom:4px;}
+.login-logo{font-family:'Outfit',sans-serif;font-size:48px;font-weight:900;color:white;letter-spacing:-1px;margin-bottom:4px;}
 .login-logo span{color:var(--orange);}
 .login-sub{color:var(--text3);font-size:12px;font-weight:600;letter-spacing:4px;text-transform:uppercase;margin-bottom:36px;}
 .login-branch-row{display:flex;gap:10px;margin-bottom:20px;}
-.branch-pick{flex:1;padding:14px;border-radius:12px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;}
+.branch-pick{flex:1;padding:14px;border-radius:12px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;}
 .branch-pick.active{border-color:var(--red);background:rgba(192,57,43,0.15);color:white;}
-.login-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;margin-bottom:14px;outline:none;transition:.2s;}
+.login-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;color:var(--text);font-family:'Outfit',sans-serif;font-size:16px;margin-bottom:14px;outline:none;transition:.2s;}
 .login-input:focus{border-color:var(--orange);}
-.login-btn{width:100%;padding:16px;border-radius:12px;background:var(--red);color:white;border:none;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-red);transition:.15s;}
+.login-btn{width:100%;padding:16px;border-radius:12px;background:var(--red);color:white;border:none;font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-red);transition:.15s;}
 .login-btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--dark-red);}
 .login-err{color:#ff6b6b;font-size:13px;margin-top:10px;display:none;}
 
@@ -38,19 +38,19 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 #pos-app.active{display:flex;}
 
 /* TOP BAR */
-.pos-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px;}
-.pos-logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:white;white-space:nowrap;}
+.pos-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px;}
+.pos-logo{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:white;white-space:nowrap;}
 .pos-logo span{color:var(--orange);}
 .pos-topbar-center{display:flex;gap:5px;flex-shrink:0;}
-.nav-btn{padding:6px 14px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:.15s;text-transform:uppercase;white-space:nowrap;position:relative;}
+.nav-btn{padding:6px 14px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:.15s;text-transform:uppercase;white-space:nowrap;position:relative;}
 .nav-btn.active{background:var(--red);color:white;}
 .nav-btn:hover:not(.active){background:var(--surface3);color:var(--text);}
-.nav-badge{position:absolute;top:-4px;right:-4px;background:var(--orange);color:white;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;}
+.nav-badge{position:absolute;top:-4px;right:-4px;background:var(--orange);color:white;width:16px;height:16px;border-radius:50%;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;}
 .nav-badge.show{display:flex;}
 .pos-topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.topbar-info{color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;white-space:nowrap;}
+.topbar-info{color:var(--text2);font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;white-space:nowrap;}
 .topbar-info span{color:var(--orange);}
-.logout-btn{padding:5px 12px;border-radius:8px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.logout-btn{padding:5px 12px;border-radius:8px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:var(--red);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
 
 /* ── VIEWS ── */
 .pos-view{display:none;flex:1;overflow:hidden;}
@@ -59,16 +59,16 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 /* ── TABLE MAP ── */
 #view-tables{flex-direction:column;}
 .table-map-header{padding:12px 18px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);gap:10px;}
-.table-map-header h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+.table-map-header h2{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
 .table-legend{display:flex;gap:12px;align-items:center;}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;}
 .legend-dot{width:9px;height:9px;border-radius:50%;}
 .table-grid-wrap{flex:1;overflow-y:auto;padding:16px;}
 .floor-section{margin-bottom:24px;}
-.floor-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.floor-label{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .floor-label::after{content:'';flex:1;height:1px;background:var(--border);}
-.table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:8px;}
-.table-cell{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:10px 7px;text-align:center;cursor:pointer;transition:.2s;position:relative;min-height:94px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+.table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px;}
+.table-cell{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:10px 7px;text-align:center;cursor:pointer;transition:.2s;position:relative;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
 .table-cell:hover{border-color:var(--orange);transform:translateY(-2px);}
 .table-cell.occupied{background:rgba(192,57,43,0.12);border-color:var(--red);}
 .table-cell.occupied:hover{border-color:#ff6b6b;}
@@ -79,24 +79,24 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 @keyframes pulse-warn{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes shake-cell{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
 .table-icon{font-size:19px;}
-.table-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
-.table-timer{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:var(--text3);font-variant-numeric:tabular-nums;}
+.table-name{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
+.table-timer{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--text3);font-variant-numeric:tabular-nums;}
 .table-cell.occupied .table-timer{color:var(--red);}
 .table-cell.warning .table-timer{color:var(--orange);}
 .table-cell.late .table-timer{color:#ff4444;}
-.table-amount{font-size:10px;font-weight:700;color:var(--green);}
-.table-covers{position:absolute;top:4px;right:4px;background:var(--red);color:white;width:17px;height:17px;border-radius:50%;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;}
+.table-amount{font-size:12px;font-weight:700;color:var(--green);}
+.table-covers{position:absolute;top:4px;right:4px;background:var(--red);color:white;width:17px;height:17px;border-radius:50%;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;}
 .table-cell.occupied .table-covers{display:flex;}
 /* Pending badge on table */
-.table-pending-badge{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;width:17px;height:17px;border-radius:50%;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;}
+.table-pending-badge{position:absolute;top:4px;left:4px;background:var(--gold);color:#000;width:17px;height:17px;border-radius:50%;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;}
 .table-cell.pending-confirm .table-pending-badge{display:flex;}
 
 /* ── ORDER PANEL ── */
 #view-order{flex-direction:row;}
 .order-left{width:400px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .order-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:6px;}
-.order-table-badge{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:white;}
-.order-type-badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.order-table-badge{font-family:'Outfit',sans-serif;font-size:17px;font-weight:900;color:white;}
+.order-type-badge{padding:3px 9px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
 .otb-dinein{background:rgba(41,128,185,0.2);color:#5dade2;border:1px solid rgba(41,128,185,0.4);}
 .otb-takeaway{background:rgba(39,174,96,0.2);color:#58d68d;border:1px solid rgba(39,174,96,0.4);}
 .otb-delivery{background:rgba(230,126,34,0.2);color:#f0a500;border:1px solid rgba(230,126,34,0.4);}
@@ -104,14 +104,14 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 /* PENDING CONFIRM BANNER */
 .pending-banner{background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.4);border-radius:10px;padding:10px 14px;margin:8px 10px 0;font-size:12px;color:var(--gold);font-weight:700;display:none;align-items:center;gap:8px;flex-shrink:0;}
 .pending-banner.show{display:flex;}
-.pb-confirm-btn{padding:6px 14px;border-radius:8px;background:var(--gold);color:#000;border:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;cursor:pointer;margin-left:auto;text-transform:uppercase;}
+.pb-confirm-btn{padding:6px 14px;border-radius:8px;background:var(--gold);color:#000;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:900;cursor:pointer;margin-left:auto;text-transform:uppercase;}
 
 .order-items-list{flex:1;overflow-y:auto;padding:8px;}
 .order-item-row{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:9px;border:1px solid var(--border);margin-bottom:5px;background:var(--surface2);}
-.oir-qty{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:white;min-width:24px;text-align:center;}
+.oir-qty{font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:white;min-width:24px;text-align:center;}
 .oir-name{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text);}
-.oir-note{font-size:10px;color:var(--text3);margin-top:1px;}
-.oir-price{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--orange);white-space:nowrap;}
+.oir-note{font-size:12px;color:var(--text3);margin-top:1px;}
+.oir-price{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--orange);white-space:nowrap;}
 .oir-del{width:22px;height:22px;border-radius:6px;background:rgba(192,57,43,0.15);border:none;color:var(--red);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
 .oir-del:hover{background:var(--red);color:white;}
 .order-empty{text-align:center;padding:36px 18px;color:var(--text3);}
@@ -119,29 +119,29 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 
 /* SC ROW */
 .sc-row{padding:6px 10px;border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:7px;background:var(--surface2);}
-.sc-row label{font-size:11px;color:var(--text2);font-weight:600;}
+.sc-row label{font-size:13px;color:var(--text2);font-weight:600;}
 .sc-chk{width:32px;height:18px;border-radius:9px;background:#444;border:none;cursor:pointer;position:relative;transition:.25s;outline:none;flex-shrink:0;}
 .sc-chk::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:white;top:3px;left:3px;transition:.25s;}
 .sc-chk.on{background:var(--green);}
 .sc-chk.on::after{left:17px;}
-.sc-pct-input{width:46px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--orange);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
+.sc-pct-input{width:46px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--orange);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
 
 /* DISCOUNT ROW */
 .disc-row{padding:5px 10px;border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:7px;background:var(--surface2);}
-.disc-row label{font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;}
-.disc-input{width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
-.disc-type-btn{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:.15s;}
+.disc-row label{font-size:13px;color:var(--text2);font-weight:600;white-space:nowrap;}
+.disc-input{width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--green);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
+.disc-type-btn{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;}
 .disc-type-btn.active{background:rgba(39,174,96,0.2);color:var(--green);border-color:var(--green);}
 
 .order-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
 .order-totals{margin-bottom:8px;}
 .total-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--text2);}
-.total-row.grand{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;color:white;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
+.total-row.grand{font-family:'Outfit',sans-serif;font-size:19px;font-weight:800;color:white;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
 .total-row.grand span:last-child{color:var(--orange);}
 .total-row.disc-line{color:var(--green);font-weight:600;}
 .order-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px;}
 .order-actions-2{display:grid;grid-template-columns:1fr;gap:5px;}
-.oa-btn{padding:10px;border-radius:9px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.15s;}
+.oa-btn{padding:10px;border-radius:9px;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.15s;}
 .oa-btn:active{transform:translateY(1px);}
 .oa-void{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);}
 .oa-send{background:var(--red);color:white;box-shadow:0 3px 0 var(--dark-red);}
@@ -155,11 +155,11 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 /* ── MENU PANEL ── */
 .order-right{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .menu-panel-header{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:7px;align-items:center;}
-.menu-search{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:7px 11px;color:var(--text);font-family:'Barlow',sans-serif;font-size:12px;outline:none;}
+.menu-search{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:7px 11px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;outline:none;}
 .menu-search:focus{border-color:var(--orange);}
 .menu-body{display:flex;flex:1;overflow:hidden;}
 .cat-sidebar{width:118px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:5px;}
-.cat-btn{display:block;width:100%;padding:7px 9px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.15s;text-align:left;margin-bottom:2px;}
+.cat-btn{display:block;width:100%;padding:7px 9px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.15s;text-align:left;margin-bottom:2px;}
 .cat-btn.active{background:var(--red);color:white;}
 .cat-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
 .items-grid-wrap{flex:1;overflow-y:auto;padding:10px;}
@@ -167,16 +167,16 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 .menu-item-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 9px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;}
 .menu-item-card:hover{border-color:var(--orange);background:rgba(230,126,34,0.06);transform:translateY(-2px);}
 .menu-item-card:active{transform:translateY(0);}
-.mic-name{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px;line-height:1.2;text-transform:uppercase;}
-.mic-price{font-size:11px;font-weight:700;color:var(--orange);}
-.mic-cat{font-size:9px;color:var(--text3);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;}
+.mic-name{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px;line-height:1.2;text-transform:uppercase;}
+.mic-price{font-size:13px;font-weight:700;color:var(--orange);}
+.mic-cat{font-size:11px;color:var(--text3);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;}
 .deals-section{padding:10px;}
 .deals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:7px;}
 .deal-card-pos{background:linear-gradient(135deg,rgba(192,57,43,0.1),rgba(230,126,34,0.05));border:1px solid rgba(192,57,43,0.25);border-radius:9px;padding:11px;cursor:pointer;transition:.2s;}
 .deal-card-pos:hover{border-color:var(--red);background:rgba(192,57,43,0.15);transform:translateY(-2px);}
-.dcp-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;color:white;text-transform:uppercase;margin-bottom:2px;}
-.dcp-desc{font-size:10px;color:var(--text3);line-height:1.4;margin-bottom:5px;}
-.dcp-price{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--orange);}
+.dcp-name{font-family:'Outfit',sans-serif;font-size:13px;font-weight:900;color:white;text-transform:uppercase;margin-bottom:2px;}
+.dcp-desc{font-size:12px;color:var(--text3);line-height:1.4;margin-bottom:5px;}
+.dcp-price{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--orange);}
 
 /* ── DELIVERY MANAGEMENT ── */
 #view-delivery{flex-direction:column;overflow-y:auto;padding:18px;gap:14px;}
@@ -188,18 +188,18 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 .delivery-card.status-ready{border-color:var(--green);}
 .delivery-card.status-out{border-color:#aa44ff;}
 .dc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
-.dc-id{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text3);}
-.dc-timer{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;}
+.dc-id{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--text3);}
+.dc-timer{font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;}
 .dc-location{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;}
-.dc-phone{font-size:11px;color:var(--orange);font-weight:600;margin-bottom:7px;}
-.dc-items{font-size:11px;color:var(--text2);background:var(--surface2);padding:7px 9px;border-radius:7px;white-space:pre-wrap;line-height:1.5;margin-bottom:8px;max-height:75px;overflow-y:auto;}
+.dc-phone{font-size:13px;color:var(--orange);font-weight:600;margin-bottom:7px;}
+.dc-items{font-size:13px;color:var(--text2);background:var(--surface2);padding:7px 9px;border-radius:7px;white-space:pre-wrap;line-height:1.5;margin-bottom:8px;max-height:75px;overflow-y:auto;}
 .dc-price-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.dc-total{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:var(--orange);}
+.dc-total{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:var(--orange);}
 .dc-riders{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
-.rider-pill{padding:4px 10px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);transition:.15s;letter-spacing:.5px;text-transform:uppercase;}
+.rider-pill{padding:4px 10px;border-radius:20px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);transition:.15s;letter-spacing:.5px;text-transform:uppercase;}
 .rider-pill.active{background:var(--green);color:white;border-color:var(--dark-green);}
 .dc-actions{display:flex;gap:5px;flex-wrap:wrap;}
-.dc-btn{padding:7px 10px;border-radius:7px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;transition:.15s;}
+.dc-btn{padding:7px 10px;border-radius:7px;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;transition:.15s;}
 .dc-btn.blue{background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
 .dc-btn.green{background:rgba(39,174,96,0.15);color:var(--green);border:1px solid rgba(39,174,96,0.3);}
 .dc-btn.purple{background:rgba(170,68,255,0.15);color:#bb77ff;border:1px solid rgba(170,68,255,0.3);}
@@ -210,40 +210,40 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 #view-cash{flex-direction:column;overflow-y:auto;padding:18px;}
 .cash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:20px;}
 .cash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
-.cash-card-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
-.cash-card-value{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;color:var(--orange);}
+.cash-card-label{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
+.cash-card-value{font-family:'Outfit',sans-serif;font-size:30px;font-weight:900;color:var(--orange);}
 .cash-card-value.green{color:var(--green);}
 .cash-card-value.red{color:var(--red);}
-.cash-section-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:white;margin-bottom:12px;}
+.cash-section-title{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:white;margin-bottom:12px;}
 .opening-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:360px;margin-bottom:18px;}
 .of-label{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:7px;}
-.of-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;outline:none;margin-bottom:9px;}
+.of-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Outfit',sans-serif;font-size:19px;font-weight:700;outline:none;margin-bottom:9px;}
 .of-input:focus{border-color:var(--orange);}
-.of-btn{padding:10px 20px;border-radius:9px;background:var(--orange);color:white;border:none;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+.of-btn{padding:10px 20px;border-radius:9px;background:var(--orange);color:white;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
 .transactions-table{width:100%;border-collapse:collapse;}
-.transactions-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 11px;border-bottom:1px solid var(--border);}
-.transactions-table td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;vertical-align:middle;}
+.transactions-table th{text-align:left;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 11px;border-bottom:1px solid var(--border);}
+.transactions-table td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle;}
 .transactions-table tr:hover td{background:rgba(255,255,255,0.02);}
-.tx-type{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.tx-type{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
 .tx-sale{background:rgba(39,174,96,0.15);color:var(--green);}
 .tx-void{background:rgba(192,57,43,0.15);color:var(--red);}
 
 /* ── CLOSING ── */
 #view-closing{flex-direction:column;overflow-y:auto;padding:18px;}
 .closing-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.closing-date{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text2);letter-spacing:1px;}
-.print-report-btn{padding:8px 18px;border-radius:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
+.closing-date{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text2);letter-spacing:1px;}
+.print-report-btn{padding:8px 18px;border-radius:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
 .closing-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px;}
 .cs-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;}
 .cs-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:2px 0 0 2px;}
 .cs-card.red::before{background:var(--red)}.cs-card.green::before{background:var(--green)}.cs-card.orange::before{background:var(--orange)}.cs-card.blue::before{background:var(--blue)}
-.cs-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;margin-bottom:2px;}
+.cs-val{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;margin-bottom:2px;}
 .cs-card.red .cs-val{color:var(--red)}.cs-card.green .cs-val{color:var(--green)}.cs-card.orange .cs-val{color:var(--orange)}.cs-card.blue .cs-val{color:var(--blue)}
-.cs-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
+.cs-lbl{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
 .closing-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .cb-section{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
-.cb-head{padding:11px 15px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
-.cb-row{display:flex;justify-content:space-between;padding:8px 15px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;}
+.cb-head{padding:11px 15px;border-bottom:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.cb-row{display:flex;justify-content:space-between;padding:8px 15px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;}
 .cb-row:last-child{border-bottom:none;}
 .cb-row-val{font-weight:700;color:var(--orange);}
 
@@ -251,59 +251,59 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:none;align-items:center;justify-content:center;z-index:8000;backdrop-filter:blur(6px);}
 .modal-backdrop.open{display:flex;}
 .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;min-width:300px;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;}
-.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;margin-bottom:3px;}
-.modal-sub{font-size:11px;color:var(--text3);margin-bottom:16px;}
+.modal-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;margin-bottom:3px;}
+.modal-sub{font-size:13px;color:var(--text3);margin-bottom:16px;}
 .size-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:7px;margin-bottom:14px;}
-.size-opt{padding:11px 7px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;text-align:center;transition:.15s;}
+.size-opt{padding:11px 7px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;text-align:center;transition:.15s;}
 .size-opt:hover{border-color:var(--orange);}
 .size-opt.selected{border-color:var(--orange);background:rgba(230,126,34,0.15);}
-.size-opt-name{font-size:11px;font-weight:800;text-transform:uppercase;}
+.size-opt-name{font-size:13px;font-weight:800;text-transform:uppercase;}
 .size-opt-price{font-size:14px;color:var(--orange);margin-top:3px;}
-.modal-note-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-family:'Barlow',sans-serif;font-size:12px;resize:none;outline:none;margin-bottom:10px;}
+.modal-note-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;resize:none;outline:none;margin-bottom:10px;}
 .modal-note-input:focus{border-color:var(--orange);}
 .modal-actions{display:flex;gap:8px;}
-.modal-cancel{flex:1;padding:10px;border-radius:9px;background:var(--surface2);border:none;color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
-.modal-confirm{flex:2;padding:10px;border-radius:9px;background:var(--orange);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 var(--dark-orange);}
+.modal-cancel{flex:1;padding:10px;border-radius:9px;background:var(--surface2);border:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.modal-confirm{flex:2;padding:10px;border-radius:9px;background:var(--orange);border:none;color:white;font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 var(--dark-orange);}
 .qty-ctrl{display:flex;align-items:center;gap:7px;justify-content:center;margin-bottom:10px;}
 .qty-ctrl button{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;}
 .qty-ctrl button:hover{background:var(--orange);border-color:var(--orange);color:white;}
-.qty-ctrl span{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;min-width:30px;text-align:center;}
+.qty-ctrl span{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;min-width:30px;text-align:center;}
 
 /* PAYMENT MODAL */
 #pay-modal .modal-box{max-width:400px;}
 .pay-total-display{background:var(--surface2);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px;}
-.pay-total-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
-.pay-total-amount{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;color:var(--orange);}
+.pay-total-label{font-size:12px;color:var(--text3);font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+.pay-total-amount{font-family:'Outfit',sans-serif;font-size:42px;font-weight:900;color:var(--orange);}
 .pay-method-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px;}
-.pay-method-btn{padding:11px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;text-align:center;transition:.2s;text-transform:uppercase;}
+.pay-method-btn{padding:11px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;text-align:center;transition:.2s;text-transform:uppercase;}
 .pay-method-btn.selected{border-color:var(--green);background:rgba(39,174,96,0.15);color:var(--green);}
 .pay-input-row{display:flex;gap:9px;align-items:center;margin-bottom:9px;}
-.pay-label{font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;width:85px;}
-.pay-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;outline:none;}
+.pay-label{font-size:13px;color:var(--text2);font-weight:600;white-space:nowrap;width:85px;}
+.pay-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;outline:none;}
 .pay-input:focus{border-color:var(--green);}
 .pay-change-box{background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:9px;padding:9px 13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.pay-change-label{font-size:11px;color:var(--green);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-.pay-change-amount{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--green);}
-.pay-complete-btn{width:100%;padding:14px;border-radius:11px;background:var(--green);color:white;border:none;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-green);}
+.pay-change-label{font-size:13px;color:var(--green);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.pay-change-amount{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:var(--green);}
+.pay-complete-btn{width:100%;padding:14px;border-radius:11px;background:var(--green);color:white;border:none;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-green);}
 .pay-complete-btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--dark-green);}
 
 /* SPLIT BILL MODAL */
 #split-modal .modal-box{max-width:420px;}
 .split-item-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .split-item-name{flex:1;color:var(--text2);}
-.split-item-price{color:var(--orange);font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;}
+.split-item-price{color:var(--orange);font-weight:700;font-family:'Outfit',sans-serif;font-size:13px;}
 .split-item-check{width:18px;height:18px;accent-color:var(--green);cursor:pointer;}
-.split-subtotal{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--orange);text-align:right;margin:10px 0 14px;}
+.split-subtotal{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:var(--orange);text-align:right;margin:10px 0 14px;}
 
 /* PENDING ORDERS MODAL */
 #pending-modal .modal-box{max-width:500px;}
 .pending-order-card{background:var(--surface2);border:1px solid rgba(212,175,55,0.3);border-radius:10px;padding:12px;margin-bottom:10px;}
-.poc-table{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;color:var(--gold);margin-bottom:4px;}
-.poc-items{font-size:11px;color:var(--text2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px;background:var(--surface);padding:6px 8px;border-radius:6px;}
+.poc-table{font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;color:var(--gold);margin-bottom:4px;}
+.poc-items{font-size:13px;color:var(--text2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px;background:var(--surface);padding:6px 8px;border-radius:6px;}
 .poc-total{font-size:12px;color:var(--orange);font-weight:700;margin-bottom:8px;}
 .poc-actions{display:flex;gap:7px;}
-.poc-accept-btn{flex:1;padding:8px;border-radius:8px;background:var(--green);color:white;border:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
-.poc-reject-btn{padding:8px 14px;border-radius:8px;background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+.poc-accept-btn{flex:1;padding:8px;border-radius:8px;background:var(--green);color:white;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+.poc-reject-btn{padding:8px 14px;border-radius:8px;background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
 
 /* RECALL MODAL */
 #recall-modal .modal-box{max-width:380px;}
@@ -311,7 +311,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 .recall-input:focus{border-color:var(--orange);}
 
 /* STATUS BADGES */
-.status-badge{padding:2px 8px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.status-badge{padding:2px 8px;border-radius:20px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
 .sb-waiting{background:rgba(230,126,34,0.2);color:var(--orange);}
 .sb-preparing{background:rgba(41,128,185,0.2);color:#5dade2;}
 .sb-ready{background:rgba(39,174,96,0.2);color:var(--green);}
@@ -325,16 +325,16 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
 
 /* MISC */
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.section-title-bar{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
-.refresh-btn{padding:6px 12px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:1px;}
+.section-title-bar{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.refresh-btn{padding:6px 12px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:1px;}
 .refresh-btn:hover{background:var(--surface3);color:var(--text);}
-.action-btn-sm{padding:6px 12px;border-radius:7px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;}
+.action-btn-sm{padding:6px 12px;border-radius:7px;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;}
 .toast{position:fixed;bottom:18px;right:18px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px 16px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transform:translateY(20px);transition:.3s;pointer-events:none;max-width:300px;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{border-left:3px solid var(--green);}
 .toast.error{border-left:3px solid var(--red);}
 .cust-info-row{display:flex;gap:6px;padding:5px 8px 0;flex-shrink:0;}
-.cust-info-row input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 9px;color:var(--text);font-size:11px;outline:none;}
+.cust-info-row input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 9px;color:var(--text);font-size:13px;outline:none;}
 .cust-info-row input:focus{border-color:var(--orange);}
 ::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
 
@@ -421,7 +421,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
       <div class="order-header">
         <div>
           <div class="order-table-badge" id="order-table-name">Table</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:1px;" id="order-covers-info"></div>
+          <div style="font-size:12px;color:var(--text3);margin-top:1px;" id="order-covers-info"></div>
         </div>
         <div style="display:flex;gap:5px;align-items:center;">
           <span class="order-type-badge otb-dinein" id="order-type-badge">Dine-In</span>
@@ -448,49 +448,49 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
       <!-- DELIVERY FIELDS — only visible for Delivery orders -->
       <div id="delivery-fields" style="display:none;padding:6px 10px 0;flex-shrink:0;">
         <textarea id="delivery-address" placeholder="📍 Delivery Address (area, street, landmark)" rows="2"
-          style="width:100%;background:var(--surface2);border:1px solid rgba(230,126,34,0.4);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;resize:none;outline:none;font-family:'Barlow',sans-serif;"
+          style="width:100%;background:var(--surface2);border:1px solid rgba(230,126,34,0.4);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;resize:none;outline:none;font-family:'Outfit',sans-serif;"
           oninput="saveTableOrder()"></textarea>
         <div style="display:flex;gap:6px;margin-top:5px;align-items:center;">
-          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">🚚 Del. Charge:</span>
+          <span style="font-size:13px;color:var(--text2);white-space:nowrap;">🚚 Del. Charge:</span>
           <input type="number" id="delivery-charge" placeholder="0" value="0" min="0"
-            style="flex:1;background:var(--surface2);border:1px solid rgba(230,126,34,0.4);border-radius:8px;padding:6px 10px;color:var(--orange);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;outline:none;"
+            style="flex:1;background:var(--surface2);border:1px solid rgba(230,126,34,0.4);border-radius:8px;padding:6px 10px;color:var(--orange);font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;outline:none;"
             oninput="renderOrderTotals();saveTableOrder()">
-          <span style="font-size:11px;color:var(--text3);">Rs</span>
+          <span style="font-size:13px;color:var(--text3);">Rs</span>
           <div style="display:flex;gap:4px;flex-wrap:wrap;">
-            <button onclick="setDelCharge(50)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700;cursor:pointer;">50</button>
-            <button onclick="setDelCharge(100)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700;cursor:pointer;">100</button>
-            <button onclick="setDelCharge(150)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700;cursor:pointer;">150</button>
-            <button onclick="setDelCharge(200)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700;cursor:pointer;">200</button>
+            <button onclick="setDelCharge(50)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">50</button>
+            <button onclick="setDelCharge(100)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">100</button>
+            <button onclick="setDelCharge(150)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">150</button>
+            <button onclick="setDelCharge(200)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">200</button>
           </div>
         </div>
       </div>
 
       <div class="order-items-list" id="order-items-list">
-        <div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:11px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>
+        <div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:13px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>
       </div>
 
       <!-- CHARGES BAR — SC + Discount always visible -->
       <div style="padding:6px 10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface2);">
         <!-- SC ROW -->
         <div id="sc-row" style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
-          <span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;">Service Charge:</span>
+          <span style="font-size:13px;color:var(--text2);font-weight:600;white-space:nowrap;">Service Charge:</span>
           <button class="sc-chk on" id="sc-toggle-btn" onclick="toggleSC()"></button>
           <input class="sc-pct-input" type="number" id="sc-pct" value="7" min="0" max="30" oninput="renderOrderTotals()">
-          <span style="font-size:10px;color:var(--text3);">%</span>
-          <span style="margin-left:auto;font-size:11px;color:var(--text3);" id="sc-amount-preview"></span>
+          <span style="font-size:12px;color:var(--text3);">%</span>
+          <span style="margin-left:auto;font-size:13px;color:var(--text3);" id="sc-amount-preview"></span>
         </div>
         <!-- DISCOUNT ROW — always shown -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;">Discount:</span>
+          <span style="font-size:13px;color:var(--text2);font-weight:600;white-space:nowrap;">Discount:</span>
           <input class="disc-input" type="number" id="disc-amount" value="0" min="0"
-            style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;"
+            style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--green);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;"
             oninput="renderOrderTotals()">
           <button class="disc-type-btn active" id="disc-flat-btn" onclick="setDiscType('flat')">Rs</button>
           <button class="disc-type-btn" id="disc-pct-btn" onclick="setDiscType('pct')">%</button>
           <div style="margin-left:auto;display:flex;gap:4px;">
-            <button onclick="setDisc(50)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--green);font-size:10px;font-weight:700;cursor:pointer;">50</button>
-            <button onclick="setDisc(100)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--green);font-size:10px;font-weight:700;cursor:pointer;">100</button>
-            <button onclick="setDisc(0)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;">CLR</button>
+            <button onclick="setDisc(50)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;">50</button>
+            <button onclick="setDisc(100)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;">100</button>
+            <button onclick="setDisc(0)" style="padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:var(--surface3);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;">CLR</button>
           </div>
         </div>
       </div>
@@ -533,7 +533,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
         </div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:18px;">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Rider Audit</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Rider Audit</div>
         <div id="rider-audit-btns" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;"></div>
         <div id="rider-audit-result" style="display:none;"></div>
       </div>
@@ -572,7 +572,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
     <div style="max-width:1050px;width:100%;padding:18px;">
       <div class="closing-header">
         <div>
-          <h2 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Day Closing Report</h2>
+          <h2 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Day Closing Report</h2>
           <div class="closing-date" id="closing-date"></div>
         </div>
         <div style="display:flex;gap:7px;">
@@ -610,7 +610,7 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;heig
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div class="modal-title">Collect Payment</div>
-      <div style="font-size:11px;color:var(--text3);">Bill <span id="pay-bill-no" style="color:var(--orange);font-weight:700;"></span></div>
+      <div style="font-size:13px;color:var(--text3);">Bill <span id="pay-bill-no" style="color:var(--orange);font-weight:700;"></span></div>
     </div>
     <div class="pay-total-display">
       <div class="pay-total-label">Grand Total</div>
@@ -858,63 +858,71 @@ function startLiveReload() {
 async function pollWebOrders() {
   if (!sb) return;
   try {
-    // Fetch recent WAITING orders from the branch that came from web (not POS)
     const { data } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
       .eq('status', 'WAITING')
-      .neq('source', 'POS')  // exclude POS-created orders
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (!data) return;
 
-    // Find orders that belong to a known table (QR dine-in)
     const newPending = [];
     data.forEach(order => {
       const loc = (order.location || '').trim();
-      // Match "Table A-1" or "A-1" or "A 1" formats
-      const tableId = ALL_TABLE_IDS.find(t => {
-        const tClean = t.toLowerCase().replace('-',' ');
-        const locClean = loc.toLowerCase().replace('table ','').replace('-',' ').trim();
-        return tClean === locClean || t.toLowerCase() === loc.toLowerCase();
+      const orderType = order.type || 'Dine-In';
+
+      // Matches "A1" = "A-1", "B2" = "B-2" etc
+      let tableId = ALL_TABLE_IDS.find(t => {
+        const tNorm = t.toLowerCase().replace(/-/g, '');
+        const locNorm = loc.toLowerCase().replace(/-/g, '').replace(/^table\s*/i, '').trim();
+        return tNorm === locNorm;
       });
 
-      if (tableId) {
-        // Check if we already have this order loaded on this table
-        const existing = tableOrders[tableId];
-        if (!existing || existing.webOrderId !== order.id) {
-          // It's a new web order on a table — auto-occupy the table
-          if (!tableOrders[tableId] || tableOrders[tableId].fromWeb) {
-            // Parse items from text
-            const parsedItems = parseItemsFromText(order.items || '');
-            tableOrders[tableId] = {
-              table: tableId,
-              type: 'Dine-In',
-              items: parsedItems,
-              startTime: new Date(order.created_at).getTime(),
-              id: order.id,
-              webOrderId: order.id,
-              fromWeb: true,
-              confirmed: false,
-              rawItems: order.items,
-              subtotal: order.subtotal,
-              customerName: order.customer_name || '',
-              customerPhone: order.phone || '',
-              scEnabled: true, scPct: 7
-            };
-          }
-          // Add to pending list for notification
-          if (!newPending.find(p => p.id === order.id)) {
-            newPending.push({ ...order, tableId });
-          }
-        }
+      // Takeaway / Car Dine → assign to next free TK slot
+      if (!tableId && (
+        orderType === 'Takeaway' ||
+        loc.toLowerCase() === 'takeaway' ||
+        loc.toLowerCase().startsWith('car dine') ||
+        loc.toLowerCase().startsWith('car-dine')
+      )) {
+        tableId = TABLES['Takeaway'].find(t =>
+          !tableOrders[t] || tableOrders[t].webOrderId === order.id
+        );
+      }
+
+      if (!tableId) return;
+
+      const existing = tableOrders[tableId];
+      if (existing && existing.webOrderId === order.id) return;
+      if (existing && !existing.fromWeb) return;
+
+      const parsedItems = parseItemsFromText(order.items || '');
+      tableOrders[tableId] = {
+        table: tableId,
+        type: orderType,
+        items: parsedItems,
+        startTime: new Date(order.created_at).getTime(),
+        id: order.id,
+        webOrderId: order.id,
+        fromWeb: true,
+        confirmed: false,
+        rawItems: order.items,
+        subtotal: order.subtotal,
+        customerName: order.customer_name || '',
+        customerPhone: order.phone || '',
+        scEnabled: orderType === 'Dine-In',
+        scPct: 7
+      };
+
+      if (!newPending.find(p => p.id === order.id)) {
+        newPending.push({ ...order, tableId });
       }
     });
 
     pendingWebOrders = newPending;
     updatePendingBadges();
-    renderTableMap(); // refresh map to show gold cells
+    renderTableMap();
   } catch(e) { console.error('pollWebOrders:', e); }
 }
 
@@ -1001,19 +1009,11 @@ async function rejectWebOrder(orderId, tableId) {
 // "Confirm & Print" — cashier confirms the QR order and prints kitchen slip
 async function confirmAndPrintSlip() {
   if (!currentOrder.webOrderId) return;
-  // Mark as confirmed in state
   currentOrder.confirmed = true;
   if (tableOrders[currentOrder.table]) tableOrders[currentOrder.table].confirmed = true;
-  // Remove from pending list
   pendingWebOrders = pendingWebOrders.filter(p => p.id !== currentOrder.webOrderId);
   updatePendingBadges();
-  // Update source to POS so it won't show as pending again
-  if (sb && currentOrder.webOrderId) {
-    try { await sb.from('kitchen_orders').update({ source: 'POS_CONFIRMED' }).eq('id', currentOrder.webOrderId); } catch(e) {}
-  }
-  // Hide banner
   document.getElementById('pending-banner').classList.remove('show');
-  // Print kitchen ticket
   printKitchenTicket();
   showToast('Confirmed & printed! ✅', 'success');
 }
@@ -1370,7 +1370,7 @@ function saveTableOrder() {
 function renderOrderItems() {
   const list = document.getElementById('order-items-list');
   if (!currentOrder.items.length) {
-    list.innerHTML = '<div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:11px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>';
+    list.innerHTML = '<div class="order-empty"><div class="order-empty-icon">🍽️</div><div>No items yet</div><div style="font-size:13px;margin-top:5px;color:var(--text3);">Select from the menu →</div></div>';
     renderOrderTotals(); return;
   }
   list.innerHTML = '';
@@ -1663,10 +1663,10 @@ function printKitchenTicket() {
       <h2 style="font-size:16px;font-weight:900;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:7px;">KITCHEN TICKET${currentOrder.fromWeb?' ⚡ WEB':''}</h2>
       <div style="font-size:15px;font-weight:900;background:#000;color:#fff;padding:4px;">${currentOrder.type.toUpperCase()} — ${(currentOrder.table||'').replace('-',' ')}</div>
       ${custName?`<div style="font-size:12px;margin-top:4px;font-weight:bold;">👤 ${custName}${custPhone?' · '+custPhone:''}</div>`:''}
-      ${delAddr?`<div style="font-size:11px;margin-top:3px;text-align:left;border:1px dashed #000;padding:4px;">📍 ${delAddr}</div>`:''}
+      ${delAddr?`<div style="font-size:13px;margin-top:3px;text-align:left;border:1px dashed #000;padding:4px;">📍 ${delAddr}</div>`:''}
       <div style="text-align:left;font-size:14px;font-weight:bold;margin-top:9px;white-space:pre-wrap;line-height:1.7;">${itemsText}</div>
       ${delCharge>0?`<div style="margin-top:5px;font-size:12px;font-weight:bold;text-align:right;">Del. Charge: Rs ${delCharge}</div>`:''}
-      <div style="margin-top:9px;border-top:1px solid #000;padding-top:5px;font-size:11px;">${new Date().toLocaleTimeString()} | ${currentStaff}</div>
+      <div style="margin-top:9px;border-top:1px solid #000;padding-top:5px;font-size:13px;">${new Date().toLocaleTimeString()} | ${currentStaff}</div>
     </div>`;
   setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
 }
@@ -1678,10 +1678,10 @@ function printReceipt(sale, isSplit=false) {
   document.getElementById('print-area').innerHTML = `
     <div style="text-align:center;font-family:'Courier New',monospace;color:black;padding:5px;">
       <h1 style="margin:0;font-size:20px;font-weight:900;letter-spacing:2px;">OVEN X</h1>
-      <div style="font-size:9px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">${br.name.toUpperCase()} BRANCH</div>
-      <div style="font-size:9px;margin-bottom:4px;">${br.address}</div>
+      <div style="font-size:11px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">${br.name.toUpperCase()} BRANCH</div>
+      <div style="font-size:11px;margin-bottom:4px;">${br.address}</div>
       <div style="border-bottom:1px dashed #000;margin-bottom:4px;"></div>
-      <div style="text-align:left;font-size:10px;line-height:1.5;">
+      <div style="text-align:left;font-size:12px;line-height:1.5;">
         <b>Bill No:</b> ${isSplit?'(Split)':sale.billNo||'—'}<br>
         <b>Date  :</b> ${new Date(sale.time).toLocaleString('en-PK')}<br>
         <b>Table :</b> ${(sale.table||'').replace('-',' ')}<br>
@@ -1692,9 +1692,9 @@ function printReceipt(sale, isSplit=false) {
         ${sale.deliveryAddress?`<br><b>Addr  :</b> ${sale.deliveryAddress}`:''}
       </div>
       <div style="border-bottom:1px solid #000;margin:4px 0;"></div>
-      <div style="text-align:left;font-size:11px;font-weight:bold;white-space:pre-wrap;line-height:1.7;">${itemsText}</div>
+      <div style="text-align:left;font-size:13px;font-weight:bold;white-space:pre-wrap;line-height:1.7;">${itemsText}</div>
       <div style="border-bottom:1px dashed #000;margin:4px 0;"></div>
-      <div style="text-align:right;font-size:11px;line-height:1.7;">
+      <div style="text-align:right;font-size:13px;line-height:1.7;">
         <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ${sale.items.reduce((s,i)=>s+i.price*i.qty,0)}</span></div>
         ${sale.sc>0?`<div style="display:flex;justify-content:space-between;"><span>SC (${sale.scPct}%):</span><span>Rs ${sale.sc}</span></div>`:''}
         ${(sale.deliveryCharge||0)>0?`<div style="display:flex;justify-content:space-between;"><span>Delivery Charge:</span><span>Rs ${sale.deliveryCharge}</span></div>`:''}
@@ -1702,10 +1702,10 @@ function printReceipt(sale, isSplit=false) {
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;border-top:1px solid #000;padding-top:3px;">
           <span>TOTAL:</span><span>Rs ${sale.total}</span>
         </div>
-        ${sale.method==='split'?`<div style="font-size:10px;color:#444;">Cash: Rs ${sale.splitCash} / Card: Rs ${sale.splitCard}</div>`:
-          `<div style="font-size:10px;color:#444;">Paid: ${sale.method.toUpperCase()}</div>`}
+        ${sale.method==='split'?`<div style="font-size:12px;color:#444;">Cash: Rs ${sale.splitCash} / Card: Rs ${sale.splitCard}</div>`:
+          `<div style="font-size:12px;color:#444;">Paid: ${sale.method.toUpperCase()}</div>`}
       </div>
-      <div style="margin-top:7px;font-size:9px;">Thank you! Visit again 🙏<br>theovenx.com</div>
+      <div style="margin-top:7px;font-size:11px;">Thank you! Visit again 🙏<br>theovenx.com</div>
     </div>`;
   setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
 }
@@ -1727,7 +1727,7 @@ async function renderDeliveryView() {
 
   const riders = BRANCHES[activeBranch].riders;
   riderBtns.innerHTML = riders.map(r =>
-    `<button onclick="showRiderAudit('${r}',${JSON.stringify(orders).replace(/'/g,"&#39;")})" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;">${r}</button>`
+    `<button onclick="showRiderAudit('${r}',${JSON.stringify(orders).replace(/'/g,"&#39;")})" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;">${r}</button>`
   ).join('');
 
   // Update delivery badge
@@ -1752,13 +1752,13 @@ async function renderDeliveryView() {
       </div>
       <div class="dc-location">📍 ${o.location||'—'}</div>
       ${o.phone?`<div class="dc-phone">📞 ${o.phone}</div>`:''}
-      ${o.customer_name?`<div style="font-size:11px;color:var(--text2);margin-bottom:4px;">👤 ${o.customer_name}</div>`:''}
+      ${o.customer_name?`<div style="font-size:13px;color:var(--text2);margin-bottom:4px;">👤 ${o.customer_name}</div>`:''}
       <div class="dc-items">${o.items||'—'}</div>
       <div class="dc-price-row">
-        <span style="font-size:11px;color:var(--text2);">Shop: Rs ${o.subtotal||0}  Del: Rs ${o.delivery_fee||0}</span>
+        <span style="font-size:13px;color:var(--text2);">Shop: Rs ${o.subtotal||0}  Del: Rs ${o.delivery_fee||0}</span>
         <span class="dc-total">Rs ${total}</span>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Assign Rider:</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:7px;font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Assign Rider:</div>
       <div class="dc-riders" id="riders-${o.id}">
         ${riders.map(r=>`<button class="rider-pill ${o.rider===r?'active':''}" onclick="assignRiderDel('${o.id}','${r}',this)">${r}</button>`).join('')}
       </div>
@@ -1811,8 +1811,8 @@ function printDeliverySlip(o) {
   document.getElementById('print-area').innerHTML = `
     <div style="font-family:'Courier New',monospace;color:black;padding:5px;">
       <div style="text-align:center;font-size:18px;font-weight:900;">OVEN X</div>
-      <div style="text-align:center;font-size:10px;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">DELIVERY SLIP — ${br.name.toUpperCase()}</div>
-      <div style="font-size:10px;line-height:1.6;margin-top:5px;">
+      <div style="text-align:center;font-size:12px;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">DELIVERY SLIP — ${br.name.toUpperCase()}</div>
+      <div style="font-size:12px;line-height:1.6;margin-top:5px;">
         <b>Order :</b> #${(o.id||'').toString().slice(0,8).toUpperCase()}<br>
         <b>Date  :</b> ${new Date(o.created_at).toLocaleString('en-PK')}<br>
         <b>To    :</b> ${o.location}<br>
@@ -1821,7 +1821,7 @@ function printDeliverySlip(o) {
         ${o.rider?`<b>Rider :</b> ${o.rider}<br>`:''}
       </div>
       <div style="border-bottom:1px dashed #000;margin:5px 0;"></div>
-      <div style="font-size:11px;font-weight:bold;white-space:pre-wrap;line-height:1.6;">${o.items}</div>
+      <div style="font-size:13px;font-weight:bold;white-space:pre-wrap;line-height:1.6;">${o.items}</div>
       <div style="border-bottom:1px dashed #000;margin:5px 0;"></div>
       <div style="font-size:12px;">
         <div style="display:flex;justify-content:space-between;"><span>Shop:</span><span>Rs ${o.subtotal||0}</span></div>
@@ -1840,7 +1840,7 @@ function showRiderAudit(riderName, orders) {
   const result = document.getElementById('rider-audit-result');
   result.style.display='block';
   result.innerHTML=`<div class="audit-card">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;margin-bottom:8px;color:white;">${riderName}</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:17px;font-weight:900;margin-bottom:8px;color:white;">${riderName}</div>
     <div class="audit-row"><span>Orders</span><span>${rOrders.length}</span></div>
     <div class="audit-row"><span>Cash Collected</span><span>Rs ${cash}</span></div>
     <div class="audit-row"><span>Delivery Fees</span><span>Rs ${fees}</span></div>
@@ -1902,10 +1902,10 @@ function renderCashView() {
 
   document.getElementById('tx-tbody').innerHTML = completedOrders.slice().reverse().map(o => `
     <tr>
-      <td style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
+      <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
       <td>${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
-      <td>${(o.table||o.type||'').replace('-',' ')} <span style="color:var(--text3);font-size:10px;">(${o.type})</span></td>
-      <td style="color:var(--text2);font-size:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.items.map(i=>i.qty+'x '+i.name).join(', ')}</td>
+      <td>${(o.table||o.type||'').replace('-',' ')} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
+      <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.items.map(i=>i.qty+'x '+i.name).join(', ')}</td>
       <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
       <td style="text-align:right;font-weight:700;color:${o.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(o.total)}</td>
     </tr>
@@ -1980,10 +1980,10 @@ function printClosingReport() {
   document.getElementById('print-area').innerHTML = `
     <div style="font-family:'Courier New',monospace;color:black;padding:5px;width:72mm;">
       <div style="text-align:center;font-size:17px;font-weight:900;">OVEN X — ${activeBranch}</div>
-      <div style="text-align:center;font-size:10px;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">DAY CLOSING REPORT</div>
-      <div style="font-size:9px;margin-bottom:4px;text-align:center;">${now.toLocaleString('en-PK')}</div>
+      <div style="text-align:center;font-size:12px;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:2px 0;">DAY CLOSING REPORT</div>
+      <div style="font-size:11px;margin-bottom:4px;text-align:center;">${now.toLocaleString('en-PK')}</div>
       <div style="border-bottom:1px dashed #000;margin:3px 0;"></div>
-      <div style="font-size:11px;line-height:1.7;">
+      <div style="font-size:13px;line-height:1.7;">
         <div style="display:flex;justify-content:space-between;"><span>Total Bills:</span><span>${sales.length}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Total Sales:</span><span><b>Rs ${total}</b></span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Sales:</span><span>Rs ${cash}</span></div>
@@ -1994,7 +1994,7 @@ function printClosingReport() {
         <div style="display:flex;justify-content:space-between;"><span>Opening Bal:</span><span>Rs ${openingBalance}</span></div>
         <div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:2px;font-weight:900;font-size:13px;"><span>Hand Over:</span><span>Rs ${openingBalance+cash-cashOuts}</span></div>
       </div>
-      <div style="border-top:1px dashed #000;margin-top:5px;padding-top:4px;font-size:9px;text-align:center;">Staff: ${currentStaff} | Shift: ${shiftStart?shiftStart.toLocaleTimeString():''} — ${now.toLocaleTimeString()}</div>
+      <div style="border-top:1px dashed #000;margin-top:5px;padding-top:4px;font-size:11px;text-align:center;">Staff: ${currentStaff} | Shift: ${shiftStart?shiftStart.toLocaleTimeString():''} — ${now.toLocaleTimeString()}</div>
     </div>`;
   setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
 }
