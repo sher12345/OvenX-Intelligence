@@ -537,6 +537,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <div class="section-title-bar">🚚 Delivery Orders</div>
         <div style="display:flex;gap:7px;align-items:center;">
           <button class="refresh-btn" onclick="renderDeliveryView()">↻ Refresh</button>
+          <button class="refresh-btn" onclick="exportDeliveryExcel()" style="color:var(--green);border-color:var(--green);">📊 Export Excel</button>
           <button class="action-btn-sm" style="background:var(--red);color:white;" onclick="openNewOrder(null,'Delivery')">+ New Delivery</button>
         </div>
       </div>
@@ -2564,6 +2565,144 @@ function loadTodaySales() {
 // ══════════════════════════════════
 // TOAST
 // ══════════════════════════════════
+function exportDeliveryExcel() {
+  if (!sb) { showToast('Not connected', 'error'); return; }
+  showToast('Preparing export...', 'success');
+
+  sb.from('kitchen_orders')
+    .select('*')
+    .eq('branch', activeBranch)
+    .eq('type', 'Delivery')
+    .order('created_at', { ascending: true })
+    .then(({ data, error }) => {
+      if (error || !data || !data.length) {
+        showToast('No delivery data to export', 'error');
+        return;
+      }
+
+      const riders = BRANCHES[activeBranch].riders;
+      const now = new Date().toLocaleDateString('en-PK', {
+        day:'2-digit', month:'long', year:'numeric'
+      });
+
+      // ── SECTION 1: Header ──
+      const lines = [];
+      lines.push(`OVEN X — ${activeBranch} BRANCH`);
+      lines.push(`Delivery Audit Report`);
+      lines.push(`Generated: ${now} by ${currentStaff}`);
+      lines.push(``);
+
+      // ── SECTION 2: Summary ──
+      const total = data.length;
+      const assigned = data.filter(o => o.rider).length;
+      const unassigned = total - assigned;
+      const totalSales = data.reduce((s,o) => s + (o.subtotal||0), 0);
+      const totalFees = data.reduce((s,o) => s + (o.delivery_fee||0), 0);
+      const totalCash = totalSales + totalFees;
+      const outOrders = data.filter(o => o.status === 'OUT' || o.status === 'PAID').length;
+
+      lines.push(`SUMMARY`);
+      lines.push(`Total Orders,${total}`);
+      lines.push(`Assigned to Rider,${assigned}`);
+      lines.push(`Unassigned,${unassigned}`);
+      lines.push(`Delivered / Out,${outOrders}`);
+      lines.push(`Total Shop Sales,Rs ${totalSales}`);
+      lines.push(`Total Delivery Fees,Rs ${totalFees}`);
+      lines.push(`Total Cash to Collect,Rs ${totalCash}`);
+      lines.push(``);
+
+      // ── SECTION 3: Rider Summary ──
+      lines.push(`RIDER WISE SUMMARY`);
+      lines.push(`Rider,Orders,Shop Amount,Delivery Fees,Total Cash,Net to Shop`);
+      riders.forEach(r => {
+        const rOrders = data.filter(o => o.rider === r);
+        if (!rOrders.length) {
+          lines.push(`${r},0,Rs 0,Rs 0,Rs 0,Rs 0`);
+          return;
+        }
+        const rSales = rOrders.reduce((s,o) => s + (o.subtotal||0), 0);
+        const rFees = rOrders.reduce((s,o) => s + (o.delivery_fee||0), 0);
+        const rTotal = rSales + rFees;
+        const rNet = rSales; // shop keeps subtotal, rider collects full but returns fees
+        lines.push(`${r},${rOrders.length},Rs ${rSales},Rs ${rFees},Rs ${rTotal},Rs ${rNet}`);
+      });
+
+      // Unassigned row
+      const unassignedOrders = data.filter(o => !o.rider);
+      if (unassignedOrders.length) {
+        const uSales = unassignedOrders.reduce((s,o) => s + (o.subtotal||0), 0);
+        const uFees = unassignedOrders.reduce((s,o) => s + (o.delivery_fee||0), 0);
+        lines.push(`UNASSIGNED,${unassignedOrders.length},Rs ${uSales},Rs ${uFees},Rs ${uSales+uFees},Rs ${uSales}`);
+      }
+      lines.push(``);
+
+      // ── SECTION 4: Order Details ──
+      lines.push(`ORDER DETAILS`);
+      lines.push(`#,Date,Time,Customer Name,Phone,Delivery Address,Items,Shop Rs,Del Fee Rs,Total Rs,Status,Rider`);
+
+      data.forEach((o, i) => {
+        const dt = new Date(o.created_at);
+        const date = dt.toLocaleDateString('en-PK');
+        const time = dt.toLocaleTimeString('en-PK', { hour:'2-digit', minute:'2-digit', hour12:true });
+
+        // Clean each field — remove commas and newlines so CSV stays clean
+        const clean = (str) => (str || '—').toString().replace(/,/g, ';').replace(/\n/g, ' | ').replace(/\r/g, '').trim();
+
+        const num = i + 1;
+        const customer = clean(o.customer_name);
+        const phone = clean(o.phone);
+        const address = clean(o.location);
+        const items = clean(o.items);
+        const shop = o.subtotal || 0;
+        const fee = o.delivery_fee || 0;
+        const total = shop + fee;
+        const status = o.status || '—';
+        const rider = o.rider || 'Unassigned';
+
+        lines.push(`${num},${date},${time},${customer},${phone},${address},${items},${shop},${fee},${total},${status},${rider}`);
+      });
+
+      lines.push(``);
+
+      // ── SECTION 5: Per-Rider Detail ──
+      lines.push(`PER RIDER DETAIL`);
+      riders.forEach(r => {
+        const rOrders = data.filter(o => o.rider === r);
+        if (!rOrders.length) return;
+
+        lines.push(``);
+        lines.push(`--- ${r.toUpperCase()} ---`);
+        lines.push(`#,Time,Customer,Phone,Address,Items,Shop Rs,Del Fee Rs,Total Rs,Status`);
+
+        rOrders.forEach((o, i) => {
+          const dt = new Date(o.created_at);
+          const time = dt.toLocaleTimeString('en-PK', { hour:'2-digit', minute:'2-digit', hour12:true });
+          const clean = (str) => (str || '—').toString().replace(/,/g, ';').replace(/\n/g, ' | ').trim();
+          const shop = o.subtotal || 0;
+          const fee = o.delivery_fee || 0;
+          lines.push(`${i+1},${time},${clean(o.customer_name)},${clean(o.phone)},${clean(o.location)},${clean(o.items)},${shop},${fee},${shop+fee},${o.status||'—'}`);
+        });
+
+        const rSales = rOrders.reduce((s,o) => s + (o.subtotal||0), 0);
+        const rFees = rOrders.reduce((s,o) => s + (o.delivery_fee||0), 0);
+        lines.push(`,,,,,,TOTAL:,Rs ${rSales},Rs ${rFees},Rs ${rSales+rFees},`);
+      });
+
+      // ── Download ──
+      const csv = lines.join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `OvenX_${activeBranch}_Delivery_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Export ready ✅', 'success');
+    });
+}
 let toastTimer;
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
