@@ -918,7 +918,7 @@ function startLiveReload() {
         filter: `branch=eq.${activeBranch}`
       }, (payload) => {
         console.log('Realtime:', payload.eventType);
-        pollWebOrders();
+        setTimeout(pollWebOrders, 500);
       })
       .subscribe();
   }
@@ -1636,11 +1636,6 @@ function voidCurrentOrder() {
   switchView('tables');
   renderTableMap();
   showToast('Order voided — ' + reason, 'error');
-
-  // Delete from DB in background — don't block UI
-  if (idToDelete && sb) {
-    sb.from('kitchen_orders').update({ status: 'VOIDED' }).eq('id', idToDelete).catch(() => {});
-  }
 }
 
 // ══════════════════════════════════
@@ -1672,7 +1667,12 @@ function voidCurrentOrder() {
   renderTableMap();
   showToast('Order voided — ' + reason, 'error');
   if (idToDelete && sb) {
-    sb.from('kitchen_orders').update({ status: 'VOIDED' }).eq('id', idToDelete).catch(() => {});
+    sb.from('kitchen_orders').update({
+      status: 'VOIDED',
+      voided_reason: reason,
+      voided_at: new Date().toISOString(),
+      voided_by: currentStaff
+    }).eq('id', idToDelete).catch(() => {});
   }
 }
 
@@ -2482,7 +2482,7 @@ function renderCashView() {
 // ══════════════════════════════════
 // CLOSING REPORT
 // ══════════════════════════════════
-function renderClosingReport() {
+async function renderClosingReport() {
   const now = new Date();
   document.getElementById('closing-date').textContent = now.toLocaleDateString('en-PK',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) + ' | Shift: '+(shiftStart?shiftStart.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—')+' — '+now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
 
@@ -2501,8 +2501,27 @@ function renderClosingReport() {
   const scCollected = sales.reduce((s,o)=>s+(o.sc||0),0);
   const returns = completedOrders.filter(o => o.method === 'return');
 const returnTotal = returns.reduce((s,o) => s + Math.abs(o.total), 0);
-const voids = completedOrders.filter(o => o.method === 'void');
-const voidTotal = voids.reduce((s,o) => s + Math.abs(o.total), 0);
+let voids = completedOrders.filter(o => o.method === 'void');
+let voidTotal = voids.reduce((s,o) => s + Math.abs(o.total), 0);
+if (sb) {
+  try {
+    const { data: voidedData } = await sb.from('kitchen_orders')
+      .select('*')
+      .eq('branch', activeBranch)
+      .eq('status', 'VOIDED')
+      .gte('created_at', new Date().toISOString().slice(0,10) + 'T00:00:00.000Z');
+    if (voidedData && voidedData.length) {
+      voidTotal = voidedData.reduce((s,o) => s + (o.subtotal||0), 0);
+      voids = voidedData.map(o => ({
+        billNo: 'VOID', table: o.location, type: o.type,
+        items: o.items, total: -(o.subtotal||0), method: 'void',
+        time: new Date(o.voided_at || o.created_at),
+        staff: o.voided_by || '—',
+        returnReason: o.voided_reason || '—'
+      }));
+    }
+  } catch(e) {}
+}
   const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
   const avg = sales.length>0?Math.round(total/sales.length):0;
 
