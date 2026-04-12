@@ -4169,50 +4169,52 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
     }
 }
     async function renderKitchenOrders() {
-        if(!sb) return; 
+    if(!sb) return; 
+    
+    if (currentKitchenFilter !== 'CALC_HISTORY') {
+        let query = sb.from('kitchen_orders').select('*')
+          .not('status', 'in', '("PAID","VOIDED","OUT")')
+          .order('created_at', { ascending: false });
+        if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
+        if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
         
-        if (currentKitchenFilter !== 'CALC_HISTORY') {
-            let query = sb.from('kitchen_orders').select('*')
-  .not('status', 'in', '("PAID","VOIDED")')
-  .order('created_at', { ascending: false });
-if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
-            const { data: orders } = await query; 
-            const list = document.getElementById('kitchen-orders-list');
-            list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
-            const now = new Date(); 
-            let isAnyOrderLate = false;
-            orders && orders.forEach((o) => {
-                const createdAt = new Date(o.created_at); 
-                const remaining = (25 * 60000) - (now - createdAt);
-                let timeLabel = ""; 
-                let alertClass = "";
-                if (o.status !== 'READY' && o.status !== 'PAID' && o.status !== 'VOIDED') { 
-                    if (remaining <= 0) { 
-                        alertClass = "late"; 
-                        timeLabel = "LATE"; 
-                        isAnyOrderLate = true; 
-                    } else { 
-                        timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
-                        if (remaining <= 5 * 60000) alertClass = "warning"; 
-                    } 
-                }
-                let priceHtml = ""; 
-if (o.subtotal) {
-    const hasDiscount = o.discount && o.discount > 0;
-    const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
-    const sourceBadge = o.discount_claimed 
-        ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
-        : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
-    priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
-        ${hasDiscount ? discountBadge : ''}
-        ${o.type === 'Delivery' ? sourceBadge : ''}
-        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div>
-            <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div>
-        </div>
-    </div>`;
-}
+        const { data: orders } = await query; 
+        const list = document.getElementById('kitchen-orders-list');
+        list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
+        const now = new Date(); 
+        let isAnyOrderLate = false;
+        
+        orders && orders.forEach((o) => {
+            const createdAt = new Date(o.created_at); 
+            const remaining = (25 * 60000) - (now - createdAt);
+            let timeLabel = ""; 
+            let alertClass = "";
+            if (o.status !== 'READY' && o.status !== 'PAID' && o.status !== 'VOIDED' && o.status !== 'OUT') { 
+                if (remaining <= 0) { 
+                    alertClass = "late"; 
+                    timeLabel = "LATE"; 
+                    isAnyOrderLate = true; 
+                } else { 
+                    timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
+                    if (remaining <= 5 * 60000) alertClass = "warning"; 
+                } 
+            }
+            let priceHtml = ""; 
+            if (o.subtotal) {
+                const hasDiscount = o.discount && o.discount > 0;
+                const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
+                const sourceBadge = o.discount_claimed 
+                    ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
+                    : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
+                priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
+                    ${hasDiscount ? discountBadge : ''}
+                    ${o.type === 'Delivery' ? sourceBadge : ''}
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div>
+                        <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div>
+                    </div>
+                </div>`;
+            }
                 let riderHtml = ""; 
                 if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
