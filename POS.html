@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -813,6 +815,21 @@ const dealsData=[
   {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1499},{n:"03 PIZZA DEAL",d:"1 Large Crown Pizza + 1L Drink",p:1599},
   {n:"04 PIZZA DEAL",d:"1 Large Extreme Pizza + 1L Drink",p:1999}
 ];
+// ══════════════════════════════════
+// DEAL FLAVOR MAP (matches web app)
+// ══════════════════════════════════
+const dealFlavorMap = {
+  'Family Feast':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza','BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  'Extreme Buddy':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  '01 PIZZA DEAL':   ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  '02 PIZZA DEAL':   ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  '03 PIZZA DEAL':   ['Kabab Crust','Crown Crust','Cheese Crust'],
+  '04 PIZZA DEAL':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  'Midnight Deal 1': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  'Midnight Deal 2': ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  'Midnight Deal 3': ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  'Midnight Deal 4': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+};
 
 // ══════════════════════════════════
 // STATE
@@ -870,11 +887,14 @@ function doLogin() {
   document.getElementById('opening-bal-input').value = openingBalance || '';
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   startClock();
-  fullRefresh();
   startTableTimers();
   startLiveReload();
   switchView('tables');
-  showToast('Welcome, ' + currentStaff + '! Shift started. 🔥', 'success');
+  applyPOSOverrides().then(() => {
+    fullRefresh();
+    renderMenu();
+    showToast('Welcome, ' + currentStaff + '! Shift started. 🔥', 'success');
+  });
 }
 
 function showLoginErr(msg) {
@@ -927,6 +947,86 @@ function startLiveReload() {
   // Fallback poll every 15s
   liveReloadInterval = setInterval(pollWebOrders, 15000);
   pollWebOrders();
+}
+// ══════════════════════════════════
+// FETCH ADMIN OVERRIDES FOR POS
+// ══════════════════════════════════
+let _posOverrideMap = {};
+
+async function applyPOSOverrides() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('menu_overrides')
+      .select('*')
+      .eq('branch', activeBranch);
+    if (error || !data) return;
+
+    _posOverrideMap = {};
+    data.forEach(r => { 
+      _posOverrideMap[r.item_name] = r;
+      _posOverrideMap[r.item_name.toLowerCase().trim()] = r; // normalize
+    });
+
+    // Apply price overrides to menuData
+    for (let cat in menuData) {
+      menuData[cat].forEach(item => {
+        const r = _posOverrideMap[item.n] || _posOverrideMap[item.n.toLowerCase().trim()];
+        if (!r) return;
+        // Price override
+        if (r.prices) {
+          if (typeof item.price === 'object' && typeof r.prices === 'object' && !r.prices._flat) {
+            for (let k in r.prices) item.price[k] = r.prices[k];
+          } else if (r.prices._flat) {
+            item.price = r.prices._flat;
+          }
+        }
+        // Availability
+        item._unavailable = r.available === false;
+      });
+    }
+
+    // Apply price overrides to dealsData
+    dealsData.forEach(deal => {
+      const r = _posOverrideMap[deal.n] || _posOverrideMap[deal.n.toLowerCase().trim()];
+      if (!r) return;
+      if (r.prices && r.prices._flat) deal.p = r.prices._flat;
+      deal._unavailable = r.available === false;
+    });
+
+    // Also load custom items from DB
+    const { data: customItems } = await sb.from('custom_menu_items')
+      .select('*')
+      .eq('branch', activeBranch)
+      .eq('available', true);
+    (customItems || []).forEach(item => {
+      const priceObj = (() => { try { return JSON.parse(item.price); } catch(e) { return parseInt(item.price); } })();
+      if (!menuData[item.category]) menuData[item.category] = [];
+      if (!menuData[item.category].find(i => i.name === item.name)) {
+        menuData[item.category].push({ n: item.name, p: priceObj, _custom: true });
+      }
+    });
+
+    // Also load custom deals from DB
+    const { data: customDeals } = await sb.from('custom_deals')
+      .select('*')
+      .eq('branch', activeBranch)
+      .eq('available', true);
+    (customDeals || []).forEach(deal => {
+      if (!dealsData.find(d => d.n === deal.name)) {
+        dealsData.push({
+          n: deal.name,
+          d: deal.deal_desc,
+          p: deal.price,
+          _custom: true,
+          _unavailable: deal.available === false
+        });
+      }
+    });
+
+    console.log('POS overrides applied ✅');
+  } catch(e) {
+    console.error('applyPOSOverrides error:', e);
+  }
 }
 
 // ══════════════════════════════════
@@ -1393,10 +1493,16 @@ function renderMenu(filter='') {
   if (activeCategory === '__deals__') {
     const dg = document.createElement('div'); dg.className = 'deals-section';
     const dGrid = document.createElement('div'); dGrid.className = 'deals-grid';
-    dealsData.filter(d => !filter || d.n.toLowerCase().includes(filter.toLowerCase())).forEach(deal => {
-      const card = document.createElement('div'); card.className = 'deal-card-pos';
+dealsData.filter(d => !d._unavailable && (!filter || d.n.toLowerCase().includes(filter.toLowerCase()))).forEach(deal => {
+  const card = document.createElement('div'); card.className = 'deal-card-pos';
       card.innerHTML = `<div class="dcp-name">${deal.n}</div><div class="dcp-desc">${deal.d}</div><div class="dcp-price">Rs ${deal.p}</div>`;
-      card.onclick = () => addItemToOrder({ n:deal.n, p:deal.p }, deal.p);
+card.onclick = () => {
+        if (dealFlavorMap[deal.n]) {
+          openDealFlavorModal(deal, dealFlavorMap[deal.n]);
+        } else {
+          openDealWithNote(deal);
+        }
+      };
       dGrid.appendChild(card);
     });
     dg.appendChild(dGrid); grid.appendChild(dg);
@@ -1404,10 +1510,11 @@ function renderMenu(filter='') {
   }
 
   const items = (menuData[activeCategory]||[]).filter(i => {
-    if (i.bwp && activeBranch!=='BWP') return false;
-    if (filter && !i.n.toLowerCase().includes(filter.toLowerCase())) return false;
-    return true;
-  });
+      if (i.bwp && activeBranch!=='BWP') return false;
+      if (i._unavailable) return false;
+      if (filter && !i.n.toLowerCase().includes(filter.toLowerCase())) return false;
+      return true;
+    });
   const ig = document.createElement('div'); ig.className = 'items-grid';
   items.forEach(item => {
     const card = document.createElement('div'); card.className = 'menu-item-card';
@@ -1427,19 +1534,28 @@ function filterMenu(val) {
   const ig = document.createElement('div'); ig.className = 'items-grid';
   let found = 0;
   for (let cat in menuData) {
-    menuData[cat].filter(i => i.n.toLowerCase().includes(filter) && (!i.bwp || activeBranch==='BWP')).forEach(item => {
-      const card = document.createElement('div'); card.className = 'menu-item-card';
+menuData[cat].filter(i => !i._unavailable && i.n.toLowerCase().includes(filter) && (!i.bwp || activeBranch==='BWP')).forEach(item => {      const card = document.createElement('div'); card.className = 'menu-item-card';
       const priceStr = typeof item.p==='object'?'From Rs '+Object.values(item.p)[0]:'Rs '+item.p;
       card.innerHTML = `<div class="mic-name">${item.n}</div><div class="mic-price">${priceStr}</div><div class="mic-cat">${cat}</div>`;
-      card.onclick = () => { if(typeof item.p==='object') openSizeModal(item); else addItemToOrder(item,item.p); };
-      ig.appendChild(card); found++;
+      card.onclick = () => {
+      if (dealFlavorMap[d.n]) {
+        openDealFlavorModal(d, dealFlavorMap[d.n]);
+      } else {
+        openDealWithNote(d);
+      }
+    };
+    ig.appendChild(card); found++;
     });
   }
-  dealsData.filter(d => d.n.toLowerCase().includes(filter)).forEach(d => {
-    const card = document.createElement('div'); card.className = 'deal-card-pos';
+dealsData.filter(d => !d._unavailable && d.n.toLowerCase().includes(filter)).forEach(d => {    const card = document.createElement('div'); card.className = 'deal-card-pos';
     card.innerHTML = `<div class="dcp-name">${d.n}</div><div class="dcp-desc">${d.d}</div><div class="dcp-price">Rs ${d.p}</div>`;
-    card.onclick = () => addItemToOrder({n:d.n,p:d.p},d.p);
-    ig.appendChild(card); found++;
+card.onclick = () => {
+      if (d.flavors && d.flavors.length) {
+        openFlavorModal(d);
+      } else {
+        addItemToOrder({n:d.n, p:d.p}, d.p);
+      }
+    };    ig.appendChild(card); found++;
   });
   if (!found) ig.innerHTML = '<div style="color:var(--text3);padding:18px;font-size:12px;grid-column:1/-1;">No items found</div>';
   grid.appendChild(ig);
@@ -1463,6 +1579,35 @@ function openSizeModal(item) {
   }
   document.getElementById('size-modal').classList.add('open');
 }
+function openFlavorModal(deal) {
+  sizeModalItem = deal;
+  sizeModalQty = 1;
+  sizeModalSelected = null;
+  document.getElementById('size-modal-title').textContent = deal.n;
+  document.getElementById('size-modal-sub').textContent = deal.d || 'Choose flavor:';
+  document.getElementById('modal-qty').textContent = '1';
+  document.getElementById('size-note').value = '';
+  const opts = document.getElementById('size-options');
+  opts.innerHTML = '';
+  deal.flavors.forEach(flavor => {
+    const btn = document.createElement('div');
+    btn.className = 'size-opt';
+    btn.innerHTML = `<div class="size-opt-name">${flavor}</div><div class="size-opt-price">Rs ${deal.p}</div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('selected'));
+      btn.classList.add('selected');
+      sizeModalSelected = { sz: flavor, price: deal.p };
+    };
+    opts.appendChild(btn);
+  });
+  document.getElementById('size-confirm-btn').onclick = () => {
+    if (!sizeModalSelected) { showToast('Please select a flavor', 'error'); return; }
+    const note = document.getElementById('size-note').value;
+    addItemToOrder({ n:`${deal.n} (${sizeModalSelected.sz})`, p:deal.p }, deal.p, sizeModalQty, note);
+    closeModal('size-modal');
+  };
+  document.getElementById('size-modal').classList.add('open');
+}
 function confirmSize() {
   if (!sizeModalSelected) { showToast('Please select a size','error'); return; }
   const note = document.getElementById('size-note').value;
@@ -1471,6 +1616,72 @@ function confirmSize() {
 }
 function changeModalQty(d) { sizeModalQty = Math.max(1,sizeModalQty+d); document.getElementById('modal-qty').textContent = sizeModalQty; }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openDealFlavorModal(deal, flavors) {
+  sizeModalItem = deal;
+  sizeModalQty = 1;
+  sizeModalSelected = null;
+
+  // How many pizza selections needed?
+  const pickCount = {
+    'Family Feast': 2,
+    'Midnight Deal 2': 2,
+    'Midnight Deal 3': 2,
+    'Midnight Deal 4': 2,
+  }[deal.n] || 1;
+
+  const selectedFlavors = [];
+
+  document.getElementById('size-modal-title').textContent = deal.n;
+  document.getElementById('size-modal-sub').textContent = (deal.d || '') + (pickCount > 1 ? ` — Pick ${pickCount} flavors` : ' — Pick flavor:');
+  document.getElementById('modal-qty').textContent = '1';
+  document.getElementById('size-note').value = '';
+
+  const opts = document.getElementById('size-options');
+  opts.innerHTML = '';
+
+  flavors.forEach(flavor => {
+    const btn = document.createElement('div');
+    btn.className = 'size-opt';
+    btn.innerHTML = `<div class="size-opt-name" style="font-size:10px;">${flavor}</div><div class="size-opt-price">Rs ${deal.p}</div>`;
+    btn.onclick = () => {
+      if (pickCount === 1) {
+        document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedFlavors.length = 0;
+        selectedFlavors.push(flavor);
+      } else {
+        if (btn.classList.contains('selected')) {
+          btn.classList.remove('selected');
+          const idx = selectedFlavors.indexOf(flavor);
+          if (idx > -1) selectedFlavors.splice(idx, 1);
+        } else {
+          if (selectedFlavors.length >= pickCount) {
+            showToast(`Max ${pickCount} flavors`, 'error'); return;
+          }
+          btn.classList.add('selected');
+          selectedFlavors.push(flavor);
+        }
+      }
+    };
+    opts.appendChild(btn);
+  });
+
+  document.getElementById('size-confirm-btn').onclick = () => {
+    if (selectedFlavors.length < pickCount) {
+      showToast(`Please select ${pickCount} flavor${pickCount>1?'s':''}`, 'error'); return;
+    }
+    const note = document.getElementById('size-note').value.trim();
+    const flavorStr = selectedFlavors.join(' + ');
+    const itemNote = note ? `${flavorStr} | ${note}` : flavorStr;
+    addItemToOrder(
+      { n: `${deal.n}`, p: deal.p },
+      deal.p, sizeModalQty, itemNote
+    );
+    closeModal('size-modal');
+  };
+
+  document.getElementById('size-modal').classList.add('open');
+}
 
 // ══════════════════════════════════
 // ORDER MANAGEMENT
