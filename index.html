@@ -4172,9 +4172,11 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
         if(!sb) return; 
         
         if (currentKitchenFilter !== 'CALC_HISTORY') {
-            let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
-            if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-            if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
+            let query = sb.from('kitchen_orders').select('*')
+  .not('status', 'in', '("PAID","VOIDED")')
+  .order('created_at', { ascending: false });
+if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
+if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
             const { data: orders } = await query; 
             const list = document.getElementById('kitchen-orders-list');
             list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
@@ -4185,7 +4187,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 const remaining = (25 * 60000) - (now - createdAt);
                 let timeLabel = ""; 
                 let alertClass = "";
-                if (o.status !== 'READY') { 
+                if (o.status !== 'READY' && o.status !== 'PAID' && o.status !== 'VOIDED') { 
                     if (remaining <= 0) { 
                         alertClass = "late"; 
                         timeLabel = "LATE"; 
