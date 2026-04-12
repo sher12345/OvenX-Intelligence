@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1107,7 +1103,7 @@ for (const tname in tableOrders) {
           && order.status === 'READY'
           && !existing) return;
 
-      const parsedItems = parseItemsFromText(order.items || '');
+      const parsedItems = parseItemsFromText(order.items || '', order.subtotal);
       tableOrders[tableId] = {
         table: tableId,
         type: orderType,
@@ -1121,9 +1117,9 @@ for (const tname in tableOrders) {
         subtotal: order.subtotal,
         customerName: order.customer_name || '',
         customerPhone: order.phone || '',
-        scEnabled: orderType === 'Dine-In',
-        scPct: 7
-      };
+        scEnabled: false,  // SC already included in subtotal from web app
+    scPct: 0
+};
 
       if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
         newPending.push({ ...order, tableId });
@@ -1151,16 +1147,15 @@ for (const tname in tableOrders) {
 }
 
 // Parse "2x Zinger Burger [note]" text back into item objects
-function parseItemsFromText(text) {
+function parseItemsFromText(text, knownSubtotal) {
   if (!text) return [];
-  return text.split('\n').map(line => {
-    line = line.trim();
-    const m = line.match(/^(\d+)x\s+(.+?)(?:\s+\[(.+)\])?$/);
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const items = lines.map(line => {
+    const m = line.match(/^(\d+)x\s+(.+?)(?:\s+\[([^\]]*)\])?$/);
     if (!m) return null;
     const qty = parseInt(m[1]);
     const name = m[2].trim();
     const note = m[3] || '';
-    // Try to find price
     let price = 0;
     for (let cat in menuData) {
       const item = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
@@ -1174,6 +1169,18 @@ function parseItemsFromText(text) {
     if (deal) price = deal.p;
     return { name, price, qty, note };
   }).filter(Boolean);
+
+  // If we have the known subtotal and calculated total doesn't match,
+  // scale prices proportionally so POS shows correct total
+  if (knownSubtotal && items.length) {
+    const calcTotal = items.reduce((s,i) => s + i.price * i.qty, 0);
+    if (calcTotal > 0 && calcTotal !== knownSubtotal) {
+      const ratio = knownSubtotal / calcTotal;
+      items.forEach(i => { i.price = Math.round(i.price * ratio); });
+    }
+  }
+
+  return items;
 }
 
 function updatePendingBadges() {
@@ -3158,6 +3165,9 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
