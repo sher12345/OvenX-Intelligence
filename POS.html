@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1535,7 +1538,13 @@ function filterMenu(val) {
 menuData[cat].filter(i => !i._unavailable && i.n.toLowerCase().includes(filter) && (!i.bwp || activeBranch==='BWP')).forEach(item => {      const card = document.createElement('div'); card.className = 'menu-item-card';
       const priceStr = typeof item.p==='object'?'From Rs '+Object.values(item.p)[0]:'Rs '+item.p;
       card.innerHTML = `<div class="mic-name">${item.n}</div><div class="mic-price">${priceStr}</div><div class="mic-cat">${cat}</div>`;
-      card.onclick = () => {
+      card.onclick = () => { if(typeof item.p==='object') openSizeModal(item); else addItemToOrder(item,item.p); };
+      ig.appendChild(card); found++;
+    });
+  }
+dealsData.filter(d => !d._unavailable && d.n.toLowerCase().includes(filter)).forEach(d => {    const card = document.createElement('div'); card.className = 'deal-card-pos';
+    card.innerHTML = `<div class="dcp-name">${d.n}</div><div class="dcp-desc">${d.d}</div><div class="dcp-price">Rs ${d.p}</div>`;
+card.onclick = () => {
       if (dealFlavorMap[d.n]) {
         openDealFlavorModal(d, dealFlavorMap[d.n]);
       } else {
@@ -1543,17 +1552,6 @@ menuData[cat].filter(i => !i._unavailable && i.n.toLowerCase().includes(filter) 
       }
     };
     ig.appendChild(card); found++;
-    });
-  }
-dealsData.filter(d => !d._unavailable && d.n.toLowerCase().includes(filter)).forEach(d => {    const card = document.createElement('div'); card.className = 'deal-card-pos';
-    card.innerHTML = `<div class="dcp-name">${d.n}</div><div class="dcp-desc">${d.d}</div><div class="dcp-price">Rs ${d.p}</div>`;
-card.onclick = () => {
-      if (d.flavors && d.flavors.length) {
-        openFlavorModal(d);
-      } else {
-        addItemToOrder({n:d.n, p:d.p}, d.p);
-      }
-    };    ig.appendChild(card); found++;
   });
   if (!found) ig.innerHTML = '<div style="color:var(--text3);padding:18px;font-size:12px;grid-column:1/-1;">No items found</div>';
   grid.appendChild(ig);
@@ -1575,6 +1573,12 @@ function openSizeModal(item) {
     btn.onclick = () => { document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('selected')); btn.classList.add('selected'); sizeModalSelected = {sz, price:item.p[sz]}; };
     opts.appendChild(btn);
   }
+  document.getElementById('size-confirm-btn').onclick = () => {
+    if (!sizeModalSelected) { showToast('Please select a size', 'error'); return; }
+    const note = document.getElementById('size-note').value;
+    addItemToOrder({ n:`${item.n} (${sizeModalSelected.sz})`, p:sizeModalSelected.price }, sizeModalSelected.price, sizeModalQty, note);
+    closeModal('size-modal');
+  };
   document.getElementById('size-modal').classList.add('open');
 }
 function openFlavorModal(deal) {
@@ -1614,6 +1618,22 @@ function confirmSize() {
 }
 function changeModalQty(d) { sizeModalQty = Math.max(1,sizeModalQty+d); document.getElementById('modal-qty').textContent = sizeModalQty; }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openDealWithNote(deal) {
+  sizeModalItem = deal;
+  sizeModalQty = 1;
+  sizeModalSelected = { sz: null, price: deal.p };
+  document.getElementById('size-modal-title').textContent = deal.n;
+  document.getElementById('size-modal-sub').textContent = deal.d || 'Add special instructions:';
+  document.getElementById('modal-qty').textContent = '1';
+  document.getElementById('size-note').value = '';
+  document.getElementById('size-options').innerHTML = '';
+  document.getElementById('size-confirm-btn').onclick = () => {
+    const note = document.getElementById('size-note').value.trim();
+    addItemToOrder({ n: deal.n, p: deal.p }, deal.p, sizeModalQty, note);
+    closeModal('size-modal');
+  };
+  document.getElementById('size-modal').classList.add('open');
+}
 function openDealFlavorModal(deal, flavors) {
   sizeModalItem = deal;
   sizeModalQty = 1;
