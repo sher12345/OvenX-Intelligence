@@ -894,7 +894,7 @@ async function doLogin() {
     shiftStart = new Date();
     openingBalance = parseInt(localStorage.getItem('pos_opening_' + todayKey()) || 0);
     billCounter = parseInt(localStorage.getItem('pos_billno_' + todayKey()) || 1);
-    loadTodaySales();
+    await loadTodaySales();
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('pos-app').classList.add('active');
@@ -1914,69 +1914,55 @@ function renderOrderTotals() {
   `;
 }
 
-function voidCurrentOrder() {
-  if (!currentOrder.items.length) { switchView('tables'); return; }
-  const reason = prompt('Void reason? (required)');
-  if (reason === null) return;
-  if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
-
-  const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
-  completedOrders.push({
-    billNo: 'VOID',
-    table: currentOrder.table, type: currentOrder.type,
-    items: [...currentOrder.items],
-    total: -food, method: 'void',
-    time: new Date(), staff: currentStaff, branch: activeBranch,
-    customerName: currentOrder.customerName || '',
-    customerPhone: currentOrder.customerPhone || '',
-    deliveryAddress: '', deliveryCharge: 0,
-    sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
-    cashReceived: 0, splitCash: 0, splitCard: 0,
-    returnReason: reason
-  });
-  saveTodaySales();
-
-  const tableToDelete = currentOrder.table;
-  const idToDelete = currentOrder.id;
-
-  // Clear table and order first
-  if (tableToDelete) delete tableOrders[tableToDelete];
-  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
-
-  // Then navigate
-  switchView('tables');
-  renderTableMap();
-  showToast('Order voided — ' + reason, 'error');
-}
 
 // ══════════════════════════════════
 // RECALL / ADD ITEM MODAL
 // ══════════════════════════════════
-function voidCurrentOrder() {
+async function voidCurrentOrder() {
   if (!currentOrder.items.length) { switchView('tables'); return; }
+  
+  // Require admin PIN
+  const adminPin = prompt('Enter Admin PIN to void order:');
+  if (adminPin !== '7530' && adminPin !== '1234') { 
+    showToast('Wrong Admin PIN — void cancelled', 'error'); return; 
+  }
+  
   const reason = prompt('Void reason? (required)');
   if (reason === null) return;
   if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
+  
   const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
-  completedOrders.push({
-    billNo: 'VOID', table: currentOrder.table, type: currentOrder.type,
-    items: [...currentOrder.items], total: -food, method: 'void',
-    time: new Date(), staff: currentStaff, branch: activeBranch,
-    customerName: currentOrder.customerName || '',
-    customerPhone: currentOrder.customerPhone || '',
-    deliveryAddress: '', deliveryCharge: 0,
-    sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
-    cashReceived: 0, splitCash: 0, splitCard: 0,
-    returnReason: reason
-  });
-  saveTodaySales();
   const tableToDelete = currentOrder.table;
   const idToDelete = currentOrder.id;
+  
+  // Save to Supabase shift_transactions
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch,
+        date: todayKey(),
+        bill_no: 'VOID',
+        type: currentOrder.type,
+        table_loc: currentOrder.table || '',
+        items: currentOrder.items,
+        items_text: currentOrder.items.map(i => `${i.qty}x ${i.name}`).join(', '),
+        subtotal: food,
+        total: -food,
+        method: 'void',
+        staff: currentStaff,
+        customer_name: currentOrder.customerName || '',
+        return_reason: reason,
+        kitchen_order_id: idToDelete || null
+      }]);
+    } catch(e) { console.error('Void save error:', e); }
+  }
+
   if (tableToDelete) delete tableOrders[tableToDelete];
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
   switchView('tables');
   renderTableMap();
   showToast('Order voided — ' + reason, 'error');
+
   if (idToDelete && sb) {
     voidedOrderIds.add(idToDelete);
     sb.from('kitchen_orders').update({
@@ -1986,14 +1972,9 @@ function voidCurrentOrder() {
       voided_by: currentStaff
     }).eq('id', idToDelete)
       .then(({ error }) => {
-        if (error) {
-          console.error('Void DB error:', error);
-          showToast('Void error: ' + error.message, 'error');
-        } else {
-          setTimeout(pollWebOrders, 1000);
-        }
-      })
-      .catch(e => console.error('Void catch:', e));
+        if (error) console.error('Void DB error:', error);
+        else setTimeout(pollWebOrders, 1000);
+      });
   }
 }
 
@@ -2316,7 +2297,7 @@ function printTakeawaySlip(sale) {
 
   setTimeout(function() { window.print(); document.getElementById('print-area').innerHTML = ''; }, 300);
 }
-function markTakeawayPaid() {
+async function markTakeawayPaid() {
   if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
   const pct = 0; // no SC for takeaway
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
@@ -2351,7 +2332,27 @@ function markTakeawayPaid() {
     tableOrders[currentOrder.table].tokenNo = tokenNo;
   }
 
-  completedOrders.push(sale);
+ completedOrders.push(sale);
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch, date: todayKey(),
+        bill_no: sale.billNo, type: sale.type,
+        table_loc: sale.table || '',
+        items: sale.items,
+        items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
+        subtotal: grand, sc: 0, sc_pct: 0,
+        discount: sale.disc || 0, delivery_charge: 0,
+        total: sale.total, method: sale.method,
+        cash_received: 0, split_cash: 0, split_card: 0,
+        staff: currentStaff,
+        customer_name: sale.customerName || '',
+        customer_phone: sale.customerPhone || '',
+        delivery_address: '',
+        kitchen_order_id: currentOrder.id || null
+      }]);
+    } catch(e) { console.error('Takeaway save error:', e); }
+  }
   const cashPart = payM === 'cash' ? grand : 0;
   cashInHand += cashPart;
   salesTotal += grand;
@@ -2360,14 +2361,12 @@ function markTakeawayPaid() {
   document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
-
-  // Mark as PAID in Supabase so it never reappears
-if (currentOrder.id && sb) {
-  sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id).catch(() => {});
-}
-printTakeawaySlip(sale);
-saveTableOrder();
-renderTableMap();
+  if (currentOrder.id && sb) {
+    sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id).catch(() => {});
+  }
+  printTakeawaySlip(sale);
+  saveTableOrder();
+  renderTableMap();
   showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
 }
 function openPayModal() {
@@ -2464,6 +2463,30 @@ async function completePayment() {
     splitCard: payMethod === 'split' ? (parseFloat(document.getElementById('split-card').value) || 0) : 0,
   };
   completedOrders.push(sale);
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch, date: todayKey(),
+        bill_no: sale.billNo, type: sale.type,
+        table_loc: sale.table || '',
+        items: sale.items,
+        items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
+        subtotal: sale.items.reduce((s,i) => s + i.price * i.qty, 0),
+        sc: sale.sc, sc_pct: sale.scPct,
+        discount: sale.disc || 0,
+        delivery_charge: sale.deliveryCharge || 0,
+        total: sale.total, method: sale.method,
+        cash_received: sale.cashReceived || 0,
+        split_cash: sale.splitCash || 0,
+        split_card: sale.splitCard || 0,
+        staff: currentStaff,
+        customer_name: sale.customerName || '',
+        customer_phone: sale.customerPhone || '',
+        delivery_address: sale.deliveryAddress || '',
+        kitchen_order_id: currentOrder.id || null
+      }]);
+    } catch(e) { console.error('Sale save error:', e); }
+  }
   const cashPart = payMethod === 'cash' ? grand : payMethod === 'split' ? sale.splitCash : 0;
   cashInHand += cashPart;
   salesTotal += grand;
@@ -2474,8 +2497,8 @@ async function completePayment() {
   saveTodaySales();
   if (!currentOrder.id) await sendToKitchen();
   if (currentOrder.id && sb) {
-  try { await sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id); } catch(e) {}
-}
+    try { await sb.from('kitchen_orders').update({ status: 'PAID' }).eq('id', currentOrder.id); } catch(e) {}
+  }
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   closeModal('pay-modal');
   printReceipt(sale);
@@ -2775,30 +2798,60 @@ function showRiderAudit(riderName, orders) {
 // ══════════════════════════════════
 // CASH VIEW
 // ══════════════════════════════════
-function setOpeningBalance() {
+async function setOpeningBalance() {
   const val = parseFloat(document.getElementById('opening-bal-input').value)||0;
   openingBalance = val;
   localStorage.setItem('pos_opening_'+todayKey(), val);
+  if (sb) {
+    try {
+      await sb.from('opening_balance').upsert([{
+        branch: activeBranch,
+        date: todayKey(),
+        amount: val,
+        set_by: currentStaff
+      }], { onConflict: 'branch,date' });
+    } catch(e) { console.error('Opening balance save error:', e); }
+  }
   cashInHand = openingBalance + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0) + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0);
   document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
   renderCashView(); showToast('Opening balance set: Rs '+val,'success');
 }
 
-function addCashIn() {
+async function addCashIn() {
   const amt = parseFloat(prompt('Cash In amount (Rs):')) || 0;
   if (!amt) return;
   const reason = prompt('Reason:') || 'Cash In';
   completedOrders.push({ billNo:'CI', table:'', type:'Cash In', items:[{name:reason,price:amt,qty:1,note:''}], total:amt, method:'cash-in', time:new Date(), staff:currentStaff, branch:activeBranch, sc:0, disc:0 });
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch, date: todayKey(),
+        bill_no: 'CI', type: 'Cash In', table_loc: '',
+        items_text: reason, subtotal: amt, total: amt,
+        method: 'cash-in', staff: currentStaff, return_reason: reason
+      }]);
+    } catch(e) { console.error('CashIn save error:', e); }
+  }
   cashInHand += amt;
   document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
   saveTodaySales(); renderCashView(); showToast('Cash In: Rs '+amt,'success');
 }
 
-function addCashOut() {
+async function addCashOut() {
   const amt = parseFloat(prompt('Cash Out amount (Rs):')) || 0;
   if (!amt) return;
   const reason = prompt('Reason:') || 'Cash Out';
   completedOrders.push({ billNo:'CO', table:'', type:'Cash Out', items:[{name:reason,price:amt,qty:1,note:''}], total:-amt, method:'cash-out', time:new Date(), staff:currentStaff, branch:activeBranch, sc:0, disc:0 });
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch, date: todayKey(),
+        bill_no: 'CO', type: 'Cash Out', table_loc: '',
+        items_text: reason, subtotal: amt, total: -amt,
+        method: 'cash-out', staff: currentStaff, return_reason: reason
+      }]);
+    } catch(e) { console.error('CashOut save error:', e); }
+  }
   cashInHand -= amt;
   document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
   saveTodaySales(); renderCashView(); showToast('Cash Out: Rs '+amt,'error');
@@ -2891,6 +2944,25 @@ if (sb) {
     <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill Value</div></div>
   `;
 
+  // Per-staff breakdown
+  const staffNames = [...new Set(completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).map(o => o.staff).filter(Boolean))];
+  const staffBreakdownHTML = staffNames.map(name => {
+    const staffSales = completedOrders.filter(o => o.staff === name && !['cash-in','cash-out','void','return'].includes(o.method));
+    const staffTotal = staffSales.reduce((s,o) => s + o.total, 0);
+    const staffCash = staffSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0) + staffSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
+    const staffCard = staffSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0) + staffSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
+    const staffDisc = staffSales.reduce((s,o) => s + (o.disc||0), 0);
+    const staffVoids = completedOrders.filter(o => o.staff === name && o.method === 'void').length;
+    return `
+      <div class="cb-row"><span style="font-weight:700;color:white;">👤 ${name}</span><span class="cb-row-val">${staffSales.length} bills</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Total Sales</span><span class="cb-row-val">Rs ${staffTotal}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Cash</span><span class="cb-row-val">Rs ${staffCash}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Card</span><span class="cb-row-val">Rs ${staffCard}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Discounts</span><span class="cb-row-val" style="color:var(--red);">Rs ${staffDisc}</span></div>
+      <div class="cb-row" style="margin-bottom:8px;"><span style="padding-left:12px;">Voids</span><span class="cb-row-val" style="color:var(--red);">${staffVoids}</span></div>
+    `;
+  }).join('<div style="border-top:1px solid var(--border);margin:4px 0;"></div>');
+
   document.getElementById('closing-breakdown').innerHTML = `
     <div class="cb-section">
       <div class="cb-head">Sales by Order Type</div>
@@ -2913,6 +2985,10 @@ if (sb) {
         <span style="font-weight:700;color:white;">Total to Hand Over</span>
         <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${openingBalance+totalCash-cashOuts}</span>
       </div>
+    </div>
+    <div class="cb-section" style="grid-column:1/-1;">
+      <div class="cb-head">👥 Per Staff Breakdown</div>
+      ${staffBreakdownHTML || '<div class="cb-row"><span style="color:var(--text3);">No staff data yet</span></div>'}
     </div>
   `;
 }
@@ -3066,18 +3142,60 @@ async function exportClosingExcel() {
 function saveTodaySales() {
   localStorage.setItem('pos_sales_'+todayKey(), JSON.stringify(completedOrders));
 }
-function loadTodaySales() {
-  const saved = localStorage.getItem('pos_sales_'+todayKey());
-  if (saved) {
-    try {
-      completedOrders = JSON.parse(saved);
-      salesTotal = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
-      cashInHand = openingBalance + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0)
-                  + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0)
-                  - completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
-      document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
-    } catch(e) {}
-  }
+async function loadTodaySales() {
+  if (!sb) return;
+  try {
+    // Load opening balance from Supabase
+    const { data: ob } = await sb.from('opening_balance')
+      .select('amount,set_by')
+      .eq('branch', activeBranch)
+      .eq('date', todayKey())
+      .single();
+    if (ob) {
+      openingBalance = ob.amount || 0;
+      document.getElementById('opening-bal-input').value = openingBalance;
+    }
+
+    // Load today's transactions from Supabase
+    const { data: txs } = await sb.from('shift_transactions')
+      .select('*')
+      .eq('branch', activeBranch)
+      .eq('date', todayKey())
+      .order('created_at', { ascending: true });
+
+    if (txs && txs.length) {
+      completedOrders = txs.map(t => ({
+        billNo: t.bill_no,
+        table: t.table_loc,
+        type: t.type,
+        items: Array.isArray(t.items) ? t.items : [],
+        total: t.total,
+        method: t.method,
+        time: new Date(t.created_at),
+        staff: t.staff,
+        branch: t.branch,
+        customerName: t.customer_name || '',
+        customerPhone: t.customer_phone || '',
+        deliveryAddress: t.delivery_address || '',
+        deliveryCharge: t.delivery_charge || 0,
+        sc: t.sc || 0,
+        scPct: t.sc_pct || 0,
+        disc: t.discount || 0,
+        cashReceived: t.cash_received || 0,
+        splitCash: t.split_cash || 0,
+        splitCard: t.split_card || 0,
+        returnReason: t.return_reason || ''
+      }));
+    }
+
+    salesTotal = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
+    cashInHand = openingBalance
+      + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0)
+      + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0)
+      - completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
+    document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
+    document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
+  } catch(e) { console.error('loadTodaySales error:', e); }
 }
 
 // ══════════════════════════════════
@@ -3230,6 +3348,7 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
