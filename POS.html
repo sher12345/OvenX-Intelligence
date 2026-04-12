@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -830,6 +831,10 @@ const dealFlavorMap = {
   'Midnight Deal 2': ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
   'Midnight Deal 3': ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
   'Midnight Deal 4': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  // Custom deals
+  'Solo Inferno':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
+  'Double Crunch':   ['Crunch Wrap','Chipotle Wrap','BBQ Wrap','Peri Peri Wrap'],
 };
 
 // ══════════════════════════════════
@@ -1014,13 +1019,21 @@ async function applyPOSOverrides() {
       .eq('available', true);
     (customDeals || []).forEach(deal => {
       if (!dealsData.find(d => d.n === deal.name)) {
+        const flavors = deal.flavors 
+          ? (Array.isArray(deal.flavors) ? deal.flavors : JSON.parse(deal.flavors))
+          : null;
         dealsData.push({
           n: deal.name,
           d: deal.deal_desc,
           p: deal.price,
           _custom: true,
-          _unavailable: deal.available === false
+          _unavailable: deal.available === false,
+          _flavors: flavors
         });
+        // Also add to dealFlavorMap if flavors exist
+        if (flavors && flavors.length) {
+          dealFlavorMap[deal.name] = flavors;
+        }
       }
     });
 
@@ -1645,6 +1658,8 @@ function openDealFlavorModal(deal, flavors) {
     'Midnight Deal 2': 2,
     'Midnight Deal 3': 2,
     'Midnight Deal 4': 2,
+    'The Roll Out': 2,
+    'Double Crunch': 2,
   }[deal.n] || 1;
 
   const selectedFlavors = [];
@@ -3143,8 +3158,6 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
