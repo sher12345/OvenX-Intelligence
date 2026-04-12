@@ -926,15 +926,23 @@ function showLoginErr(msg) {
   setTimeout(() => el.style.display = 'none', 3000);
 }
 
-function doLogout() {
+async function doLogout() {
   if (!confirm('End shift and logout?')) return;
   if (liveReloadInterval) clearInterval(liveReloadInterval);
-  renderClosingReport();
-  switchView('closing');
+  
+  // Switch view without triggering renderClosingReport()
+  document.querySelectorAll('.pos-view').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById('view-closing').classList.add('active');
+  document.querySelectorAll('.nav-btn')[3]?.classList.add('active');
+  
+  // Now await the report properly
+  await renderClosingReport();
+  
   setTimeout(() => {
     if (confirm('Print closing report before logout?')) printClosingReport();
     location.reload();
-  }, 400);
+  }, 1500);
 }
 
 function todayKey() { return new Date().toISOString().slice(0,10); }
