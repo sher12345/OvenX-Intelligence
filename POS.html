@@ -837,7 +837,8 @@ let sizeModalSelected = null;
 let payMethod = 'cash';
 let activeCategory = 'Starters';
 let billCounter = 1;
-let pendingWebOrders = []; // QR orders waiting for cashier confirmation
+let pendingWebOrders = [];
+let voidedOrderIds = new Set(); // QR orders waiting for cashier confirmation
 let liveReloadInterval = null;
 
 // ══════════════════════════════════
@@ -985,6 +986,7 @@ for (const tname in tableOrders) {
       const existing = tableOrders[tableId];
       if (existing && existing.webOrderId === order.id) return;
       if (existing && !existing.fromWeb) return;
+      if (voidedOrderIds.has(order.id)) return;
 
       // Takeaway READY — don't auto-reload onto empty slot
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
@@ -1667,9 +1669,22 @@ function voidCurrentOrder() {
   renderTableMap();
   showToast('Order voided — ' + reason, 'error');
   if (idToDelete && sb) {
-    sb.from('kitchen_orders').delete().eq('id', idToDelete)
-      .then(() => { setTimeout(pollWebOrders, 1000); })
-      .catch(() => {});
+    voidedOrderIds.add(idToDelete);
+    sb.from('kitchen_orders').update({
+      status: 'VOIDED',
+      voided_reason: reason,
+      voided_at: new Date().toISOString(),
+      voided_by: currentStaff
+    }).eq('id', idToDelete)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Void DB error:', error);
+          showToast('Void error: ' + error.message, 'error');
+        } else {
+          setTimeout(pollWebOrders, 1000);
+        }
+      })
+      .catch(e => console.error('Void catch:', e));
   }
 }
 
