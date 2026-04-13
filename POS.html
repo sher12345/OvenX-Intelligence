@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -184,7 +185,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .dcp-price{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--orange);}
 
 /* ── DELIVERY MANAGEMENT ── */
-#view-delivery{flex-direction:column;overflow-y:auto;padding:18px;gap:14px;}
+#view-delivery{flex-direction:column;overflow-y:auto;padding:18px;gap:14px;align-items:stretch;}
 .delivery-header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .delivery-orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;}
 .delivery-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:16px;position:relative;transition:.2s;}
@@ -212,7 +213,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .dc-btn.gold{background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3);}
 
 /* ── CASH ── */
-#view-cash{flex-direction:column;overflow-y:auto;padding:18px;}
+#view-cash{flex-direction:column;overflow-y:auto;padding:18px;align-items:stretch;}
 .cash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:20px;}
 .cash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
 .cash-card-label{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
@@ -234,8 +235,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .tx-void{background:rgba(192,57,43,0.15);color:var(--red);}
 
 /* ── CLOSING ── */
-#view-closing{flex-direction:column;overflow-y:auto;padding:18px;}
-#view-history{flex-direction:column;overflow-y:auto;padding:18px;}
+#view-closing{flex-direction:column;overflow-y:auto;padding:18px;align-items:stretch;}
+#view-history{flex-direction:column;overflow-y:auto;padding:18px;align-items:stretch;}
 .closing-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
 .closing-date{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text2);letter-spacing:1px;}
 .print-report-btn{padding:8px 18px;border-radius:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
@@ -533,7 +534,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
   <!-- DELIVERY -->
   <div class="pos-view" id="view-delivery">
-    <div style="max-width:1200px;width:100%;padding:18px;">
+    <div style="max-width:100%;width:100%;padding:18px;">
       <div class="section-header">
         <div class="section-title-bar">🚚 Delivery Orders</div>
         <div style="display:flex;gap:7px;align-items:center;">
@@ -555,8 +556,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
   <!-- CASH -->
   <div class="pos-view" id="view-cash">
-    <div style="max-width:1050px;width:100%;padding:18px;">
-      <div class="section-header">
+<div style="max-width:100%;width:100%;padding:18px;">
+        <div class="section-header">
         <div class="section-title-bar">💵 Cash Drawer</div>
         <div style="display:flex;gap:7px;">
           <button class="refresh-btn" onclick="renderCashView()">↻ Refresh</button>
@@ -579,8 +580,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
   <!-- CLOSING -->
   <div class="pos-view" id="view-closing">
-    <div style="max-width:1050px;width:100%;padding:18px;">
-      <div class="closing-header">
+<div style="max-width:100%;width:100%;padding:18px;">
+        <div class="closing-header">
         <div>
           <h2 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Day Closing Report</h2>
           <div class="closing-date" id="closing-date"></div>
@@ -598,7 +599,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
   <!-- HISTORY VIEW -->
   <div class="pos-view" id="view-history">
-    <div style="max-width:1050px;width:100%;padding:18px;overflow-y:auto;flex-direction:column;height:100%;">
+    <div style="max-width:100%;width:100%;padding:18px;overflow-y:auto;flex-direction:column;height:100%;">
       <div class="section-header">
         <div class="section-title-bar">📅 Shift History</div>
         <div style="display:flex;gap:10px;align-items:center;">
