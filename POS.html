@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -802,6 +803,7 @@ const menuData = {
   "Pasta":[{n:"Alfredo Pasta",p:749},{n:"OvenX Flaming Pasta",p:650},{n:"Fire Kissed Pasta",p:699},{n:"X-Special Pasta",p:749}],
   "Wraps & Rolls":[{n:"Chipotle Wrap",p:699},{n:"BBQ Wrap",p:599},{n:"Donar Kabab",p:749},{n:"Crunch Wrap",p:449},{n:"Zingeratha Roll",p:449},{n:"Paratha Roll",p:449},{n:"Malai Roll",p:449},{n:"Behari Roll",p:749},{n:"Peri Peri Wrap",p:749}],
   "Steaks (BWP)":[{n:"Mexican Steak",p:1549,bwp:true},{n:"Moroccan Steak",p:1549,bwp:true},{n:"Tarragon Steak",p:1549,bwp:true},{n:"Mushroom Steak",p:1549,bwp:true},{n:"Cordon Blue Steak",p:1549,bwp:true},{n:"Stuffed Jalapeno Steak",p:1549,bwp:true},{n:"Pepper Steak",p:1499,bwp:true}],
+  "Add-ons":[{n:"Dip: BBQ",p:70},{n:"Dip: Peri Peri",p:70},{n:"Dip: Bonfire",p:70},{n:"Dip: Special",p:70},{n:"Dip: Chipotle",p:70},{n:"Dip: Creamy Dreamy",p:70},{n:"Dip: Chili Mayo",p:70}],
   "Drinks":[{n:"Coke Buddy",p:130},{n:"Sprite Buddy",p:130},{n:"Coke 1 Liter",p:190},{n:"Next Cola 1 Liter",p:170},{n:"Coke 1.5L",p:230},{n:"Sprite 1.5L",p:230},{n:"Water Small",p:99},{n:"Water Large",p:170}]
 };
 const dealsData=[
@@ -859,6 +861,7 @@ let activeCategory = 'Starters';
 let billCounter = 1;
 let pendingWebOrders = [];
 let voidedOrderIds = new Set();
+const paidOrderIds = new Set();
 let liveReloadInterval = null;
 
 // ══════════════════════════════════
@@ -1089,10 +1092,19 @@ async function pollWebOrders() {
     // Build set of active order IDs from DB
     const dbOrderIds = new Set(data.map(o => o.id));
 
+// Fetch today's paid kitchen_order_ids from shift_transactions
+const { data: paidTx } = await sb.from('shift_transactions')
+  .select('kitchen_order_id')
+  .eq('date', todayKey())
+  .eq('branch', activeBranch)
+  .not('kitchen_order_id', 'is', null);
+
+const dbPaidIds = new Set((paidTx || []).map(t => t.kitchen_order_id));
+
     // Remove any orders from table map that are no longer active in DB
 for (const tname in tableOrders) {
   const order = tableOrders[tname];
-  if (order.fromWeb && order.id && !dbOrderIds.has(order.id)) {
+  if (order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
     delete tableOrders[tname];
   }
 }
@@ -1126,7 +1138,7 @@ for (const tname in tableOrders) {
       if (existing && existing.webOrderId === order.id) return;
       if (existing && !existing.fromWeb) return;
       if (voidedOrderIds.has(order.id)) return;
-
+      if (dbPaidIds.has(order.id)) return;
       // Takeaway READY — don't auto-reload onto empty slot
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
           && order.status === 'READY'
@@ -2299,12 +2311,10 @@ async function markTakeawayPaid() {
   const pct = 0; // no SC for takeaway
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const { grand, disc } = getOrderTotal(currentOrder.items, currentOrder.type, false, 0, discAmt, discType, 0);
-
   // Ask payment method
   const method = prompt('Payment method?\n1. Cash\n2. Card\n3. JazzCash\n4. Bank\n5. FoodPanda\n\nType number:');
   const methodMap = { '1':'cash','2':'card','3':'jazzcash','4':'bank','5':'foodpanda' };
   const payM = methodMap[method] || 'cash';
-
   const tokenNo = String(billCounter).padStart(3,'0');
   const sale = {
     billNo: tokenNo,
@@ -2318,7 +2328,6 @@ async function markTakeawayPaid() {
     sc: 0, disc, scPct: 0, discType, discAmount: discAmt,
     cashReceived: 0, splitCash: 0, splitCard: 0
   };
-
   // Mark as paid in state
   currentOrder.paid = true;
   currentOrder.payMethod = payM;
@@ -2328,8 +2337,7 @@ async function markTakeawayPaid() {
     tableOrders[currentOrder.table].payMethod = payM;
     tableOrders[currentOrder.table].tokenNo = tokenNo;
   }
-
- completedOrders.push(sale);
+  completedOrders.push(sale);
   if (sb) {
     try {
       await sb.from('shift_transactions').insert([{
@@ -2350,6 +2358,7 @@ async function markTakeawayPaid() {
       }]);
     } catch(e) { console.error('Takeaway save error:', e); }
   }
+  if (currentOrder.id) paidOrderIds.add(currentOrder.id);
   const cashPart = payM === 'cash' ? grand : 0;
   cashInHand += cashPart;
   salesTotal += grand;
@@ -2490,6 +2499,7 @@ async function completePayment() {
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
   if (!currentOrder.id) await sendToKitchen();
+  if (currentOrder.id) paidOrderIds.add(currentOrder.id);
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   closeModal('pay-modal');
   printReceipt(sale);
@@ -3349,6 +3359,7 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
