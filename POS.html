@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -235,7 +236,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
 /* ── CLOSING ── */
 #view-closing{flex-direction:column;overflow-y:auto;padding:18px;}
-.closing-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+#view-history{flex-direction:column;overflow-y:auto;padding:18px;display:flex;}.closing-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
 .closing-date{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text2);letter-spacing:1px;}
 .print-report-btn{padding:8px 18px;border-radius:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
 .closing-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px;}
@@ -384,7 +385,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <span class="nav-badge" id="badge-delivery"></span>
       </button>
       <button class="nav-btn" onclick="switchView('cash')">💵 Cash</button>
-      <button class="nav-btn" onclick="switchView('closing')">📊 Closing</button>
+<button class="nav-btn" onclick="switchView('closing')">📊 Closing</button>
+<button class="nav-btn" onclick="switchView('history')">📅 History</button>
     </div>
     <div class="pos-topbar-right">
       <div class="topbar-info">Staff: <span id="bar-staff">—</span></div>
@@ -593,7 +595,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <div class="closing-breakdown" id="closing-breakdown"></div>
     </div>
   </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="pos-view" id="view-history">
+    <div style="max-width:1050px;width:100%;padding:18px;overflow-y:auto;flex-direction:column;height:100%;">
+      <div class="section-header">
+        <div class="section-title-bar">📅 Shift History</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input type="date" id="history-date-picker" 
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;"
+            onchange="loadHistoryForDate(this.value)">
+          <select id="history-branch-picker"
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;"
+            onchange="loadHistoryForDate(document.getElementById('history-date-picker').value)">
+            <option value="MULTAN">🍕 Multan</option>
+            <option value="BWP">🥩 BWP</option>
+          </select>
+          <button class="refresh-btn" onclick="loadHistoryForDate(document.getElementById('history-date-picker').value)">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="history-content">
+        <div style="text-align:center;padding:48px;color:var(--text3);">Select a date to view shift reports</div>
+      </div>
+    </div>
+  </div>
+
 </div>
+<!-- SIZE MODAL -->
 
 <!-- SIZE MODAL -->
 <div class="modal-backdrop" id="size-modal">
@@ -894,22 +922,28 @@ async function doLogin() {
     currentStaff = data.name;
     currentStaffRole = data.role;
     shiftStart = new Date();
+
+    // Clean up old localStorage keys from previous days
+    const todayK = todayKey();
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('pos_sales_') && !key.endsWith(todayK)) localStorage.removeItem(key);
+      if (key.startsWith('pos_opening_') && !key.endsWith(todayK)) localStorage.removeItem(key);
+      if (key.startsWith('pos_billno_') && !key.endsWith(todayK)) localStorage.removeItem(key);
+    });
+
     openingBalance = parseInt(localStorage.getItem('pos_opening_' + todayKey()) || 0);
     billCounter = parseInt(localStorage.getItem('pos_billno_' + todayKey()) || 1);
     await loadTodaySales();
-
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('pos-app').classList.add('active');
     document.getElementById('bar-branch').textContent = activeBranch;
     document.getElementById('bar-staff').textContent = currentStaff;
     document.getElementById('opening-bal-input').value = openingBalance || '';
     document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
-
     startClock();
     startTableTimers();
     startLiveReload();
     switchView('tables');
-
     applyPOSOverrides().then(() => {
       fullRefresh();
       renderMenu();
@@ -927,28 +961,87 @@ function showLoginErr(msg) {
   el.textContent = msg; el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 3000);
 }
+async function saveShiftReport() {
+  if (!sb || !currentStaff) return;
+  const now = new Date();
+  const sales = completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method));
+  const total = sales.reduce((s,o) => s+o.total, 0);
+  const cash = sales.filter(o => o.method==='cash').reduce((s,o) => s+o.total, 0);
+  const card = sales.filter(o => o.method==='card').reduce((s,o) => s+o.total, 0);
+  const splitCash = sales.filter(o => o.method==='split').reduce((s,o) => s+(o.splitCash||0), 0);
+  const splitCard = sales.filter(o => o.method==='split').reduce((s,o) => s+(o.splitCard||0), 0);
+  const totalCash = cash + splitCash;
+  const totalCard = card + splitCard;
+  const scCollected = sales.reduce((s,o) => s+(o.sc||0), 0);
+  const discGiven = sales.reduce((s,o) => s+(o.disc||0), 0);
+  const voids = completedOrders.filter(o => o.method==='void');
+  const voidTotal = voids.reduce((s,o) => s+Math.abs(o.total), 0);
+  const returns = completedOrders.filter(o => o.method==='return');
+  const returnTotal = returns.reduce((s,o) => s+Math.abs(o.total), 0);
+  const cashOuts = completedOrders.filter(o => o.method==='cash-out').reduce((s,o) => s+Math.abs(o.total), 0);
+  const expected = openingBalance + totalCash - cashOuts;
+
+  try {
+    await sb.from('shift_reports').insert([{
+      branch: activeBranch,
+      date: todayKey(),
+      staff: currentStaff,
+      shift_start: shiftStart ? shiftStart.toISOString() : null,
+      shift_end: now.toISOString(),
+      opening_balance: openingBalance,
+      total_sales: total,
+      cash_sales: totalCash,
+      card_sales: totalCard,
+      sc_collected: scCollected,
+      discounts_given: discGiven,
+      voids_count: voids.length,
+      voids_amount: voidTotal,
+      returns_count: returns.length,
+      returns_amount: returnTotal,
+      bills_count: sales.length,
+      cash_outs: cashOuts,
+      expected_in_drawer: expected
+    }]);
+    console.log('Shift report saved ✅');
+  } catch(e) {
+    console.error('Shift report save error:', e);
+  }
+}
 
 async function doLogout() {
   if (!confirm('End shift and logout?')) return;
   if (liveReloadInterval) clearInterval(liveReloadInterval);
-  
-  // Switch view without triggering renderClosingReport()
+
+  // Switch to closing view
   document.querySelectorAll('.pos-view').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
   document.getElementById('view-closing').classList.add('active');
   document.querySelectorAll('.nav-btn')[3]?.classList.add('active');
-  
-  // Now await the report properly
+
   await renderClosingReport();
-  
-  setTimeout(() => {
-    if (confirm('Print closing report before logout?')) printClosingReport();
+
+  // Save shift report to Supabase
+  await saveShiftReport();
+
+  const shouldPrint = confirm('Print closing report before logout?');
+  if (shouldPrint) {
+    printClosingReport();
+    setTimeout(() => {
+      // Clear all local data
+      localStorage.clear();
+      location.reload();
+    }, 2500);
+  } else {
+    localStorage.clear();
     location.reload();
-  }, 1500);
+  }
 }
 
-function todayKey() { return new Date().toISOString().slice(0,10); }
-
+function todayKey() {
+  const now = new Date();
+  const pkTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
+  return pkTime.toISOString().slice(0,10);
+}
 // ══════════════════════════════════
 // CLOCK & LIVE RELOAD
 // ══════════════════════════════════
@@ -1300,12 +1393,17 @@ function switchView(v) {
   document.querySelectorAll('.pos-view').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  const navMap = {tables:0,delivery:1,cash:2,closing:3};
+  const navMap = {tables:0,delivery:1,cash:2,closing:3,history:4};
   if (navMap[v] !== undefined) document.querySelectorAll('.nav-btn')[navMap[v]]?.classList.add('active');
   if (v==='cash') renderCashView();
   if (v==='closing') renderClosingReport();
   if (v==='tables') renderTableMap();
   if (v==='delivery') renderDeliveryView();
+  if (v==='history') {
+    const picker = document.getElementById('history-date-picker');
+    picker.value = '2026-04-13';
+    loadHistoryForDate('2026-04-13');
+  }
 }
 
 function switchViewDirect(v) {
@@ -3053,7 +3151,10 @@ function printClosingReport() {
       </div>
       <div style="border-top:1px dashed #000;margin-top:5px;padding-top:4px;font-size:11px;text-align:center;">Staff: ${currentStaff} | Shift: ${shiftStart?shiftStart.toLocaleTimeString():''} — ${now.toLocaleTimeString()}</div>
     </div>`;
-  setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
+  setTimeout(()=>{ 
+    window.print();
+    setTimeout(() => { document.getElementById('print-area').innerHTML=''; }, 3000);
+  }, 500);
 }
 async function exportClosingExcel() {
   const now = new Date();
@@ -3371,6 +3472,119 @@ function exportDeliveryExcel() {
       showToast('Export ready ✅', 'success');
     });
 }
+async function loadHistoryForDate(dateStr) {
+  if (!dateStr) return;
+  const branch = document.getElementById('history-branch-picker').value;
+  const content = document.getElementById('history-content');
+  content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);">Loading...</div>';
+
+  try {
+    // Load shift reports for this date
+    const { data: reports } = await sb.from('shift_reports')
+      .select('*')
+      .eq('branch', branch)
+      .eq('date', dateStr)
+      .order('created_at', { ascending: true });
+
+    // Load individual transactions for this date
+    const { data: txs } = await sb.from('shift_transactions')
+      .select('*')
+      .eq('branch', branch)
+      .eq('date', dateStr)
+      .order('created_at', { ascending: true });
+
+    if (!reports || !reports.length) {
+      content.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3);">No shift reports found for ${dateStr}</div>`;
+      return;
+    }
+
+    content.innerHTML = reports.map(r => {
+      const shiftStart = r.shift_start ? new Date(r.shift_start).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+      const shiftEnd = r.shift_end ? new Date(r.shift_end).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+            <div>
+              <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:white;">👤 ${r.staff}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px;">⏰ ${shiftStart} — ${shiftEnd}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;color:var(--text3);">${branch} Branch</div>
+              <div style="font-size:12px;color:var(--text3);">${dateStr}</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;">
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Total Sales</div>
+              <div style="font-size:22px;font-weight:900;color:var(--green);">Rs ${r.total_sales}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Bills</div>
+              <div style="font-size:22px;font-weight:900;color:var(--orange);">${r.bills_count}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Cash</div>
+              <div style="font-size:22px;font-weight:900;color:var(--green);">Rs ${r.cash_sales}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Card</div>
+              <div style="font-size:22px;font-weight:900;color:var(--blue);">Rs ${r.card_sales}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">SC Collected</div>
+              <div style="font-size:22px;font-weight:900;color:var(--orange);">Rs ${r.sc_collected}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Discounts</div>
+              <div style="font-size:22px;font-weight:900;color:var(--red);">Rs ${r.discounts_given}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Voids</div>
+              <div style="font-size:22px;font-weight:900;color:var(--red);">${r.voids_count} (Rs ${r.voids_amount})</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Hand Over</div>
+              <div style="font-size:22px;font-weight:900;color:var(--green);">Rs ${r.expected_in_drawer}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Show transactions table if available
+    if (txs && txs.length) {
+      content.innerHTML += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">
+            📋 Transactions (${txs.length})
+          </div>
+          <table class="transactions-table">
+            <thead><tr><th>Bill#</th><th>Time</th><th>Staff</th><th>Type</th><th>Items</th><th>Method</th><th style="text-align:right;">Amount</th></tr></thead>
+            <tbody>
+              ${txs.map(t => `
+                <tr>
+                  <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${t.bill_no||'—'}</td>
+                  <td>${new Date(t.created_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
+                  <td style="color:var(--text2);">${t.staff||'—'}</td>
+                  <td>${t.type||'—'}</td>
+                  <td style="color:var(--text2);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.items_text||'—'}</td>
+                  <td><span class="tx-type tx-sale">${t.method||'—'}</span></td>
+                  <td style="text-align:right;font-weight:700;color:${t.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(t.total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+  } catch(e) {
+    content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--red);">Error loading history</div>';
+    console.error(e);
+  }
+}
 let toastTimer;
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
@@ -3380,6 +3594,7 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
