@@ -1143,7 +1143,9 @@ for (const tname in tableOrders) {
           && order.status === 'READY'
           && !existing) return;
 
-      const parsedItems = parseItemsFromText(order.items || '', order.subtotal);
+      const isDineIn = orderType === 'Dine-In';
+const subtotalForParsing = isDineIn ? Math.round(order.subtotal / 1.07) : order.subtotal;
+const parsedItems = parseItemsFromText(order.items || '', subtotalForParsing);
       tableOrders[tableId] = {
         table: tableId,
         type: orderType,
@@ -1157,8 +1159,8 @@ for (const tname in tableOrders) {
         subtotal: order.subtotal,
         customerName: order.customer_name || '',
         customerPhone: order.phone || '',
-        scEnabled: false,  // SC already included in subtotal from web app
-    scPct: 0
+        scEnabled: true,
+        scPct: 7
 };
 
       if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
@@ -1210,16 +1212,15 @@ function parseItemsFromText(text, knownSubtotal) {
     return { name, price, qty, note };
   }).filter(Boolean);
 
-  // If we have the known subtotal and calculated total doesn't match,
-  // scale prices proportionally so POS shows correct total
   if (knownSubtotal && items.length) {
     const calcTotal = items.reduce((s,i) => s + i.price * i.qty, 0);
     if (calcTotal > 0 && calcTotal !== knownSubtotal) {
       const ratio = knownSubtotal / calcTotal;
       items.forEach(i => { i.price = Math.round(i.price * ratio); });
     }
+    // Strip baked-in SC (7%) from web Dine-In order prices
+    items.forEach(i => { i.price = Math.round(i.price / 1.07); });
   }
-
   return items;
 }
 
