@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1176,7 +1175,7 @@ for (const tname in tableOrders) {
       .select('id')
       .eq('branch', activeBranch)
       .eq('type', 'Delivery')
-      .eq('status', 'WAITING')
+      .in('status', ['WAITING', 'PREPARING', 'READY'])
       .then(({ data }) => {
         const badge = document.getElementById('badge-delivery');
         const count = (data || []).length;
@@ -1452,7 +1451,18 @@ function openOrderView(tname, type) {
   // SC: only Dine-In
   const scRow = document.getElementById('sc-row');
   scRow.style.display = type==='Dine-In' ? 'flex' : 'none';
-  scEnabled = type==='Dine-In' ? (currentOrder.scEnabled !== undefined ? currentOrder.scEnabled : true) : false;
+  // For web orders, SC is already baked into subtotal — disable SC toggle
+  if (currentOrder.fromWeb) {
+    scEnabled = false;
+    document.getElementById('sc-toggle-btn').disabled = true;
+    document.getElementById('sc-toggle-btn').style.opacity = '0.4';
+    document.getElementById('sc-toggle-btn').style.cursor = 'not-allowed';
+  } else {
+    scEnabled = type==='Dine-In' ? (currentOrder.scEnabled !== undefined ? currentOrder.scEnabled : true) : false;
+    document.getElementById('sc-toggle-btn').disabled = false;
+    document.getElementById('sc-toggle-btn').style.opacity = '1';
+    document.getElementById('sc-toggle-btn').style.cursor = 'pointer';
+  }
   syncSCUI();
 
   // Delivery fields: only Delivery
@@ -2451,7 +2461,13 @@ async function completePayment() {
   const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const delCharge = getDelCharge();
-  const { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+  let { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+  // For web Dine-In orders, SC is baked into subtotal — extract it
+  if (currentOrder.fromWeb && currentOrder.type === 'Dine-In') {
+    const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
+    sc = grand - food - delCharge + (disc || 0);
+    if (sc < 0) sc = 0;
+  }
   const billNo = String(billCounter).padStart(3,'0');
   const sale = {
     billNo, table: currentOrder.table, type: currentOrder.type, items: [...currentOrder.items],
@@ -2919,7 +2935,11 @@ async function renderClosingReport() {
   const takeaway = sales.filter(o=>o.type==='Takeaway');
   const delivery = sales.filter(o=>o.type==='Delivery');
   const discGiven = sales.reduce((s,o)=>s+(o.disc||0),0);
-  const scCollected = sales.reduce((s,o)=>s+(o.sc||0),0);
+  const scCollected = sales.reduce((s,o) => {
+  if (o.sc && o.sc > 0) return s + o.sc;
+  // Estimate SC from web/dine-in orders where it was baked in
+  return s;
+}, 0);
   const returns = completedOrders.filter(o => o.method === 'return');
 const returnTotal = returns.reduce((s,o) => s + Math.abs(o.total), 0);
 let voids = completedOrders.filter(o => o.method === 'void');
