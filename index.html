@@ -4185,15 +4185,18 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 const remaining = (25 * 60000) - (now - createdAt);
                 let timeLabel = ""; 
                 let alertClass = "";
-                if (o.status !== 'READY') { 
-                    if (remaining <= 0) { 
-                        alertClass = "late"; 
-                        timeLabel = "LATE"; 
-                        isAnyOrderLate = true; 
-                    } else { 
-                        timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
-                        if (remaining <= 5 * 60000) alertClass = "warning"; 
-                    } 
+                if (o.status !== 'READY' && o.status !== 'OUT' && o.status !== 'PAID' && o.status !== 'VOIDED') { 
+    if (remaining <= 0) { 
+        alertClass = "late"; 
+        timeLabel = "LATE"; 
+        isAnyOrderLate = true; 
+    } else { 
+    timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
+    if (remaining <= 5 * 60000) alertClass = "warning"; 
+}
+} else if (o.status === 'OUT' || o.status === 'PAID') {
+    timeLabel = '✓ Done';
+    alertClass = '';
                 }
                 let priceHtml = ""; 
 if (o.subtotal) {
