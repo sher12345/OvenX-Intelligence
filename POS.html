@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1176,31 +1177,28 @@ async function pollWebOrders() {
     const { data, error } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
-      .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In),and(status.eq.READY,type.eq.Takeaway)')
+      .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In),and(status.eq.READY,type.eq.Takeaway),and(status.eq.READY,type.eq.Delivery)')
       .order('created_at', { ascending: false })
       .limit(100);
 
     if (error || !data) return;
 
-    // Build set of active order IDs from DB
     const dbOrderIds = new Set(data.map(o => o.id));
 
-// Fetch today's paid kitchen_order_ids from shift_transactions
-const { data: paidTx } = await sb.from('shift_transactions')
-  .select('kitchen_order_id')
-  .eq('date', todayKey())
-  .eq('branch', activeBranch)
-  .not('kitchen_order_id', 'is', null);
+    const { data: paidTx } = await sb.from('shift_transactions')
+      .select('kitchen_order_id')
+      .eq('date', todayKey())
+      .eq('branch', activeBranch)
+      .not('kitchen_order_id', 'is', null);
 
-const dbPaidIds = new Set((paidTx || []).map(t => t.kitchen_order_id));
+    const dbPaidIds = new Set((paidTx || []).map(t => t.kitchen_order_id));
 
-    // Remove any orders from table map that are no longer active in DB
-for (const tname in tableOrders) {
-  const order = tableOrders[tname];
-  if (order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
-    delete tableOrders[tname];
-  }
-}
+    for (const tname in tableOrders) {
+      const order = tableOrders[tname];
+      if (order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
+        delete tableOrders[tname];
+      }
+    }
 
     const newPending = [];
 
@@ -1225,6 +1223,18 @@ for (const tname in tableOrders) {
         );
       }
 
+      // ✅ ADD THIS BLOCK: Handle POS-created delivery orders
+      if (!tableId && order.type === 'Delivery' && order.source === 'POS') {
+        // First, try to match by existing ID in tableOrders (reconnecting)
+        tableId = Object.keys(tableOrders).find(t => 
+          tableOrders[t].id === order.id
+        );
+        // If not found, assign a free DEL slot
+        if (!tableId) {
+          tableId = TABLES['Delivery'].find(t => !tableOrders[t]);
+        }
+      }
+
       if (!tableId) return;
 
       const existing = tableOrders[tableId];
@@ -1232,14 +1242,14 @@ for (const tname in tableOrders) {
       if (existing && !existing.fromWeb) return;
       if (voidedOrderIds.has(order.id)) return;
       if (dbPaidIds.has(order.id)) return;
-      // Takeaway READY — don't auto-reload onto empty slot
+      
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
           && order.status === 'READY'
           && !existing) return;
 
       const isDineIn = orderType === 'Dine-In';
-// CORRECT — pass raw subtotal, let parseItemsFromText handle it
-const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
+      const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
+      
       tableOrders[tableId] = {
         table: tableId,
         type: orderType,
@@ -1255,7 +1265,7 @@ const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDine
         customerPhone: order.phone || '',
         scEnabled: true,
         scPct: 7
-};
+      };
 
       if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
         newPending.push({ ...order, tableId });
@@ -1266,7 +1276,6 @@ const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDine
     updatePendingBadges();
     renderTableMap();
 
-    // Update delivery badge
     sb.from('kitchen_orders')
       .select('id')
       .eq('branch', activeBranch)
@@ -1529,9 +1538,50 @@ function openNewOrder(tname, type) {
     const pool = type==='Delivery' ? TABLES['Delivery'] : TABLES['Takeaway'];
     tname = pool.find(t => !tableOrders[t]) || pool[0];
   }
-  currentOrder = { table:tname, type:type, items:[], startTime:Date.now(), id:null, scEnabled:type==='Dine-In', scPct:7, fromWeb:false, confirmed:false, webOrderId:null };
+  currentOrder = { table:tname, type:type, items:[], startTime:Date.now(), id:null, 
+    scEnabled:type==='Dine-In', scPct:7, fromWeb:false, confirmed:false, webOrderId:null };
   scEnabled = currentOrder.scEnabled; scPercent = 7;
   syncSCUI(); openOrderView(tname, type);
+  
+  // ✅ FIX: Create Supabase record for BOTH Delivery AND Takeaway
+  if ((type === 'Delivery' || type === 'Takeaway') && !currentOrder.fromWeb) {
+    tableOrders[tname] = { ...currentOrder };
+    createPosOrderRecord(tname, type);
+  }
+}
+// ✅ NEW function: creates POS order record in Supabase (Delivery AND Takeaway)
+async function createPosOrderRecord(tname, type) {
+  if (!sb) return;
+  try {
+    const isDelivery = type === 'Delivery';
+    const addr = isDelivery ? (document.getElementById('delivery-address')?.value || '') : '';
+    const delCharge = isDelivery ? (parseFloat(document.getElementById('delivery-charge')?.value) || 0) : 0;
+    
+    const obj = {
+      type: type,
+      location: isDelivery ? (addr || tname) : tname,
+      items: '',
+      status: 'WAITING',
+      subtotal: 0,
+      delivery_fee: delCharge,
+      branch: activeBranch,
+      customer_name: null,
+      phone: null,
+      source: 'POS'
+    };
+    
+    const { data, error } = await sb.from('kitchen_orders').insert([obj]).select();
+    if (!error && data && data[0]) {
+      currentOrder.id = data[0].id;
+      // ✅ CRITICAL: Also update tableOrders with the new ID
+      if (tableOrders[tname]) {
+        tableOrders[tname].id = data[0].id;
+        tableOrders[tname].webOrderId = data[0].id;
+      }
+    }
+  } catch(e) { 
+    console.error('createPosOrderRecord error:', e); 
+  }
 }
 
 function openOrderView(tname, type) {
@@ -1896,17 +1946,51 @@ function saveTableOrder() {
       delete tableOrders[currentOrder.table];
       return;
     }
+    
     currentOrder.scEnabled = scEnabled;
     currentOrder.scPct = getSCPct();
     currentOrder.discAmount = parseFloat(document.getElementById('disc-amount').value) || 0;
     currentOrder.discType = discType;
     currentOrder.customerName = document.getElementById('order-customer-name').value;
     currentOrder.customerPhone = document.getElementById('order-customer-phone').value;
+    
     if (currentOrder.type === 'Delivery') {
       currentOrder.deliveryAddress = document.getElementById('delivery-address').value;
       currentOrder.deliveryCharge = parseFloat(document.getElementById('delivery-charge').value) || 0;
     }
+    
     tableOrders[currentOrder.table] = { ...currentOrder };
+    
+    // ✅ FIX: Sync BOTH Delivery AND Takeaway (not just Delivery)
+    if ((currentOrder.type === 'Delivery' || currentOrder.type === 'Takeaway') 
+        && currentOrder.id && sb) {
+      
+      const isDelivery = currentOrder.type === 'Delivery';
+      const addr = isDelivery 
+        ? (document.getElementById('delivery-address')?.value || currentOrder.deliveryAddress || '') 
+        : '';
+      const delCharge = isDelivery 
+        ? (parseFloat(document.getElementById('delivery-charge')?.value) || currentOrder.deliveryCharge || 0) 
+        : 0;
+        
+      const itemsText = currentOrder.items.map(i => 
+        `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`
+      ).join('\n');
+      
+      const custName = document.getElementById('order-customer-name')?.value || '';
+      const custPhone = document.getElementById('order-customer-phone')?.value || '';
+      
+      sb.from('kitchen_orders').update({
+        items: itemsText,
+        location: isDelivery ? (addr || currentOrder.table) : currentOrder.table,
+        delivery_fee: delCharge,
+        subtotal: currentOrder.items.reduce((s, i) => s + i.price * i.qty, 0),
+        customer_name: custName || null,
+        phone: custPhone || null
+      }).eq('id', currentOrder.id).then(({ error }) => {
+        if (error) console.error('saveTableOrder sync error:', error);
+      });
+    }
   }
 }
 
@@ -3661,5 +3745,6 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
