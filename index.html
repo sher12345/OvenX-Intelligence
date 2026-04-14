@@ -3907,46 +3907,65 @@ if (orderType === 'Delivery') {
 }
 
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
-    async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
-    async function clearReadyOrders() { if(!confirm("Clear Ready Dine-In orders?")) return; playClick('pop'); if(!sb) return; const { data: ready } = await sb.from('kitchen_orders').select('id').eq('status', 'READY').neq('type', 'Delivery'); if(ready && ready.length > 0) { await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); renderKitchenOrders(); } }
-
-    async function clearDeliveriesWithPassword() {
-        const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
-        if(p === "7530") {
-            playClick('thud'); if(!sb) return;
-            const { error } = await sb.from('kitchen_orders').delete().eq('type', 'Delivery');
-            if(!error) { alert("Delivery Audit Cleared!"); renderKitchenOrders(); } else alert("Error clearing database.");
-        } else if (p !== null) { alert("Denied! Wrong Password."); }
+async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
+async function clearReadyOrders() { 
+    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
+    if(!confirm(`Clear Ready Dine-In orders for ${branch.name} only?`)) return; 
+    playClick('pop'); 
+    if(!sb) return; 
+    const { data: ready } = await sb
+        .from('kitchen_orders')
+        .select('id')
+        .eq('status', 'READY')
+        .neq('type', 'Delivery')
+        .eq('branch', branch.id);
+    if(ready && ready.length > 0) { 
+        await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); 
+        renderKitchenOrders(); 
+    } else {
+        alert(`No ready dine-in orders for ${branch.name}.`);
     }
+}
+async function clearDeliveriesWithPassword() {
+    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
+    const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
+    if(p === "7530") {
+        playClick('thud'); if(!sb) return;
+        const { error } = await sb.from('kitchen_orders').delete().eq('type', 'Delivery').eq('branch', branch.id);
+        if(!error) { alert(`Delivery Audit Cleared for ${branch.name}!`); renderKitchenOrders(); } else alert("Error clearing database.");
+    } else if (p !== null) { alert("Denied! Wrong Password."); }
+}
     
     function setKitchenFilter(f) {
-        currentKitchenFilter = f; 
-        playClick('pop'); 
-        document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
-        
-        document.getElementById('rider-audit-sidebar').style.display = 'none';
-        document.getElementById('delivery-history-sidebar').style.display = 'none';
-        document.getElementById('clear-del-btn').style.display = 'none';
-        
-        if(f === 'ALL') { 
-            document.getElementById('k-tab-all').classList.add('active'); 
-        } else if (f === 'DELIVERY') { 
-            document.getElementById('k-tab-del').classList.add('active'); 
-            document.getElementById('rider-audit-sidebar').style.display = 'flex'; 
-            document.getElementById('clear-del-btn').style.display = 'block'; 
-        } else if (f === 'CALC_HISTORY') {
-            document.getElementById('k-tab-calc').classList.add('active');
-            document.getElementById('delivery-history-sidebar').style.display = 'flex';
-            loadDeliveryHistory();
-        }
-        renderKitchenOrders();
+    currentKitchenFilter = f; 
+    playClick('pop'); 
+    document.querySelectorAll('.k-tab').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById('rider-audit-sidebar').style.display = 'none';
+    document.getElementById('delivery-history-sidebar').style.display = 'none';
+    document.getElementById('clear-del-btn').style.display = 'none';
+    
+    if(f === 'ALL') { 
+        document.getElementById('k-tab-all').classList.add('active'); 
+    } else if (f === 'DELIVERY') { 
+        document.getElementById('k-tab-del').classList.add('active'); 
+        document.getElementById('rider-audit-sidebar').style.display = 'flex'; 
+        document.getElementById('clear-del-btn').style.display = 'block'; 
+    } else if (f === 'CALC_HISTORY') {
+        document.getElementById('k-tab-calc').classList.add('active');
+        document.getElementById('delivery-history-sidebar').style.display = 'flex';
+        loadDeliveryHistory();
     }
+    renderKitchenOrders();
+}
 
-    async function loadDeliveryHistory() {
+async function loadDeliveryHistory() {
     if (!sb) return;
+    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
     
     const { data, error } = await sb.from('delivery_calculations')
         .select('*')
+        .eq('branch', branch.id)
         .order('created_at', { ascending: false })
         .limit(50);
         
@@ -3993,18 +4012,19 @@ if (orderType === 'Delivery') {
 }
 
     async function clearDeliveryHistory() {
-        if (!confirm("Clear all delivery calculation history?")) return;
-        if (!sb) return;
+    if (!confirm("Clear all delivery calculation history?")) return;
+    if (!sb) return;
+    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
+    
+    const { error } = await sb.from('delivery_calculations')
+        .delete()
+        .eq('branch', branch.id);
         
-        const { error } = await sb.from('delivery_calculations')
-            .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000');
-            
-        if (!error) {
-            loadDeliveryHistory();
-            playClick('thud');
-        }
+    if (!error) {
+        loadDeliveryHistory();
+        playClick('thud');
     }
+}
 
     function openInGoogleMaps(lat, lng) {
         playClick('pop');
@@ -6431,4 +6451,5 @@ loadCustomItemsIntoMenu();
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
