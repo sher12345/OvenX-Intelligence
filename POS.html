@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1176,7 +1175,7 @@ async function pollWebOrders() {
     const { data, error } = await sb.from('kitchen_orders')
       .select('*')
       .eq('branch', activeBranch)
-      .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In)')
+      .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In),and(status.eq.READY,type.eq.Takeaway)')
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -1238,8 +1237,8 @@ for (const tname in tableOrders) {
           && !existing) return;
 
       const isDineIn = orderType === 'Dine-In';
-const subtotalForParsing = isDineIn ? Math.round(order.subtotal / 1.07) : order.subtotal;
-const parsedItems = parseItemsFromText(order.items || '', subtotalForParsing);
+// CORRECT — pass raw subtotal, let parseItemsFromText handle it
+const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
       tableOrders[tableId] = {
         table: tableId,
         type: orderType,
@@ -1282,8 +1281,7 @@ const parsedItems = parseItemsFromText(order.items || '', subtotalForParsing);
   } catch(e) { console.error('pollWebOrders:', e); }
 }
 
-// Parse "2x Zinger Burger [note]" text back into item objects
-function parseItemsFromText(text, knownSubtotal) {
+function parseItemsFromText(text, knownSubtotal, isDineIn) {
   if (!text) return [];
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const items = lines.map(line => {
@@ -1307,13 +1305,12 @@ function parseItemsFromText(text, knownSubtotal) {
   }).filter(Boolean);
 
   if (knownSubtotal && items.length) {
-    const calcTotal = items.reduce((s,i) => s + i.price * i.qty, 0);
-    if (calcTotal > 0 && calcTotal !== knownSubtotal) {
-      const ratio = knownSubtotal / calcTotal;
+    const rawSubtotal = isDineIn ? Math.round(knownSubtotal / 1.07) : knownSubtotal;
+    const calcTotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+    if (calcTotal > 0 && calcTotal !== rawSubtotal) {
+      const ratio = rawSubtotal / calcTotal;
       items.forEach(i => { i.price = Math.round(i.price * ratio); });
     }
-    // Strip baked-in SC (7%) from web Dine-In order prices
-    items.forEach(i => { i.price = Math.round(i.price / 1.07); });
   }
   return items;
 }
@@ -1552,11 +1549,12 @@ function openOrderView(tname, type) {
   const scRow = document.getElementById('sc-row');
   scRow.style.display = type==='Dine-In' ? 'flex' : 'none';
   // For web orders, SC is already baked into subtotal — disable SC toggle
-  if (currentOrder.fromWeb) {
-    scEnabled = false;
-    document.getElementById('sc-toggle-btn').disabled = true;
-    document.getElementById('sc-toggle-btn').style.opacity = '0.4';
-    document.getElementById('sc-toggle-btn').style.cursor = 'not-allowed';
+  // REPLACE WITH:
+if (currentOrder.fromWeb) {
+    scEnabled = true;  // SC ON for web dine-in orders
+    document.getElementById('sc-toggle-btn').disabled = false;
+    document.getElementById('sc-toggle-btn').style.opacity = '1';
+    document.getElementById('sc-toggle-btn').style.cursor = 'pointer';
   } else {
     scEnabled = type==='Dine-In' ? (currentOrder.scEnabled !== undefined ? currentOrder.scEnabled : true) : false;
     document.getElementById('sc-toggle-btn').disabled = false;
@@ -2782,7 +2780,11 @@ async function renderDeliveryView() {
   let orders = [];
   if (sb) {
     try {
-      const { data } = await sb.from('kitchen_orders').select('*').eq('branch',activeBranch).eq('type','Delivery').order('created_at',{ascending:false});
+      const { data } = await sb.from('kitchen_orders').select('*')
+  .eq('branch', activeBranch)
+  .eq('type', 'Delivery')
+  .in('status', ['WAITING', 'PREPARING', 'READY'])
+  .order('created_at', {ascending: false});
       orders = data || [];
     } catch(e) {}
   } else { orders = completedOrders.filter(o=>o.type==='Delivery'); }
@@ -2802,7 +2804,9 @@ async function renderDeliveryView() {
  const now = new Date(); grid.innerHTML = '';
   orders.forEach((o, index) => {
     const created = new Date(o.created_at||o.time);
-    const elapsed = Math.floor((now-created)/1000);
+    const isCompleted = o.status === 'OUT' || o.status === 'PAID' || o.status === 'VOIDED';
+const elapsed = isCompleted ? 0 : Math.floor((now-created)/1000);
+const timerColor = isCompleted ? 'var(--text3)' : 'var(--red)';
     const total = (o.subtotal||0)+(o.delivery_fee||0);
     const statusMap = { WAITING:'sb-waiting', PREPARING:'sb-preparing', READY:'sb-ready', OUT:'sb-out' };
     const isNew = elapsed < 180;
@@ -2811,7 +2815,7 @@ async function renderDeliveryView() {
     card.innerHTML = `
       ${isNew ? '<div style="display:inline-block;background:var(--red);color:white;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;margin-bottom:6px;animation:pulse-warn 1s infinite;letter-spacing:1px;">🔴 NEW ORDER</div>' : ''}
       <div class="dc-header">
-        <div><div class="dc-id">#${orders.length - index} &nbsp;·&nbsp; ${(o.id||'').toString().slice(0,8).toUpperCase()}</div><div class="dc-timer">${fmtSeconds(elapsed)}</div></div>
+        <div><div class="dc-id">#${orders.length - index} &nbsp;·&nbsp; ${(o.id||'').toString().slice(0,8).toUpperCase()}</div><div class="dc-timer" style="color:${timerColor};">${isCompleted ? '✓ Done' : fmtSeconds(elapsed)}</div></div>
         <span class="status-badge ${statusMap[o.status]||'sb-waiting'}">${o.status||'WAITING'}</span>
       </div>
       <div class="dc-location">📍 ${o.location||'—'}</div>
@@ -2847,19 +2851,80 @@ async function assignRiderDel(orderId, rider, btn) {
 }
 
 async function updateDeliveryStatus(orderId, status) {
-  if (sb) { try { await sb.from('kitchen_orders').update({status}).eq('id',orderId); } catch(e){} }
-  showToast(`Status → ${status}`,'success');
-  if (status === 'OUT' || status === 'PAID') {
-    voidedOrderIds.add(orderId);
-    for (const tname in tableOrders) {
-      if (tableOrders[tname].id === orderId || tableOrders[tname].webOrderId === orderId) {
-        delete tableOrders[tname];
-        break;
+  try {
+    const updateData = { status };
+if (sb) {
+  const { error } = await sb.from('kitchen_orders').update(updateData).eq('id', orderId);
+      if (error) { showToast('Update failed', 'error'); return; }
+    }
+    showToast(`Status → ${status}`, 'success');
+
+    if (status === 'OUT' || status === 'PAID') {
+      voidedOrderIds.add(orderId);
+      for (const tname in tableOrders) {
+        if (tableOrders[tname].id === orderId || tableOrders[tname].webOrderId === orderId) {
+          delete tableOrders[tname];
+          break;
+        }
+      }
+      renderTableMap();
+
+      // Save to report
+      if (sb) {
+        try {
+          const { data: ko } = await sb.from('kitchen_orders').select('*').eq('id', orderId).single();
+          if (ko) {
+            const total = (ko.subtotal || 0) + (ko.delivery_fee || 0);
+            const billNo = String(billCounter).padStart(3, '0');
+            const alreadySaved = completedOrders.find(o => o.kitchenOrderId === orderId);
+            if (!alreadySaved) {
+              const sale = {
+                billNo, table: ko.location, type: 'Delivery',
+                items: [], total, method: 'cash',
+                time: new Date(), staff: currentStaff, branch: activeBranch,
+                customerName: ko.customer_name || '',
+                customerPhone: ko.phone || '',
+                deliveryAddress: ko.location || '',
+                deliveryCharge: ko.delivery_fee || 0,
+                sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+                splitCash: 0, splitCard: 0,
+                kitchenOrderId: orderId
+              };
+              completedOrders.push(sale);
+              await sb.from('shift_transactions').insert([{
+                branch: activeBranch, date: todayKey(),
+                bill_no: billNo, type: 'Delivery',
+                table_loc: ko.location || '',
+                items_text: ko.items || '',
+                subtotal: ko.subtotal || 0,
+                sc: 0, sc_pct: 0,
+                discount: 0, delivery_charge: ko.delivery_fee || 0,
+                total, method: 'cash',
+                cash_received: 0, split_cash: 0, split_card: 0,
+                staff: currentStaff,
+                customer_name: ko.customer_name || '',
+                customer_phone: ko.phone || '',
+                delivery_address: ko.location || '',
+                kitchen_order_id: orderId
+              }]);
+              billCounter++;
+              localStorage.setItem('pos_billno_' + todayKey(), billCounter);
+              cashInHand += total;
+              document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+              document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
+              saveTodaySales();
+            }
+          }
+        } catch(e) { console.error('Delivery OUT save error:', e); }
       }
     }
-    renderTableMap();
+
+    setTimeout(renderDeliveryView, 800);
+
+  } catch(e) {
+    showToast('Error updating status', 'error');
+    console.error(e);
   }
-  setTimeout(renderDeliveryView, 300);
 }
 
 async function deleteDelivery(orderId) {
@@ -3595,6 +3660,7 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
