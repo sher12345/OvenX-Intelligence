@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -390,6 +388,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <button class="nav-btn" onclick="switchView('cash')">💵 Cash</button>
 <button class="nav-btn" onclick="switchView('closing')">📊 Closing</button>
 <button class="nav-btn" onclick="switchView('history')">📅 History</button>
+<button class="print-report-btn" onclick="closeAllShifts()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">
+  🔒 CLOSE ALL SHIFTS & RESET
+</button>
     </div>
     <div class="pos-topbar-right">
       <div class="topbar-info">Staff: <span id="bar-staff">—</span></div>
@@ -588,11 +589,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
           <h2 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Day Closing Report</h2>
           <div class="closing-date" id="closing-date"></div>
         </div>
-        <div style="display:flex;gap:7px;">
-          <button class="refresh-btn" onclick="renderClosingReport()">↻ Refresh</button>
-          <button class="print-report-btn" onclick="printClosingReport()">🖨️ Print Report</button>
-<button class="print-report-btn" onclick="exportClosingExcel()" style="color:var(--green);border-color:var(--green);">📊 Export Excel</button>
-        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+  <button class="refresh-btn" onclick="renderClosingReport()">↻ Refresh</button>
+  <button class="print-report-btn" onclick="printClosingReport()">🖨️ Print Report</button>
+  <button class="print-report-btn" onclick="exportClosingExcel()" style="color:var(--green);border-color:var(--green);">📊 Export Excel</button>
+  <button class="print-report-btn" onclick="closeAllShiftsAndArchive()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">
+    🔒 CLOSE SHIFTS & START FRESH
+  </button>
+</div>
       </div>
       <div class="closing-stats" id="closing-stats"></div>
       <div class="closing-breakdown" id="closing-breakdown"></div>
@@ -926,8 +930,17 @@ async function doLogin() {
     currentStaffRole = data.role;
     shiftStart = new Date();
 
-    // Clean up old localStorage keys from previous days
+            // Clean up old localStorage keys from previous days
     const todayK = todayKey();
+    
+    // 🆕 Clear old closure flags if it's a new day
+    const lastClosedDate = localStorage.getItem('pos_closed_date_' + activeBranch);
+    if (lastClosedDate && lastClosedDate !== todayK) {
+      console.log('New day detected, clearing old closure flag');
+      localStorage.removeItem('pos_closed_date_' + activeBranch);
+      localStorage.removeItem('pos_closed_at_' + activeBranch);
+    }
+    
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('pos_sales_') && !key.endsWith(todayK)) localStorage.removeItem(key);
       if (key.startsWith('pos_opening_') && !key.endsWith(todayK)) localStorage.removeItem(key);
@@ -1041,9 +1054,11 @@ async function doLogout() {
 }
 
 function todayKey() {
+  // Use Pakistan timezone (UTC+5) consistently
   const now = new Date();
+  // Format as YYYY-MM-DD in Pakistan time
   const pkTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
-  return pkTime.toISOString().slice(0,10);
+  return pkTime.toISOString().slice(0, 10);
 }
 // ══════════════════════════════════
 // CLOCK & LIVE RELOAD
@@ -3462,23 +3477,82 @@ function saveTodaySales() {
 }
 async function loadTodaySales() {
   if (!sb) return;
+  
   try {
-    // Load opening balance from Supabase
+    const todayK = todayKey();
+    
+    // 🆕 KEY FIX: Check localStorage closure flags FIRST (fastest, works offline)
+    const closedDate = localStorage.getItem('pos_closed_date_' + activeBranch);
+    const closedAtStr = localStorage.getItem('pos_closed_at_' + activeBranch);
+    const closedAt = closedAtStr ? parseInt(closedAtStr) : 0;
+    const hoursSinceClose = closedAt > 0 ? (Date.now() - closedAt) / (1000 * 60 * 60) : 999;
+    
+    // DEBUG: Log what we found
+    console.log('Closure check:', { closedDate, todayK, closedAt, hoursSinceClose, match: closedDate === todayK });
+    
+    // If closed today, start fresh with 0
+    if (closedDate === todayK) {
+      console.log('✅ Shift was closed today — starting FRESH with 0');
+      openingBalance = 0;
+      billCounter = 1;
+      completedOrders = [];
+      cashInHand = 0;
+      document.getElementById('bar-cash').textContent = 'Rs 0';
+      document.getElementById('bar-billno').textContent = '001';
+      document.getElementById('opening-bal-input').value = '';
+      
+      // Clear the flag so tomorrow starts fresh
+      // But keep it for 1 hour to prevent accidental re-login loading data
+      if (hoursSinceClose > 1) {
+        localStorage.removeItem('pos_closed_date_' + activeBranch);
+        localStorage.removeItem('pos_closed_at_' + activeBranch);
+      }
+      return; // EXIT — don't load old data
+    }
+
+    // Fallback: Check Supabase (for multi-device or if localStorage was cleared)
+    const { data: closedCheck } = await sb.from('shift_closures')
+      .select('*')
+      .eq('branch', activeBranch)
+      .eq('date', todayK)
+      .maybeSingle(); // Use maybeSingle to avoid errors if not found
+    
+    if (closedCheck) {
+      console.log('✅ Shift was closed (Supabase check) — starting FRESH with 0');
+      // Also set localStorage flag for next time
+      localStorage.setItem('pos_closed_date_' + activeBranch, todayK);
+      localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
+      
+      openingBalance = 0;
+      billCounter = 1;
+      completedOrders = [];
+      cashInHand = 0;
+      document.getElementById('bar-cash').textContent = 'Rs 0';
+      document.getElementById('bar-billno').textContent = '001';
+      document.getElementById('opening-bal-input').value = '';
+      return; // EXIT — don't load old data
+    }
+
+    // NOT CLOSED — Load normally from Supabase
+    console.log('❌ Shift not closed — loading data from Supabase');
+    
+    // Load opening balance
     const { data: ob } = await sb.from('opening_balance')
       .select('amount,set_by')
       .eq('branch', activeBranch)
-      .eq('date', todayKey())
-      .single();
+      .eq('date', todayK)
+      .maybeSingle();
+      
     if (ob) {
       openingBalance = ob.amount || 0;
       document.getElementById('opening-bal-input').value = openingBalance;
     }
 
-    // Load today's transactions from Supabase
+    // Load transactions
     const { data: txs } = await sb.from('shift_transactions')
-      .select('bill_no, type, table_loc, items, items_text, total, method, created_at, staff, customer_name, customer_phone, delivery_address, delivery_charge, sc, sc_pct, discount, cash_received, split_cash, split_card, return_reason')
+      .select('*')
       .eq('branch', activeBranch)
-      .eq('date', todayKey())
+      .eq('date', todayK)
       .order('created_at', { ascending: true });
 
     if (txs && txs.length) {
@@ -3506,14 +3580,22 @@ async function loadTodaySales() {
       }));
     }
 
+    // Calculate totals
     salesTotal = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
     cashInHand = openingBalance
       + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0)
       + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0)
       - completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
+    
     document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
     document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
-  } catch(e) { console.error('loadTodaySales error:', e); }
+    
+  } catch(e) { 
+    console.error('loadTodaySales error:', e);
+    // On error, start fresh to be safe
+    openingBalance = 0;
+    completedOrders = [];
+  }
 }
 
 // ══════════════════════════════════
@@ -3778,7 +3860,240 @@ function showToast(msg, type='success') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
+async function closeAllShifts() {
+  if (!confirm('⚠️ WARNING: This will FINALIZE all sales and CLEAR all data.\n\nOnly use this after 2AM when ALL shifts are done.\n\nContinue?')) return;
+  
+  const adminPin = prompt('Enter Admin PIN to authorize:');
+  if (adminPin !== '7530' && adminPin !== '1234') {
+    showToast('Wrong PIN — operation cancelled', 'error');
+    return;
+  }
+
+  showToast('Finalizing all shifts...', 'success');
+
+  // CAPTURE DATE BEFORE ANYTHING ELSE
+  const closedDate = todayKey();
+
+  // 1. Get ALL unpaid/active orders and mark them
+  const activeTables = Object.keys(tableOrders).length;
+  if (activeTables > 0) {
+    if (!confirm(`⚠️ ${activeTables} table(s) still have open orders!\n\nThese will be marked as unpaid/void. Continue?`)) return;
+  }
+
+  // 2. Save final shift report
+  await saveShiftReport();
+
+  // 3. Mark ALL kitchen orders as completed/closed for this branch
+  if (sb) {
+    try {
+      // Close any lingering orders
+      await sb.from('kitchen_orders')
+        .update({ status: 'CLOSED', closed_at: new Date().toISOString(), closed_by: currentStaff })
+        .eq('branch', activeBranch)
+        .in('status', ['WAITING', 'PREPARING', 'READY']);
+      
+      // Mark shift as formally closed
+      await sb.from('shift_closures').insert([{
+        branch: activeBranch,
+        date: closedDate,
+        closed_at: new Date().toISOString(),
+        closed_by: currentStaff,
+        final_total: completedOrders
+          .filter(o => !['cash-in','cash-out'].includes(o.method))
+          .reduce((s,o) => s + o.total, 0),
+        bills_count: completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).length
+      }]);
+    } catch(e) { console.error('Close orders error:', e); }
+  }
+
+  // 4. Calculate grand totals for display
+  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
+  const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
+  const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
+    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
+  const totalCard = allSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0)
+    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
+  
+  const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
+  const finalHandOver = openingBalance + totalCash - cashOuts;
+
+  // 5. Print final summary
+  const summaryHTML = `
+    <div style="font-family:'Courier New',monospace;color:black;padding:10px;width:72mm;">
+      <div style="text-align:center;font-size:20px;font-weight:900;">OVEN X</div>
+      <div style="text-align:center;font-size:14px;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px;margin:6px 0;">
+        FINAL CLOSE — ${activeBranch}
+      </div>
+      <div style="font-size:11px;text-align:center;margin-bottom:8px;">
+        ${new Date().toLocaleString('en-PK')}
+      </div>
+      <div style="font-size:13px;line-height:2;">
+        <div style="display:flex;justify-content:space-between;"><span>Total Bills:</span><b>${allSales.length}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span>Grand Total:</span><b>Rs ${grandTotal}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span>Cash Total:</span><span>Rs ${totalCash}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Card Total:</span><span>Rs ${totalCard}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Opening:</span><span>Rs ${openingBalance}</span></div>
+        <div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:4px;margin-top:4px;">
+          <span><b>HAND OVER:</b></span>
+          <span><b>Rs ${finalHandOver}</b></span>
+        </div>
+      </div>
+      <div style="border-top:2px dashed #000;margin-top:10px;padding-top:6px;text-align:center;font-size:12px;font-weight:bold;">
+        ALL SHIFTS CLOSED<br>System Reset Complete
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('print-area').innerHTML = summaryHTML;
+  window.print();
+  
+  // 6. 🆕 KEY FIX: Mark as closed BEFORE clearing everything
+  localStorage.setItem('pos_closed_date_' + activeBranch, closedDate);
+  localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
+
+  // 7. CLEAR EVERYTHING
+  setTimeout(() => {
+    // Clear localStorage for ALL dates (except closure flags which we just set)
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('pos_') && !key.startsWith('pos_closed_date_') && !key.startsWith('pos_closed_at_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Reset all variables
+    completedOrders = [];
+    tableOrders = {};
+    openingBalance = 0;
+    cashInHand = 0;
+    salesTotal = 0;
+    billCounter = 1;
+    pendingWebOrders = [];
+    voidedOrderIds.clear();
+    paidOrderIds.clear();
+    
+    // Clear Supabase real-time connection
+    if (liveReloadInterval) clearInterval(liveReloadInterval);
+    
+    showToast('All shifts closed. System reset.', 'success');
+    
+    // Force reload after 2 seconds
+    setTimeout(() => location.reload(), 2000);
+  }, 1000);
+}
+async function closeAllShiftsAndArchive() {
+  // 1. Confirmations
+  if (!confirm('🔒 FINAL SHIFT CLOSE\n\nThis will:\n• Save all data to history\n• Print final report\n• START FRESH with 0\n\nContinue?')) return;
+  
+  const adminPin = prompt('Enter Admin PIN:');
+  if (adminPin !== '7530' && adminPin !== '1234') {
+    showToast('Wrong PIN', 'error');
+    return;
+  }
+
+  showToast('Archiving shift data...', 'success');
+
+  // CAPTURE DATE BEFORE ANYTHING ELSE
+  const closedDate = todayKey();
+
+  // 2. Save final shift report
+  await saveShiftReport();
+
+  // 3. Mark this branch/date as CLOSED in Supabase
+  if (sb) {
+    try {
+      // Archive: Mark all kitchen orders as closed
+      await sb.from('kitchen_orders')
+        .update({ 
+          status: 'CLOSED', 
+          closed_at: new Date().toISOString(),
+          closed_by: currentStaff 
+        })
+        .eq('branch', activeBranch)
+        .in('status', ['WAITING', 'PREPARING', 'READY']);
+      
+      // Mark shift as formally closed
+      await sb.from('shift_closures').insert([{
+        branch: activeBranch,
+        date: closedDate,
+        closed_at: new Date().toISOString(),
+        closed_by: currentStaff,
+        final_total: completedOrders
+          .filter(o => !['cash-in','cash-out'].includes(o.method))
+          .reduce((s,o) => s + o.total, 0),
+        bills_count: completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).length
+      }]);
+    } catch(e) { console.error('Archive error:', e); }
+  }
+
+  // 4. Print final summary
+  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
+  const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
+  const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
+    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
+  
+  const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
+  const finalHandOver = openingBalance + totalCash - cashOuts;
+
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:'Courier New',monospace;color:black;padding:10px;width:72mm;">
+      <div style="text-align:center;font-size:20px;font-weight:900;letter-spacing:2px;">OVEN X</div>
+      <div style="text-align:center;font-size:12px;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px;margin:6px 0;">
+        ${activeBranch} — SHIFT CLOSED
+      </div>
+      <div style="font-size:11px;text-align:center;margin-bottom:8px;">
+        ${new Date().toLocaleString('en-PK')}
+      </div>
+      <div style="font-size:13px;line-height:1.8;">
+        <div style="display:flex;justify-content:space-between;"><span>Total Bills:</span><b>${allSales.length}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span>Grand Total:</span><b>Rs ${grandTotal}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span>Cash:</span><span>Rs ${totalCash}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Hand Over:</span><b>Rs ${finalHandOver}</b></span></div>
+      </div>
+      <div style="border-top:2px dashed #000;margin-top:10px;padding-top:6px;text-align:center;font-size:11px;">
+        <b>SHIFT ARCHIVED</b><br>
+        New shift starts from 0
+      </div>
+    </div>
+  `;
+  window.print();
+
+  // 5. CLEAR LOCAL STATE ONLY — data stays in Supabase history
+  
+  // 🆕 KEY FIX: Mark this date as closed in localStorage (persists across reloads!)
+  localStorage.setItem('pos_closed_date_' + activeBranch, closedDate);
+  localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
+  
+  // Clear other localStorage keys for current shift
+  const keysToRemove = Object.keys(localStorage).filter(k => 
+    k.startsWith('pos_sales_') || 
+    k.startsWith('pos_opening_') || 
+    k.startsWith('pos_billno_')
+  );
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  // Reset all in-memory variables to ZERO
+  completedOrders = [];
+  tableOrders = {};
+  openingBalance = 0;
+  cashInHand = 0;
+  salesTotal = 0;
+  billCounter = 1;
+  pendingWebOrders = [];
+  voidedOrderIds.clear();
+  paidOrderIds.clear();
+
+  // Clear UI
+  document.getElementById('bar-cash').textContent = 'Rs 0';
+  document.getElementById('bar-billno').textContent = '001';
+  document.getElementById('opening-bal-input').value = '';
+
+  showToast('✅ Shift archived. Starting fresh...', 'success');
+  
+  // Force reload to clean state
+  setTimeout(() => location.reload(), 1500);
+}
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
