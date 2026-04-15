@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1072,8 +1073,8 @@ function startLiveReload() {
       .subscribe();
   }
 
-  // Fallback poll every 15s
-  liveReloadInterval = setInterval(pollWebOrders, 15000);
+  // Fallback poll every 60s
+  liveReloadInterval = setInterval(pollWebOrders, 60000);
   pollWebOrders();
 }
 // ══════════════════════════════════
@@ -1171,11 +1172,17 @@ async function applyPOSOverrides() {
 // via the customer-facing web app (QR scan) that match a table
 // and haven't been "confirmed" (printed) by the POS yet.
 // ══════════════════════════════════
+// ====================== TOP OF FILE (Global/Cache variables) ======================
+let _cachedPaidIds = new Set();
+let _paidIdsCacheTime = 0;
+// ================================================================================
+
 async function pollWebOrders() {
   if (!sb) return;
+
   try {
     const { data, error } = await sb.from('kitchen_orders')
-      .select('*')
+      .select('id, type, location, items, status, subtotal, delivery_fee, created_at, rider, customer_name, phone, source')
       .eq('branch', activeBranch)
       .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In),and(status.eq.READY,type.eq.Takeaway),and(status.eq.READY,type.eq.Delivery)')
       .order('created_at', { ascending: false })
@@ -1185,14 +1192,21 @@ async function pollWebOrders() {
 
     const dbOrderIds = new Set(data.map(o => o.id));
 
-    const { data: paidTx } = await sb.from('shift_transactions')
-      .select('kitchen_order_id')
-      .eq('date', todayKey())
-      .eq('branch', activeBranch)
-      .not('kitchen_order_id', 'is', null);
+    // === Cached paid IDs (refreshed every 5 minutes) ===
+    if (Date.now() - _paidIdsCacheTime > 5 * 60 * 1000) { // 5 minutes
+      const { data: paidTx } = await sb.from('shift_transactions')
+        .select('kitchen_order_id')
+        .eq('date', todayKey())
+        .eq('branch', activeBranch)
+        .not('kitchen_order_id', 'is', null);
 
-    const dbPaidIds = new Set((paidTx || []).map(t => t.kitchen_order_id));
+      _cachedPaidIds = new Set((paidTx || []).map(t => t.kitchen_order_id));
+      _paidIdsCacheTime = Date.now();
+    }
 
+    const dbPaidIds = _cachedPaidIds;
+
+    // Clean up stale table orders
     for (const tname in tableOrders) {
       const order = tableOrders[tname];
       if (order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
@@ -1212,6 +1226,7 @@ async function pollWebOrders() {
         return tNorm === locNorm;
       });
 
+      // Takeaway / Car Dine handling
       if (!tableId && (
         orderType === 'Takeaway' ||
         loc.toLowerCase() === 'takeaway' ||
@@ -1223,13 +1238,14 @@ async function pollWebOrders() {
         );
       }
 
-      // ✅ ADD THIS BLOCK: Handle POS-created delivery orders
+      // ✅ Handle POS-created Delivery orders
       if (!tableId && order.type === 'Delivery' && order.source === 'POS') {
-        // First, try to match by existing ID in tableOrders (reconnecting)
-        tableId = Object.keys(tableOrders).find(t => 
+        // Reconnect if already exists
+        tableId = Object.keys(tableOrders).find(t =>
           tableOrders[t].id === order.id
         );
-        // If not found, assign a free DEL slot
+
+        // Assign new DEL slot if not found
         if (!tableId) {
           tableId = TABLES['Delivery'].find(t => !tableOrders[t]);
         }
@@ -1238,18 +1254,24 @@ async function pollWebOrders() {
       if (!tableId) return;
 
       const existing = tableOrders[tableId];
+
+      // Skip if already correctly loaded from web
       if (existing && existing.webOrderId === order.id) return;
+
+      // Don't override manually created POS orders
       if (existing && !existing.fromWeb) return;
+
       if (voidedOrderIds.has(order.id)) return;
       if (dbPaidIds.has(order.id)) return;
-      
+
+      // Skip READY Takeaway/Car orders that haven't been accepted yet
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
           && order.status === 'READY'
           && !existing) return;
 
       const isDineIn = orderType === 'Dine-In';
       const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
-      
+
       tableOrders[tableId] = {
         table: tableId,
         type: orderType,
@@ -1276,6 +1298,7 @@ async function pollWebOrders() {
     updatePendingBadges();
     renderTableMap();
 
+    // Delivery badge count
     sb.from('kitchen_orders')
       .select('id')
       .eq('branch', activeBranch)
@@ -1284,11 +1307,17 @@ async function pollWebOrders() {
       .then(({ data }) => {
         const badge = document.getElementById('badge-delivery');
         const count = (data || []).length;
-        if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
-        else badge.classList.remove('show');
+        if (count > 0) {
+          badge.textContent = count;
+          badge.classList.add('show');
+        } else {
+          badge.classList.remove('show');
+        }
       });
 
-  } catch(e) { console.error('pollWebOrders:', e); }
+  } catch (e) {
+    console.error('pollWebOrders:', e);
+  }
 }
 
 function parseItemsFromText(text, knownSubtotal, isDineIn) {
@@ -2551,6 +2580,8 @@ async function markTakeawayPaid() {
       }]);
     } catch(e) { console.error('Takeaway save error:', e); }
   }
+  // 🆕 Invalidate paid IDs cache so next poll sees fresh data
+  _paidIdsCacheTime = 0;
   if (currentOrder.id) paidOrderIds.add(currentOrder.id);
   const cashPart = payM === 'cash' ? grand : 0;
   cashInHand += cashPart;
@@ -2664,7 +2695,7 @@ async function completePayment() {
     splitCash: payMethod === 'split' ? (parseFloat(document.getElementById('split-cash').value) || 0) : 0,
     splitCard: payMethod === 'split' ? (parseFloat(document.getElementById('split-card').value) || 0) : 0,
   };
-  completedOrders.push(sale);
+ completedOrders.push(sale);
   if (sb) {
     try {
       await sb.from('shift_transactions').insert([{
@@ -2689,6 +2720,8 @@ async function completePayment() {
       }]);
     } catch(e) { console.error('Sale save error:', e); }
   }
+  // 🆕 Invalidate paid IDs cache so next poll sees fresh data
+  _paidIdsCacheTime = 0;
   const cashPart = payMethod === 'cash' ? grand : payMethod === 'split' ? sale.splitCash : 0;
   cashInHand += cashPart;
   salesTotal += grand;
@@ -2865,8 +2898,8 @@ async function renderDeliveryView() {
   let orders = [];
   if (sb) {
     try {
-      const { data } = await sb.from('kitchen_orders').select('*')
-  .eq('branch', activeBranch)
+      const { data } = await sb.from('kitchen_orders')
+.select('id, type, location, items, status, subtotal, delivery_fee, created_at, rider, customer_name, phone, source')  .eq('branch', activeBranch)
   .eq('type', 'Delivery')
   .in('status', ['WAITING', 'PREPARING', 'READY'])
   .order('created_at', {ascending: false});
@@ -2957,7 +2990,8 @@ if (sb) {
       // Save to report
       if (sb) {
         try {
-          const { data: ko } = await sb.from('kitchen_orders').select('*').eq('id', orderId).single();
+          const { data: ko } = await sb.from('kitchen_orders')
+          .select('id, subtotal, delivery_fee, location, items, customer_name, phone').eq('id', orderId).single();
           if (ko) {
             const total = (ko.subtotal || 0) + (ko.delivery_fee || 0);
             const billNo = String(billCounter).padStart(3, '0');
@@ -3197,7 +3231,7 @@ let voidTotal = voids.reduce((s,o) => s + Math.abs(o.total), 0);
 if (sb) {
   try {
     const { data: voidedData } = await sb.from('kitchen_orders')
-      .select('*')
+      .select('id, subtotal, location, type, items, voided_at, voided_by, voided_reason, created_at')
       .eq('branch', activeBranch)
       .eq('status', 'VOIDED')
       .gte('created_at', new Date().toISOString().slice(0,10) + 'T00:00:00.000Z');
@@ -3339,7 +3373,7 @@ async function exportClosingExcel() {
   if (sb) {
     try {
       const { data: voidedData } = await sb.from('kitchen_orders')
-        .select('*')
+        .select('id, subtotal, location, type, items, voided_at, voided_by, voided_reason, created_at')
         .eq('branch', activeBranch)
         .eq('status', 'VOIDED')
         .gte('created_at', new Date().toISOString().slice(0,10) + 'T00:00:00.000Z');
@@ -3442,7 +3476,7 @@ async function loadTodaySales() {
 
     // Load today's transactions from Supabase
     const { data: txs } = await sb.from('shift_transactions')
-      .select('*')
+      .select('bill_no, type, table_loc, items, items_text, total, method, created_at, staff, customer_name, customer_phone, delivery_address, delivery_charge, sc, sc_pct, discount, cash_received, split_cash, split_card, return_reason')
       .eq('branch', activeBranch)
       .eq('date', todayKey())
       .order('created_at', { ascending: true });
@@ -3490,7 +3524,7 @@ function exportDeliveryExcel() {
   showToast('Preparing export...', 'success');
 
   sb.from('kitchen_orders')
-    .select('*')
+    .select('id, type, location, items, status, subtotal, delivery_fee, created_at, rider, customer_name, phone')
     .eq('branch', activeBranch)
     .eq('type', 'Delivery')
     .order('created_at', { ascending: true })
@@ -3632,14 +3666,14 @@ async function loadHistoryForDate(dateStr) {
   try {
     // Load shift reports for this date
     const { data: reports } = await sb.from('shift_reports')
-      .select('*')
+      .select('staff, shift_start, shift_end, total_sales, bills_count, cash_sales, card_sales, sc_collected, discounts_given, voids_count, voids_amount, expected_in_drawer, created_at')
       .eq('branch', branch)
       .eq('date', dateStr)
       .order('created_at', { ascending: true });
 
     // Load individual transactions for this date
     const { data: txs } = await sb.from('shift_transactions')
-      .select('*')
+      .select('bill_no, type, table_loc, items_text, total, method, created_at, staff')
       .eq('branch', branch)
       .eq('date', dateStr)
       .order('created_at', { ascending: true });
@@ -3745,6 +3779,7 @@ function showToast(msg, type='success') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
