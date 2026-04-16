@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -576,7 +577,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <div class="cash-grid" id="cash-cards"></div>
       <div class="cash-section-title">Transactions Today</div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;">
-        <table class="transactions-table"><thead><tr><th>Bill#</th><th>Time</th><th>Table / Type</th><th>Items</th><th>Payment</th><th style="text-align:right;">Amount</th></tr></thead><tbody id="tx-tbody"></tbody></table>
+        <table class="transactions-table"><thead><tr><th>Bill#</th><th>Time</th><th>Table / Type</th><th>Items</th><th>Payment</th><th style="text-align:right;">Amount</th><th>🖨️</th></tr></thead><tbody id="tx-tbody"></tbody></table>
       </div>
     </div>
   </div>
@@ -2385,29 +2386,44 @@ function applySplitByItems() {
   });
   if (!selected.length) { showToast('Select at least one item', 'error'); return; }
 
-var selectedFood = selected.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-var totalFood = currentOrder.items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-var scRate = (currentOrder.type === 'Dine-In' && scEnabled) ? (getSCPct() / 100) : 0;
-var proportion = totalFood > 0 ? selectedFood / totalFood : 1;
-var pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
-var discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-var fullTotals = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType, getDelCharge());
-var splitTotal = Math.ceil(fullTotals.grand * proportion);  var splitSale = {
+// ✅ FIX 2: Each person pays proportional SC + discount for their items only
+  var totalFood = currentOrder.items.reduce(function(s,i){return s+(i.returned?0:i.price*i.qty);},0);
+  var selectedFood = selected.reduce(function(s,i){return s+(i.returned?0:i.price*i.qty);},0);
+  var totalDiscountable = currentOrder.items.reduce(function(s,i){
+    if(i.returned)return s;
+    var isDrink=DISCOUNT_EXCLUDED.some(function(d){return i.name.includes(d);});
+    return s+(isDrink?0:i.price*i.qty);
+  },0);
+  var selectedDiscountable = selected.reduce(function(s,i){
+    if(i.returned)return s;
+    var isDrink=DISCOUNT_EXCLUDED.some(function(d){return i.name.includes(d);});
+    return s+(isDrink?0:i.price*i.qty);
+  },0);
+  var pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+  var scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
+  var discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  var fullTotals = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, getDelCharge());
+  var foodRatio = totalFood > 0 ? selectedFood / totalFood : 1;
+  var discRatio = totalDiscountable > 0 ? selectedDiscountable / totalDiscountable : foodRatio;
+  var splitSC   = Math.round(fullTotals.sc * foodRatio);
+  var splitDisc = Math.round(fullTotals.disc * discRatio);
+  var splitTotal = Math.max(0, selectedFood + splitSC - splitDisc);
+  var splitSale = {
     billNo: 'SPL', table: currentOrder.table, type: currentOrder.type,
     items: selected, total: splitTotal, method: splitItemMethod,
     time: new Date(), staff: currentStaff, branch: activeBranch,
     customerName: currentOrder.customerName || '',
     customerPhone: currentOrder.customerPhone || '',
     deliveryAddress: '', deliveryCharge: 0,
-sc: Math.ceil(fullTotals.grand * proportion) - selectedFood, disc: 0, scPct: getSCPct(), discType: 'flat', discAmount: 0,
-splitCash: 0, splitCard: 0
+    sc: splitSC, disc: splitDisc, scPct: pct, discType: discType, discAmount: discAmt,
+    splitCash: 0, splitCard: 0
   };
   printReceipt(splitSale);
   currentOrder.items = remaining;
   saveTableOrder();
   renderOrderItems();
   closeModal('split-modal');
-  showToast('Split bill printed — ' + selected.length + ' item(s) removed', 'success');
+  showToast('Split: Rs '+splitTotal+' (SC Rs '+splitSC+', Disc Rs '+splitDisc+')', 'success');
 }
 
 function applySplitByAmount() {
@@ -2510,6 +2526,7 @@ function printBillOnly() {
 // ══════════════════════════════════
 // PAYMENT
 // ══════════════════════════════════
+let _paymentInProgress = false;  // ✅ FIX 7: double-tap guard
 function handOverTakeaway() {
   if (currentOrder.table) delete tableOrders[currentOrder.table];
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
@@ -2681,6 +2698,12 @@ function calcSplit() {
 }
 
 async function completePayment() {
+  // ✅ FIX 7: prevent double-tap / double-click
+  if (_paymentInProgress) { showToast('Payment already processing — wait', 'error'); return; }
+  _paymentInProgress = true;
+  const payBtn = document.querySelector('.pay-complete-btn');
+  if (payBtn) { payBtn.disabled=true; payBtn.textContent='⏳ Processing...'; payBtn.style.opacity='0.6'; }
+  try {
   const grand = parseInt(document.getElementById('pay-grand-total').textContent.replace('Rs ','')) || 0;
   if (payMethod === 'cash') {
     const received = parseFloat(document.getElementById('cash-received').value) || 0;
@@ -2759,6 +2782,12 @@ async function completePayment() {
   switchView('tables');
   renderTableMap();
   showToast('Bill #' + billNo + ' — Rs ' + grand + ' collected 💰', 'success');
+  } finally {
+    // ✅ FIX 7: always re-enable
+    _paymentInProgress = false;
+    const pb = document.querySelector('.pay-complete-btn');
+    if (pb) { pb.disabled=false; pb.textContent='✅ COMPLETE SALE & PRINT'; pb.style.opacity='1'; }
+  }
 }
 
 // ══════════════════════════════════
@@ -2776,65 +2805,67 @@ function printKitchenTicket() {
     ? (document.getElementById('delivery-address').value || currentOrder.deliveryAddress || '') : '';
   const time = new Date().toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  // Build items text
+  // ✅ FIX 4: Sequential KOT number on every kitchen ticket
+  const kotNum = String(billCounter).padStart(3,'0');
+  // ✅ FIX 5: Token matches customer slip exactly
+  const tokenNum = (type === 'Takeaway' && currentOrder.tokenNo) ? currentOrder.tokenNo : kotNum;
+
   const itemsHTML = currentOrder.items.map(i => {
-    let html = `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #ccc;">
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #ccc;">
       <div style="flex:1;">
         <div style="font-size:17px;font-weight:900;letter-spacing:0.3px;">${i.qty}x &nbsp;${i.name}</div>
         ${i.note ? `<div style="font-size:13px;font-weight:700;color:#333;margin-top:3px;padding-left:18px;">↳ ${i.note}</div>` : ''}
       </div>
     </div>`;
-    return html;
   }).join('');
 
-  // Header based on type
   let headerHTML = '';
 
   if (type === 'Dine-In') {
     headerHTML = `
       <div style="background:#000;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.7;">DINE-IN</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.8;">DINE-IN &nbsp;·&nbsp; KOT #${kotNum}</div>
         <div style="font-size:42px;font-weight:900;letter-spacing:1px;line-height:1;">${table}</div>
       </div>`;
 
   } else if (type === 'Takeaway') {
     headerHTML = `
       <div style="background:#1a5c80;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.7;">TAKEAWAY</div>
-        <div style="font-size:32px;font-weight:900;line-height:1.2;">${custName || table}</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.8;">TAKEAWAY &nbsp;·&nbsp; KOT #${kotNum}</div>
+        <div style="font-size:48px;font-weight:900;line-height:1;">🎫 #${tokenNum}</div>
+        ${custName ? `<div style="font-size:18px;font-weight:800;margin-top:4px;opacity:0.9;">👤 ${custName}</div>` : ''}
       </div>`;
 
   } else if (type === 'Delivery') {
     headerHTML = `
       <div style="background:#922b21;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.7;">DELIVERY</div>
-        <div style="font-size:22px;font-weight:900;line-height:1.3;margin-top:4px;">📍 ${delAddr || table}</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.8;">DELIVERY &nbsp;·&nbsp; KOT #${kotNum}</div>
+        <div style="font-size:20px;font-weight:900;line-height:1.3;margin-top:4px;">📍 ${delAddr || table}</div>
+        ${custName ? `<div style="font-size:16px;font-weight:700;margin-top:4px;opacity:0.9;">👤 ${custName}</div>` : ''}
       </div>`;
   }
 
   document.getElementById('print-area').innerHTML = `
     <div style="font-family:'Courier New',monospace;color:black;padding:6px;width:72mm;">
 
-      <!-- TOP: OVEN X + TIME -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:2px solid #000;padding-bottom:6px;">
         <div style="font-size:20px;font-weight:900;letter-spacing:2px;">OVEN X</div>
-        <div style="font-size:12px;font-weight:700;">${time}</div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;font-weight:700;">${time}</div>
+          <div style="font-size:11px;color:#555;letter-spacing:1px;">${activeBranch}</div>
+        </div>
       </div>
 
-      <!-- ORDER TYPE HEADER -->
       ${headerHTML}
 
-      <!-- WEB ORDER BADGE -->
       ${currentOrder.fromWeb ? `<div style="background:#d4af37;color:#000;text-align:center;font-size:11px;font-weight:900;padding:4px;border-radius:5px;margin-bottom:8px;letter-spacing:2px;">⚡ WEB / QR ORDER</div>` : ''}
 
-      <!-- ITEMS -->
       <div style="margin-bottom:6px;">
         ${itemsHTML}
       </div>
 
-      <!-- FOOTER -->
       <div style="border-top:2px solid #000;margin-top:6px;padding-top:5px;font-size:11px;text-align:center;font-weight:700;letter-spacing:1px;">
-        ${activeBranch} &nbsp;·&nbsp; KITCHEN COPY
+        ${activeBranch} &nbsp;·&nbsp; KITCHEN &nbsp;·&nbsp; KOT #${kotNum}
       </div>
 
     </div>`;
@@ -2990,12 +3021,19 @@ async function assignRiderDel(orderId, rider, btn) {
 
 async function updateDeliveryStatus(orderId, status) {
   try {
+    // ✅ FIX 1: Ask payment method when marking delivered
+    let paymentMethod = 'cash';
+    if (status === 'OUT') {
+      const mc = prompt('How did customer pay?\n1. Cash\n2. JazzCash\n3. Card\n4. FoodPanda\n5. Bank Transfer\n\nEnter number (Enter = Cash):');
+      const mm = { '1':'cash','2':'jazzcash','3':'card','4':'foodpanda','5':'bank' };
+      paymentMethod = mm[(mc||'').trim()] || 'cash';
+    }
     const updateData = { status };
-if (sb) {
-  const { error } = await sb.from('kitchen_orders').update(updateData).eq('id', orderId);
+    if (sb) {
+      const { error } = await sb.from('kitchen_orders').update(updateData).eq('id', orderId);
       if (error) { showToast('Update failed', 'error'); return; }
     }
-    showToast(`Status → ${status}`, 'success');
+    showToast(`Status → ${status} [${paymentMethod.toUpperCase()}]`, 'success');
 
     if (status === 'OUT' || status === 'PAID') {
       voidedOrderIds.add(orderId);
@@ -3019,7 +3057,7 @@ if (sb) {
             if (!alreadySaved) {
               const sale = {
                 billNo, table: ko.location, type: 'Delivery',
-                items: [], total, method: 'cash',
+                items: [], total, method: paymentMethod,
                 time: new Date(), staff: currentStaff, branch: activeBranch,
                 customerName: ko.customer_name || '',
                 customerPhone: ko.phone || '',
@@ -3038,7 +3076,7 @@ if (sb) {
                 subtotal: ko.subtotal || 0,
                 sc: 0, sc_pct: 0,
                 discount: 0, delivery_charge: ko.delivery_fee || 0,
-                total, method: 'cash',
+                total, method: paymentMethod,  // ✅ FIX 1
                 cash_received: 0, split_cash: 0, split_card: 0,
                 staff: currentStaff,
                 customer_name: ko.customer_name || '',
@@ -3048,7 +3086,7 @@ if (sb) {
               }]);
               billCounter++;
               localStorage.setItem('pos_billno_' + todayKey(), billCounter);
-              cashInHand += total;
+              if (paymentMethod === 'cash') cashInHand += total;  // ✅ FIX 1: only cash goes to drawer
               document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
               document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
               saveTodaySales();
@@ -3213,10 +3251,16 @@ function renderCashView() {
       <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
       <td>${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
       <td>${(o.table||o.type||'').replace('-',' ')} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
-<td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.method==='return' ? '↩ '+(o.returnReason||'Return') : (o.items && o.items.length ? o.items.map(i=>i.qty+'x '+i.name).join(', ') : (o.itemsText || o.items_text || '—'))}</td>      <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
+      <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.method==='return' ? '↩ '+(o.returnReason||'Return') : (o.items && o.items.length ? o.items.map(i=>i.qty+'x '+i.name).join(', ') : (o.itemsText || o.items_text || '—'))}</td>
+      <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
       <td style="text-align:right;font-weight:700;color:${o.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(o.total)}</td>
+      <td style="text-align:center;">
+        ${o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' && o.billNo !== 'VOID' && o.billNo !== 'RTN' && !o.billNo.startsWith('SPL') ? 
+          `<button onclick="reprintReceipt('${o.billNo}')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;" title="Reprint">🖨️</button>` : 
+          '<span style="color:var(--text3);font-size:11px;">—</span>'}
+      </td>
     </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--text3);">No transactions yet</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--text3);">No transactions yet</td></tr>';
 }
 
 // ══════════════════════════════════
@@ -3267,7 +3311,9 @@ if (sb) {
   } catch(e) {}
 }
   const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
-  const avg = sales.length>0?Math.round(total/sales.length):0;
+const totalDelCharges = sales.filter(o => o.type === 'Delivery').reduce((s, o) => s + (o.deliveryCharge || 0), 0);
+const avg = sales.length>0?Math.round(total/sales.length):0;
+  
 
   document.getElementById('closing-stats').innerHTML = `
     <div class="cs-card green"><div class="cs-val">Rs ${total}</div><div class="cs-lbl">Total Sales</div></div>
@@ -3304,6 +3350,7 @@ if (sb) {
       <div class="cb-row"><span>Takeaway (${takeaway.length} bills)</span><span class="cb-row-val">Rs ${takeaway.reduce((s,o)=>s+o.total,0)}</span></div>
       <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,o)=>s+o.total,0)}</span></div>
       <div class="cb-row"><span>SC Collected</span><span class="cb-row-val">Rs ${scCollected}</span></div>
+      <div class="cb-row"><span>📦 Delivery Fees</span><span class="cb-row-val" style="color:var(--orange);">Rs ${totalDelCharges}</span></div>
       <div class="cb-row"><span>Discounts Given</span><span class="cb-row-val" style="color:var(--red);">Rs ${discGiven}</span></div>
       <div class="cb-row"><span>Returns (${returns.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${returnTotal}</span></div>
       <div class="cb-row"><span>Voids (${voids.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${voidTotal}</span></div>
@@ -3315,6 +3362,7 @@ if (sb) {
       <div class="cb-row"><span>Card Sales</span><span class="cb-row-val">Rs ${totalCard}</span></div>
       <div class="cb-row"><span>Cash Outs</span><span class="cb-row-val" style="color:var(--red);">-Rs ${cashOuts}</span></div>
       <div class="cb-row"><span>Staff</span><span class="cb-row-val">${currentStaff}</span></div>
+      <div class="cb-row"><span>📦 Delivery Fees In</span><span class="cb-row-val" style="color:var(--orange);">Rs ${totalDelCharges}</span></div>
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Total to Hand Over</span>
         <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${openingBalance+totalCash-cashOuts}</span>
@@ -3606,6 +3654,81 @@ async function loadTodaySales() {
 // ══════════════════════════════════
 // TOAST
 // ══════════════════════════════════
+async function reprintReceipt(billNo) {
+  // ✅ FIX 3: Reprint any past bill from memory or Supabase
+  let sale = completedOrders.find(o => o.billNo === billNo);
+  if (!sale && sb) {
+    try {
+      const { data } = await sb.from('shift_transactions')
+        .select('*').eq('branch', activeBranch).eq('bill_no', billNo)
+        .order('created_at', { ascending: false }).limit(1);
+      if (data && data[0]) {
+        const t = data[0];
+        sale = { billNo:t.bill_no, table:t.table_loc, type:t.type,
+          items: Array.isArray(t.items)?t.items:[], itemsText:t.items_text||'',
+          total:t.total, method:t.method, time:new Date(t.created_at),
+          staff:t.staff, branch:t.branch||activeBranch,
+          customerName:t.customer_name||'', customerPhone:t.customer_phone||'',
+          deliveryAddress:t.delivery_address||'', deliveryCharge:t.delivery_charge||0,
+          sc:t.sc||0, scPct:t.sc_pct||7, disc:t.discount||0,
+          cashReceived:t.cash_received||0, splitCash:t.split_cash||0, splitCard:t.split_card||0 };
+      }
+    } catch(e) { showToast('Could not fetch bill', 'error'); return; }
+  }
+  if (!sale) { showToast('Bill #'+billNo+' not found', 'error'); return; }
+  if ((!sale.items||!sale.items.length) && sale.itemsText) {
+    sale.items = sale.itemsText.split(',').map(s => {
+      const m = s.trim().match(/^(\d+)x\s+(.+)/);
+      return m ? { qty:parseInt(m[1]), name:m[2].trim(), price:0, note:'' } : null;
+    }).filter(Boolean);
+  }
+  const br = BRANCHES[activeBranch];
+  const itemsText = (sale.items&&sale.items.length&&sale.items[0].price>0)
+    ? sale.items.map(i=>`${i.qty}x ${i.name}${i.note?'\n   > '+i.note:''}   Rs ${i.price*i.qty}`).join('\n')
+    : (sale.itemsText ? sale.itemsText.split(',').map(s=>s.trim()).join('\n') : (sale.items||[]).map(i=>`${i.qty}x ${i.name}`).join('\n'));
+  const food = (sale.items&&sale.items.length&&sale.items[0].price>0)
+    ? sale.items.reduce((s,i)=>s+i.price*i.qty,0)
+    : Math.max(0, sale.total-(sale.sc||0)-(sale.deliveryCharge||0)+(sale.disc||0));
+  const ml={cash:'CASH',card:'CARD',bank:'BANK TRANSFER',jazzcash:'JAZZCASH',foodpanda:'FOODPANDA',split:'SPLIT'};
+  const methodLabel = ml[sale.method]||(sale.method||'').toUpperCase();
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:'Courier New',monospace;color:black;padding:5px;width:72mm;">
+      <div style="text-align:center;">
+        <h1 style="margin:0;font-size:22px;font-weight:900;letter-spacing:3px;">OVEN X</h1>
+        <div style="font-size:9px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:3px 0;">${br.name.toUpperCase()} BRANCH</div>
+        <div style="background:#000;color:#fff;font-size:13px;font-weight:900;padding:4px 8px;letter-spacing:3px;margin:5px 0;">*** REPRINT ***</div>
+      </div>
+      <div style="border-bottom:1px dashed #000;margin:4px 0;"></div>
+      <div style="font-size:11px;line-height:1.6;">
+        <b>Bill#  :</b> ${sale.billNo||'—'}<br>
+        <b>Date   :</b> ${new Date(sale.time).toLocaleString('en-PK')}<br>
+        <b>Table  :</b> ${(sale.table||'').replace(/-/g,' ')}<br>
+        <b>Type   :</b> ${sale.type||'—'}<br>
+        <b>Staff  :</b> ${sale.staff||'—'}
+        ${sale.customerName?'<br><b>Name   :</b> '+sale.customerName:''}
+        ${sale.customerPhone?'<br><b>Phone  :</b> '+sale.customerPhone:''}
+        ${sale.deliveryAddress?'<br><b>Addr   :</b> '+sale.deliveryAddress:''}
+      </div>
+      <div style="border-bottom:1px solid #000;margin:5px 0;"></div>
+      <div style="font-size:12px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">${itemsText||'Items not available'}</div>
+      <div style="border-bottom:1px dashed #000;margin:5px 0;"></div>
+      <div style="font-size:12px;line-height:1.8;">
+        ${food>0?'<div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs '+food+'</span></div>':''}
+        ${(sale.sc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>SC ('+sale.scPct+'%):</span><span>Rs '+sale.sc+'</span></div>':''}
+        ${(sale.deliveryCharge||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Delivery:</span><span>Rs '+sale.deliveryCharge+'</span></div>':''}
+        ${(sale.disc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs '+sale.disc+'</span></div>':''}
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid #000;padding-top:3px;margin-top:3px;">
+          <span>TOTAL:</span><span>Rs ${sale.total}</span>
+        </div>
+        <div style="font-size:11px;margin-top:2px;">Paid via: ${methodLabel}</div>
+      </div>
+      <div style="border-top:1px dashed #000;margin-top:6px;padding-top:5px;text-align:center;font-size:10px;">
+        Thank you for dining with us! 🙏<br>theovenx.com
+      </div>
+    </div>`;
+  setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
+  showToast('Reprinting bill #'+billNo+' 🖨️','success');
+}
 function exportDeliveryExcel() {
   if (!sb) { showToast('Not connected', 'error'); return; }
   showToast('Preparing export...', 'success');
