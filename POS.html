@@ -1253,17 +1253,14 @@ async function pollWebOrders() {
         );
       }
 
-      // ✅ Handle POS-created Delivery orders
+      // ✅ Handle POS-created Delivery orders — reconnect to existing slot only, never create new
       if (!tableId && order.type === 'Delivery' && order.source === 'POS') {
-        // Reconnect if already exists
+        // Only reconnect if POS already has this order open — don't create phantom entries
         tableId = Object.keys(tableOrders).find(t =>
           tableOrders[t].id === order.id
         );
-
-        // Assign new DEL slot if not found
-        if (!tableId) {
-          tableId = TABLES['Delivery'].find(t => !tableOrders[t]);
-        }
+        // If not found in tableOrders, skip entirely — POS manages it directly
+        if (!tableId) return;
       }
 
       if (!tableId) return;
@@ -1524,10 +1521,18 @@ function renderTableMap() {
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
       const grand = order ? (order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) : 0;
+      const delLabel = (order && order.type === 'Delivery' && order.deliveryAddress)
+        ? `<div style="font-size:9px;color:var(--text3);margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${order.deliveryAddress}</div>`
+        : '';
+      const itemsSummary = (order && order.items && order.items.length)
+        ? `<div style="font-size:9px;color:var(--text2);margin-top:1px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.items.slice(0,2).map(i=>i.qty+'x '+i.name.split(' ')[0]).join(', ')}${order.items.length>2?'…':''}</div>`
+        : '';
       cell.innerHTML = `
         <div class="table-pending-badge">!</div>
         <div class="table-icon">${icon}</div>
         <div class="table-name">${tname.replace('-',' ')}</div>
+        ${delLabel}
+        ${itemsSummary}
         <div class="table-timer" id="timer-${tname}">${timer}</div>
         ${order ? `<div class="table-amount">Rs ${grand}</div>` : ''}
         <div class="table-covers">1</div>
@@ -3208,8 +3213,7 @@ function renderCashView() {
       <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
       <td>${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
       <td>${(o.table||o.type||'').replace('-',' ')} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
-      <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.method==='return' ? '↩ '+(o.returnReason||'Return') : o.items.map(i=>i.qty+'x '+i.name).join(', ')}</td>
-      <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
+<td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.method==='return' ? '↩ '+(o.returnReason||'Return') : (o.items && o.items.length ? o.items.map(i=>i.qty+'x '+i.name).join(', ') : (o.itemsText || o.items_text || '—'))}</td>      <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
       <td style="text-align:right;font-weight:700;color:${o.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(o.total)}</td>
     </tr>
   `).join('') || '<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--text3);">No transactions yet</td></tr>';
@@ -3561,6 +3565,7 @@ async function loadTodaySales() {
         table: t.table_loc,
         type: t.type,
         items: Array.isArray(t.items) ? t.items : [],
+        itemsText: t.items_text || '',
         total: t.total,
         method: t.method,
         time: new Date(t.created_at),
@@ -4093,8 +4098,6 @@ async function closeAllShiftsAndArchive() {
   setTimeout(() => location.reload(), 1500);
 }
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
