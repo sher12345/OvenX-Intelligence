@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -444,7 +442,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <!-- PENDING CONFIRM BANNER -->
       <div class="pending-banner" id="pending-banner">
         <span>⚡ Web/QR order — confirm to print slip</span>
-        <button class="pb-confirm-btn" onclick="confirmAndPrintSlip()">✅ CONFIRM & PRINT</button>
+        <div style="display:flex;gap:6px;margin-left:auto;">
+          <button class="pb-confirm-btn" onclick="confirmAndPrintSlip()">✅ CONFIRM & PRINT</button>
+          <button class="pb-confirm-btn" style="background:var(--red);color:white;" onclick="rejectCurrentWebOrder()">🗑️ REJECT</button>
+        </div>
       </div>
 
       <!-- CUSTOMER INFO — always visible -->
@@ -598,7 +599,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   <button class="print-report-btn" onclick="closeAllShiftsAndArchive()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">
     🔒 CLOSE SHIFTS & START FRESH
   </button>
-</div>
+  </div>
       </div>
       <div class="closing-stats" id="closing-stats"></div>
       <div class="closing-breakdown" id="closing-breakdown"></div>
@@ -1175,10 +1176,16 @@ async function _saveActiveTable(tname, orderData) {
         .eq('branch', activeBranch).eq('table_name', tname);
     } else {
       const safe = JSON.parse(JSON.stringify(orderData));
-      await sb.from('active_tables').upsert(
-        [{ branch: activeBranch, table_name: tname, order_data: safe, updated_at: new Date().toISOString() }],
-        { onConflict: 'branch,table_name' }
-      );
+      const { data: existing } = await sb.from('active_tables')
+        .select('id').eq('branch', activeBranch).eq('table_name', tname).maybeSingle();
+      if (existing) {
+        await sb.from('active_tables')
+          .update({ order_data: safe, updated_at: new Date().toISOString() })
+          .eq('branch', activeBranch).eq('table_name', tname);
+      } else {
+        await sb.from('active_tables')
+          .insert([{ branch: activeBranch, table_name: tname, order_data: safe, updated_at: new Date().toISOString() }]);
+      }
     }
   } catch(e) { console.warn('_saveActiveTable:', e.message); }
 }
@@ -1369,11 +1376,8 @@ async function pollWebOrders() {
         );
       }
 
-      // POS Delivery — reconnect to existing slot only, never create phantom entries
-      if (!tableId && order.type === 'Delivery' && order.source === 'POS') {
-        tableId = Object.keys(tableOrders).find(t => tableOrders[t].id === order.id);
-        if (!tableId) return;
-      }
+      // POS Delivery orders are managed via DEL tables only — never re-import
+      if (order.source === 'POS' && order.type === 'Delivery') return;
 
       if (!tableId) return;
       if (voidedOrderIds.has(order.id)) return;
@@ -1635,7 +1639,9 @@ function renderTableMap() {
         timer = fmtSeconds(elapsed);
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
-      const grand = order ? (order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) : 0;
+const food = order ? (order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) : 0;
+      const delFee = order ? (order.deliveryCharge || 0) : 0;
+      const grand = food; // shop amount only, delivery fee shown separately
       const delLabel = (order && order.type === 'Delivery' && order.deliveryAddress)
         ? `<div style="font-size:9px;color:var(--text3);margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${order.deliveryAddress}</div>`
         : '';
@@ -1650,6 +1656,7 @@ function renderTableMap() {
         ${itemsSummary}
         <div class="table-timer" id="timer-${tname}">${timer}</div>
         ${order ? `<div class="table-amount">Rs ${grand}</div>` : ''}
+        ${delFee > 0 ? `<div style="font-size:9px;color:var(--orange);font-weight:700;">+Rs ${delFee} del</div>` : ''}
         <div class="table-covers">1</div>
       `;
       cell.onclick = () => openTable(tname, floor);
@@ -2591,6 +2598,10 @@ async function sendToKitchen() {
   const delAddr = currentOrder.type==='Delivery' ? (document.getElementById('delivery-address').value||currentOrder.deliveryAddress||'') : '';
   const delCharge = currentOrder.type==='Delivery' ? (parseFloat(document.getElementById('delivery-charge').value)||currentOrder.deliveryCharge||0) : 0;
   const location = currentOrder.type==='Delivery' ? (delAddr || currentOrder.table||'Delivery') : (currentOrder.table?currentOrder.table.replace('-',' '):currentOrder.type);
+  // POS Delivery orders are NOT sent to kitchen_orders — managed via DEL table only
+  if (currentOrder.type === 'Delivery' && !currentOrder.fromWeb) {
+    saveTableOrder(); showToast('Order saved! 🔥','success'); return;
+  }
   const obj = { type:currentOrder.type, location:location, items:itemsText, status:'WAITING', subtotal:grand, delivery_fee:delCharge, branch:activeBranch, customer_name:custName||null, phone:custPhone||null, source:'POS' };
   try {
     if (sb) {
@@ -2746,6 +2757,9 @@ async function markTakeawayPaid() {
 }
 function openPayModal() {
   if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
+  if (currentOrder.id && paidOrderIds.has(currentOrder.id)) {
+    showToast('This order was already paid via Delivery view', 'error'); return;
+  }
   const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
   const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
@@ -2889,7 +2903,7 @@ async function completePayment() {
     document.getElementById('bar-cash').textContent   = 'Rs ' + cashInHand;
     document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
  
-    if (!currentOrder.id) await sendToKitchen();
+    if (!currentOrder.id && currentOrder.type !== 'Delivery') await sendToKitchen();
     if (currentOrder.id) paidOrderIds.add(currentOrder.id);
  
     // Remove from cloud active_tables
@@ -3006,7 +3020,7 @@ function printKitchenTicket() {
     showToast('Kitchen ticket printed 🔥', 'success');
   }, 300);
 
-  if (!currentOrder.id) sendToKitchen();
+  if (!currentOrder.id && currentOrder.type !== 'Delivery') sendToKitchen();
 }
 
 function printReceipt(sale, isSplit=false) {
@@ -3050,7 +3064,7 @@ function printReceipt(sale, isSplit=false) {
         <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ${food}</span></div>
         ${sale.sc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Service Charge (${sale.scPct}%):</span><span>Rs ${sale.sc}</span></div>` : ''}
         ${(sale.deliveryCharge||0)>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Charge:</span><span>Rs ${sale.deliveryCharge}</span></div>` : ''}
-        ${sale.disc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ${sale.disc}</span></div>` : ''}
+        ${sale.disc>0 ? `<div style="display:flex;justify-content:space-between;color:#27ae60;font-weight:700;"><span>Discount Applied:</span><span>-Rs ${sale.disc}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid #000;padding-top:3px;margin-top:3px;">
           <span>TOTAL:</span><span>Rs ${sale.total}</span>
         </div>
@@ -3120,8 +3134,8 @@ const timerColor = isCompleted ? 'var(--text3)' : 'var(--red)';
       ${o.customer_name?`<div style="font-size:13px;color:var(--text2);margin-bottom:4px;">👤 ${o.customer_name}</div>`:''}
       <div class="dc-items">${o.items||'—'}</div>
       <div class="dc-price-row">
-        <span style="font-size:13px;color:var(--text2);">Shop: Rs ${o.subtotal||0}  Del: Rs ${o.delivery_fee||0}</span>
-        <span class="dc-total">Rs ${total}</span>
+        <span style="font-size:13px;color:var(--text2);">Shop: Rs ${o.subtotal||0}  Del: Rs ${o.delivery_fee||0}${(o.discount||0)>0?` <span style="color:var(--green);font-weight:700;">Disc: -Rs ${o.discount}</span>`:''}</span>
+        <span class="dc-total">Rs ${(o.subtotal||0) + (o.delivery_fee||0) - (o.discount||0)}</span>
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:7px;font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Assign Rider:</div>
       <div class="dc-riders" id="riders-${o.id}">
@@ -3178,21 +3192,22 @@ async function updateDeliveryStatus(orderId, status) {
       if (sb) {
         try {
           const { data: ko } = await sb.from('kitchen_orders')
-          .select('id, subtotal, delivery_fee, location, items, customer_name, phone').eq('id', orderId).single();
+          .select('id, subtotal, delivery_fee, location, items, customer_name, phone, discount').eq('id', orderId).single();
           if (ko) {
-            const total = (ko.subtotal || 0) + (ko.delivery_fee || 0);
-            const billNo = String(billCounter).padStart(3, '0');
-            const alreadySaved = completedOrders.find(o => o.kitchenOrderId === orderId);
-            if (!alreadySaved) {
-              const sale = {
-                billNo, table: ko.location, type: 'Delivery',
-                items: [], total, method: paymentMethod,
+            const shopTotal = ko.subtotal || 0;
+              const delFee = ko.delivery_fee || 0;
+              const billNo = String(billCounter).padStart(3, '0');
+              const alreadySaved = completedOrders.find(o => o.kitchenOrderId === orderId);
+              if (!alreadySaved) {
+                const sale = {
+                  billNo, table: ko.location, type: 'Delivery',
+                  items: [], total: shopTotal, method: paymentMethod,
                 time: new Date(), staff: currentStaff, branch: activeBranch,
                 customerName: ko.customer_name || '',
                 customerPhone: ko.phone || '',
                 deliveryAddress: ko.location || '',
                 deliveryCharge: ko.delivery_fee || 0,
-                sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
+sc: 0, disc: ko.discount || 0, scPct: 0, discType: 'flat', discAmount: ko.discount || 0,
                 splitCash: 0, splitCard: 0,
                 kitchenOrderId: orderId
               };
@@ -3204,8 +3219,9 @@ async function updateDeliveryStatus(orderId, status) {
                 items_text: ko.items || '',
                 subtotal: ko.subtotal || 0,
                 sc: 0, sc_pct: 0,
-                discount: 0, delivery_charge: ko.delivery_fee || 0,
-                total, method: paymentMethod,  // ✅ FIX 1
+                discount: ko.discount || tableOrders[ko.location]?.discAmount || 0,
+                delivery_charge: delFee,
+                total: Math.max(0, shopTotal - (ko.discount || 0)), method: paymentMethod,
                 cash_received: 0, split_cash: 0, split_card: 0,
                 staff: currentStaff,
                 customer_name: ko.customer_name || '',
@@ -3215,7 +3231,7 @@ async function updateDeliveryStatus(orderId, status) {
               }]);
               billCounter++;
               
-              if (paymentMethod === 'cash') cashInHand += total;  // ✅ FIX 1: only cash goes to drawer
+              if (paymentMethod === 'cash') cashInHand += shopTotal;
               document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
               document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
               saveTodaySales();
@@ -3271,7 +3287,8 @@ function printDeliverySlip(o) {
       <div style="font-size:12px;">
         <div style="display:flex;justify-content:space-between;"><span>Shop:</span><span>Rs ${o.subtotal||0}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Delivery:</span><span>Rs ${o.delivery_fee||0}</span></div>
-        <div style="display:flex;justify-content:space-between;font-weight:900;font-size:14px;border-top:1px solid #000;padding-top:3px;"><span>TOTAL:</span><span>Rs ${total}</span></div>
+        ${o.discount > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ${o.discount}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;font-weight:900;font-size:14px;border-top:1px solid #000;padding-top:3px;"><span>TOTAL:</span><span>Rs ${total - (o.discount||0)}</span></div>
       </div>
     </div>`;
   setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
@@ -3309,7 +3326,8 @@ async function setOpeningBalance() {
       }], { onConflict: 'branch,date' });
     } catch(e) { console.error('Opening balance save error:', e); }
   }
-  cashInHand = openingBalance + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0) + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0);
+const _delFees = completedOrders.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.deliveryCharge||0),0);
+  cashInHand = openingBalance + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0) + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0) - _delFees;
   document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
   renderCashView(); showToast('Opening balance set: Rs '+val,'success');
 }
@@ -3361,17 +3379,19 @@ function renderCashView() {
   const splitCard = completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCard||0),0);
   const totalCash = cashSales + splitCash;
   const totalCard = cardSales + splitCard;
-  const totalSales = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
-  const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
-  const expected = openingBalance + totalCash - cashOuts;
+const totalSales = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
+  const totalDelFees = completedOrders.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.deliveryCharge||0),0);
+  const shopSales = totalSales - totalDelFees;  const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
+const expected = openingBalance + totalCash - totalDelFees - cashOuts;
 
   document.getElementById('cash-cards').innerHTML = `
     <div class="cash-card"><div class="cash-card-label">Opening Balance</div><div class="cash-card-value">Rs ${openingBalance}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Cash Sales</div><div class="cash-card-value green">Rs ${totalCash}</div></div>
+<div class="cash-card"><div class="cash-card-label">Cash Sales</div><div class="cash-card-value green">Rs ${totalCash - totalDelFees}</div></div>
+    <div class="cash-card"><div class="cash-card-label">Delivery Fees (Rider)</div><div class="cash-card-value" style="color:var(--orange);">Rs ${totalDelFees}</div></div>
     <div class="cash-card"><div class="cash-card-label">Card Sales</div><div class="cash-card-value">Rs ${totalCard}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Total Sales</div><div class="cash-card-value orange">Rs ${totalSales}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Expected in Drawer</div><div class="cash-card-value green">Rs ${expected}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Bills Today</div><div class="cash-card-value">${completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).length}</div></div>
+    <div class="cash-card"><div class="cash-card-label">Shop Sales</div><div class="cash-card-value orange">Rs ${shopSales}</div></div>
+<div class="cash-card"><div class="cash-card-label">Expected in Drawer</div><div class="cash-card-value green">Rs ${expected}</div></div>
+<div class="cash-card"><div class="cash-card-label">Bills Today</div><div class="cash-card-value">${completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).length}</div></div>
   `;
 
   document.getElementById('tx-tbody').innerHTML = completedOrders.slice().reverse().map(o => `
@@ -3399,8 +3419,9 @@ async function renderClosingReport() {
   document.getElementById('closing-date').textContent = now.toLocaleDateString('en-PK',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) + ' | Shift: '+(shiftStart?shiftStart.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—')+' — '+now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
 
   const sales = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method));
-  const total = sales.reduce((s,o)=>s+o.total,0);
-  const cash  = sales.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0);
+const total = sales.reduce((s,o)=>s+o.total,0);
+  const deliveryFeesOnly = sales.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.deliveryCharge||0),0);
+  const shopTotal = total - deliveryFeesOnly;  const cash  = sales.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0);
   const card  = sales.filter(o=>o.method==='card').reduce((s,o)=>s+o.total,0);
   const splitCashTotal = sales.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0);
   const splitCardTotal = sales.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCard||0),0);
@@ -3440,31 +3461,43 @@ if (sb) {
 }
   const cashOuts = completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
 const totalDelCharges = sales.filter(o => o.type === 'Delivery').reduce((s, o) => s + (o.deliveryCharge || 0), 0);
-const avg = sales.length>0?Math.round(total/sales.length):0;
+const avg = sales.length>0?Math.round(shopTotal/sales.length):0;
   
-
+// Show admin delete button if admin
+  const existingAdminBtn = document.getElementById('admin-delete-today-btn');
+  if (existingAdminBtn) existingAdminBtn.remove();
+  if (currentStaffRole === 'Admin') {
+    const adminBtn = document.createElement('button');
+    adminBtn.id = 'admin-delete-today-btn';
+    adminBtn.className = 'print-report-btn';
+    adminBtn.style.cssText = 'background:var(--purple);color:white;border-color:var(--purple);font-weight:800;';
+    adminBtn.textContent = '🗑️ Delete Today\'s Data';
+    adminBtn.onclick = adminDeleteToday;
+    document.querySelector('.closing-header div:last-child').appendChild(adminBtn);
+  }
   document.getElementById('closing-stats').innerHTML = `
-    <div class="cs-card green"><div class="cs-val">Rs ${total}</div><div class="cs-lbl">Total Sales</div></div>
-    <div class="cs-card orange"><div class="cs-val">${sales.length}</div><div class="cs-lbl">Bills Issued</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${totalCard}</div><div class="cs-lbl">Card Collected</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${openingBalance+totalCash-cashOuts}</div><div class="cs-lbl">Expected in Drawer</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill Value</div></div>
+<div class="cs-card green"><div class="cs-val">Rs ${shopTotal}</div><div class="cs-lbl">Shop Sales</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Del Fees (Rider)</div></div>    <div class="cs-card orange"><div class="cs-val">${sales.length}</div><div class="cs-lbl">Bills Issued</div></div>
+<div class="cs-card red"><div class="cs-val">Rs ${totalCash - deliveryFeesOnly}</div><div class="cs-lbl">Cash Collected</div></div>
+<div class="cs-card blue"><div class="cs-val">Rs ${totalCard}</div><div class="cs-lbl">Card Collected</div></div>
+<div class="cs-card green"><div class="cs-val">Rs ${openingBalance+totalCash-cashOuts-deliveryFeesOnly}</div><div class="cs-lbl">Expected in Drawer</div></div>    <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill Value</div></div>
   `;
 
   // Per-staff breakdown
   const staffNames = [...new Set(completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).map(o => o.staff).filter(Boolean))];
   const staffBreakdownHTML = staffNames.map(name => {
     const staffSales = completedOrders.filter(o => o.staff === name && !['cash-in','cash-out','void','return'].includes(o.method));
-    const staffTotal = staffSales.reduce((s,o) => s + o.total, 0);
-    const staffCash = staffSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0) + staffSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
+const staffTotal = staffSales.reduce((s,o) => s + o.total, 0);
+    const staffDelFees = staffSales.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.deliveryCharge||0),0);
+    const staffShopTotal = staffTotal - staffDelFees;
+    const staffCash = staffSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0) + staffSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0) - staffDelFees;
     const staffCard = staffSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0) + staffSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
     const staffDisc = staffSales.reduce((s,o) => s + (o.disc||0), 0);
     const staffVoids = completedOrders.filter(o => o.staff === name && o.method === 'void').length;
     return `
       <div class="cb-row"><span style="font-weight:700;color:white;">👤 ${name}</span><span class="cb-row-val">${staffSales.length} bills</span></div>
-      <div class="cb-row"><span style="padding-left:12px;">Total Sales</span><span class="cb-row-val">Rs ${staffTotal}</span></div>
-      <div class="cb-row"><span style="padding-left:12px;">Cash</span><span class="cb-row-val">Rs ${staffCash}</span></div>
+<div class="cb-row"><span style="padding-left:12px;">Total Sales</span><span class="cb-row-val">Rs ${staffShopTotal}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Del Fees (Rider)</span><span class="cb-row-val" style="color:var(--orange);">Rs ${staffDelFees}</span></div>      <div class="cb-row"><span style="padding-left:12px;">Cash</span><span class="cb-row-val">Rs ${staffCash}</span></div>
       <div class="cb-row"><span style="padding-left:12px;">Card</span><span class="cb-row-val">Rs ${staffCard}</span></div>
       <div class="cb-row"><span style="padding-left:12px;">Discounts</span><span class="cb-row-val" style="color:var(--red);">Rs ${staffDisc}</span></div>
       <div class="cb-row" style="margin-bottom:8px;"><span style="padding-left:12px;">Voids</span><span class="cb-row-val" style="color:var(--red);">${staffVoids}</span></div>
@@ -3476,7 +3509,7 @@ const avg = sales.length>0?Math.round(total/sales.length):0;
       <div class="cb-head">Sales by Order Type</div>
       <div class="cb-row"><span>Dine-In (${dinein.length} bills)</span><span class="cb-row-val">Rs ${dinein.reduce((s,o)=>s+o.total,0)}</span></div>
       <div class="cb-row"><span>Takeaway (${takeaway.length} bills)</span><span class="cb-row-val">Rs ${takeaway.reduce((s,o)=>s+o.total,0)}</span></div>
-      <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,o)=>s+o.total,0)}</span></div>
+      <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,o)=>s+o.total,0) - deliveryFeesOnly}</span></div>
       <div class="cb-row"><span>SC Collected</span><span class="cb-row-val">Rs ${scCollected}</span></div>
       <div class="cb-row"><span>📦 Delivery Fees</span><span class="cb-row-val" style="color:var(--orange);">Rs ${totalDelCharges}</span></div>
       <div class="cb-row"><span>Discounts Given</span><span class="cb-row-val" style="color:var(--red);">Rs ${discGiven}</span></div>
@@ -3486,14 +3519,14 @@ const avg = sales.length>0?Math.round(total/sales.length):0;
     <div class="cb-section">
       <div class="cb-head">Cash Reconciliation</div>
       <div class="cb-row"><span>Opening Balance</span><span class="cb-row-val">Rs ${openingBalance}</span></div>
-      <div class="cb-row"><span>Cash Sales</span><span class="cb-row-val">Rs ${totalCash}</span></div>
-      <div class="cb-row"><span>Card Sales</span><span class="cb-row-val">Rs ${totalCard}</span></div>
+<div class="cb-row"><span>Cash Sales (Shop)</span><span class="cb-row-val">Rs ${totalCash - deliveryFeesOnly}</span></div>
+      <div class="cb-row"><span>Cash Sales (Del Fees)</span><span class="cb-row-val" style="color:var(--orange);">Rs ${deliveryFeesOnly}</span></div>      <div class="cb-row"><span>Card Sales</span><span class="cb-row-val">Rs ${totalCard}</span></div>
       <div class="cb-row"><span>Cash Outs</span><span class="cb-row-val" style="color:var(--red);">-Rs ${cashOuts}</span></div>
       <div class="cb-row"><span>Staff</span><span class="cb-row-val">${currentStaff}</span></div>
       <div class="cb-row"><span>📦 Delivery Fees In</span><span class="cb-row-val" style="color:var(--orange);">Rs ${totalDelCharges}</span></div>
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Total to Hand Over</span>
-        <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${openingBalance+totalCash-cashOuts}</span>
+        <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${openingBalance+totalCash-cashOuts-deliveryFeesOnly}</span>
       </div>
     </div>
     <div class="cb-section" style="grid-column:1/-1;">
@@ -3974,7 +4007,25 @@ async function loadHistoryForDate(dateStr) {
       return;
     }
 
-    content.innerHTML = reports.map(r => {
+    const adminDeleteBar = currentStaffRole === 'Admin' ? `
+      <div style="background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:10px;
+                  padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:13px;color:var(--text2);">⚠️ Admin: Delete all data for <b style="color:white;">${dateStr} — ${branch}</b></div>
+        <div style="display:flex;gap:7px;">
+          <button onclick="adminDeleteAllTransactions('${dateStr}','${branch}')"
+            style="padding:6px 12px;border-radius:7px;background:rgba(192,57,43,0.2);border:1px solid var(--red);
+            color:var(--red);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+            🗑️ Delete Transactions
+          </button>
+          <button onclick="adminDeleteFullDay('${dateStr}','${branch}')"
+            style="padding:6px 12px;border-radius:7px;background:var(--red);border:none;
+            color:white;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+            💣 Delete Everything
+          </button>
+        </div>
+      </div>` : '';
+
+    content.innerHTML = adminDeleteBar + reports.map(r => {
       const shiftStart = r.shift_start ? new Date(r.shift_start).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
       const shiftEnd = r.shift_end ? new Date(r.shift_end).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
 
@@ -3988,6 +4039,13 @@ async function loadHistoryForDate(dateStr) {
             <div style="text-align:right;">
               <div style="font-size:12px;color:var(--text3);">${branch} Branch</div>
               <div style="font-size:12px;color:var(--text3);">${dateStr}</div>
+              ${currentStaffRole === 'Admin' ? `
+              <button onclick="adminDeleteShiftReport('${r.staff}','${dateStr}','${branch}')"
+                style="margin-top:6px;padding:4px 10px;border-radius:6px;background:rgba(192,57,43,0.15);
+                border:1px solid rgba(192,57,43,0.3);color:var(--red);font-family:'Outfit',sans-serif;
+                font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;">
+                🗑️ Delete This Report
+              </button>` : ''}
             </div>
           </div>
 
@@ -4283,7 +4341,127 @@ async function closeAllShiftsAndArchive() {
   // Force reload to clean state
   setTimeout(() => location.reload(), 1500);
 }
+async function rejectCurrentWebOrder() {
+  if (!currentOrder.webOrderId) return;
+  if (!confirm('Reject and delete this web order?')) return;
+  const orderId = currentOrder.webOrderId;
+  const tname = currentOrder.table;
+  if (sb) {
+    try { await sb.from('kitchen_orders').delete().eq('id', orderId); } catch(e) {}
+  }
+  if (tname) {
+    delete tableOrders[tname];
+    _saveActiveTable(tname, null);
+  }
+  pendingWebOrders = pendingWebOrders.filter(p => p.id !== orderId);
+  updatePendingBadges();
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Web order rejected and deleted', 'error');
+}
+// ══════════════════════════════════
+// ADMIN DELETE FUNCTIONS
+// ══════════════════════════════════
+async function adminDeleteShiftReport(staff, date, branch) {
+  if (!confirm(`Delete shift report for ${staff} on ${date}?`)) return;
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  try {
+    await sb.from('shift_reports')
+      .delete()
+      .eq('branch', branch).eq('date', date).eq('staff', staff);
+    showToast('Shift report deleted ✅', 'success');
+    loadHistoryForDate(date);
+  } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
+}
+
+async function adminDeleteAllTransactions(date, branch) {
+  if (!confirm(`Delete ALL transactions for ${date} — ${branch}?\n\nThis cannot be undone.`)) return;
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  try {
+    await sb.from('shift_transactions').delete().eq('branch', branch).eq('date', date);
+    showToast('All transactions deleted ✅', 'success');
+    loadHistoryForDate(date);
+  } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
+}
+
+async function adminDeleteFullDay(date, branch) {
+  if (!confirm(`⚠️ DELETE EVERYTHING for ${date} — ${branch}?\n\nThis deletes:\n• All shift reports\n• All transactions\n• Shift closure record\n• Opening balance\n\nThis CANNOT be undone.`)) return;
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  try {
+    await Promise.all([
+      sb.from('shift_reports').delete().eq('branch', branch).eq('date', date),
+      sb.from('shift_transactions').delete().eq('branch', branch).eq('date', date),
+      sb.from('shift_closures').delete().eq('branch', branch).eq('date', date),
+      sb.from('opening_balance').delete().eq('branch', branch).eq('date', date),
+    ]);
+    showToast('All data deleted for ' + date + ' ✅', 'success');
+    loadHistoryForDate(date);
+  } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
+}
+
+async function adminDeleteToday() {
+  await adminDeleteFullDay(todayKey(), activeBranch);
+  // Also clear in-memory state
+  completedOrders = [];
+  openingBalance = 0;
+  cashInHand = 0;
+  billCounter = 1;
+  document.getElementById('bar-cash').textContent = 'Rs 0';
+  document.getElementById('bar-billno').textContent = '001';
+  document.getElementById('opening-bal-input').value = '';
+  renderClosingReport();
+  renderCashView();
+  showToast('Today\'s data cleared ✅', 'success');
+}
+
+async function adminClearActiveTables() {
+  if (!confirm('Clear ALL active table orders from cloud?\n\nThis removes all open tables for this branch.')) return;
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  try {
+    await sb.from('active_tables').delete().eq('branch', activeBranch);
+    tableOrders = {};
+    renderTableMap();
+    showToast('All active tables cleared ✅', 'success');
+  } catch(e) { showToast('Clear failed', 'error'); console.error(e); }
+}
+function openAdminPanel() {
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  const choice = prompt(
+    'Admin Tools:\n' +
+    '1. Clear all active tables (cloud)\n' +
+    '2. Delete today\'s data\n' +
+    '3. Go to History to delete past records\n\n' +
+    'Enter number:'
+  );
+  if (choice === '1') adminClearActiveTables();
+  else if (choice === '2') adminDeleteToday();
+  else if (choice === '3') switchView('history');
+}
+
+
+async function adminDeleteFullDay(date, branch) {
+  if (!confirm(`⚠️ DELETE EVERYTHING for ${date} — ${branch}?\n\nThis deletes:\n• All shift reports\n• All transactions\n• Shift closure record\n• Opening balance\n\nThis CANNOT be undone.`)) return;
+  const pin = prompt('Enter Admin PIN:');
+  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
+  try {
+    await Promise.all([
+      sb.from('shift_reports').delete().eq('branch', branch).eq('date', date),
+      sb.from('shift_transactions').delete().eq('branch', branch).eq('date', date),
+      sb.from('shift_closures').delete().eq('branch', branch).eq('date', date),
+      sb.from('opening_balance').delete().eq('branch', branch).eq('date', date),
+    ]);
+    showToast('All data deleted for ' + date + ' ✅', 'success');
+    loadHistoryForDate(date);
+  } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
+}
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
