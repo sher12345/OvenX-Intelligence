@@ -1062,7 +1062,7 @@ function startLiveReload() {
   }
 
   // Fallback poll every 60s
-  liveReloadInterval = setInterval(pollWebOrders, 60000);
+  liveReloadInterval = setInterval(pollWebOrders, 120000);
   pollWebOrders();
 }
 // ══════════════════════════════════
@@ -1313,17 +1313,17 @@ async function pollWebOrders() {
 
   try {
     const { data, error } = await sb.from('kitchen_orders')
-      .select('id, type, location, items, status, subtotal, delivery_fee, created_at, rider, customer_name, phone, source')
+      .select('id, type, location, status, subtotal, delivery_fee, created_at, customer_name, phone, source')
       .eq('branch', activeBranch)
       .or('status.eq.WAITING,status.eq.PREPARING,and(status.eq.READY,type.eq.Dine-In),and(status.eq.READY,type.eq.Takeaway),and(status.eq.READY,type.eq.Delivery)')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(50);
 
     if (error || !data) return;
 
     const dbOrderIds = new Set(data.map(o => o.id));
 
-    if (Date.now() - _paidIdsCacheTime > 5 * 60 * 1000) {
+    if (Date.now() - _paidIdsCacheTime > 15 * 60 * 1000) {
       const { data: paidTx } = await sb.from('shift_transactions')
         .select('kitchen_order_id')
         .eq('date', todayKey())
@@ -1416,14 +1416,14 @@ async function pollWebOrders() {
       const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
 
       tableOrders[tableId] = {
-        table: tableId, type: orderType, items: parsedItems,
-        startTime: new Date(order.created_at).getTime(),
-        id: order.id, webOrderId: order.id, fromWeb: true,
-        confirmed: order.status === 'PREPARING' || order.status === 'READY',
-        rawItems: order.items, subtotal: order.subtotal,
-        customerName: order.customer_name || '', customerPhone: order.phone || '',
-        scEnabled: true, scPct: 7
-      };
+  table: tableId, type: orderType, items: [],
+  startTime: new Date(order.created_at).getTime(),
+  id: order.id, webOrderId: order.id, fromWeb: true,
+  confirmed: order.status === 'PREPARING' || order.status === 'READY',
+  rawItems: null, subtotal: order.subtotal,
+  customerName: order.customer_name || '', customerPhone: order.phone || '',
+  scEnabled: true, scPct: 7
+};
 
       if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
         newPending.push({ ...order, tableId });
@@ -1434,17 +1434,11 @@ async function pollWebOrders() {
     updatePendingBadges();
     renderTableMap();
 
-    sb.from('kitchen_orders')
-      .select('id')
-      .eq('branch', activeBranch)
-      .eq('type', 'Delivery')
-      .in('status', ['WAITING', 'PREPARING', 'READY'])
-      .then(({ data }) => {
-        const badge = document.getElementById('badge-delivery');
-        const count = (data || []).length;
-        if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
-        else { badge.classList.remove('show'); }
-      });
+    // Use already-fetched data instead of a separate query
+    const deliveryCount = (data || []).filter(o => o.type === 'Delivery').length;
+    const badge = document.getElementById('badge-delivery');
+    if (deliveryCount > 0) { badge.textContent = deliveryCount; badge.classList.add('show'); }
+    else { badge.classList.remove('show'); }
 
   } catch(e) {
     console.error('pollWebOrders:', e);
@@ -1690,10 +1684,23 @@ function fmtSeconds(s) {
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
 
-function openTable(tname, floor) {
+async function openTable(tname, floor) {
   const orderType = floor==='Delivery'?'Delivery':floor==='Takeaway'?'Takeaway':'Dine-In';
   if (tableOrders[tname]) {
     currentOrder = { ...tableOrders[tname], table:tname };
+
+    // Fetch items lazily — only when cashier opens the table
+    if (currentOrder.fromWeb && currentOrder.id && !currentOrder.items.length) {
+      try {
+        const { data } = await sb.from('kitchen_orders')
+          .select('items, subtotal').eq('id', currentOrder.id).single();
+        if (data && data.items) {
+          const isDineIn = orderType === 'Dine-In';
+          currentOrder.items = parseItemsFromText(data.items, data.subtotal, isDineIn);
+          tableOrders[tname].items = currentOrder.items;
+        }
+      } catch(e) { console.warn('Could not load order items:', e); }
+    }
   } else {
     currentOrder = { table:tname, type:orderType, items:[], startTime:Date.now(), id:null, scEnabled:orderType==='Dine-In', scPct:7, fromWeb:false, confirmed:false, webOrderId:null };
   }
@@ -1701,23 +1708,6 @@ function openTable(tname, floor) {
   scPercent = currentOrder.scPct || 7;
   syncSCUI();
   openOrderView(tname, orderType);
-}
-
-function openNewOrder(tname, type) {
-  if (!tname) {
-    const pool = type==='Delivery' ? TABLES['Delivery'] : TABLES['Takeaway'];
-    tname = pool.find(t => !tableOrders[t]) || pool[0];
-  }
-  currentOrder = { table:tname, type:type, items:[], startTime:Date.now(), id:null, 
-    scEnabled:type==='Dine-In', scPct:7, fromWeb:false, confirmed:false, webOrderId:null };
-  scEnabled = currentOrder.scEnabled; scPercent = 7;
-  syncSCUI(); openOrderView(tname, type);
-  
-  // ✅ FIX: Create Supabase record for BOTH Delivery AND Takeaway
-  if ((type === 'Delivery' || type === 'Takeaway') && !currentOrder.fromWeb) {
-    tableOrders[tname] = { ...currentOrder };
-    createPosOrderRecord(tname, type);
-  }
 }
 // ✅ NEW function: creates POS order record in Supabase (Delivery AND Takeaway)
 async function createPosOrderRecord(tname, type) {
@@ -3691,15 +3681,16 @@ async function loadTodaySales() {
       document.getElementById('opening-bal-input').value = openingBalance;
     }
 
-    // ── Load completed transactions ───────────────────────────────
+   // ── Load completed transactions ───────────────────────────────
     const { data: txs } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch).eq('date', todayK)
+      .select('bill_no, type, table_loc, items_text, total, method, created_at, staff, branch, customer_name, customer_phone, delivery_address, delivery_charge, sc, sc_pct, discount, cash_received, split_cash, split_card, return_reason, kitchen_order_id')
+      .eq('branch', activeBranch).eq('date', todayK)
       .order('created_at', { ascending: true });
 
     if (txs && txs.length) {
       completedOrders = txs.map(t => ({
         billNo: t.bill_no, table: t.table_loc, type: t.type,
-        items: Array.isArray(t.items) ? t.items : [],
+        items: [], // not fetched — use itemsText for display
         itemsText: t.items_text || '',
         total: t.total, method: t.method, time: new Date(t.created_at),
         staff: t.staff, branch: t.branch || activeBranch,
