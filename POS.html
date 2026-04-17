@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -931,25 +932,6 @@ async function doLogin() {
     currentStaffRole = data.role;
     shiftStart = new Date();
 
-            // Clean up old localStorage keys from previous days
-    const todayK = todayKey();
-    
-    // 🆕 Clear old closure flags if it's a new day
-    const lastClosedDate = localStorage.getItem('pos_closed_date_' + activeBranch);
-    if (lastClosedDate && lastClosedDate !== todayK) {
-      console.log('New day detected, clearing old closure flag');
-      localStorage.removeItem('pos_closed_date_' + activeBranch);
-      localStorage.removeItem('pos_closed_at_' + activeBranch);
-    }
-    
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pos_sales_') && !key.endsWith(todayK)) localStorage.removeItem(key);
-      if (key.startsWith('pos_opening_') && !key.endsWith(todayK)) localStorage.removeItem(key);
-      if (key.startsWith('pos_billno_') && !key.endsWith(todayK)) localStorage.removeItem(key);
-    });
-
-    openingBalance = parseInt(localStorage.getItem('pos_opening_' + todayKey()) || 0);
-    billCounter = parseInt(localStorage.getItem('pos_billno_' + todayKey()) || 1);
     await loadTodaySales();
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('pos-app').classList.add('active');
@@ -1026,32 +1008,22 @@ async function saveShiftReport() {
 }
 
 async function doLogout() {
-  if (!confirm('End shift and logout?')) return;
+  if (!confirm('Logout? Shift data stays intact — use "Close Shifts" to end the day.')) return;
   if (liveReloadInterval) clearInterval(liveReloadInterval);
+  if (timerInterval) clearInterval(timerInterval);
+  if (tableTimerInterval) clearInterval(tableTimerInterval);
 
-  // Switch to closing view
-  document.querySelectorAll('.pos-view').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-  document.getElementById('view-closing').classList.add('active');
-  document.querySelectorAll('.nav-btn')[3]?.classList.add('active');
-
-  await renderClosingReport();
-
-  // Save shift report to Supabase
   await saveShiftReport();
 
-  const shouldPrint = confirm('Print closing report before logout?');
+  const shouldPrint = confirm('Print closing report before logging out?');
   if (shouldPrint) {
+    await renderClosingReport();
     printClosingReport();
-    setTimeout(() => {
-      // Clear all local data
-      localStorage.clear();
-      location.reload();
-    }, 2500);
+    setTimeout(() => location.reload(), 2500);
   } else {
-    localStorage.clear();
     location.reload();
   }
+  // ✅ No localStorage.clear() — data stays, next login restores everything from Supabase
 }
 
 function todayKey() {
@@ -1191,8 +1163,151 @@ async function applyPOSOverrides() {
 // ====================== TOP OF FILE (Global/Cache variables) ======================
 let _cachedPaidIds = new Set();
 let _paidIdsCacheTime = 0;
+// ════════════════════════════════════════════════════════
+// FIX 1 — After `let _paidIdsCacheTime = 0;` add these two functions
+// ════════════════════════════════════════════════════════
+ 
+async function _saveActiveTable(tname, orderData) {
+  if (!sb) return;
+  try {
+    if (!orderData) {
+      await sb.from('active_tables').delete()
+        .eq('branch', activeBranch).eq('table_name', tname);
+    } else {
+      const safe = JSON.parse(JSON.stringify(orderData));
+      await sb.from('active_tables').upsert(
+        [{ branch: activeBranch, table_name: tname, order_data: safe, updated_at: new Date().toISOString() }],
+        { onConflict: 'branch,table_name' }
+      );
+    }
+  } catch(e) { console.warn('_saveActiveTable:', e.message); }
+}
+ 
+async function _loadActiveTables() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('active_tables')
+      .select('*').eq('branch', activeBranch);
+    if (error || !data) return;
+    data.forEach(row => {
+      if (row.table_name && row.order_data && !tableOrders[row.table_name]) {
+        tableOrders[row.table_name] = row.order_data;
+      }
+    });
+    if (data.length) console.log('✅ Restored', data.length, 'active tables from cloud');
+  } catch(e) { console.warn('_loadActiveTables:', e.message); }
+}
 // ================================================================================
 
+function showTableConflictModal(newOrderTableId, newOrder, existingOrder) {
+  // Only show one modal at a time
+  if (document.getElementById('conflict-modal-overlay')) return;
+ 
+  const floor     = getFloorForTable(newOrderTableId);
+  const pool      = TABLES[floor] || TABLES['A Floor'];
+  const freeSlots = pool.filter(t => !tableOrders[t] && t !== newOrderTableId).slice(0, 8);
+ 
+  const el = document.createElement('div');
+  el.id = 'conflict-modal-overlay';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;'
+    + 'align-items:center;justify-content:center;z-index:9600;backdrop-filter:blur(8px);';
+ 
+  el.innerHTML = `
+    <div style="background:#1c1f27;border:1px solid rgba(212,175,55,0.4);border-radius:18px;
+                padding:24px;max-width:460px;width:92%;">
+      <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;
+                  color:#d4af37;margin-bottom:6px;">⚡ Table Conflict</div>
+      <div style="font-size:13px;color:#9aa0b0;margin-bottom:14px;">
+        A new web order arrived for <b style="color:white;">${newOrderTableId}</b>,
+        but that table already has an open POS order.
+      </div>
+      <div style="background:#242830;border-radius:10px;padding:10px 12px;
+                  margin-bottom:14px;font-size:12px;color:#9aa0b0;">
+        <div style="color:white;font-weight:700;margin-bottom:4px;">
+          Existing POS order on ${newOrderTableId}:
+        </div>
+        ${existingOrder.items.slice(0,4).map(i => `${i.qty}x ${i.name}`).join(', ')}
+        ${existingOrder.items.length > 4 ? '…' : ''}
+      </div>
+      <div style="font-size:12px;color:#9aa0b0;font-weight:700;margin-bottom:8px;
+                  text-transform:uppercase;letter-spacing:1px;">
+        Move existing POS order to:
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+        ${freeSlots.map(slot => `
+          <button onclick="_resolveConflict('move','${slot}','${newOrderTableId}')"
+            style="padding:8px 14px;border-radius:8px;
+                   border:1px solid rgba(255,255,255,0.15);
+                   background:rgba(255,255,255,0.07);color:white;
+                   font-family:'Outfit',sans-serif;font-size:13px;
+                   font-weight:700;cursor:pointer;">
+            ${slot}
+          </button>`).join('')}
+        ${!freeSlots.length
+          ? '<div style="color:#555d70;font-size:12px;padding:6px;">No free slots in this section</div>'
+          : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button onclick="_resolveConflict('ignore','','${newOrderTableId}')"
+          style="padding:12px;border-radius:10px;
+                 background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);
+                 color:#c0392b;font-family:'Outfit',sans-serif;
+                 font-size:13px;font-weight:700;cursor:pointer;">
+          🚫 Ignore Web Order
+        </button>
+        ${freeSlots.length ? `
+        <button onclick="_resolveConflict('assign','${freeSlots[0]}','${newOrderTableId}')"
+          style="padding:12px;border-radius:10px;
+                 background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);
+                 color:#27ae60;font-family:'Outfit',sans-serif;
+                 font-size:13px;font-weight:700;cursor:pointer;">
+          ✅ Put Web Order on ${freeSlots[0]}
+        </button>` : '<div></div>'}
+      </div>
+    </div>`;
+ 
+  window._conflictNewOrder  = newOrder;
+  window._conflictExisting  = existingOrder;
+  document.body.appendChild(el);
+}
+ 
+window._resolveConflict = function(action, targetSlot, originalSlot) {
+  const el          = document.getElementById('conflict-modal-overlay');
+  const newOrder    = window._conflictNewOrder;
+  const existing    = window._conflictExisting;
+  if (el) document.body.removeChild(el);
+  delete window._conflictNewOrder;
+  delete window._conflictExisting;
+  window._conflictShownFor = null;
+ 
+  if (action === 'ignore') {
+    showToast('Web order ignored — ' + originalSlot + ' kept as-is', 'error');
+    return;
+  }
+  if (action === 'move' && targetSlot) {
+    // Move existing POS order to free slot
+    tableOrders[targetSlot] = { ...existing, table: targetSlot };
+    _saveActiveTable(targetSlot, tableOrders[targetSlot]);
+    delete tableOrders[originalSlot];
+    _saveActiveTable(originalSlot, null);
+    if (existing.id && sb)
+      sb.from('kitchen_orders').update({ location: targetSlot }).eq('id', existing.id).catch(() => {});
+    // Place the new web order on the now-free original slot
+    tableOrders[originalSlot] = newOrder;
+    _saveActiveTable(originalSlot, newOrder);
+    showToast('Existing order → ' + targetSlot + '. Web order → ' + originalSlot, 'success');
+    renderTableMap();
+    return;
+  }
+  if (action === 'assign' && targetSlot) {
+    // Keep existing on original slot, put web order on a different free slot
+    tableOrders[targetSlot] = { ...newOrder, table: targetSlot };
+    _saveActiveTable(targetSlot, tableOrders[targetSlot]);
+    showToast('Web order assigned to ' + targetSlot, 'success');
+    renderTableMap();
+    return;
+  }
+};
 async function pollWebOrders() {
   if (!sb) return;
 
@@ -1208,8 +1323,7 @@ async function pollWebOrders() {
 
     const dbOrderIds = new Set(data.map(o => o.id));
 
-    // === Cached paid IDs (refreshed every 5 minutes) ===
-    if (Date.now() - _paidIdsCacheTime > 5 * 60 * 1000) { // 5 minutes
+    if (Date.now() - _paidIdsCacheTime > 5 * 60 * 1000) {
       const { data: paidTx } = await sb.from('shift_transactions')
         .select('kitchen_order_id')
         .eq('date', todayKey())
@@ -1225,8 +1339,9 @@ async function pollWebOrders() {
     // Clean up stale table orders
     for (const tname in tableOrders) {
       const order = tableOrders[tname];
-      if (order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
+      if (order.fromWeb && order.id && (!dbOrderIds.has(order.id) || dbPaidIds.has(order.id))) {
         delete tableOrders[tname];
+        _saveActiveTable(tname, null);
       }
     }
 
@@ -1254,28 +1369,43 @@ async function pollWebOrders() {
         );
       }
 
-      // ✅ Handle POS-created Delivery orders — reconnect to existing slot only, never create new
+      // POS Delivery — reconnect to existing slot only, never create phantom entries
       if (!tableId && order.type === 'Delivery' && order.source === 'POS') {
-        // Only reconnect if POS already has this order open — don't create phantom entries
-        tableId = Object.keys(tableOrders).find(t =>
-          tableOrders[t].id === order.id
-        );
-        // If not found in tableOrders, skip entirely — POS manages it directly
+        tableId = Object.keys(tableOrders).find(t => tableOrders[t].id === order.id);
         if (!tableId) return;
       }
 
       if (!tableId) return;
+      if (voidedOrderIds.has(order.id)) return;
+      if (dbPaidIds.has(order.id)) return;
 
       const existing = tableOrders[tableId];
 
       // Skip if already correctly loaded from web
       if (existing && existing.webOrderId === order.id) return;
 
-      // Don't override manually created POS orders
-      if (existing && !existing.fromWeb) return;
-
-      if (voidedOrderIds.has(order.id)) return;
-      if (dbPaidIds.has(order.id)) return;
+      // ── TABLE CONFLICT ──────────────────────────────────────────────
+      // A web order wants a slot that already has a manually created POS order.
+      // Instead of silently ignoring, show the cashier a modal to decide.
+      if (existing && !existing.fromWeb) {
+        const parsedItems = parseItemsFromText(order.items || '', order.subtotal, orderType === 'Dine-In');
+        const newWebOrder = {
+          table: tableId, type: orderType, items: parsedItems,
+          startTime: new Date(order.created_at).getTime(),
+          id: order.id, webOrderId: order.id, fromWeb: true,
+          confirmed: order.status === 'PREPARING' || order.status === 'READY',
+          rawItems: order.items, subtotal: order.subtotal,
+          customerName: order.customer_name || '', customerPhone: order.phone || '',
+          scEnabled: true, scPct: 7
+        };
+        // Only show the modal once per order ID
+        if (window._conflictShownFor !== order.id) {
+          window._conflictShownFor = order.id;
+          showTableConflictModal(tableId, newWebOrder, existing);
+        }
+        return;
+      }
+      // ───────────────────────────────────────────────────────────────
 
       // Skip READY Takeaway/Car orders that haven't been accepted yet
       if ((orderType === 'Takeaway' || loc.toLowerCase().startsWith('car'))
@@ -1286,20 +1416,13 @@ async function pollWebOrders() {
       const parsedItems = parseItemsFromText(order.items || '', order.subtotal, isDineIn);
 
       tableOrders[tableId] = {
-        table: tableId,
-        type: orderType,
-        items: parsedItems,
+        table: tableId, type: orderType, items: parsedItems,
         startTime: new Date(order.created_at).getTime(),
-        id: order.id,
-        webOrderId: order.id,
-        fromWeb: true,
+        id: order.id, webOrderId: order.id, fromWeb: true,
         confirmed: order.status === 'PREPARING' || order.status === 'READY',
-        rawItems: order.items,
-        subtotal: order.subtotal,
-        customerName: order.customer_name || '',
-        customerPhone: order.phone || '',
-        scEnabled: true,
-        scPct: 7
+        rawItems: order.items, subtotal: order.subtotal,
+        customerName: order.customer_name || '', customerPhone: order.phone || '',
+        scEnabled: true, scPct: 7
       };
 
       if (order.status === 'WAITING' && !newPending.find(p => p.id === order.id)) {
@@ -1311,7 +1434,6 @@ async function pollWebOrders() {
     updatePendingBadges();
     renderTableMap();
 
-    // Delivery badge count
     sb.from('kitchen_orders')
       .select('id')
       .eq('branch', activeBranch)
@@ -1320,15 +1442,11 @@ async function pollWebOrders() {
       .then(({ data }) => {
         const badge = document.getElementById('badge-delivery');
         const count = (data || []).length;
-        if (count > 0) {
-          badge.textContent = count;
-          badge.classList.add('show');
-        } else {
-          badge.classList.remove('show');
-        }
+        if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
+        else { badge.classList.remove('show'); }
       });
 
-  } catch (e) {
+  } catch(e) {
     console.error('pollWebOrders:', e);
   }
 }
@@ -1449,11 +1567,13 @@ function switchView(v) {
   if (v==='closing') renderClosingReport();
   if (v==='tables') renderTableMap();
   if (v==='delivery') renderDeliveryView();
-  if (v==='history') {
-    const picker = document.getElementById('history-date-picker');
-    picker.value = '2026-04-13';
-    loadHistoryForDate('2026-04-13');
-  }
+  if (v === 'history') {
+  const picker = document.getElementById('history-date-picker');
+  const today  = todayKey();
+  picker.value = today;
+  document.getElementById('history-branch-picker').value = activeBranch; // ← ADD THIS
+  loadHistoryForDate(today);
+}
 }
 
 function switchViewDirect(v) {
@@ -1622,11 +1742,11 @@ async function createPosOrderRecord(tname, type) {
     
     const { data, error } = await sb.from('kitchen_orders').insert([obj]).select();
     if (!error && data && data[0]) {
-      currentOrder.id = data[0].id;
-      // ✅ CRITICAL: Also update tableOrders with the new ID
-      if (tableOrders[tname]) {
-        tableOrders[tname].id = data[0].id;
-        tableOrders[tname].webOrderId = data[0].id;
+  currentOrder.id = data[0].id;
+  if (tableOrders[tname]) {
+    tableOrders[tname].id = data[0].id;
+    tableOrders[tname].webOrderId = data[0].id;
+    _saveActiveTable(tname, tableOrders[tname]);
       }
     }
   } catch(e) { 
@@ -1991,56 +2111,51 @@ function addItemToOrder(item, price, qty=1, note='') {
 }
 
 function saveTableOrder() {
-  if (currentOrder.table) {
-    if (!currentOrder.items.length && !currentOrder.fromWeb) {
-      delete tableOrders[currentOrder.table];
-      return;
-    }
-    
-    currentOrder.scEnabled = scEnabled;
-    currentOrder.scPct = getSCPct();
-    currentOrder.discAmount = parseFloat(document.getElementById('disc-amount').value) || 0;
-    currentOrder.discType = discType;
-    currentOrder.customerName = document.getElementById('order-customer-name').value;
-    currentOrder.customerPhone = document.getElementById('order-customer-phone').value;
-    
-    if (currentOrder.type === 'Delivery') {
-      currentOrder.deliveryAddress = document.getElementById('delivery-address').value;
-      currentOrder.deliveryCharge = parseFloat(document.getElementById('delivery-charge').value) || 0;
-    }
-    
-    tableOrders[currentOrder.table] = { ...currentOrder };
-    
-    // ✅ FIX: Sync BOTH Delivery AND Takeaway (not just Delivery)
-    if ((currentOrder.type === 'Delivery' || currentOrder.type === 'Takeaway') 
-        && currentOrder.id && sb) {
-      
-      const isDelivery = currentOrder.type === 'Delivery';
-      const addr = isDelivery 
-        ? (document.getElementById('delivery-address')?.value || currentOrder.deliveryAddress || '') 
-        : '';
-      const delCharge = isDelivery 
-        ? (parseFloat(document.getElementById('delivery-charge')?.value) || currentOrder.deliveryCharge || 0) 
-        : 0;
-        
-      const itemsText = currentOrder.items.map(i => 
-        `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`
-      ).join('\n');
-      
-      const custName = document.getElementById('order-customer-name')?.value || '';
-      const custPhone = document.getElementById('order-customer-phone')?.value || '';
-      
-      sb.from('kitchen_orders').update({
-        items: itemsText,
-        location: isDelivery ? (addr || currentOrder.table) : currentOrder.table,
-        delivery_fee: delCharge,
-        subtotal: currentOrder.items.reduce((s, i) => s + i.price * i.qty, 0),
-        customer_name: custName || null,
-        phone: custPhone || null
-      }).eq('id', currentOrder.id).then(({ error }) => {
-        if (error) console.error('saveTableOrder sync error:', error);
-      });
-    }
+  if (!currentOrder.table) return;
+ 
+  if (!currentOrder.items.length && !currentOrder.fromWeb) {
+    delete tableOrders[currentOrder.table];
+    _saveActiveTable(currentOrder.table, null);   // remove from cloud
+    return;
+  }
+ 
+  currentOrder.scEnabled  = scEnabled;
+  currentOrder.scPct      = getSCPct();
+  currentOrder.discAmount = parseFloat(document.getElementById('disc-amount').value) || 0;
+  currentOrder.discType   = discType;
+  currentOrder.customerName  = document.getElementById('order-customer-name').value;
+  currentOrder.customerPhone = document.getElementById('order-customer-phone').value;
+  if (currentOrder.type === 'Delivery') {
+    currentOrder.deliveryAddress = document.getElementById('delivery-address').value;
+    currentOrder.deliveryCharge  = parseFloat(document.getElementById('delivery-charge').value) || 0;
+  }
+ 
+  // Deep-copy so mutations to currentOrder.items don't corrupt tableOrders
+  tableOrders[currentOrder.table] = {
+    ...currentOrder,
+    items: currentOrder.items.map(i => ({ ...i }))
+  };
+ 
+  // Save to cloud (fire-and-forget — non-blocking)
+  _saveActiveTable(currentOrder.table, tableOrders[currentOrder.table]);
+ 
+  // Sync Delivery/Takeaway items to kitchen_orders
+  if ((currentOrder.type === 'Delivery' || currentOrder.type === 'Takeaway')
+      && currentOrder.id && sb) {
+    const isDelivery = currentOrder.type === 'Delivery';
+    const addr      = isDelivery ? (document.getElementById('delivery-address')?.value || '') : '';
+    const delCharge = isDelivery ? (parseFloat(document.getElementById('delivery-charge')?.value) || 0) : 0;
+    const itemsText = currentOrder.items
+      .map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
+    sb.from('kitchen_orders').update({
+      items: itemsText,
+      location: isDelivery ? (addr || currentOrder.table) : currentOrder.table,
+      delivery_fee: delCharge,
+      subtotal: currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0),
+      customer_name: document.getElementById('order-customer-name')?.value || null,
+      phone: document.getElementById('order-customer-phone')?.value || null
+    }).eq('id', currentOrder.id)
+      .then(({ error }) => { if (error) console.error('saveTableOrder sync:', error); });
   }
 }
 
@@ -2089,6 +2204,7 @@ async function changeTablePrompt() {
   if (tableOrders[newTable] && newTable !== currentOrder.table) { showToast('That table is already occupied', 'error'); return; }
   const oldTable = currentOrder.table;
   if (oldTable) delete tableOrders[oldTable];
+  if (oldTable) _saveActiveTable(oldTable, null);
   currentOrder.table = newTable;
   const newLocation = newTable.replace('-', ' ');
   saveTableOrder();
@@ -2213,6 +2329,7 @@ async function voidCurrentOrder() {
   }
 
   if (tableToDelete) delete tableOrders[tableToDelete];
+  if (tableToDelete) _saveActiveTable(tableToDelete, null);
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
   switchView('tables');
   renderTableMap();
@@ -2528,7 +2645,10 @@ function printBillOnly() {
 // ══════════════════════════════════
 let _paymentInProgress = false;  // ✅ FIX 7: double-tap guard
 function handOverTakeaway() {
-  if (currentOrder.table) delete tableOrders[currentOrder.table];
+  if (currentOrder.table) {
+    _saveActiveTable(currentOrder.table, null);
+    delete tableOrders[currentOrder.table];
+  }
   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
   switchView('tables');
   renderTableMap();
@@ -2592,10 +2712,11 @@ async function markTakeawayPaid() {
   currentOrder.payMethod = payM;
   currentOrder.tokenNo = tokenNo;
   if (tableOrders[currentOrder.table]) {
-    tableOrders[currentOrder.table].paid = true;
-    tableOrders[currentOrder.table].payMethod = payM;
-    tableOrders[currentOrder.table].tokenNo = tokenNo;
-  }
+  tableOrders[currentOrder.table].paid = true;
+  tableOrders[currentOrder.table].payMethod = payM;
+  tableOrders[currentOrder.table].tokenNo = tokenNo;
+  _saveActiveTable(currentOrder.table, tableOrders[currentOrder.table]); // ← this line is missing
+}
   completedOrders.push(sale);
   if (sb) {
     try {
@@ -2624,7 +2745,7 @@ async function markTakeawayPaid() {
   cashInHand += cashPart;
   salesTotal += grand;
   billCounter++;
-  localStorage.setItem('pos_billno_' + todayKey(), billCounter);
+  
   document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
@@ -2698,95 +2819,112 @@ function calcSplit() {
 }
 
 async function completePayment() {
-  // ✅ FIX 7: prevent double-tap / double-click
   if (_paymentInProgress) { showToast('Payment already processing — wait', 'error'); return; }
   _paymentInProgress = true;
   const payBtn = document.querySelector('.pay-complete-btn');
-  if (payBtn) { payBtn.disabled=true; payBtn.textContent='⏳ Processing...'; payBtn.style.opacity='0.6'; }
+  if (payBtn) { payBtn.disabled = true; payBtn.textContent = '⏳ Processing...'; payBtn.style.opacity = '0.6'; }
+ 
   try {
-  const grand = parseInt(document.getElementById('pay-grand-total').textContent.replace('Rs ','')) || 0;
-  if (payMethod === 'cash') {
-    const received = parseFloat(document.getElementById('cash-received').value) || 0;
-    if (received < grand) { showToast('Cash received is less than total', 'error'); return; }
-  }
-  if (payMethod === 'split') {
-    const c = parseFloat(document.getElementById('split-cash').value) || 0;
-    const k = parseFloat(document.getElementById('split-card').value) || 0;
-    if (c + k < grand) { showToast('Total paid is less than bill amount', 'error'); return; }
-  }
-  const pct = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
-  const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
-  const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const delCharge = getDelCharge();
-  let { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
-  // For web Dine-In orders, SC is baked into subtotal — extract it
-  if (currentOrder.fromWeb && currentOrder.type === 'Dine-In') {
-    const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
-    sc = grand - food - delCharge + (disc || 0);
-    if (sc < 0) sc = 0;
-  }
-  const billNo = String(billCounter).padStart(3,'0');
-  const sale = {
-    billNo, table: currentOrder.table, type: currentOrder.type, items: [...currentOrder.items],
-    total: grand, method: payMethod, time: new Date(), staff: currentStaff, branch: activeBranch,
-    customerName: currentOrder.customerName || '',
-    customerPhone: currentOrder.customerPhone || '',
-    deliveryAddress: currentOrder.type === 'Delivery' ? (document.getElementById('delivery-address').value || '') : '',
-    deliveryCharge: delCharge,
-    sc, disc, scPct: pct, discType, discAmount: discAmt,
-    cashReceived: payMethod === 'cash' ? (parseFloat(document.getElementById('cash-received').value) || 0) : 0,
-    splitCash: payMethod === 'split' ? (parseFloat(document.getElementById('split-cash').value) || 0) : 0,
-    splitCard: payMethod === 'split' ? (parseFloat(document.getElementById('split-card').value) || 0) : 0,
-  };
- completedOrders.push(sale);
-  if (sb) {
-    try {
-      await sb.from('shift_transactions').insert([{
-        branch: activeBranch, date: todayKey(),
-        bill_no: sale.billNo, type: sale.type,
-        table_loc: sale.table || '',
-        items: sale.items,
-        items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
-        subtotal: sale.items.reduce((s,i) => s + i.price * i.qty, 0),
-        sc: sale.sc, sc_pct: sale.scPct,
-        discount: sale.disc || 0,
-        delivery_charge: sale.deliveryCharge || 0,
-        total: sale.total, method: sale.method,
-        cash_received: sale.cashReceived || 0,
-        split_cash: sale.splitCash || 0,
-        split_card: sale.splitCard || 0,
-        staff: currentStaff,
-        customer_name: sale.customerName || '',
-        customer_phone: sale.customerPhone || '',
-        delivery_address: sale.deliveryAddress || '',
-        kitchen_order_id: currentOrder.id || null
-      }]);
-    } catch(e) { console.error('Sale save error:', e); }
-  }
-  // 🆕 Invalidate paid IDs cache so next poll sees fresh data
-  _paidIdsCacheTime = 0;
-  const cashPart = payMethod === 'cash' ? grand : payMethod === 'split' ? sale.splitCash : 0;
-  cashInHand += cashPart;
-  salesTotal += grand;
-  billCounter++;
-  localStorage.setItem('pos_billno_' + todayKey(), billCounter);
-  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
-  document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
-  saveTodaySales();
-  if (!currentOrder.id) await sendToKitchen();
-  if (currentOrder.id) paidOrderIds.add(currentOrder.id);
-  if (currentOrder.table) delete tableOrders[currentOrder.table];
-  closeModal('pay-modal');
-  printReceipt(sale);
-  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
-  switchView('tables');
-  renderTableMap();
-  showToast('Bill #' + billNo + ' — Rs ' + grand + ' collected 💰', 'success');
+    const grand = parseInt(document.getElementById('pay-grand-total').textContent.replace('Rs ', '')) || 0;
+ 
+    // FIX: throw (not return) so finally always fires and button re-enables
+    if (payMethod === 'cash') {
+      const received = parseFloat(document.getElementById('cash-received').value) || 0;
+      if (received < grand) { showToast('Cash received is less than total', 'error'); throw new Error('validation'); }
+    }
+    if (payMethod === 'split') {
+      const c = parseFloat(document.getElementById('split-cash').value) || 0;
+      const k = parseFloat(document.getElementById('split-card').value) || 0;
+      if (c + k < grand) { showToast('Total paid is less than bill amount', 'error'); throw new Error('validation'); }
+    }
+ 
+    const pct      = currentOrder.type === 'Dine-In' ? getSCPct() : 0;
+    const scOn     = currentOrder.type === 'Dine-In' ? scEnabled : false;
+    const discAmt  = parseFloat(document.getElementById('disc-amount').value) || 0;
+    const delCharge = getDelCharge();
+    let { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+    if (currentOrder.fromWeb && currentOrder.type === 'Dine-In') {
+      const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
+      sc = grand - food - delCharge + (disc || 0);
+      if (sc < 0) sc = 0;
+    }
+ 
+    const billNo = String(billCounter).padStart(3, '0');
+    const sale = {
+      billNo, table: currentOrder.table, type: currentOrder.type,
+      items: [...currentOrder.items], total: grand, method: payMethod,
+      time: new Date(), staff: currentStaff, branch: activeBranch,
+      customerName: currentOrder.customerName || '',
+      customerPhone: currentOrder.customerPhone || '',
+      deliveryAddress: currentOrder.type === 'Delivery'
+        ? (document.getElementById('delivery-address').value || '') : '',
+      deliveryCharge: delCharge, sc, disc, scPct: pct, discType, discAmount: discAmt,
+      cashReceived: payMethod === 'cash'
+        ? (parseFloat(document.getElementById('cash-received').value) || 0) : 0,
+      splitCash: payMethod === 'split'
+        ? (parseFloat(document.getElementById('split-cash').value) || 0) : 0,
+      splitCard: payMethod === 'split'
+        ? (parseFloat(document.getElementById('split-card').value) || 0) : 0,
+    };
+ 
+    completedOrders.push(sale);
+    if (sb) {
+      try {
+        await sb.from('shift_transactions').insert([{
+          branch: activeBranch, date: todayKey(),
+          bill_no: sale.billNo, type: sale.type,
+          table_loc: sale.table || '',
+          items: sale.items,
+          items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
+          subtotal: sale.items.reduce((s,i) => s + i.price * i.qty, 0),
+          sc: sale.sc, sc_pct: sale.scPct, discount: sale.disc || 0,
+          delivery_charge: sale.deliveryCharge || 0,
+          total: sale.total, method: sale.method,
+          cash_received: sale.cashReceived || 0,
+          split_cash: sale.splitCash || 0, split_card: sale.splitCard || 0,
+          staff: currentStaff,
+          customer_name: sale.customerName || '',
+          customer_phone: sale.customerPhone || '',
+          delivery_address: sale.deliveryAddress || '',
+          kitchen_order_id: currentOrder.id || null
+        }]);
+      } catch(e) { console.error('Sale save error:', e); }
+    }
+ 
+    _paidIdsCacheTime = 0;
+    const cashPart = payMethod === 'cash' ? grand : payMethod === 'split' ? sale.splitCash : 0;
+    cashInHand += cashPart;
+    salesTotal  += grand;
+    billCounter++;
+    document.getElementById('bar-cash').textContent   = 'Rs ' + cashInHand;
+    document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
+ 
+    if (!currentOrder.id) await sendToKitchen();
+    if (currentOrder.id) paidOrderIds.add(currentOrder.id);
+ 
+    // Remove from cloud active_tables
+    if (currentOrder.table) {
+      _saveActiveTable(currentOrder.table, null);
+      delete tableOrders[currentOrder.table];
+    }
+ 
+    closeModal('pay-modal');
+    printReceipt(sale);
+    currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+    switchView('tables');
+    renderTableMap();
+    showToast('Bill #' + billNo + ' — Rs ' + grand + ' collected 💰', 'success');
+ 
+  } catch(e) {
+    if (e.message !== 'validation') {
+      showToast('Payment error — try again', 'error');
+      console.error(e);
+    }
   } finally {
-    // ✅ FIX 7: always re-enable
+    // Always re-enable — even if validation failed or an error occurred
     _paymentInProgress = false;
     const pb = document.querySelector('.pay-complete-btn');
-    if (pb) { pb.disabled=false; pb.textContent='✅ COMPLETE SALE & PRINT'; pb.style.opacity='1'; }
+    if (pb) { pb.disabled = false; pb.textContent = '✅ COMPLETE SALE & PRINT'; pb.style.opacity = '1'; }
   }
 }
 
@@ -3038,11 +3176,12 @@ async function updateDeliveryStatus(orderId, status) {
     if (status === 'OUT' || status === 'PAID') {
       voidedOrderIds.add(orderId);
       for (const tname in tableOrders) {
-        if (tableOrders[tname].id === orderId || tableOrders[tname].webOrderId === orderId) {
-          delete tableOrders[tname];
-          break;
-        }
-      }
+  if (tableOrders[tname].id === orderId || tableOrders[tname].webOrderId === orderId) {
+    _saveActiveTable(tname, null); // ← add this
+    delete tableOrders[tname];
+    break;
+  }
+}
       renderTableMap();
 
       // Save to report
@@ -3085,7 +3224,7 @@ async function updateDeliveryStatus(orderId, status) {
                 kitchen_order_id: orderId
               }]);
               billCounter++;
-              localStorage.setItem('pos_billno_' + todayKey(), billCounter);
+              
               if (paymentMethod === 'cash') cashInHand += total;  // ✅ FIX 1: only cash goes to drawer
               document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
               document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
@@ -3170,7 +3309,6 @@ function showRiderAudit(riderName, orders) {
 async function setOpeningBalance() {
   const val = parseFloat(document.getElementById('opening-bal-input').value)||0;
   openingBalance = val;
-  localStorage.setItem('pos_opening_'+todayKey(), val);
   if (sb) {
     try {
       await sb.from('opening_balance').upsert([{
@@ -3525,129 +3663,81 @@ async function exportClosingExcel() {
 // LOCAL STORAGE
 // ══════════════════════════════════
 function saveTodaySales() {
-  localStorage.setItem('pos_sales_'+todayKey(), JSON.stringify(completedOrders));
 }
 async function loadTodaySales() {
   if (!sb) return;
-  
   try {
     const todayK = todayKey();
-    
-    // 🆕 KEY FIX: Check localStorage closure flags FIRST (fastest, works offline)
-    const closedDate = localStorage.getItem('pos_closed_date_' + activeBranch);
-    const closedAtStr = localStorage.getItem('pos_closed_at_' + activeBranch);
-    const closedAt = closedAtStr ? parseInt(closedAtStr) : 0;
-    const hoursSinceClose = closedAt > 0 ? (Date.now() - closedAt) / (1000 * 60 * 60) : 999;
-    
-    // DEBUG: Log what we found
-    console.log('Closure check:', { closedDate, todayK, closedAt, hoursSinceClose, match: closedDate === todayK });
-    
-    // If closed today, start fresh with 0
-    if (closedDate === todayK) {
-      console.log('✅ Shift was closed today — starting FRESH with 0');
-      openingBalance = 0;
-      billCounter = 1;
-      completedOrders = [];
-      cashInHand = 0;
-      document.getElementById('bar-cash').textContent = 'Rs 0';
-      document.getElementById('bar-billno').textContent = '001';
-      document.getElementById('opening-bal-input').value = '';
-      
-      // Clear the flag so tomorrow starts fresh
-      // But keep it for 1 hour to prevent accidental re-login loading data
-      if (hoursSinceClose > 1) {
-        localStorage.removeItem('pos_closed_date_' + activeBranch);
-        localStorage.removeItem('pos_closed_at_' + activeBranch);
-      }
-      return; // EXIT — don't load old data
-    }
 
-    // Fallback: Check Supabase (for multi-device or if localStorage was cleared)
+    // Only source of truth for "is shift closed" is Supabase
+    // localStorage flags are NOT checked here — a browser refresh is not a shift end
     const { data: closedCheck } = await sb.from('shift_closures')
-      .select('*')
-      .eq('branch', activeBranch)
-      .eq('date', todayK)
-      .maybeSingle(); // Use maybeSingle to avoid errors if not found
-    
+      .select('id').eq('branch', activeBranch).eq('date', todayK).maybeSingle();
+
     if (closedCheck) {
-      console.log('✅ Shift was closed (Supabase check) — starting FRESH with 0');
-      // Also set localStorage flag for next time
-      localStorage.setItem('pos_closed_date_' + activeBranch, todayK);
-      localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
-      
-      openingBalance = 0;
-      billCounter = 1;
-      completedOrders = [];
-      cashInHand = 0;
+      // Shift was formally closed via the Close button — start fresh
+      openingBalance = 0; billCounter = 1; completedOrders = []; cashInHand = 0;
       document.getElementById('bar-cash').textContent = 'Rs 0';
       document.getElementById('bar-billno').textContent = '001';
       document.getElementById('opening-bal-input').value = '';
-      return; // EXIT — don't load old data
+      return;
     }
 
-    // NOT CLOSED — Load normally from Supabase
-    console.log('❌ Shift not closed — loading data from Supabase');
-    
-    // Load opening balance
+    // ── Load opening balance ──────────────────────────────────────
     const { data: ob } = await sb.from('opening_balance')
-      .select('amount,set_by')
-      .eq('branch', activeBranch)
-      .eq('date', todayK)
-      .maybeSingle();
-      
+      .select('amount').eq('branch', activeBranch).eq('date', todayK).maybeSingle();
     if (ob) {
       openingBalance = ob.amount || 0;
       document.getElementById('opening-bal-input').value = openingBalance;
     }
 
-    // Load transactions
+    // ── Load completed transactions ───────────────────────────────
     const { data: txs } = await sb.from('shift_transactions')
-      .select('*')
-      .eq('branch', activeBranch)
-      .eq('date', todayK)
+      .select('*').eq('branch', activeBranch).eq('date', todayK)
       .order('created_at', { ascending: true });
 
     if (txs && txs.length) {
       completedOrders = txs.map(t => ({
-        billNo: t.bill_no,
-        table: t.table_loc,
-        type: t.type,
+        billNo: t.bill_no, table: t.table_loc, type: t.type,
         items: Array.isArray(t.items) ? t.items : [],
         itemsText: t.items_text || '',
-        total: t.total,
-        method: t.method,
-        time: new Date(t.created_at),
-        staff: t.staff,
-        branch: t.branch,
-        customerName: t.customer_name || '',
-        customerPhone: t.customer_phone || '',
-        deliveryAddress: t.delivery_address || '',
-        deliveryCharge: t.delivery_charge || 0,
-        sc: t.sc || 0,
-        scPct: t.sc_pct || 0,
-        disc: t.discount || 0,
-        cashReceived: t.cash_received || 0,
-        splitCash: t.split_cash || 0,
-        splitCard: t.split_card || 0,
-        returnReason: t.return_reason || ''
+        total: t.total, method: t.method, time: new Date(t.created_at),
+        staff: t.staff, branch: t.branch || activeBranch,
+        customerName: t.customer_name || '', customerPhone: t.customer_phone || '',
+        deliveryAddress: t.delivery_address || '', deliveryCharge: t.delivery_charge || 0,
+        sc: t.sc || 0, scPct: t.sc_pct || 0, disc: t.discount || 0,
+        cashReceived: t.cash_received || 0, splitCash: t.split_cash || 0,
+        splitCard: t.split_card || 0, returnReason: t.return_reason || '',
+        kitchenOrderId: t.kitchen_order_id || null
       }));
+
+      // Restore billCounter from highest bill number in DB
+      const nums = completedOrders.map(o => parseInt(o.billNo)).filter(n => !isNaN(n) && n > 0);
+      if (nums.length) billCounter = Math.max(...nums) + 1;
     }
 
-    // Calculate totals
-    salesTotal = completedOrders.filter(o=>!['cash-in','cash-out'].includes(o.method)).reduce((s,o)=>s+o.total,0);
+    // ── Recalculate totals ────────────────────────────────────────
+    salesTotal = completedOrders
+      .filter(o => !['cash-in','cash-out'].includes(o.method))
+      .reduce((s,o) => s + o.total, 0);
     cashInHand = openingBalance
-      + completedOrders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0)
-      + completedOrders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0)
-      - completedOrders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
-    
-    document.getElementById('bar-cash').textContent = 'Rs '+cashInHand;
+      + completedOrders.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
+      + completedOrders.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0)
+      - completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
+
+    document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
     document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
-    
-  } catch(e) { 
+
+    // ── Restore open tables (survives refresh) ────────────────────
+    await _loadActiveTables();
+
+    console.log('✅ Restored from cloud: bills=' + completedOrders.length +
+      ' tables=' + Object.keys(tableOrders).length +
+      ' billCounter=' + billCounter);
+
+  } catch(e) {
     console.error('loadTodaySales error:', e);
-    // On error, start fresh to be safe
-    openingBalance = 0;
-    completedOrders = [];
+    openingBalance = 0; completedOrders = [];
   }
 }
 
@@ -4075,18 +4165,10 @@ async function closeAllShifts() {
   document.getElementById('print-area').innerHTML = summaryHTML;
   window.print();
   
-  // 6. 🆕 KEY FIX: Mark as closed BEFORE clearing everything
-  localStorage.setItem('pos_closed_date_' + activeBranch, closedDate);
-  localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
-
+  
   // 7. CLEAR EVERYTHING
   setTimeout(() => {
-    // Clear localStorage for ALL dates (except closure flags which we just set)
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pos_') && !key.startsWith('pos_closed_date_') && !key.startsWith('pos_closed_at_')) {
-        localStorage.removeItem(key);
-      }
-    });
+    
     
     // Reset all variables
     completedOrders = [];
@@ -4187,17 +4269,7 @@ async function closeAllShiftsAndArchive() {
 
   // 5. CLEAR LOCAL STATE ONLY — data stays in Supabase history
   
-  // 🆕 KEY FIX: Mark this date as closed in localStorage (persists across reloads!)
-  localStorage.setItem('pos_closed_date_' + activeBranch, closedDate);
-  localStorage.setItem('pos_closed_at_' + activeBranch, Date.now().toString());
   
-  // Clear other localStorage keys for current shift
-  const keysToRemove = Object.keys(localStorage).filter(k => 
-    k.startsWith('pos_sales_') || 
-    k.startsWith('pos_opening_') || 
-    k.startsWith('pos_billno_')
-  );
-  keysToRemove.forEach(k => localStorage.removeItem(k));
 
   // Reset all in-memory variables to ZERO
   completedOrders = [];
