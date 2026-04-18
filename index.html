@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2268,7 +2269,7 @@ body {
     } else {
         document.getElementById('gateway-screen').style.display = 'flex';
 applyAdminOverrides().then(() => {
-    renderLoyaltyCard();
+    renderLoyaltyCard(); // already async, will run fine
 });
 loadCustomItemsIntoMenu();
         if (window._pendingTab) {
@@ -2634,32 +2635,67 @@ function proceedFromSheet() {
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
     
-    function renderLoyaltyCard() {
-        const name = localStorage.getItem('ovenx_member_name');
-        const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
-        if(!name) {
-    document.getElementById('join-club-btn').style.display = 'block';
-    document.getElementById('recover-stamps-btn').style.display = 'block';
-    document.getElementById('loyalty-display').style.display = 'none';
-    return;
-}
-document.getElementById('recover-stamps-btn').style.display = 'none';
-        document.getElementById('join-club-btn').style.display = 'none';
-        document.getElementById('loyalty-display').style.display = 'block';
-        document.getElementById('club-member-name').innerText = name.toUpperCase();
-        const row1 = document.getElementById('stamp-row-1'); 
-        const row2 = document.getElementById('stamp-row-2');
-        row1.innerHTML = ""; row2.innerHTML = "";
-        for(let i=1; i<=10; i++) {
-            const circle = document.createElement('div');
-            circle.className = "stamp-circle" + (i <= stamps ? " filled" : "");
-            circle.innerHTML = i <= stamps ? "🔥" : i;
-            if(i <= 6) row1.appendChild(circle); else row2.appendChild(circle);
-        }
-        const msg = document.getElementById('loyalty-msg');
-        if(stamps >= 10) msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
-        else msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
+    async function renderLoyaltyCard() {
+    const phone = localStorage.getItem('ovenx_member_phone');
+
+    if (!phone) {
+        document.getElementById('join-club-btn').style.display = 'block';
+        document.getElementById('recover-stamps-btn').style.display = 'block';
+        document.getElementById('loyalty-display').style.display = 'none';
+        return;
     }
+
+    // Always sync from Supabase — DB is source of truth
+    if (sb) {
+        try {
+            const { data } = await sb.from('gold_club_members')
+                .select('*').eq('phone', phone);
+
+            if (data && data.length > 0) {
+                const member = data[0];
+                localStorage.setItem('ovenx_member_name', member.name);
+                localStorage.setItem('ovenx_stamps', member.stamps || 0);
+            } else {
+                // Phone in localStorage but not in DB — clear cache
+                localStorage.removeItem('ovenx_member_name');
+                localStorage.removeItem('ovenx_member_phone');
+                localStorage.removeItem('ovenx_stamps');
+                document.getElementById('join-club-btn').style.display = 'block';
+                document.getElementById('recover-stamps-btn').style.display = 'block';
+                document.getElementById('loyalty-display').style.display = 'none';
+                return;
+            }
+        } catch(e) {
+            console.warn('Supabase sync failed, using localStorage cache:', e);
+        }
+    }
+
+    const name = localStorage.getItem('ovenx_member_name');
+    const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
+
+    document.getElementById('recover-stamps-btn').style.display = 'none';
+    document.getElementById('join-club-btn').style.display = 'none';
+    document.getElementById('loyalty-display').style.display = 'block';
+    document.getElementById('club-member-name').innerText = name.toUpperCase();
+
+    const row1 = document.getElementById('stamp-row-1');
+    const row2 = document.getElementById('stamp-row-2');
+    row1.innerHTML = ""; row2.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+        const circle = document.createElement('div');
+        circle.className = "stamp-circle" + (i <= stamps ? " filled" : "");
+        circle.innerHTML = i <= stamps ? "🔥" : i;
+        if (i <= 6) row1.appendChild(circle); else row2.appendChild(circle);
+    }
+
+    const msg = document.getElementById('loyalty-msg');
+    if (stamps >= 10) {
+        msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
+    } else {
+        msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
+    }
+}
 
     function requestNotificationPermission() {
         if ("Notification" in window) {
@@ -2673,60 +2709,90 @@ document.getElementById('recover-stamps-btn').style.display = 'none';
 
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
     async function recoverStamps() {
-    const phone = prompt("Enter your registered WhatsApp number:");
+    let phone = prompt("Enter your registered WhatsApp number:");
     if (!phone) return;
     
-    const { data, error } = await sb.from('gold_club_members')
-        .select('*').eq('phone', phone).single();
-    
-    if (error || !data) {
-        alert("No account found with this number. Please register first!");
-        return;
-    }
-    
-    localStorage.setItem('ovenx_member_name', data.name);
-    localStorage.setItem('ovenx_member_phone', data.phone);
-    localStorage.setItem('ovenx_stamps', data.stamps || 0);
-    
-    document.getElementById('join-club-btn').style.display = 'none';
-    document.getElementById('recover-stamps-btn').style.display = 'none';
-    renderLoyaltyCard();
-    alert("Welcome back " + data.name + "! Your " + (data.stamps || 0) + " stamps have been restored 🔥");
-}
-    async function saveClubProfile() {
-    const n = document.getElementById('clubName').value;
-    const p = document.getElementById('clubPhone').value;
-    if(!n || !p) return alert("Enter your name and WhatsApp number!");
-    
-    if(sb) {
-        // Check if member already exists
-        const { data: existing } = await sb.from('gold_club_members')
-            .select('*').eq('phone', p).single();
-        
-        if(existing) {
-            // Member exists — restore their stamps
-            localStorage.setItem('ovenx_member_name', existing.name);
-            localStorage.setItem('ovenx_member_phone', existing.phone);
-            localStorage.setItem('ovenx_stamps', existing.stamps || 0);
-            document.getElementById('loyalty-setup-overlay').style.display = 'none';
-            setScrollLock(false);
-            renderLoyaltyCard();
-            alert("Welcome back, " + existing.name + "! You have " + (existing.stamps || 0) + " stamps 🔥");
+    // Normalize
+    phone = phone.replace(/[\s\-\(\)]/g, '');
+    if (phone.startsWith('0')) phone = '92' + phone.slice(1);
+    if (!phone.startsWith('92')) phone = '92' + phone;
+
+    if (!sb) { alert("No connection to database."); return; }
+
+    try {
+        const { data, error } = await sb.from('gold_club_members')
+            .select('*').eq('phone', phone);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            alert("No account found for this number. Please register first!");
             return;
         }
-        
-        // New member — insert
-        await sb.from('gold_club_members').insert([{ name: n, phone: p, stamps: 0 }]);
+
+        const member = data[0];
+        localStorage.setItem('ovenx_member_name', member.name);
+        localStorage.setItem('ovenx_member_phone', member.phone);
+        localStorage.setItem('ovenx_stamps', member.stamps || 0);
+        document.getElementById('join-club-btn').style.display = 'none';
+        document.getElementById('recover-stamps-btn').style.display = 'none';
+        await renderLoyaltyCard();
+        alert(`Welcome back ${member.name}! You have ${member.stamps || 0} stamps 🔥`);
+
+    } catch(e) {
+        alert("Connection error. Please check internet and try again.");
+        console.error(e);
+    }
+}
+    async function saveClubProfile() {
+    const n = document.getElementById('clubName').value.trim();
+    let p = document.getElementById('clubPhone').value.trim();
+    if (!n || !p) return alert("Enter your name and WhatsApp number!");
+    
+    // Normalize phone — strip spaces, dashes, brackets
+    p = p.replace(/[\s\-\(\)]/g, '');
+    // Convert 03xx to 923xx format
+    if (p.startsWith('0')) p = '92' + p.slice(1);
+    if (!p.startsWith('92')) p = '92' + p;
+
+    if (sb) {
+        try {
+            // Check if already exists
+            const { data } = await sb.from('gold_club_members')
+                .select('*').eq('phone', p);
+
+            if (data && data.length > 0) {
+                // Already registered — restore their data
+                const existing = data[0];
+                localStorage.setItem('ovenx_member_name', existing.name);
+                localStorage.setItem('ovenx_member_phone', existing.phone);
+                localStorage.setItem('ovenx_stamps', existing.stamps || 0);
+                document.getElementById('loyalty-setup-overlay').style.display = 'none';
+                setScrollLock(false);
+                await renderLoyaltyCard();
+                alert(`Welcome back, ${existing.name}! You have ${existing.stamps || 0} stamps 🔥`);
+                return;
+            }
+
+            // New member — insert
+            const { error } = await sb.from('gold_club_members')
+                .insert([{ name: n, phone: p, stamps: 0 }]);
+            if (error) throw error;
+
+        } catch(e) {
+            alert("Connection error. Please try again.");
+            console.error(e);
+            return;
+        }
     }
 
     localStorage.setItem('ovenx_member_name', n);
     localStorage.setItem('ovenx_member_phone', p);
     localStorage.setItem('ovenx_stamps', 0);
-    
     document.getElementById('loyalty-setup-overlay').style.display = 'none';
     setScrollLock(false);
-    renderLoyaltyCard();
-    alert("Welcome to the Club, " + n + "! 👑");
+    await renderLoyaltyCard();
+    alert(`Welcome to the Club, ${n}! 👑`);
 }
 
     function enterApp(target) { 
@@ -3438,26 +3504,40 @@ if (orderType === 'Takeaway') {
     let orderId = null;
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 if (orderId) initCustomerTracking(orderId, orderObj);
-let stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
-    let bonus = "";
-    if(localStorage.getItem('ovenx_member_name')) {
-    if(stamps >= 10) {
-        const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-        bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-        localStorage.setItem('ovenx_stamps', 0);
-        // Sync reset to Supabase
-        if(sb) {
-            const phone = localStorage.getItem('ovenx_member_phone');
-            await sb.from('gold_club_members').update({ stamps: 0 }).eq('phone', phone);
+// REPLACE WITH:
+let bonus = "";
+const memberPhone = localStorage.getItem('ovenx_member_phone');
+
+if (memberPhone && sb) {
+    try {
+        // Always fetch current stamps from DB — never trust localStorage alone
+        const { data: memberData } = await sb.from('gold_club_members')
+            .select('*').eq('phone', memberPhone);
+
+        if (memberData && memberData.length > 0) {
+            const member = memberData[0];
+            let stamps = member.stamps || 0;
+
+            if (stamps >= 10) {
+                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
+                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+                // Reset stamps in DB
+                await sb.from('gold_club_members')
+                    .update({ stamps: 0 })
+                    .eq('phone', memberPhone);
+                localStorage.setItem('ovenx_stamps', 0);
+
+            } else if (foodTotal >= 1000) {
+                const newStamps = stamps + 1;
+                // Save to DB
+                await sb.from('gold_club_members')
+                    .update({ stamps: newStamps })
+                    .eq('phone', memberPhone);
+                localStorage.setItem('ovenx_stamps', newStamps);
+            }
         }
-    } else if(foodTotal >= 1000) {
-        const newStamps = stamps + 1;
-        localStorage.setItem('ovenx_stamps', newStamps);
-        // Sync to Supabase
-        if(sb) {
-            const phone = localStorage.getItem('ovenx_member_phone');
-            await sb.from('gold_club_members').update({ stamps: newStamps }).eq('phone', phone);
-        }
+    } catch(e) {
+        console.error('Stamp sync error:', e);
     }
 }
 
@@ -6451,5 +6531,6 @@ loadCustomItemsIntoMenu();
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
