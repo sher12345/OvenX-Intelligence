@@ -2648,8 +2648,9 @@ function proceedFromSheet() {
     // Always sync from Supabase — DB is source of truth
     if (sb) {
         try {
-            const { data } = await sb.from('gold_club_members')
-                .select('*').eq('phone', phone);
+            const { data } = await sb.rpc('find_member_by_phone', { 
+    search_phone: phone 
+});
 
             if (data && data.length > 0) {
                 const member = data[0];
@@ -2711,22 +2712,19 @@ function proceedFromSheet() {
     async function recoverStamps() {
     let phone = prompt("Enter your registered WhatsApp number:");
     if (!phone) return;
-    
-    // Normalize
-    phone = phone.replace(/[\s\-\(\)]/g, '');
-    if (phone.startsWith('0')) phone = '92' + phone.slice(1);
-    if (!phone.startsWith('92')) phone = '92' + phone;
-
     if (!sb) { alert("No connection to database."); return; }
 
     try {
-        const { data, error } = await sb.from('gold_club_members')
-            .select('*').eq('phone', phone);
+        // Use the SQL function that matches by last 10 digits
+        const { data, error } = await sb.rpc('find_member_by_phone', { 
+            search_phone: phone 
+        });
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            alert("No account found for this number. Please register first!");
+            // Fallback — show what we're searching so user can debug
+            alert(`No account found.\n\nYou entered: ${phone}\n\nTip: Try just the last 10 digits e.g. 3087305896`);
             return;
         }
 
@@ -2758,8 +2756,9 @@ function proceedFromSheet() {
     if (sb) {
         try {
             // Check if already exists
-            const { data } = await sb.from('gold_club_members')
-                .select('*').eq('phone', p);
+            const { data } = await sb.rpc('find_member_by_phone', { 
+    search_phone: p 
+});
 
             if (data && data.length > 0) {
                 // Already registered — restore their data
