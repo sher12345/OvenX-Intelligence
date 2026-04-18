@@ -1256,27 +1256,34 @@ async function _saveActiveTable(tname, orderData) {
 async function _loadActiveTables() {
   if (!sb) return;
   try {
-    // Step 1: Get all active_tables rows for this branch
     const { data, error } = await sb.from('active_tables')
       .select('*').eq('branch', activeBranch);
     if (error || !data || !data.length) return;
 
-    // Step 2: Get today's paid transactions — both kitchen_order_id AND table_loc
+    // Get today's paid transactions
     const { data: paidTx } = await sb.from('shift_transactions')
-      .select('kitchen_order_id, table_loc, bill_no')
+      .select('kitchen_order_id, table_loc, created_at')
       .eq('date', todayKey())
       .eq('branch', activeBranch);
 
     const paidKitchenIds = new Set();
-    const paidTableNames = new Set();
+    // Map of table_loc → latest paid time (to compare against order start time)
+    const paidTableTimes = {};
 
     (paidTx || []).forEach(t => {
       if (t.kitchen_order_id) paidKitchenIds.add(t.kitchen_order_id);
       if (t.table_loc) {
-        // Normalize: store both "A-1" and "A 1" variants
-        paidTableNames.add(t.table_loc);
-        paidTableNames.add(t.table_loc.replace(/ /g, '-'));
-        paidTableNames.add(t.table_loc.replace(/-/g, ' '));
+        const variants = [
+          t.table_loc,
+          t.table_loc.replace(/ /g, '-'),
+          t.table_loc.replace(/-/g, ' ')
+        ];
+        const paidAt = new Date(t.created_at).getTime();
+        variants.forEach(v => {
+          if (!paidTableTimes[v] || paidAt > paidTableTimes[v]) {
+            paidTableTimes[v] = paidAt;
+          }
+        });
       }
     });
 
@@ -1288,31 +1295,38 @@ async function _loadActiveTables() {
       const order = row.order_data;
 
       if (!tname || !order) { staleRows.push(tname); continue; }
-      if (tableOrders[tname]) continue; // already in memory, skip
+      if (tableOrders[tname]) continue;
 
-      // Check 1: kitchen_order_id paid?
+      // Check 1: kitchen_order_id was explicitly paid — always skip
       if (order.id && paidKitchenIds.has(order.id)) {
         console.log('🗑️ Skipping paid order (kitchen_id match):', tname, order.id);
         staleRows.push(tname); continue;
       }
 
-      // Check 2: table location paid today? (catches manual POS orders)
-      // Only skip non-web orders — web orders without kitchen_id might still be valid
-      if (!order.fromWeb && (paidTableNames.has(tname) || paidTableNames.has(tname.replace(/-/g,' ')) || paidTableNames.has(tname.replace(/ /g,'-')))) {
-        console.log('🗑️ Skipping paid table (loc match):', tname);
-        staleRows.push(tname); continue;
+      // Check 2: table location was paid — BUT only if the payment
+      // happened AFTER this order started (not a previous order on same slot)
+      if (!order.fromWeb && !order.id) {
+        const orderStartTime = order.startTime || 0;
+        const lastPaidAt = paidTableTimes[tname]
+          || paidTableTimes[tname.replace(/-/g,' ')]
+          || paidTableTimes[tname.replace(/ /g,'-')]
+          || 0;
+
+        if (lastPaidAt > orderStartTime) {
+          console.log('🗑️ Skipping paid table (time match):', tname, 'paid at', lastPaidAt, 'order started', orderStartTime);
+          staleRows.push(tname); continue;
+        }
       }
 
       tableOrders[tname] = order;
       restored++;
     }
 
-    // Clean up stale rows in background
+    // Clean up stale rows
     if (staleRows.length && sb) {
       staleRows.forEach(tname => {
         sb.from('active_tables').delete()
           .eq('branch', activeBranch).eq('table_name', tname)
-          .then(() => console.log('🗑️ Cleaned stale active_table:', tname))
           .catch(() => {});
       });
     }
