@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -345,6 +346,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .cust-info-row input:focus{border-color:var(--orange);}
 ::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
 
+/* ── ADMIN TRANSACTION MODAL ── */
+#admin-tx-modal .modal-box{max-width:540px;}
+.admin-tx-section{margin-bottom:16px;}
+.admin-tx-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;}
+.admin-tx-info{background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.7;}
+.admin-tx-info b{color:var(--text);}
+.admin-items-editor{background:var(--surface2);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.admin-item-row-edit{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);}
+.admin-item-row-edit:last-child{border-bottom:none;}
+.admin-item-name-edit{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;outline:none;}
+.admin-item-qty-edit{width:48px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--orange);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
+.admin-item-price-edit{width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--green);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;outline:none;text-align:center;}
+.admin-item-del-btn{width:24px;height:24px;border-radius:6px;background:rgba(192,57,43,0.15);border:none;color:var(--red);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.admin-item-del-btn:hover{background:var(--red);color:white;}
+.admin-add-item-btn{width:100%;padding:8px;background:rgba(39,174,96,0.1);border:1px dashed rgba(39,174,96,0.3);border-radius:8px;color:var(--green);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;}
+.admin-method-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;}
+.admin-action-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+.admin-action-btn{padding:10px 8px;border-radius:9px;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:.15s;}
+.admin-action-btn:active{transform:translateY(1px);}
+.aab-delete{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);}
+.aab-save{background:var(--green);color:white;box-shadow:0 3px 0 var(--dark-green);}
+.aab-cancel{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
 @media print{
   body>*:not(#print-area){display:none!important;}
   #print-area{display:block!important;width:72mm;font-family:'Courier New',monospace;font-size:14px;color:black;}
@@ -771,6 +794,47 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <button class="modal-cancel" onclick="closeModal('split-modal')">Cancel</button>
         <button class="modal-confirm" onclick="applySplitByAmount()">Print Split Bills</button>
       </div>
+    </div>
+  </div>
+</div>
+<!-- ADMIN TRANSACTION MODAL -->
+<div class="modal-backdrop" id="admin-tx-modal">
+  <div class="modal-box" style="max-width:540px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="modal-title">⚙️ Admin: Edit Transaction</div>
+      <div style="font-size:12px;color:var(--text3);">Bill <span id="atm-bill-no" style="color:var(--orange);font-weight:700;"></span></div>
+    </div>
+    <div class="admin-tx-info" id="atm-info"></div>
+    <div class="admin-tx-section">
+      <div class="admin-tx-label">Items</div>
+      <div class="admin-items-editor" id="atm-items-editor"></div>
+      <button class="admin-add-item-btn" onclick="adminTxAddItem()">+ Add Item</button>
+    </div>
+    <div class="admin-tx-section">
+      <div class="admin-tx-label">Payment Method</div>
+      <div class="admin-method-grid">
+        <button class="pay-method-btn" id="atm-pm-cash"      onclick="adminTxSelectMethod('cash')">💵 Cash</button>
+        <button class="pay-method-btn" id="atm-pm-card"      onclick="adminTxSelectMethod('card')">💳 Card</button>
+        <button class="pay-method-btn" id="atm-pm-bank"      onclick="adminTxSelectMethod('bank')">🏦 Bank</button>
+        <button class="pay-method-btn" id="atm-pm-jazzcash"  onclick="adminTxSelectMethod('jazzcash')">📱 JazzCash</button>
+        <button class="pay-method-btn" id="atm-pm-foodpanda" onclick="adminTxSelectMethod('foodpanda')">🐼 FoodPanda</button>
+        <button class="pay-method-btn" id="atm-pm-split"     onclick="adminTxSelectMethod('split')">✂️ Split</button>
+      </div>
+    </div>
+    <div class="admin-tx-section">
+      <div class="admin-tx-label">Total Amount (Rs)</div>
+      <input type="number" id="atm-total-input"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--orange);font-family:'Outfit',sans-serif;font-size:20px;font-weight:700;outline:none;margin-bottom:6px;"
+        oninput="adminTxUpdatePreview()">
+      <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:9px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span style="font-size:13px;color:var(--text2);">Calculated from items:</span>
+        <span id="atm-calc-total" style="font-size:16px;font-weight:800;color:var(--orange);">Rs 0</span>
+      </div>
+    </div>
+    <div class="admin-action-btns">
+      <button class="admin-action-btn aab-delete" onclick="adminTxDelete()">🗑️ Delete</button>
+      <button class="admin-action-btn aab-cancel" onclick="closeModal('admin-tx-modal')">Cancel</button>
+      <button class="admin-action-btn aab-save" onclick="adminTxSave()">✅ Save Changes</button>
     </div>
   </div>
 </div>
@@ -3403,9 +3467,12 @@ const expected = openingBalance + totalCash - totalDelFees - cashOuts;
       <td><span class="tx-type ${o.method==='cash-out'?'tx-void':'tx-sale'}">${o.method}</span></td>
       <td style="text-align:right;font-weight:700;color:${o.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(o.total)}</td>
       <td style="text-align:center;">
+        <div style="display:flex;gap:3px;justify-content:center;">
         ${o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' && o.billNo !== 'VOID' && o.billNo !== 'RTN' && !o.billNo.startsWith('SPL') ? 
           `<button onclick="reprintReceipt('${o.billNo}')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;" title="Reprint">🖨️</button>` : 
-          '<span style="color:var(--text3);font-size:11px;">—</span>'}
+          '<span style="color:var(--text3);font-size:11px;"></span>'}
+        ${currentStaffRole === 'Admin' && o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' ? `<button onclick="openAdminTxModal('${o.billNo}',true,'${todayKey()}','${activeBranch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;" title="Admin Edit">⚙️</button>` : ''}
+        </div>
       </td>
     </tr>
   `).join('') || '<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--text3);">No transactions yet</td></tr>';
@@ -4095,7 +4162,7 @@ async function loadHistoryForDate(dateStr) {
             📋 Transactions (${txs.length})
           </div>
           <table class="transactions-table">
-            <thead><tr><th>Bill#</th><th>Time</th><th>Staff</th><th>Type</th><th>Items</th><th>Method</th><th style="text-align:right;">Amount</th></tr></thead>
+          <thead><tr><th>Bill#</th><th>Time</th><th>Staff</th><th>Type</th><th>Items</th><th>Method</th><th style="text-align:right;">Amount</th>${currentStaffRole==='Admin'?'<th>⚙️</th>':''}</tr></thead>
             <tbody>
               ${txs.map(t => `
                 <tr>
@@ -4106,6 +4173,7 @@ async function loadHistoryForDate(dateStr) {
                   <td style="color:var(--text2);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.items_text||'—'}</td>
                   <td><span class="tx-type tx-sale">${t.method||'—'}</span></td>
                   <td style="text-align:right;font-weight:700;color:${t.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(t.total)}</td>
+                  ${currentStaffRole==='Admin'?`<td style="text-align:center;padding:4px 8px;"><button onclick="openAdminTxModal('${t.bill_no}',false,'${dateStr}','${branch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;">⚙️</button></td>`:'<td></td>'}
                 </tr>
               `).join('')}
             </tbody>
@@ -4138,28 +4206,22 @@ async function closeAllShifts() {
 
   showToast('Finalizing all shifts...', 'success');
 
-  // CAPTURE DATE BEFORE ANYTHING ELSE
   const closedDate = todayKey();
 
-  // 1. Get ALL unpaid/active orders and mark them
   const activeTables = Object.keys(tableOrders).length;
   if (activeTables > 0) {
     if (!confirm(`⚠️ ${activeTables} table(s) still have open orders!\n\nThese will be marked as unpaid/void. Continue?`)) return;
   }
 
-  // 2. Save final shift report
   await saveShiftReport();
 
-  // 3. Mark ALL kitchen orders as completed/closed for this branch
   if (sb) {
     try {
-      // Close any lingering orders
       await sb.from('kitchen_orders')
         .update({ status: 'CLOSED', closed_at: new Date().toISOString(), closed_by: currentStaff })
         .eq('branch', activeBranch)
         .in('status', ['WAITING', 'PREPARING', 'READY']);
       
-      // Mark shift as formally closed
       await sb.from('shift_closures').insert([{
         branch: activeBranch,
         date: closedDate,
@@ -4173,23 +4235,23 @@ async function closeAllShifts() {
     } catch(e) { console.error('Close orders error:', e); }
   }
 
-  // 4. Calculate grand totals for display
+  // Capture totals BEFORE clearing
   const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
   const totalCard = allSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
-  
   const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
   const finalHandOver = openingBalance + totalCash - cashOuts;
+  const savedOpeningBalance = openingBalance;
+  const savedBranch = activeBranch;
 
-  // 5. Print final summary
-  const summaryHTML = `
+  document.getElementById('print-area').innerHTML = `
     <div style="font-family:'Courier New',monospace;color:black;padding:10px;width:72mm;">
       <div style="text-align:center;font-size:20px;font-weight:900;">OVEN X</div>
       <div style="text-align:center;font-size:14px;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px;margin:6px 0;">
-        FINAL CLOSE — ${activeBranch}
+        FINAL CLOSE — ${savedBranch}
       </div>
       <div style="font-size:11px;text-align:center;margin-bottom:8px;">
         ${new Date().toLocaleString('en-PK')}
@@ -4199,7 +4261,7 @@ async function closeAllShifts() {
         <div style="display:flex;justify-content:space-between;"><span>Grand Total:</span><b>Rs ${grandTotal}</b></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Total:</span><span>Rs ${totalCash}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Card Total:</span><span>Rs ${totalCard}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>Opening:</span><span>Rs ${openingBalance}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Opening:</span><span>Rs ${savedOpeningBalance}</span></div>
         <div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:4px;margin-top:4px;">
           <span><b>HAND OVER:</b></span>
           <span><b>Rs ${finalHandOver}</b></span>
@@ -4210,37 +4272,30 @@ async function closeAllShifts() {
       </div>
     </div>
   `;
-  
-  document.getElementById('print-area').innerHTML = summaryHTML;
-  window.print();
-  
-  
-  // 7. CLEAR EVERYTHING
+
   setTimeout(() => {
-    
-    
-    // Reset all variables
-    completedOrders = [];
-    tableOrders = {};
-    openingBalance = 0;
-    cashInHand = 0;
-    salesTotal = 0;
-    billCounter = 1;
-    pendingWebOrders = [];
-    voidedOrderIds.clear();
-    paidOrderIds.clear();
-    
-    // Clear Supabase real-time connection
-    if (liveReloadInterval) clearInterval(liveReloadInterval);
-    
-    showToast('All shifts closed. System reset.', 'success');
-    
-    // Force reload after 2 seconds
-    setTimeout(() => location.reload(), 2000);
-  }, 1000);
+    window.print();
+    setTimeout(() => {
+      completedOrders = [];
+      tableOrders = {};
+      openingBalance = 0;
+      cashInHand = 0;
+      salesTotal = 0;
+      billCounter = 1;
+      pendingWebOrders = [];
+      voidedOrderIds.clear();
+      paidOrderIds.clear();
+      if (liveReloadInterval) clearInterval(liveReloadInterval);
+      document.getElementById('bar-cash').textContent = 'Rs 0';
+      document.getElementById('bar-billno').textContent = '001';
+      document.getElementById('opening-bal-input').value = '';
+      showToast('All shifts closed. System reset.', 'success');
+      setTimeout(() => location.reload(), 2000);
+    }, 1000);
+  }, 300);
 }
+
 async function closeAllShiftsAndArchive() {
-  // 1. Confirmations
   if (!confirm('🔒 FINAL SHIFT CLOSE\n\nThis will:\n• Save all data to history\n• Print final report\n• START FRESH with 0\n\nContinue?')) return;
   
   const adminPin = prompt('Enter Admin PIN:');
@@ -4251,16 +4306,12 @@ async function closeAllShiftsAndArchive() {
 
   showToast('Archiving shift data...', 'success');
 
-  // CAPTURE DATE BEFORE ANYTHING ELSE
   const closedDate = todayKey();
 
-  // 2. Save final shift report
   await saveShiftReport();
 
-  // 3. Mark this branch/date as CLOSED in Supabase
   if (sb) {
     try {
-      // Archive: Mark all kitchen orders as closed
       await sb.from('kitchen_orders')
         .update({ 
           status: 'CLOSED', 
@@ -4270,7 +4321,6 @@ async function closeAllShiftsAndArchive() {
         .eq('branch', activeBranch)
         .in('status', ['WAITING', 'PREPARING', 'READY']);
       
-      // Mark shift as formally closed
       await sb.from('shift_closures').insert([{
         branch: activeBranch,
         date: closedDate,
@@ -4284,20 +4334,20 @@ async function closeAllShiftsAndArchive() {
     } catch(e) { console.error('Archive error:', e); }
   }
 
-  // 4. Print final summary
+  // Capture totals BEFORE clearing
   const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
-  
   const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
   const finalHandOver = openingBalance + totalCash - cashOuts;
+  const savedBranch = activeBranch;
 
   document.getElementById('print-area').innerHTML = `
     <div style="font-family:'Courier New',monospace;color:black;padding:10px;width:72mm;">
       <div style="text-align:center;font-size:20px;font-weight:900;letter-spacing:2px;">OVEN X</div>
       <div style="text-align:center;font-size:12px;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px;margin:6px 0;">
-        ${activeBranch} — SHIFT CLOSED
+        ${savedBranch} — SHIFT CLOSED
       </div>
       <div style="font-size:11px;text-align:center;margin-bottom:8px;">
         ${new Date().toLocaleString('en-PK')}
@@ -4306,7 +4356,7 @@ async function closeAllShiftsAndArchive() {
         <div style="display:flex;justify-content:space-between;"><span>Total Bills:</span><b>${allSales.length}</b></div>
         <div style="display:flex;justify-content:space-between;"><span>Grand Total:</span><b>Rs ${grandTotal}</b></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash:</span><span>Rs ${totalCash}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>Hand Over:</span><b>Rs ${finalHandOver}</b></span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Hand Over:</span><b>Rs ${finalHandOver}</b></div>
       </div>
       <div style="border-top:2px dashed #000;margin-top:10px;padding-top:6px;text-align:center;font-size:11px;">
         <b>SHIFT ARCHIVED</b><br>
@@ -4314,33 +4364,28 @@ async function closeAllShiftsAndArchive() {
       </div>
     </div>
   `;
-  window.print();
 
-  // 5. CLEAR LOCAL STATE ONLY — data stays in Supabase history
-  
-  
-
-  // Reset all in-memory variables to ZERO
-  completedOrders = [];
-  tableOrders = {};
-  openingBalance = 0;
-  cashInHand = 0;
-  salesTotal = 0;
-  billCounter = 1;
-  pendingWebOrders = [];
-  voidedOrderIds.clear();
-  paidOrderIds.clear();
-
-  // Clear UI
-  document.getElementById('bar-cash').textContent = 'Rs 0';
-  document.getElementById('bar-billno').textContent = '001';
-  document.getElementById('opening-bal-input').value = '';
-
-  showToast('✅ Shift archived. Starting fresh...', 'success');
-  
-  // Force reload to clean state
-  setTimeout(() => location.reload(), 1500);
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      completedOrders = [];
+      tableOrders = {};
+      openingBalance = 0;
+      cashInHand = 0;
+      salesTotal = 0;
+      billCounter = 1;
+      pendingWebOrders = [];
+      voidedOrderIds.clear();
+      paidOrderIds.clear();
+      document.getElementById('bar-cash').textContent = 'Rs 0';
+      document.getElementById('bar-billno').textContent = '001';
+      document.getElementById('opening-bal-input').value = '';
+      showToast('✅ Shift archived. Starting fresh...', 'success');
+      setTimeout(() => location.reload(), 1500);
+    }, 1000);
+  }, 300);
 }
+
 async function rejectCurrentWebOrder() {
   if (!currentOrder.webOrderId) return;
   if (!confirm('Reject and delete this web order?')) return;
@@ -4460,7 +4505,285 @@ async function adminDeleteFullDay(date, branch) {
     loadHistoryForDate(date);
   } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
 }
+// ══════════════════════════════════
+// ADMIN TRANSACTION MANAGER
+// ══════════════════════════════════
+let _adminTxCurrent = null; // the transaction being edited
+let _adminTxMethod  = 'cash';
+let _adminTxIsToday = true; // true = today's live data, false = history (DB only)
+let _adminTxDate    = '';
+let _adminTxBranch  = '';
+
+function _recalcAllTotals() {
+  // Recalculate cashInHand and salesTotal from completedOrders
+  salesTotal = completedOrders
+    .filter(o => !['cash-in','cash-out'].includes(o.method))
+    .reduce((s,o) => s + o.total, 0);
+  cashInHand = openingBalance
+    + completedOrders.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
+    + completedOrders.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0)
+    - completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0)
+    - completedOrders.filter(o => o.type === 'Delivery').reduce((s,o) => s + (o.deliveryCharge||0), 0);
+  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+}
+
+// Open the admin edit modal for a transaction
+// tx = the completedOrders object (today) or a row object from history DB
+function openAdminTxModal(billNo, isToday, dateStr, branchStr) {
+  if (currentStaffRole !== 'Admin') { showToast('Admin only', 'error'); return; }
+  _adminTxIsToday = isToday;
+  _adminTxDate    = dateStr || todayKey();
+  _adminTxBranch  = branchStr || activeBranch;
+
+  // Find the transaction
+  let tx = null;
+  if (isToday) {
+    tx = completedOrders.find(o => o.billNo === billNo);
+  }
+
+  if (!tx) {
+    // Fetch from DB (history or not found in memory)
+    _fetchAndOpenAdminTxModal(billNo);
+    return;
+  }
+
+  _openAdminTxModalWithData(tx);
+}
+
+async function _fetchAndOpenAdminTxModal(billNo) {
+  try {
+    const { data } = await sb.from('shift_transactions')
+      .select('*')
+      .eq('branch', _adminTxBranch)
+      .eq('bill_no', billNo)
+      .eq('date', _adminTxDate)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (!data || !data.length) { showToast('Transaction not found', 'error'); return; }
+    const t = data[0];
+    const tx = {
+      billNo: t.bill_no, table: t.table_loc, type: t.type,
+      items: [], itemsText: t.items_text || '',
+      total: t.total, method: t.method, time: new Date(t.created_at),
+      staff: t.staff, customerName: t.customer_name || '',
+      sc: t.sc || 0, disc: t.discount || 0, deliveryCharge: t.delivery_charge || 0,
+      splitCash: t.split_cash || 0, splitCard: t.split_card || 0,
+      _dbId: t.id
+    };
+    // Parse items from itemsText
+    if (t.items_text) {
+      tx.items = t.items_text.split(',').map(s => {
+        const m = s.trim().match(/^(\d+)x\s+(.+)/);
+        return m ? { qty: parseInt(m[1]), name: m[2].trim(), price: 0 } : null;
+      }).filter(Boolean);
+    }
+    _openAdminTxModalWithData(tx);
+  } catch(e) {
+    showToast('Could not load transaction', 'error');
+    console.error(e);
+  }
+}
+
+function _openAdminTxModalWithData(tx) {
+  _adminTxCurrent = JSON.parse(JSON.stringify(tx)); // deep copy
+  _adminTxMethod  = tx.method || 'cash';
+
+  document.getElementById('atm-bill-no').textContent = tx.billNo || '—';
+
+  // Info block
+  document.getElementById('atm-info').innerHTML = `
+    <b>Time:</b> ${new Date(tx.time).toLocaleString('en-PK')} &nbsp;|&nbsp;
+    <b>Staff:</b> ${tx.staff || '—'} &nbsp;|&nbsp;
+    <b>Type:</b> ${tx.type || '—'} &nbsp;|&nbsp;
+    <b>Table:</b> ${(tx.table || '').replace(/-/g,' ') || '—'}
+    ${tx.customerName ? `<br><b>Customer:</b> ${tx.customerName}` : ''}
+  `;
+
+  // Total
+  document.getElementById('atm-total-input').value = Math.abs(tx.total);
+
+  // Method buttons
+  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(m => {
+    const el = document.getElementById('atm-pm-' + m);
+    if (el) el.classList.toggle('selected', m === _adminTxMethod);
+  });
+
+  // Render items editor
+  _renderAdminItemsEditor();
+  adminTxUpdatePreview();
+
+  document.getElementById('admin-tx-modal').classList.add('open');
+}
+
+function _renderAdminItemsEditor() {
+  const editor = document.getElementById('atm-items-editor');
+  const items = _adminTxCurrent.items || [];
+
+  if (!items.length) {
+    // Show raw text editor if no structured items
+    editor.innerHTML = `
+      <div style="padding:10px 12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Items Text (comma separated)</div>
+        <textarea id="atm-raw-items" rows="3"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;resize:vertical;outline:none;"
+          oninput="adminTxUpdatePreview()">${_adminTxCurrent.itemsText || ''}</textarea>
+      </div>`;
+    return;
+  }
+
+  editor.innerHTML = items.map((item, idx) => `
+    <div class="admin-item-row-edit">
+      <input class="admin-item-qty-edit" type="number" value="${item.qty}" min="1"
+        oninput="adminTxItemChange(${idx},'qty',this.value)" title="Qty">
+      <input class="admin-item-name-edit" type="text" value="${item.name}"
+        oninput="adminTxItemChange(${idx},'name',this.value)" placeholder="Item name">
+      <input class="admin-item-price-edit" type="number" value="${item.price || 0}" min="0"
+        oninput="adminTxItemChange(${idx},'price',this.value)" title="Price each">
+      <button class="admin-item-del-btn" onclick="adminTxRemoveItem(${idx})">✕</button>
+    </div>
+  `).join('');
+}
+
+function adminTxItemChange(idx, field, val) {
+  if (!_adminTxCurrent.items[idx]) return;
+  if (field === 'qty') _adminTxCurrent.items[idx].qty = parseInt(val) || 1;
+  else if (field === 'name') _adminTxCurrent.items[idx].name = val;
+  else if (field === 'price') _adminTxCurrent.items[idx].price = parseFloat(val) || 0;
+  adminTxUpdatePreview();
+}
+
+function adminTxRemoveItem(idx) {
+  _adminTxCurrent.items.splice(idx, 1);
+  _renderAdminItemsEditor();
+  adminTxUpdatePreview();
+}
+
+function adminTxAddItem() {
+  if (!_adminTxCurrent.items) _adminTxCurrent.items = [];
+  _adminTxCurrent.items.push({ name: 'New Item', qty: 1, price: 0 });
+  _renderAdminItemsEditor();
+  adminTxUpdatePreview();
+}
+
+function adminTxSelectMethod(m) {
+  _adminTxMethod = m;
+  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(id => {
+    const el = document.getElementById('atm-pm-' + id);
+    if (el) el.classList.toggle('selected', id === m);
+  });
+}
+
+function adminTxUpdatePreview() {
+  const items = _adminTxCurrent.items || [];
+  const calcTotal = items.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0);
+  document.getElementById('atm-calc-total').textContent = 'Rs ' + calcTotal;
+  // Auto-fill total if items have prices
+  if (calcTotal > 0) {
+    document.getElementById('atm-total-input').value = calcTotal;
+  }
+}
+
+async function adminTxDelete() {
+  if (!_adminTxCurrent) return;
+  if (!confirm(`Delete bill #${_adminTxCurrent.billNo}?\n\nThis removes it from DB and recalculates all totals.`)) return;
+
+  try {
+    // Delete from Supabase by bill_no + date + branch
+    await sb.from('shift_transactions')
+      .delete()
+      .eq('branch', _adminTxBranch)
+      .eq('bill_no', _adminTxCurrent.billNo)
+      .eq('date', _adminTxDate);
+
+    // If it's today, remove from memory too
+    if (_adminTxIsToday) {
+      const idx = completedOrders.findIndex(o => o.billNo === _adminTxCurrent.billNo);
+      if (idx > -1) completedOrders.splice(idx, 1);
+      _recalcAllTotals();
+      renderCashView();
+      renderClosingReport();
+    }
+
+    closeModal('admin-tx-modal');
+    showToast('Transaction deleted ✅', 'success');
+
+    // Refresh whichever view triggered this
+    if (!_adminTxIsToday) loadHistoryForDate(_adminTxDate);
+
+  } catch(e) {
+    showToast('Delete failed', 'error');
+    console.error(e);
+  }
+}
+
+async function adminTxSave() {
+  if (!_adminTxCurrent) return;
+
+  const newTotal = parseFloat(document.getElementById('atm-total-input').value) || 0;
+  const newMethod = _adminTxMethod;
+  const newItems  = _adminTxCurrent.items || [];
+
+  // Build new items_text
+  const newItemsText = newItems.length
+    ? newItems.map(i => `${i.qty}x ${i.name}`).join(', ')
+    : (document.getElementById('atm-raw-items')?.value || _adminTxCurrent.itemsText || '');
+
+  // Build items array for JSONB
+  const itemsForDB = newItems.map(i => ({ name: i.name, qty: i.qty, price: i.price || 0, note: '' }));
+
+  const updatePayload = {
+    total: newTotal,
+    method: newMethod,
+    items_text: newItemsText,
+    items: itemsForDB.length ? itemsForDB : null,
+    // Recalc subtotal from items if we have prices
+    subtotal: newItems.length ? newItems.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0) : undefined,
+  };
+
+  // Remove undefined keys
+  Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
+
+  try {
+    await sb.from('shift_transactions')
+      .update(updatePayload)
+      .eq('branch', _adminTxBranch)
+      .eq('bill_no', _adminTxCurrent.billNo)
+      .eq('date', _adminTxDate);
+
+    // If today, update in memory too
+    if (_adminTxIsToday) {
+      const idx = completedOrders.findIndex(o => o.billNo === _adminTxCurrent.billNo);
+      if (idx > -1) {
+        completedOrders[idx].total      = newTotal;
+        completedOrders[idx].method     = newMethod;
+        completedOrders[idx].itemsText  = newItemsText;
+        completedOrders[idx].items      = itemsForDB.length ? itemsForDB : completedOrders[idx].items;
+        // Update split fields if applicable
+        if (newMethod === 'split') {
+          completedOrders[idx].splitCash = newTotal * 0.5;
+          completedOrders[idx].splitCard = newTotal * 0.5;
+        } else {
+          completedOrders[idx].splitCash = 0;
+          completedOrders[idx].splitCard = 0;
+        }
+      }
+      _recalcAllTotals();
+      renderCashView();
+      renderClosingReport();
+    }
+
+    closeModal('admin-tx-modal');
+    showToast('Transaction updated ✅', 'success');
+
+    if (!_adminTxIsToday) loadHistoryForDate(_adminTxDate);
+
+  } catch(e) {
+    showToast('Save failed', 'error');
+    console.error(e);
+  }
+}
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
