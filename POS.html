@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1257,15 +1256,68 @@ async function _saveActiveTable(tname, orderData) {
 async function _loadActiveTables() {
   if (!sb) return;
   try {
+    // Step 1: Get all active_tables rows for this branch
     const { data, error } = await sb.from('active_tables')
       .select('*').eq('branch', activeBranch);
-    if (error || !data) return;
-    data.forEach(row => {
-      if (row.table_name && row.order_data && !tableOrders[row.table_name]) {
-        tableOrders[row.table_name] = row.order_data;
+    if (error || !data || !data.length) return;
+
+    // Step 2: Get today's paid transactions — both kitchen_order_id AND table_loc
+    const { data: paidTx } = await sb.from('shift_transactions')
+      .select('kitchen_order_id, table_loc, bill_no')
+      .eq('date', todayKey())
+      .eq('branch', activeBranch);
+
+    const paidKitchenIds = new Set();
+    const paidTableNames = new Set();
+
+    (paidTx || []).forEach(t => {
+      if (t.kitchen_order_id) paidKitchenIds.add(t.kitchen_order_id);
+      if (t.table_loc) {
+        // Normalize: store both "A-1" and "A 1" variants
+        paidTableNames.add(t.table_loc);
+        paidTableNames.add(t.table_loc.replace(/ /g, '-'));
+        paidTableNames.add(t.table_loc.replace(/-/g, ' '));
       }
     });
-    if (data.length) console.log('✅ Restored', data.length, 'active tables from cloud');
+
+    const staleRows = [];
+    let restored = 0;
+
+    for (const row of data) {
+      const tname = row.table_name;
+      const order = row.order_data;
+
+      if (!tname || !order) { staleRows.push(tname); continue; }
+      if (tableOrders[tname]) continue; // already in memory, skip
+
+      // Check 1: kitchen_order_id paid?
+      if (order.id && paidKitchenIds.has(order.id)) {
+        console.log('🗑️ Skipping paid order (kitchen_id match):', tname, order.id);
+        staleRows.push(tname); continue;
+      }
+
+      // Check 2: table location paid today? (catches manual POS orders)
+      // Only skip non-web orders — web orders without kitchen_id might still be valid
+      if (!order.fromWeb && (paidTableNames.has(tname) || paidTableNames.has(tname.replace(/-/g,' ')) || paidTableNames.has(tname.replace(/ /g,'-')))) {
+        console.log('🗑️ Skipping paid table (loc match):', tname);
+        staleRows.push(tname); continue;
+      }
+
+      tableOrders[tname] = order;
+      restored++;
+    }
+
+    // Clean up stale rows in background
+    if (staleRows.length && sb) {
+      staleRows.forEach(tname => {
+        sb.from('active_tables').delete()
+          .eq('branch', activeBranch).eq('table_name', tname)
+          .then(() => console.log('🗑️ Cleaned stale active_table:', tname))
+          .catch(() => {});
+      });
+    }
+
+    if (restored) console.log('✅ Restored', restored, 'active tables from cloud');
   } catch(e) { console.warn('_loadActiveTables:', e.message); }
 }
 // ================================================================================
@@ -2815,7 +2867,18 @@ async function markTakeawayPaid() {
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
   saveTodaySales();
   printTakeawaySlip(sale);
-  saveTableOrder();
+  // Hard delete from active_tables so refresh never restores a paid takeaway
+  const _twTable = currentOrder.table;
+  if (_twTable) {
+    delete tableOrders[_twTable];
+    if (sb) {
+      sb.from('active_tables').delete()
+        .eq('branch', activeBranch).eq('table_name', _twTable)
+        .catch(e => console.error('TW active_tables delete:', e));
+    }
+  }
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
   renderTableMap();
   showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
 }
@@ -2970,10 +3033,19 @@ async function completePayment() {
     if (!currentOrder.id && currentOrder.type !== 'Delivery') await sendToKitchen();
     if (currentOrder.id) paidOrderIds.add(currentOrder.id);
  
-    // Remove from cloud active_tables
-    if (currentOrder.table) {
-      _saveActiveTable(currentOrder.table, null);
-      delete tableOrders[currentOrder.table];
+    // Remove from cloud active_tables — hard delete so refresh never restores a paid table
+    const _paidTable = currentOrder.table;
+    if (_paidTable) {
+      delete tableOrders[_paidTable];
+      if (sb) {
+        // Fire-and-forget but also await — belt and suspenders
+        try {
+          await sb.from('active_tables').delete()
+            .eq('branch', activeBranch)
+            .eq('table_name', _paidTable);
+          console.log('✅ active_tables row deleted for', _paidTable);
+        } catch(e) { console.error('active_tables delete failed:', e); }
+      }
     }
  
     closeModal('pay-modal');
@@ -4489,22 +4561,6 @@ function openAdminPanel() {
   else if (choice === '3') switchView('history');
 }
 
-
-async function adminDeleteFullDay(date, branch) {
-  if (!confirm(`⚠️ DELETE EVERYTHING for ${date} — ${branch}?\n\nThis deletes:\n• All shift reports\n• All transactions\n• Shift closure record\n• Opening balance\n\nThis CANNOT be undone.`)) return;
-  const pin = prompt('Enter Admin PIN:');
-  if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
-  try {
-    await Promise.all([
-      sb.from('shift_reports').delete().eq('branch', branch).eq('date', date),
-      sb.from('shift_transactions').delete().eq('branch', branch).eq('date', date),
-      sb.from('shift_closures').delete().eq('branch', branch).eq('date', date),
-      sb.from('opening_balance').delete().eq('branch', branch).eq('date', date),
-    ]);
-    showToast('All data deleted for ' + date + ' ✅', 'success');
-    loadHistoryForDate(date);
-  } catch(e) { showToast('Delete failed', 'error'); console.error(e); }
-}
 // ══════════════════════════════════
 // ADMIN TRANSACTION MANAGER
 // ══════════════════════════════════
@@ -4783,8 +4839,6 @@ async function adminTxSave() {
   }
 }
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
