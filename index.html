@@ -348,6 +348,12 @@ body {
         #modal-overlay, #welcome-overlay, #flavor-overlay, #size-overlay, #admin-login-overlay, #tracking-overlay, #upsell-overlay, #loyalty-setup-overlay { 
             position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index: 9000; backdrop-filter: blur(8px); 
         }
+        #loyalty-setup-overlay {
+    align-items: flex-start !important;
+    padding: 0 !important;
+    background: #0d0000 !important;
+    backdrop-filter: none !important;
+}
 
         /* FIXED MANUAL ORDER Z-INDEX (MUST BE HIGHER THAN KITCHEN PANEL) */
         #manual-order-overlay { 
@@ -1641,20 +1647,7 @@ body {
         </div>
     </div>
 </div>
-
-<!-- CLUB SETUP MODAL -->
-<div id="loyalty-setup-overlay">
-    <div class="modal modal-gold">
-        <h2 class="gold-label">ACTIVATE CLUB CARD 👑</h2>
-        <p style="color:#aaa; font-size:13px; margin:15px 0;">Collect 10 stamps (Order Rs 1000+) to win a mystery free meal!</p>
-        <input type="text" id="clubName" placeholder="Full Name" class="premium-input">
-        <input type="number" id="clubPhone" placeholder="WhatsApp Number" class="premium-input">
-        <button class="gate-btn btn-gold btn-3d" style="width:100%; margin-top:20px;" onclick="saveClubProfile()">ACTIVATE NOW 🚀</button>
-        <button onclick="document.getElementById('loyalty-setup-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; color:#666; font-weight:bold; background:none; border:none;">CANCEL</button>
-    </div>
-</div>
-
-<div id="admin-login-overlay">
+<div id="admin-login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:9000;backdrop-filter:blur(8px);">
     <div class="modal">
         <h2 style="color:var(--red); font-weight:900;">Kitchen Access</h2>
         <input type="text" id="adminPassword" placeholder="Secret Code" class="big-input" oninput="handlePassInput(this)" style="text-align:center; letter-spacing:4px; font-size:22px;">
@@ -1662,6 +1655,280 @@ body {
             <button class="next-btn btn-3d" style="background:#888;" onclick="closeAdminLogin()">BACK</button>
             <button class="next-btn btn-3d" style="background:var(--red);" onclick="verifyAdmin()">UNLOCK</button>
         </div>
+    </div>
+</div>
+<!-- CLUB SETUP MODAL -->
+<div id="loyalty-setup-overlay">
+<div style="width:100%;min-height:100vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+          <input type="hidden" id="clubName">
+        <input type="hidden" id="clubPhone">
+
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        .oc{font-family:'Outfit','Segoe UI',sans-serif;width:100%;background:#0d0000;overflow:hidden;min-height:0}
+.oc-slide{display:none;flex-direction:column;align-items:center;padding:1.25rem 1rem 1rem;min-height:0}
+        .oc-slide.active{display:flex}
+        .oc-slide.ain{animation:su 0.38s ease}
+        @keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        .top-bar{background:#c0392b;padding:9px 16px;text-align:center;letter-spacing:3px;font-size:10px;font-weight:900;color:white;text-transform:uppercase}
+        .dots{display:flex;gap:6px;justify-content:center;padding:1.1rem 0 0}
+        .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.12);transition:all 0.3s}
+        .dot.on{background:#d4af37;width:20px;border-radius:3px}
+        .gold-text{background:linear-gradient(135deg,#bf953f,#fcf6ba,#b38728,#fbf5b7,#aa771c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;text-transform:uppercase;letter-spacing:3px;font-size:10px}
+        .icon-ring{width:72px;height:72px;border-radius:50%;border:1.5px solid rgba(212,175,55,0.3);background:rgba(212,175,55,0.06);display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;position:relative}
+        .icon-ring::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(192,57,43,0.2)}
+        .oc-h{font-size:22px;font-weight:900;color:white;text-align:center;line-height:1.25;margin-bottom:0.45rem;letter-spacing:-0.3px}
+        .oc-h em{color:#e05c2b;font-style:normal}
+        .oc-sub{font-size:13px;color:rgba(255,255,255,0.45);text-align:center;line-height:1.7;margin-bottom:1.25rem;max-width:265px}
+        .perk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-bottom:1.25rem}
+        .perk{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:0.85rem 0.75rem}
+        .perk-line{width:22px;height:2px;background:#c0392b;border-radius:2px;margin-bottom:8px}
+        .perk-name{font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:3px;letter-spacing:0.2px}
+        .perk-desc{font-size:11px;color:rgba(255,255,255,0.35);line-height:1.45}
+        .stamp-rows{display:flex;flex-direction:column;gap:7px;width:100%;margin-bottom:0.75rem}
+        .stamp-row{display:flex;justify-content:center;gap:7px}
+        .stamp{width:38px;height:38px;border-radius:50%;border:1.5px dashed rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgba(255,255,255,0.18);transition:all 0.4s;font-family:inherit}
+        .stamp.on{background:linear-gradient(135deg,#bf953f,#b38728);border:1.5px solid #d4af37;color:#000;font-size:11px;box-shadow:0 0 14px rgba(212,175,55,0.35)}
+        .prog-track{width:100%;height:2px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:0.6rem;overflow:hidden}
+        .prog-fill{height:100%;background:linear-gradient(90deg,#c0392b,#e05c2b,#d4af37);border-radius:2px;transition:width 0.7s ease}
+        .prog-caption{font-size:11px;color:rgba(255,255,255,0.35);text-align:center;margin-bottom:1.1rem;letter-spacing:0.3px}
+        .info-box{background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);border-radius:13px;padding:0.8rem 0.9rem;width:100%;margin-bottom:0.75rem}
+        .info-box-title{font-size:11px;font-weight:700;color:#e05c2b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+        .info-box-body{font-size:11px;color:rgba(255,255,255,0.4);line-height:1.6}
+        .prize-list{display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:1.1rem}
+        .prize-item{display:flex;align-items:center;gap:10px;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:11px}
+        .prize-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#bf953f,#b38728)}
+        .prize-name{font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;letter-spacing:0.2px}
+        .card-wrap{background:rgba(8,0,0,0.95);border:2px solid #d4af37;border-radius:20px;padding:1.15rem 1rem;width:100%;margin-bottom:0.9rem;position:relative;overflow:hidden}
+        .card-shimmer{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#bf953f,#fcf6ba,#b38728,#fbf5b7,#aa771c)}
+        .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+        .card-member-lbl{font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:2px}
+        .card-member-name{font-size:14px;color:white;font-weight:900;margin-top:3px;letter-spacing:0.3px}
+        .card-stamps-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:0.75rem}
+        .cs{aspect-ratio:1;border-radius:50%;border:1.5px dashed rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(212,175,55,0.4);font-weight:700}
+        .cs.on{background:rgba(212,175,55,0.12);border:1.5px solid rgba(212,175,55,0.6);color:rgba(212,175,55,0.9)}
+        .card-foot{font-size:9px;color:rgba(255,255,255,0.2);border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;text-align:center;text-transform:uppercase;letter-spacing:2px}
+        .form-wrap{width:100%;display:flex;flex-direction:column;gap:9px;margin-bottom:1rem}
+        .form-wrap input{width:100%;padding:13px 14px;border:1.5px solid rgba(212,175,55,0.2);border-radius:13px;font-size:14px;background:rgba(255,255,255,0.03);color:white;outline:none;font-family:inherit;font-weight:500;letter-spacing:0.2px;transition:border-color 0.2s}
+        .form-wrap input::placeholder{color:rgba(255,255,255,0.2);font-weight:400}
+        .form-wrap input:focus{border-color:rgba(212,175,55,0.6);background:rgba(212,175,55,0.04)}
+        .btn-gold{width:100%;padding:15px;background:linear-gradient(135deg,#bf953f,#fcf6ba,#b38728);color:#1a0a00;border:none;border-radius:13px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:1px;text-transform:uppercase;box-shadow:0 5px 0px #7a5218;transition:all 0.1s}
+        .btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0px #7a5218}
+        .btn-red{width:100%;padding:13px;background:#c0392b;color:white;border:none;border-radius:13px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 5px 0px #922b21}
+        .btn-red:active{transform:translateY(3px);box-shadow:0 2px 0px #922b21}
+        .btn-ghost{background:transparent;color:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:9px;width:100%;font-size:12px;cursor:pointer;font-family:inherit;margin-top:7px;letter-spacing:0.5px}
+        .nav-row{display:flex;gap:8px;width:100%;margin-top:auto;padding-top:0.75rem}
+        .btn-back{flex:0 0 44px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:11px;font-size:18px;cursor:pointer;color:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center}
+        .btn-next{flex:1;padding:13px;background:#c0392b;color:white;border:none;border-radius:11px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 0px #922b21;letter-spacing:1px;text-transform:uppercase}
+        .btn-next:active{transform:translateY(2px);box-shadow:0 2px 0px #922b21}
+        svg.ico{display:block}
+        </style>
+
+        <div class="oc" role="region" aria-label="Oven X Club membership onboarding">
+        <div class="top-bar">Oven X Club &nbsp;·&nbsp; Free to Join</div>
+        <div class="dots" id="dots">
+          <div class="dot on" id="d0"></div>
+          <div class="dot" id="d1"></div>
+          <div class="dot" id="d2"></div>
+          <div class="dot" id="d3"></div>
+          <div class="dot" id="d4"></div>
+        </div>
+
+        <div class="oc-slide active ain" id="s0">
+          <div style="height:1.25rem"></div>
+          <div class="icon-ring">
+            <svg class="ico" width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M16 4L19.2 12.8H28.8L21.6 18.4L24 27.2L16 22L8 27.2L10.4 18.4L3.2 12.8H12.8Z" stroke="#d4af37" stroke-width="1.5" stroke-linejoin="round" fill="rgba(212,175,55,0.1)"/>
+            </svg>
+          </div>
+          <div class="gold-text" style="margin-bottom:0.6rem">Oven X Club</div>
+          <h2 class="oc-h">Eat. Collect.<br><em>Win Free Meals.</em></h2>
+          <p class="oc-sub">Our loyalty program rewards you for every order. Collect stamps, reach 10, and unlock a mystery free meal on us.</p>
+          <div class="perk-grid">
+            <div class="perk"><div class="perk-line"></div><div class="perk-name">1 stamp per order</div><div class="perk-desc">On orders above Rs 1000</div></div>
+            <div class="perk"><div class="perk-line" style="background:#d4af37"></div><div class="perk-name">Free mystery meal</div><div class="perk-desc">Unlocked at stamp 10</div></div>
+            <div class="perk"><div class="perk-line" style="background:rgba(255,255,255,0.2)"></div><div class="perk-name">Never expires</div><div class="perk-desc">Stamps last forever</div></div>
+            <div class="perk"><div class="perk-line"></div><div class="perk-name">Both branches</div><div class="perk-desc">Multan & Bahawalpur</div></div>
+          </div>
+          <div class="nav-row" style="padding-top:0">
+            <button class="btn-red" onclick="go(1)" style="box-shadow:0 5px 0px #922b21">GET STARTED</button>
+          </div>
+        </div>
+
+        <div class="oc-slide" id="s1">
+          <div class="gold-text" style="margin-bottom:0.6rem;margin-top:0.5rem">How it works</div>
+          <h2 class="oc-h">Fill your card,<br><em>unlock the reward</em></h2>
+          <p class="oc-sub">Every qualifying order earns one stamp. Reach 10 and claim your reward.</p>
+          <div class="stamp-rows">
+            <div class="stamp-row" id="sr1"></div>
+            <div class="stamp-row" id="sr2"></div>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="pf" style="width:30%"></div></div>
+          <p class="prog-caption" id="pc">3 of 10 stamps collected</p>
+          <div class="info-box">
+            <div class="info-box-title">How to earn stamps</div>
+            <div class="info-box-body">Place a Dine-In, Takeaway, or Delivery order above Rs 1000 through our website. One stamp is added automatically per qualifying order.</div>
+          </div>
+          <div class="nav-row">
+            <button class="btn-back" onclick="go(0)">&#8592;</button>
+            <button class="btn-next" onclick="go(2)">WHAT DO I WIN?</button>
+          </div>
+        </div>
+
+        <div class="oc-slide" id="s2">
+          <div style="height:0.75rem"></div>
+          <div class="icon-ring" style="width:60px;height:60px;margin-bottom:0.9rem">
+            <svg class="ico" width="26" height="26" viewBox="0 0 26 26" fill="none">
+              <rect x="3" y="9" width="20" height="14" rx="2" stroke="#d4af37" stroke-width="1.4"/>
+              <path d="M9 9V7a4 4 0 018 0v2" stroke="#d4af37" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="13" cy="16" r="2.5" fill="rgba(212,175,55,0.2)" stroke="#d4af37" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <div class="gold-text" style="margin-bottom:0.5rem">Mystery reward</div>
+          <h2 class="oc-h">One of these is<br><em>yours at stamp 10</em></h2>
+          <p class="oc-sub">Randomly selected at checkout — every option is worth the wait.</p>
+          <div class="prize-list">
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">Pan Pizza (Small)</span></div>
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">Classic Zinger Burger</span></div>
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">Club Sandwich</span></div>
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">Loaded Fries</span></div>
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">6 pcs Wings</span></div>
+            <div class="prize-item"><div class="prize-dot"></div><span class="prize-name">Chipotle Wrap</span></div>
+          </div>
+          <div class="nav-row">
+            <button class="btn-back" onclick="go(1)">&#8592;</button>
+            <button class="btn-next" onclick="go(3)">SEE YOUR CARD</button>
+          </div>
+        </div>
+
+        <div class="oc-slide" id="s3">
+          <div class="gold-text" style="margin-bottom:0.6rem;margin-top:0.4rem">Your digital card</div>
+          <h2 class="oc-h">Always with you,<br><em>right on this screen</em></h2>
+          <div class="card-wrap">
+            <div class="card-shimmer"></div>
+            <div class="card-top">
+              <div><div class="gold-text" style="font-size:12px;letter-spacing:2px">Oven X Club</div><div style="font-size:9px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:2px;margin-top:4px">Member 2025</div></div>
+              <div style="text-align:right"><div class="card-member-lbl">Member</div><div class="card-member-name" id="pname">Your Name</div></div>
+            </div>
+            <div class="card-stamps-grid" id="csg"></div>
+            <div class="card-foot">10 stamps &nbsp;·&nbsp; 1 mystery free meal</div>
+          </div>
+          <p style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center;margin-bottom:0.75rem;line-height:1.6">Stamps sync across devices via your WhatsApp number — never lose your progress</p>
+          <div class="nav-row">
+            <button class="btn-back" onclick="go(2)">&#8592;</button>
+            <button class="btn-next" onclick="go(4)">JOIN — IT'S FREE</button>
+          </div>
+        </div>
+
+        <div class="oc-slide" id="s4">
+          <div style="height:0.5rem"></div>
+          <div class="icon-ring">
+            <svg class="ico" width="30" height="30" viewBox="0 0 30 30" fill="none">
+              <circle cx="15" cy="11" r="5" stroke="#d4af37" stroke-width="1.4"/>
+              <path d="M4 25c0-6 4.5-8 11-8s11 2 11 8" stroke="#d4af37" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="gold-text" style="margin-bottom:0.5rem">Activate your card</div>
+          <h2 class="oc-h">One step to<br><em>start earning</em></h2>
+          <p class="oc-sub">Your WhatsApp number is your card ID — enter it once, linked forever across all devices.</p>
+          <div class="form-wrap">
+            <input type="text" id="inp-name" placeholder="Full name" oninput="pn(this.value)">
+            <input type="tel" id="inp-phone" placeholder="WhatsApp number (03xx-xxxxxxx)" maxlength="15">
+          </div>
+          <button class="btn-gold" onclick="doJoin()">ACTIVATE MY CLUB CARD</button>
+          <button class="btn-ghost" onclick="doCancel()">Maybe later</button>
+          <div class="nav-row" style="padding-top:0.25rem">
+            <button class="btn-back" onclick="go(3)">&#8592;</button>
+            <p style="font-size:10px;color:rgba(255,255,255,0.18);padding:8px 0;text-align:center;flex:1;letter-spacing:0.5px">Free forever &nbsp;·&nbsp; No spam &nbsp;·&nbsp; Cancel anytime</p>
+          </div>
+        </div>
+
+        </div>
+
+        <script>
+        const flame = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M6 1C6 1 9 4.5 9 7.5C9 9.16 7.66 10.5 6 10.5C4.34 10.5 3 9.16 3 7.5C3 6.2 3.8 5.3 3.8 5.3C3.8 5.3 3.5 7 4.8 7.5C4.8 5.8 6 4.5 6 1Z" fill="#d4af37"/></svg>';
+        let cur=0;
+
+        function buildStamps(){
+          const r1=document.getElementById('sr1'),r2=document.getElementById('sr2');
+          if(!r1||!r2)return;
+          r1.innerHTML='';r2.innerHTML='';
+          for(let i=1;i<=10;i++){
+            const d=document.createElement('div');
+            d.className='stamp'+(i<=3?' on':'');
+            d.innerHTML=i<=3?flame:String(i);
+            d.id='st'+i;
+            (i<=6?r1:r2).appendChild(d);
+          }
+          let c=3;
+          setInterval(()=>{
+            c=(c%10)+1;
+            document.getElementById('pf').style.width=Math.round(c/10*100)+'%';
+            document.getElementById('pc').textContent=c+' of 10 stamps collected';
+            for(let i=1;i<=10;i++){
+              const el=document.getElementById('st'+i);
+              if(!el)continue;
+              if(i<=c){el.className='stamp on';el.innerHTML=flame;}
+              else{el.className='stamp';el.textContent=i;}
+            }
+          },1100);
+        }
+
+        function buildCardStamps(){
+          const g=document.getElementById('csg');
+          if(!g)return;
+          g.innerHTML='';
+          for(let i=0;i<10;i++){
+            const d=document.createElement('div');
+            d.className='cs'+(i<3?' on':'');
+            d.innerHTML=i<3?flame:String(i+1);
+            g.appendChild(d);
+          }
+        }
+
+        function pn(v){
+          const el=document.getElementById('pname');
+          if(el)el.textContent=v.trim()||'Your Name';
+        }
+
+        function go(n){
+          const ss=document.querySelectorAll('.oc-slide');
+          ss[cur].classList.remove('active','ain');
+          cur=n;
+          ss[cur].classList.add('active');
+          setTimeout(()=>ss[cur].classList.add('ain'),10);
+          for(let i=0;i<5;i++){
+            const d=document.getElementById('d'+i);
+            if(d)d.classList.toggle('on',i===cur);
+          }
+        }
+
+        function doJoin(){
+          const name=document.getElementById('inp-name').value.trim();
+          const phone=document.getElementById('inp-phone').value.trim();
+          if(!name){document.getElementById('inp-name').focus();return;}
+          if(!phone){document.getElementById('inp-phone').focus();return;}
+          if(typeof saveClubProfile==='function'){
+            const cn=document.getElementById('clubName'),cp=document.getElementById('clubPhone');
+            if(cn)cn.value=name;
+            if(cp)cp.value=phone;
+            const ov=document.getElementById('loyalty-setup-overlay');
+            if(ov)ov.style.display='none';
+            if(typeof setScrollLock==='function')setScrollLock(false);
+            saveClubProfile();
+          }
+        }
+
+        function doCancel(){
+          const ov=document.getElementById('loyalty-setup-overlay');
+          if(ov)ov.style.display='none';
+          if(typeof setScrollLock==='function')setScrollLock(false);
+        }
+
+        buildStamps();
+        buildCardStamps();
+        </script>
+
     </div>
 </div>
 
@@ -2140,9 +2407,9 @@ body {
     lat: 30.2197, lng: 71.4711,
     phone: '923001450301',
     cc_phone: '923002450301',
-    riders: ["Ramzan", "Abdurehman", "Atif", "Ehsan"],
+    riders: ["Ashar", "Abdurehman", "Atif", "Ehsan"],
     riderPhones: {
-        "Ramzan":     "923196206229",
+        "Ashar":     "92339600980",
         "Abdurehman": "923286001660",
         "Atif":       "923047373321",
         "Ehsan":      "923193157142"
@@ -2333,7 +2600,7 @@ loadCustomItemsIntoMenu();
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL';    let currentCalcData = null;
-        const RIDERS = ["Ramzan", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
+        const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
