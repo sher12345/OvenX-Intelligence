@@ -4381,7 +4381,7 @@ async function loadDeliveryHistory() {
     function openKitchenPanel() { 
         document.getElementById('kitchen-panel-overlay').style.display = 'flex'; 
         renderKitchenOrders(); 
-        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 1000); 
+        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); 
         setScrollLock(true); 
     }
     
