@@ -83,8 +83,7 @@ body {
     0%,100%{transform:scale(1);}
     50%{transform:scale(1.08);}
 }
-        .bouncing-logo { animation: bounce 2s infinite; display: inline-block; }
-        .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
+.bouncing-logo { animation: bounce 2s infinite; display: inline-block; user-select: none; -webkit-user-select: none; cursor: pointer; }        .btn-3d { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; border: none; position: relative; user-select: none; }
         .btn-3d:active { transform: translateY(4px) !important; box-shadow: 0 2px 0px rgba(0,0,0,0.2) !important; }
         
         #gateway-screen {
@@ -1477,10 +1476,12 @@ body {
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
-        <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
-        <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
-    ⚙️ ADMIN PANEL
-</button>
+        <div id="staff-buttons" style="display:none; flex-direction:column; gap:12px; width:100%;">
+    <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
+    <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
+        ⚙️ ADMIN PANEL
+    </button>
+</div>
     </div>
 </div>
 
@@ -6725,6 +6726,21 @@ async function loadCustomItemsIntoMenu() {
   } catch(e) { console.error('loadCustomItemsIntoMenu:', e); }
 }
 loadCustomItemsIntoMenu();
+setTimeout(() => {
+    let logoTaps = 0, logoTimer;
+    const logo = document.querySelector('#gateway-screen .bouncing-logo');
+    if (!logo) return;
+    logo.addEventListener('click', () => {
+        logoTaps++;
+        clearTimeout(logoTimer);
+        logoTimer = setTimeout(() => logoTaps = 0, 2000);
+        if (logoTaps >= 5) {
+            logoTaps = 0;
+            const btn = document.getElementById('staff-buttons');
+            btn.style.display = btn.style.display === 'none' ? 'flex' : 'none';
+        }
+    });
+}, 1000);
 </script>
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
@@ -6797,3 +6813,4 @@ loadCustomItemsIntoMenu();
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
