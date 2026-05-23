@@ -3083,7 +3083,7 @@ function proceedFromSheet() {
     if(target === 'deals') switchTab('deals'); else switchTab('menu'); 
 }
     
-    function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
+    function renderServiceOptions() { const container = document.getElementById('service-options-container'); let html = `<button class="next-btn btn-3d" onclick="setInitialService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="setInitialService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡Pic-kUp</button>`; if (!isQRScan) { html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="setInitialService('Delivery')">🚚 Delivery</button>`; } container.innerHTML = html; }
 
 function renderTakeawayWelcome() {
     document.getElementById('welcome-msg').innerHTML = "Welcome to <b>Oven X " + (activeBranch ? activeBranch.name : '') + "</b>! 👋<br><small style='color:#888;'>How would you like your order?</small>";
@@ -3916,7 +3916,7 @@ function removeItem(idx) {
     
     function renderCheckoutServiceButtons() { 
         const container = document.getElementById('checkout-options-buttons'); 
-        let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Take Home</button>`; 
+        let html = `<button class="next-btn btn-3d" onclick="selectService('Dine-In')" style="background:#007bff; box-shadow: 0 6px 0px #0056b3;">🍽️ Eat Here (7% SC)</button><button class="next-btn btn-3d" onclick="selectService('Takeaway')" style="background:#6c757d; box-shadow: 0 6px 0px #495057;">🥡 Pick-Up</button>`; 
         if (!isQRScan) { 
             html += `<button class="next-btn btn-3d" style="background:var(--red); box-shadow: 0 6px 0px var(--dark-red);" onclick="selectService('Delivery')">🚚 Delivery</button>`; 
         } 
@@ -4214,7 +4214,7 @@ if (orderType === 'Delivery') {
         if (window.carPlateNumber) {
             summaryBubbleContent += `<br><small style="color:var(--red);">🚗 Car Dine Order</small>`;
         } else {
-            summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Takeaway Order</small>`;
+            summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Pick-Up Order</small>`;
         }
     }
     
@@ -6815,5 +6815,3 @@ setTimeout(() => {
         data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
 </body>
 </html>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
