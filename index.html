@@ -2667,7 +2667,7 @@ menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i =>
         { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", image: "https://www.citysouthpizzakitchenerwaterloo.ca/cdn/shop/files/pizza-with-3-toppings-chicken-wings-and-3-cokes.png?v=1759010649&width=533", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
         { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", image: "https://assets3.thrillist.com/v1/image/2826030/792x528/scale;webp=auto;jpeg_quality=60;progressive.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
         { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Pan/Premium"}, {label: "Pizza 2", cat: "Pan/Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
+        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg", flavorsNeeded: [{label: "Category 1", cat: "Pan Pizza 🍕", forceCat: "Pan"}, {label: "Category 2", cat: "Premium Pizza 🌟", forceCat: "Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
         { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", image: "https://media.sodagift.com/img/image/1877697001877199.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
         { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", image: "https://www.shutterstock.com/image-photo/crispy-chicken-burger-served-french-600nw-2647455697.jpg", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
         { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", image: "https://d1w7312wesee68.cloudfront.net/papYm9QPXbu985kLHmECoETz9chauwF12d0PGs2MVKY/resize:fit:720:720/plain/s3://toasttab/restaurants/restaurant-255618000000000000/menu/items/7/item-5740050945299277_1766103306.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
@@ -3233,44 +3233,30 @@ function exitToGateway() {
     const grid = document.getElementById('flavor-grid');
     grid.innerHTML = '';
     
-    // Get flavors from the specified category
-    let flavors = menuData[step.cat] || [];
+    const isFamilyFeast = selectedItem.name === "Family Feast";
     
-    // Special handling for Family Feast - show Pan and Premium separately
-    if (selectedItem.name === "Family Feast" && step.cat === "Pan/Premium") {
-        // Split into Pan and Premium sections
-        const panPizzas = menuData["Pan Pizza 🍕"] || [];
-        const premiumPizzas = menuData["Premium Pizza 🌟"] || [];
+    if (isFamilyFeast) {
+        const forceCat = step.forceCat;
+        const items = forceCat === "Pan" ? menuData["Pan Pizza 🍕"] : menuData["Premium Pizza 🌟"];
+        const sectionColor = forceCat === "Pan" ? "#f37021" : "#d4af37";
+        const sectionLabel = forceCat === "Pan" ? "🍕 PAN PIZZA" : "🌟 PREMIUM PIZZA";
         
-        // Add Pan Pizza Section Header - NO PRICES
-        if (panPizzas.length > 0) {
-            const panHeader = document.createElement('div');
-            panHeader.style.cssText = "grid-column: 1 / -1; background: linear-gradient(135deg, #f37021, #b34e12); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
-            panHeader.innerText = "🍕 PAN PIZZA";
-            grid.appendChild(panHeader);
-            
-            panPizzas.forEach(f => {
-                const b = createFlavorButton(f, "Pan");
-                grid.appendChild(b);
-            });
-        }
+        const header = document.createElement('div');
+        header.style.cssText = `grid-column: 1 / -1; background: linear-gradient(135deg, ${sectionColor}, ${sectionColor}cc); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;`;
+        header.innerText = sectionLabel;
+        grid.appendChild(header);
         
-        // Add Premium Pizza Section Header - NO PRICES
-        if (premiumPizzas.length > 0) {
-            const premiumHeader = document.createElement('div');
-            premiumHeader.style.cssText = "grid-column: 1 / -1; background: linear-gradient(135deg, #d4af37, #aa771c); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
-            premiumHeader.innerText = "🌟 PREMIUM PIZZA";
-            grid.appendChild(premiumHeader);
-            
-            premiumPizzas.forEach(f => {
-                const b = createFlavorButton(f, "Premium");
-                grid.appendChild(b);
-            });
-        }
+        // ✅ REMOVED: greyed-out "already selected" section entirely
+        
+        items.forEach(f => {
+            const b = createFlavorButton(f, forceCat, false);
+            grid.appendChild(b);
+        });
+        
     } else {
-        // Normal behavior for other deals - NO PRICES shown
+        const flavors = menuData[step.cat] || [];
         flavors.forEach(f => {
-            const b = createFlavorButton(f);
+            const b = createFlavorButton(f, null, false);
             grid.appendChild(b);
         });
     }
@@ -3280,16 +3266,18 @@ function exitToGateway() {
 }
 
 // Helper function to create flavor buttons - NO PRICES ANYWHERE
-function createFlavorButton(f, categoryLabel) {
+function createFlavorButton(f, categoryLabel, disabled) {
     const b = document.createElement('div');
     b.style.cssText = `
-        background: #f5f5f5; border: 3px solid #eee; border-radius: 16px;
-        padding: 10px; text-align: center; cursor: pointer;
+        background: ${disabled ? '#f0f0f0' : '#f5f5f5'}; 
+        border: 3px solid ${disabled ? '#ddd' : '#eee'}; 
+        border-radius: 16px;
+        padding: 10px; text-align: center; cursor: ${disabled ? 'not-allowed' : 'pointer'};
         transition: all 0.2s; display: flex; flex-direction: column;
         align-items: center; gap: 8px; position: relative;
+        opacity: ${disabled ? '0.5' : '1'};
     `;
 
-    // Smart image lookup — same logic as renderPublicMenu
     let imgUrl = imgMap["pizza"];
     const n = f.name.toLowerCase();
     for (let key in imgMap) {
@@ -3304,33 +3292,36 @@ function createFlavorButton(f, categoryLabel) {
         const badgeColor = categoryLabel === "Pan" ? "#f37021" : categoryLabel === "Premium" ? "#d4af37" : "#e67e22";
         badge = `<div style="position:absolute; top:6px; right:6px; background:${badgeColor}; color:white; padding:2px 7px; border-radius:8px; font-size:9px; font-weight:900; text-transform:uppercase;">${categoryLabel}</div>`;
     }
+    
+    const checkmark = disabled ? `<div style="position:absolute;top:6px;left:6px;background:#16a34a;color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">✓</div>` : '';
 
     b.innerHTML = `
-        ${badge}
+        ${badge}${checkmark}
         <img src="${imgUrl}" style="width:90px; height:90px; object-fit:cover; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.15);" onerror="this.style.display='none'">
-        <div style="font-weight:800; font-size:13px; color:#1a1a1a; text-align:center; line-height:1.3;">${f.name}</div>
+        <div style="font-weight:800; font-size:13px; color:${disabled ? '#999' : '#1a1a1a'}; text-align:center; line-height:1.3;">${f.name}</div>
     `;
 
-    b.onmouseover = () => b.style.borderColor = 'var(--orange)';
-    b.onmouseout = () => b.style.borderColor = '#eee';
-
-    b.onclick = function() {
-        b.style.borderColor = 'var(--orange)';
-        b.style.background = '#fff9f5';
-        playClick('pop');
-        setTimeout(() => {
-            const categoryPrefix = categoryLabel ? `[${categoryLabel}] ` : "";
-            dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${categoryPrefix}${f.name}`);
-            currentFlavorStep++;
-            if (currentFlavorStep < selectedItem.flavorsNeeded.length) {
-                startFlavorSelection();
-            } else {
-                document.getElementById('flavor-overlay').style.display = 'none';
-                selectedItem.flavorNotes = dealChoices.join(", ");
-                openQtyModal();
-            }
-        }, 100);
-    };
+    if (!disabled) {
+        b.onmouseover = () => b.style.borderColor = 'var(--orange)';
+        b.onmouseout = () => b.style.borderColor = '#eee';
+        b.onclick = function() {
+            b.style.borderColor = 'var(--orange)';
+            b.style.background = '#fff9f5';
+            playClick('pop');
+            setTimeout(() => {
+                const categoryPrefix = categoryLabel ? `[${categoryLabel}] ` : "";
+                dealChoices.push(`${selectedItem.flavorsNeeded[currentFlavorStep].label}: ${categoryPrefix}${f.name}`);
+                currentFlavorStep++;
+                if (currentFlavorStep < selectedItem.flavorsNeeded.length) {
+                    startFlavorSelection();
+                } else {
+                    document.getElementById('flavor-overlay').style.display = 'none';
+                    selectedItem.flavorNotes = dealChoices.join(", ");
+                    openQtyModal();
+                }
+            }, 100);
+        };
+    }
 
     return b;
 }
@@ -6714,7 +6705,7 @@ async function loadCustomItemsIntoMenu() {
         const flavorMap = {
           'Solo Inferno':  { flavorsNeeded: [{label: 'Pizza Flavor', cat: 'Pan Pizza 🍕'}], fixedItems: ['1x Buddy Drink', '2x Wings'] },
           'The Roll Out':  { flavorsNeeded: [{label: 'Roll 1', cat: 'Rolls 🌯'}, {label: 'Roll 2', cat: 'Rolls 🌯'}], fixedItems: ['2x Buddy Drink'] },
-          'Double Crunch': { flavorsNeeded: [{label: 'Wrap 1', cat: 'Wraps 🌯'}, {label: 'Wrap 2', cat: 'Wraps 🌯'}], fixedItems: ['2x Buddy Drink'] },
+          'Double Crunch': { fixedItems: ['2x Crunch Wrap', '2x Buddy Drink'] },
           'Flame & Fame': { fixedItems: ['2x CM Grilled Burger', '2x Buddy Drink'] },
           'The X Bite':    { fixedItems: ['1x Zinger Burger', '1x Buddy Drink', '2x Wings'] },
           'Triple Blaze':  { fixedItems: ['3x Zinger Burger', '1L Drink'] },
