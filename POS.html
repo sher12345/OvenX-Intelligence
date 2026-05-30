@@ -345,6 +345,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .cust-info-row input:focus{border-color:var(--orange);}
 ::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
 
+/* ANALYTICS PANEL STYLES */
+.anav-btn{padding:12px 16px;border:none;background:transparent;color:#9aa0b0;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;text-transform:uppercase;transition:.15s;}
+.anav-btn.active{color:#e67e22;border-bottom-color:#e67e22;}
+.anav-btn:hover:not(.active){color:#f0f0f0;background:#242830;}
+.a-stat{background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;}
+.a-stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;}
+.a-stat.red::before{background:#c0392b;}.a-stat.green::before{background:#27ae60;}.a-stat.orange::before{background:#e67e22;}.a-stat.blue::before{background:#2980b9;}.a-stat.purple::before{background:#8e44ad;}.a-stat.gold::before{background:#d4af37;}
+.a-sv{font-size:24px;font-weight:900;margin-bottom:3px;}
+.a-stat.red .a-sv{color:#c0392b;}.a-stat.green .a-sv{color:#27ae60;}.a-stat.orange .a-sv{color:#e67e22;}.a-stat.blue .a-sv{color:#2980b9;}.a-stat.purple .a-sv{color:#8e44ad;}.a-stat.gold .a-sv{color:#d4af37;}
+.a-sl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;}
+.a-chart-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#9aa0b0;margin-bottom:12px;}
+.a-ing-row{display:flex;align-items:center;gap:7px;padding:8px 10px;background:#242830;border:1px solid rgba(255,255,255,0.07);border-radius:9px;margin-bottom:6px;}
+.a-month-card{background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:.15s;}
+.a-month-card:hover{border-color:#e67e22;}
+
 /* ── ADMIN TRANSACTION MODAL ── */
 #admin-tx-modal .modal-box{max-width:540px;}
 .admin-tx-section{margin-bottom:16px;}
@@ -419,9 +434,169 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <div class="topbar-info" id="bar-time">—</div>
       <div class="topbar-info">Cash: <span id="bar-cash" style="color:var(--green)">Rs 0</span></div>
       <div class="topbar-info">Bill# <span id="bar-billno" style="color:var(--text3)">001</span></div>
-      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+      <button class="logout-btn" onclick="window.open('ovenx-analytics.html','_blank')" style="background:rgba(230,126,34,0.15);border-color:rgba(230,126,34,0.4);color:var(--orange);">≡ Analytics</button>
+<button class="logout-btn" onclick="toggleAnalyticsPanel()" style="background:rgba(230,126,34,0.15);border-color:rgba(230,126,34,0.4);color:var(--orange);font-size:18px;padding:5px 14px;">☰</button>
+<button class="logout-btn" onclick="doLogout()">LOGOUT</button>
     </div>
   </div>
+  <!-- ANALYTICS PANEL -->
+<div id="analytics-panel" style="display:none;position:fixed;inset:0;top:58px;background:#111318;z-index:7000;overflow-y:auto;">
+  <div style="padding:0;height:100%;">
+    
+    <!-- ANALYTICS NAV -->
+    <div style="background:#1c1f27;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:2px;padding:0 20px;position:sticky;top:0;z-index:10;">
+      <button class="anav-btn active" onclick="showATab('aoverview')">📈 Overview</button>
+      <button class="anav-btn" onclick="showATab('aitems')">🔍 Item Search</button>
+      <button class="anav-btn" onclick="showATab('ahistory')">📅 History</button>
+      <button class="anav-btn" onclick="showATab('ainventory')">🧪 Ingredients</button>
+      <button class="anav-btn" onclick="showATab('aconsumption')">📦 Consumption</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <input type="date" id="a-date-from" style="background:#242830;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:6px 10px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:12px;outline:none;">
+        <span style="color:#555d70;font-size:12px;">to</span>
+        <input type="date" id="a-date-to" style="background:#242830;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:6px 10px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:12px;outline:none;">
+        <button onclick="aRefreshAll()" style="padding:6px 14px;border-radius:8px;background:#c0392b;color:white;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">↻ Load</button>
+        <button onclick="exportACSV()" style="padding:6px 12px;border-radius:8px;background:#242830;color:#9aa0b0;border:1px solid rgba(255,255,255,0.07);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📊 CSV</button>
+        <button onclick="toggleAnalyticsPanel()" style="padding:6px 12px;border-radius:8px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:#c0392b;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">✕ Close</button>
+      </div>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div id="aoverview" style="padding:18px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px;" id="a-stat-grid">
+        <div class="a-stat green"><div class="a-sv" id="as-total">—</div><div class="a-sl">Shop Sales</div></div>
+        <div class="a-stat orange"><div class="a-sv" id="as-bills">—</div><div class="a-sl">Bills</div></div>
+        <div class="a-stat blue"><div class="a-sv" id="as-avg">—</div><div class="a-sl">Avg Bill</div></div>
+        <div class="a-stat red"><div class="a-sv" id="as-cash">—</div><div class="a-sl">Cash</div></div>
+        <div class="a-stat purple"><div class="a-sv" id="as-card">—</div><div class="a-sl">Card/Digital</div></div>
+        <div class="a-stat gold"><div class="a-sv" id="as-del">—</div><div class="a-sl">Del Fees</div></div>
+        <div class="a-stat orange"><div class="a-sv" id="as-disc">—</div><div class="a-sl">Discounts</div></div>
+        <div class="a-stat red"><div class="a-sv" id="as-sc">—</div><div class="a-sl">SC Collected</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+        <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;">
+          <div class="a-chart-title">Sales by Type</div>
+          <div style="position:relative;height:220px;"><canvas id="a-typeChart"></canvas></div>
+        </div>
+        <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;">
+          <div class="a-chart-title">Payment Methods</div>
+          <div style="position:relative;height:220px;"><canvas id="a-methodChart"></canvas></div>
+        </div>
+        <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;grid-column:1/-1;">
+          <div class="a-chart-title">Hourly Sales</div>
+          <div style="position:relative;height:260px;"><canvas id="a-hourChart"></canvas></div>
+        </div>
+      </div>
+      <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#9aa0b0;">🏆 Top Items</div>
+        <table style="width:100%;border-collapse:collapse;" id="a-top-body-wrap">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">#</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Item</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Qty</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Revenue</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555d70;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Share</th>
+          </tr></thead>
+          <tbody id="a-top-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:#555d70;font-size:12px;">Click ↻ Load to fetch data</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ITEM SEARCH TAB -->
+    <div id="aitems" style="display:none;padding:18px;">
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <input id="a-item-search" placeholder="🔍 Search: 04 PIZZA DEAL, Zinger, Wings..." style="flex:1;background:#242830;border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:10px 14px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')aSearchItem()">
+        <button onclick="aSearchItem()" style="padding:10px 20px;border-radius:9px;background:#e67e22;color:white;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">Search</button>
+        <button onclick="document.getElementById('a-item-search').value='';document.getElementById('a-item-results').innerHTML='';document.getElementById('a-item-chart-wrap').style.display='none'" style="padding:10px 16px;border-radius:9px;background:#242830;color:#9aa0b0;border:1px solid rgba(255,255,255,0.07);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Clear</button>
+      </div>
+      <div id="a-item-results" style="margin-bottom:16px;"></div>
+      <div id="a-item-chart-wrap" style="display:none;background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div class="a-chart-title" id="a-item-chart-title">Item Trend</div>
+        <div style="position:relative;height:280px;"><canvas id="a-itemTrendChart"></canvas></div>
+      </div>
+      <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#9aa0b0;">All Items Ranked</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">#</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Item</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Qty</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Revenue</th>
+            <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Avg/Day</th>
+          </tr></thead>
+          <tbody id="a-all-items-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:#555d70;font-size:12px;">Load data first</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="ahistory" style="display:none;padding:18px;">
+      <div style="font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">Monthly Breakdown</div>
+      <div id="a-monthly-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px;"></div>
+      <div id="a-month-detail" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;" id="a-month-detail-title"></div>
+          <button onclick="document.getElementById('a-month-detail').style.display='none'" style="padding:4px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.07);background:#242830;color:#9aa0b0;font-size:12px;font-weight:700;cursor:pointer;">✕ Close</button>
+        </div>
+        <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-bottom:14px;">
+          <div class="a-chart-title">Daily Sales</div>
+          <div style="position:relative;height:280px;"><canvas id="a-monthDetailChart"></canvas></div>
+        </div>
+        <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Date</th>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Bills</th>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Sales</th>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Cash</th>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Card</th>
+              <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555d70;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07);">Top Item</th>
+            </tr></thead>
+            <tbody id="a-month-detail-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- INGREDIENTS TAB -->
+    <div id="ainventory" style="display:none;padding:18px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">📝 Recipe Editor</div>
+            <button onclick="aAddIngRow()" style="padding:6px 13px;border-radius:7px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:#27ae60;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">+ Ingredient</button>
+          </div>
+          <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;">
+            <div style="font-size:11px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Menu Item</div>
+            <select id="a-recipe-sel" onchange="aLoadRecipe(this.value)" style="width:100%;background:#242830;border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:13px;outline:none;margin-bottom:14px;">
+              <option value="">— Select item —</option>
+            </select>
+            <div style="font-size:11px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Ingredients per serving</div>
+            <div id="a-ing-list"></div>
+            <button onclick="aSaveRecipe()" style="width:100%;padding:11px;border-radius:9px;background:#27ae60;color:white;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px;box-shadow:0 3px 0 #1e8449;">✅ Save Recipe</button>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">📋 Saved Recipes</div>
+            <button onclick="aLoadAllRecipes()" style="padding:5px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.07);background:#242830;color:#9aa0b0;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↻ Refresh</button>
+          </div>
+          <div id="a-recipes-list" style="max-height:580px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSUMPTION TAB -->
+    <div id="aconsumption" style="display:none;padding:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">📦 Ingredient Consumption</div>
+        <button onclick="aCalcConsumption()" style="padding:7px 16px;border-radius:8px;background:#c0392b;color:white;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">↻ Calculate</button>
+      </div>
+      <p style="color:#555d70;font-size:13px;margin-bottom:16px;">Actual ingredients used based on items sold × your recipes in the selected date range.</p>
+      <div id="a-consumption-content"><div style="text-align:center;padding:30px;color:#555d70;font-size:13px;">Set date range above then click Calculate</div></div>
+    </div>
+
+  </div>
+</div>
 
   <!-- TABLE MAP -->
   <div class="pos-view active" id="view-tables">
@@ -4859,7 +5034,476 @@ async function adminTxSave() {
     console.error(e);
   }
 }
+// ══════════════════════════════════
+// ANALYTICS PANEL
+// ══════════════════════════════════
+let _aTxData = [];
+let _aRecipes = {};
+let _aCharts = {};
+
+function toggleAnalyticsPanel() {
+  const panel = document.getElementById('analytics-panel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const today = new Date().toISOString().slice(0,10);
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10);
+    if (!document.getElementById('a-date-from').value) document.getElementById('a-date-from').value = monthStart;
+    if (!document.getElementById('a-date-to').value) document.getElementById('a-date-to').value = today;
+    aPopulateMenuSelector();
+    aLoadAllRecipes();
+    aRefreshAll();
+  }
+}
+
+function showATab(t) {
+  ['aoverview','aitems','ahistory','ainventory','aconsumption'].forEach(id => {
+    document.getElementById(id).style.display = id===t ? 'block' : 'none';
+  });
+  document.querySelectorAll('.anav-btn').forEach((btn,i) => {
+    const tabs = ['aoverview','aitems','ahistory','ainventory','aconsumption'];
+    btn.classList.toggle('active', tabs[i]===t);
+  });
+  if (t==='ahistory') aLoadMonthlyHistory();
+  if (t==='ainventory') { aPopulateMenuSelector(); aLoadAllRecipes(); }
+  if (t==='aconsumption') aCalcConsumption();
+  if (t==='aitems' && _aTxData.length) aRenderAllItemsTable();
+}
+
+async function aRefreshAll() {
+  await aLoadTransactions();
+  aLoadOverview();
+}
+
+async function aLoadTransactions() {
+  try {
+    const from = document.getElementById('a-date-from').value;
+    const to = document.getElementById('a-date-to').value;
+    const { data } = await sb.from('shift_transactions')
+      .select('*').eq('branch', activeBranch)
+      .gte('date', from).lte('date', to)
+      .not('method','in','("cash-in","cash-out","void")')
+      .order('created_at', {ascending:true});
+    _aTxData = data || [];
+    return _aTxData;
+  } catch(e) { console.error('aLoadTransactions:', e); return []; }
+}
+
+function aGetCat(name) {
+  for (let cat in menuData) {
+    for (let item of menuData[cat]) {
+      if (name.toLowerCase().includes(item.n.toLowerCase()) || item.n.toLowerCase().includes(name.toLowerCase().split('(')[0].trim())) return cat;
+    }
+  }
+  if (dealsData.find(d => name.toLowerCase().includes(d.n.toLowerCase()))) return 'Deals';
+  return 'Other';
+}
+
+function aParseItems(txList) {
+  const map = {};
+  txList.forEach(tx => {
+    if (!tx.items_text) return;
+    tx.items_text.split(',').forEach(line => {
+      const m = line.trim().match(/^(\d+)x\s+(.+)/);
+      if (!m) return;
+      const qty = parseInt(m[1]);
+      const name = m[2].trim();
+      if (!map[name]) map[name] = {name, qty:0, revenue:0, cat:aGetCat(name), days:new Set()};
+      map[name].qty += qty;
+      let price = 0;
+      for (let c in menuData) {
+        const itm = menuData[c].find(i => name.includes(i.n));
+        if (itm) { price = typeof itm.p==='object'?Object.values(itm.p)[0]:itm.p; break; }
+      }
+      const deal = dealsData.find(d => name.toLowerCase().includes(d.n.toLowerCase()));
+      if (deal) price = deal.p;
+      map[name].revenue += price * qty;
+      if (tx.date) map[name].days.add(tx.date);
+    });
+  });
+  return Object.values(map).map(i=>({...i,days:i.days.size})).sort((a,b)=>b.qty-a.qty);
+}
+
+function aDestroyChart(id) {
+  if (_aCharts[id]) { _aCharts[id].destroy(); delete _aCharts[id]; }
+}
+
+function aLoadOverview() {
+  const txs = _aTxData;
+  const total = txs.reduce((s,t)=>s+(t.total||0),0);
+  const delFees = txs.filter(t=>t.type==='Delivery').reduce((s,t)=>s+(t.delivery_charge||0),0);
+  const shopTotal = total - delFees;
+  const cash = txs.filter(t=>t.method==='cash').reduce((s,t)=>s+t.total,0)
+              +txs.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_cash||0),0);
+  const card = txs.filter(t=>['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t)=>s+t.total,0)
+              +txs.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_card||0),0);
+  const disc = txs.reduce((s,t)=>s+(t.discount||0),0);
+  const sc   = txs.reduce((s,t)=>s+(t.sc||0),0);
+  document.getElementById('as-total').textContent = 'Rs '+Math.round(shopTotal).toLocaleString();
+  document.getElementById('as-bills').textContent = txs.length;
+  document.getElementById('as-avg').textContent = txs.length?'Rs '+Math.round(shopTotal/txs.length):'—';
+  document.getElementById('as-cash').textContent = 'Rs '+Math.round(cash-delFees).toLocaleString();
+  document.getElementById('as-card').textContent = 'Rs '+Math.round(card).toLocaleString();
+  document.getElementById('as-del').textContent  = 'Rs '+Math.round(delFees).toLocaleString();
+  document.getElementById('as-disc').textContent = 'Rs '+Math.round(disc).toLocaleString();
+  document.getElementById('as-sc').textContent   = 'Rs '+Math.round(sc).toLocaleString();
+  aRenderTypeChart(txs); aRenderMethodChart(txs); aRenderHourChart(txs); aRenderTopItems(txs);
+}
+
+function aRenderTypeChart(txs) {
+  const di=txs.filter(t=>t.type==='Dine-In').reduce((s,t)=>s+t.total,0);
+  const tk=txs.filter(t=>t.type==='Takeaway').reduce((s,t)=>s+t.total,0);
+  const dl=txs.filter(t=>t.type==='Delivery').reduce((s,t)=>s+t.total,0);
+  aDestroyChart('a-typeChart');
+  _aCharts['a-typeChart'] = new Chart(document.getElementById('a-typeChart'),{
+    type:'doughnut',
+    data:{labels:['Dine-In','Takeaway','Delivery'],datasets:[{data:[di,tk,dl],backgroundColor:['#2980b9','#27ae60','#c0392b'],borderColor:'#1c1f27',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#9aa0b0',font:{family:'Outfit',size:11},padding:10}}}}
+  });
+}
+
+function aRenderMethodChart(txs) {
+  const methods={};
+  txs.forEach(t=>{const m=t.method||'other';methods[m]=(methods[m]||0)+t.total;});
+  const labels=Object.keys(methods), vals=Object.values(methods);
+  const colors={'cash':'#27ae60','card':'#2980b9','bank':'#8e44ad','jazzcash':'#e67e22','foodpanda':'#c0392b','split':'#d4af37'};
+  aDestroyChart('a-methodChart');
+  _aCharts['a-methodChart'] = new Chart(document.getElementById('a-methodChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Rs',data:vals,backgroundColor:labels.map(l=>colors[l]||'#555d70'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa0b0',callback:v=>'Rs '+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#9aa0b0'}}}}
+  });
+}
+
+function aRenderHourChart(txs) {
+  const hd=Array(24).fill(0), hb=Array(24).fill(0);
+  txs.forEach(t=>{const h=new Date(t.created_at).getHours();hd[h]+=t.total;hb[h]++;});
+  const labels=Array.from({length:24},(_,i)=>i===0?'12am':i<12?i+'am':i===12?'12pm':(i-12)+'pm');
+  aDestroyChart('a-hourChart');
+  _aCharts['a-hourChart'] = new Chart(document.getElementById('a-hourChart'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Revenue',data:hd,backgroundColor:'rgba(230,126,34,0.7)',borderRadius:4,yAxisID:'y'},
+      {label:'Bills',data:hb,backgroundColor:'rgba(39,174,96,0.6)',borderRadius:4,yAxisID:'y2',type:'line',tension:0.4,pointRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#9aa0b0',font:{family:'Outfit',size:11}}}},scales:{x:{ticks:{color:'#9aa0b0',maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#9aa0b0',callback:v=>'Rs '+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.04)'},position:'left'},y2:{ticks:{color:'#58d68d'},grid:{display:false},position:'right'}}}
+  });
+}
+
+function aRenderTopItems(txs) {
+  const items = aParseItems(txs).slice(0,25);
+  const maxQty = items[0]?.qty||1;
+  const totalQty = items.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('a-top-body').innerHTML = items.map((item,idx)=>{
+    const pct=Math.round((item.qty/totalQty)*100);
+    const rc=idx===0?'#d4af37':idx===1?'#b0b8cc':idx===2?'#c87941':'#555d70';
+    return `<tr>
+      <td style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:11px;font-weight:900;background:rgba(255,255,255,0.06);color:${rc};">${idx+1}</span></td>
+      <td style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:#f0f0f0;">${item.name} <span style="font-size:11px;color:#555d70;margin-left:3px;">${item.cat}</span></td>
+      <td style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:800;color:#e67e22;">${item.qty}</td>
+      <td style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#27ae60;font-weight:700;">Rs ${Math.round(item.revenue).toLocaleString()}</td>
+      <td style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="height:6px;border-radius:3px;background:#2e3340;width:80px;min-width:80px;"><div style="height:6px;border-radius:3px;background:#e67e22;width:${Math.round((item.qty/maxQty)*100)}%;"></div></div>
+          <span style="font-size:12px;color:#555d70;">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#555d70;font-size:12px;">No data</td></tr>';
+}
+
+function aRenderAllItemsTable() {
+  const items = aParseItems(_aTxData);
+  const dateSpan = Math.max(1,(new Date(document.getElementById('a-date-to').value)-new Date(document.getElementById('a-date-from').value))/86400000+1);
+  document.getElementById('a-all-items-body').innerHTML = items.map((item,idx)=>`<tr>
+    <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#555d70;">${idx+1}</td>
+    <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:#e67e22;cursor:pointer;" onclick="aQuickSearch('${item.name.replace(/'/g,'')}')">${item.name}</td>
+    <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:800;color:#e67e22;">${item.qty}</td>
+    <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#27ae60;">Rs ${Math.round(item.revenue).toLocaleString()}</td>
+    <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#9aa0b0;">${(item.qty/dateSpan).toFixed(1)}/day</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#555d70;">No data</td></tr>';
+}
+
+function aQuickSearch(name) {
+  showATab('aitems');
+  document.getElementById('a-item-search').value = name;
+  aSearchItem();
+}
+
+function aSearchItem() {
+  const query = document.getElementById('a-item-search').value.trim().toLowerCase();
+  if (!query) return;
+  const itemMap={}, dailyMap={};
+  _aTxData.forEach(tx=>{
+    if (!tx.items_text) return;
+    const date=tx.date;
+    tx.items_text.split(',').forEach(line=>{
+      const m=line.trim().match(/^(\d+)x\s+(.+)/);
+      if (!m) return;
+      const name=m[2].trim();
+      if (!name.toLowerCase().includes(query)) return;
+      const qty=parseInt(m[1]);
+      if (!itemMap[name]) itemMap[name]={name,qty:0,revenue:0,days:new Set()};
+      itemMap[name].qty+=qty;
+      itemMap[name].days.add(date);
+      let price=0;
+      for (let c in menuData){const itm=menuData[c].find(i=>name.includes(i.n));if(itm){price=typeof itm.p==='object'?Object.values(itm.p)[0]:itm.p;break;}}
+      const deal=dealsData.find(d=>name.toLowerCase().includes(d.n.toLowerCase()));if(deal)price=deal.p;
+      itemMap[name].revenue+=price*qty;
+      if(!dailyMap[date])dailyMap[date]={};
+      if(!dailyMap[date][name])dailyMap[date][name]=0;
+      dailyMap[date][name]+=qty;
+    });
+  });
+  const results=Object.values(itemMap).sort((a,b)=>b.qty-a.qty);
+  const el=document.getElementById('a-item-results');
+  if (!results.length){el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">No items found for "'+query+'"</div>';document.getElementById('a-item-chart-wrap').style.display='none';return;}
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">'+results.map(item=>`
+    <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:#f0f0f0;margin-bottom:6px;text-transform:uppercase;">${item.name}</div>
+      <div style="font-size:10px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Total Sold</div>
+      <div style="font-size:28px;font-weight:900;color:#e67e22;">${item.qty}</div>
+      <div style="margin-top:6px;font-size:10px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Est. Revenue</div>
+      <div style="font-size:16px;font-weight:700;color:#27ae60;">Rs ${Math.round(item.revenue).toLocaleString()}</div>
+      <div style="margin-top:6px;display:flex;gap:14px;">
+        <div><div style="font-size:10px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Days</div><div style="font-size:14px;font-weight:700;color:#9aa0b0;">${item.days.size}</div></div>
+        <div><div style="font-size:10px;color:#555d70;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Avg/Day</div><div style="font-size:14px;font-weight:700;color:#9aa0b0;">${item.days.size?(item.qty/item.days.size).toFixed(1):0}</div></div>
+      </div>
+    </div>`).join('')+'</div>';
+  const top=results[0];
+  const dates=Object.keys(dailyMap).sort();
+  const trendData=dates.map(d=>dailyMap[d][top.name]||0);
+  document.getElementById('a-item-chart-title').textContent=top.name+' — Daily Trend';
+  document.getElementById('a-item-chart-wrap').style.display='block';
+  aDestroyChart('a-itemTrendChart');
+  _aCharts['a-itemTrendChart']=new Chart(document.getElementById('a-itemTrendChart'),{
+    type:'bar',
+    data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'Units',data:trendData,backgroundColor:'rgba(230,126,34,0.7)',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa0b0',autoSkip:true,maxTicksLimit:30},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#9aa0b0',stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+  aRenderAllItemsTable();
+}
+
+async function aLoadMonthlyHistory() {
+  const grid=document.getElementById('a-monthly-grid');
+  grid.innerHTML='<div style="color:#555d70;font-size:12px;padding:12px;">Loading...</div>';
+  try {
+    const{data}=await sb.from('shift_transactions').select('date,total,method,type,items_text,sc,discount,split_cash,split_card,delivery_charge').eq('branch',activeBranch).not('method','in','("cash-in","cash-out","void")').order('date',{ascending:false});
+    if (!data||!data.length){grid.innerHTML='<div style="color:#555d70;font-size:12px;padding:12px;">No history found</div>';return;}
+    const mMap={};
+    data.forEach(t=>{if(!t.date)return;const mk=t.date.slice(0,7);if(!mMap[mk])mMap[mk]={total:0,bills:0,txs:[]};mMap[mk].total+=t.total||0;mMap[mk].bills++;mMap[mk].txs.push(t);});
+    const months=Object.keys(mMap).sort().reverse();
+    const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    grid.innerHTML=months.map(m=>{
+      const[yr,mo]=m.split('-');
+      return `<div class="a-month-card" onclick="aShowMonthDetail('${m}',${JSON.stringify(mMap[m].txs).replace(/"/g,'&quot;')})">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9aa0b0;margin-bottom:3px;">${mn[parseInt(mo)-1]} ${yr}</div>
+        <div style="font-size:20px;font-weight:900;color:#e67e22;">Rs ${Math.round(mMap[m].total/1000)}K</div>
+        <div style="font-size:11px;color:#555d70;margin-top:2px;">${mMap[m].bills} bills</div>
+      </div>`;
+    }).join('');
+  } catch(e){grid.innerHTML='<div style="color:#c0392b;font-size:12px;padding:12px;">Error loading</div>';}
+}
+
+function aShowMonthDetail(mKey, txs) {
+  document.getElementById('a-month-detail').style.display='block';
+  const[yr,mn]=mKey.split('-');
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('a-month-detail-title').textContent=monthNames[parseInt(mn)-1]+' '+yr+' — Daily';
+  const dayMap={};
+  txs.forEach(t=>{
+    if(!t.date)return;
+    if(!dayMap[t.date])dayMap[t.date]={bills:0,total:0,cash:0,card:0,items:{}};
+    dayMap[t.date].bills++;dayMap[t.date].total+=t.total||0;
+    if(t.method==='cash')dayMap[t.date].cash+=t.total||0;
+    if(['card','bank','jazzcash','foodpanda'].includes(t.method))dayMap[t.date].card+=t.total||0;
+    if(t.items_text)t.items_text.split(',').forEach(line=>{const m2=line.trim().match(/^(\d+)x\s+(.+)/);if(!m2)return;dayMap[t.date].items[m2[2].trim()]=(dayMap[t.date].items[m2[2].trim()]||0)+parseInt(m2[1]);});
+  });
+  const days=Object.keys(dayMap).sort();
+  aDestroyChart('a-monthDetailChart');
+  _aCharts['a-monthDetailChart']=new Chart(document.getElementById('a-monthDetailChart'),{
+    type:'bar',
+    data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Sales',data:days.map(d=>dayMap[d].total),backgroundColor:'rgba(41,128,185,0.7)',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa0b0',autoSkip:false,maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#9aa0b0',callback:v=>'Rs '+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+  document.getElementById('a-month-detail-body').innerHTML=days.slice().reverse().map(d=>{
+    const day=dayMap[d];const top=Object.entries(day.items).sort((a,b)=>b[1]-a[1])[0];
+    return `<tr>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:#f0f0f0;">${d}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e67e22;">${day.bills}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#27ae60;font-weight:700;">Rs ${Math.round(day.total).toLocaleString()}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.cash).toLocaleString()}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.card).toLocaleString()}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#9aa0b0;">${top?top[0].slice(0,24)+' ('+top[1]+')':'—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('a-month-detail').scrollIntoView({behavior:'smooth'});
+}
+
+function aPopulateMenuSelector() {
+  const sel=document.getElementById('a-recipe-sel');
+  if (sel.options.length > 1) return;
+  sel.innerHTML='<option value="">— Select item —</option>';
+  for (let cat in menuData) {
+    const og=document.createElement('optgroup');og.label=cat;
+    menuData[cat].forEach(item=>{
+      if (typeof item.p==='object'){
+        Object.keys(item.p).forEach(sz=>{const opt=document.createElement('option');opt.value=item.n+' ('+sz+')';opt.textContent=item.n+' ('+sz+')';og.appendChild(opt);});
+      } else {
+        const opt=document.createElement('option');opt.value=item.n;opt.textContent=item.n;og.appendChild(opt);
+      }
+    });
+    sel.appendChild(og);
+  }
+  const og2=document.createElement('optgroup');og2.label='Deals';
+  dealsData.forEach(d=>{const opt=document.createElement('option');opt.value=d.n;opt.textContent=d.n;og2.appendChild(opt);});
+  sel.appendChild(og2);
+}
+
+async function aLoadAllRecipes() {
+  const listEl=document.getElementById('a-recipes-list');
+  listEl.innerHTML='<div style="color:#555d70;font-size:12px;padding:12px;">Loading...</div>';
+  try {
+    const{data}=await sb.from('item_recipes').select('*').eq('branch',activeBranch).order('item_name');
+    _aRecipes={};
+    (data||[]).forEach(r=>{_aRecipes[r.item_name]=r.ingredients;});
+    if(!data||!data.length){listEl.innerHTML='<div style="color:#555d70;font-size:13px;padding:16px;text-align:center;">No recipes yet. Select an item and add ingredients.</div>';return;}
+    listEl.innerHTML=data.map(r=>`
+      <div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+          <div style="font-size:13px;font-weight:800;color:#f0f0f0;">${r.item_name}</div>
+          <div style="display:flex;gap:5px;">
+            <button onclick="aEditRecipe('${r.item_name.replace(/'/g,"\\'")}',${JSON.stringify(r.ingredients).replace(/"/g,'&quot;')})" style="padding:3px 8px;border-radius:5px;background:rgba(41,128,185,0.15);border:1px solid rgba(41,128,185,0.3);color:#5dade2;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>
+            <button onclick="aDeleteRecipe('${r.item_name.replace(/'/g,"\\'")}',this)" style="padding:3px 8px;border-radius:5px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:#c0392b;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">🗑️</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          ${(r.ingredients||[]).map(ing=>`<span style="padding:3px 8px;border-radius:5px;background:#242830;font-size:12px;color:#9aa0b0;">${ing.qty}${ing.unit} ${ing.name}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch(e){listEl.innerHTML='<div style="color:#c0392b;font-size:12px;padding:12px;">Error — have you created the item_recipes table in Supabase?</div>';}
+}
+
+function aLoadRecipe(itemName) {
+  const list=document.getElementById('a-ing-list');list.innerHTML='';
+  if (_aRecipes[itemName]&&_aRecipes[itemName].length) {
+    _aRecipes[itemName].forEach(ing=>aAddIngRow(ing.name,ing.qty,ing.unit));
+  } else { aAddIngRow(); }
+}
+
+function aAddIngRow(name='',qty='',unit='g') {
+  const list=document.getElementById('a-ing-list');
+  const row=document.createElement('div');row.className='a-ing-row';
+  row.innerHTML=`
+    <input type="text" value="${name}" placeholder="Ingredient" style="flex:1;background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:6px 9px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:12px;outline:none;">
+    <input type="number" value="${qty}" placeholder="Qty" min="0" step="0.1" style="width:65px;background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:6px 8px;color:#e67e22;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;outline:none;text-align:center;">
+    <select style="width:60px;background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:6px 5px;color:#9aa0b0;font-family:'Outfit',sans-serif;font-size:12px;outline:none;">
+      ${['g','kg','ml','L','pcs','tbsp','tsp','slice'].map(u=>`<option value="${u}" ${u===unit?'selected':''}>${u}</option>`).join('')}
+    </select>
+    <button onclick="this.parentElement.remove()" style="width:26px;height:26px;border-radius:6px;background:rgba(192,57,43,0.15);border:none;color:#c0392b;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>`;
+  list.appendChild(row);
+}
+
+async function aSaveRecipe() {
+  const itemName=document.getElementById('a-recipe-sel').value;
+  if(!itemName){showToast('Select a menu item first','error');return;}
+  const rows=document.querySelectorAll('.a-ing-row');
+  const ingredients=[];
+  rows.forEach(row=>{
+    const inputs=row.querySelectorAll('input,select');
+    const name=inputs[0].value.trim(),qty=parseFloat(inputs[1].value)||0,unit=inputs[2].value;
+    if(name&&qty>0)ingredients.push({name,qty,unit});
+  });
+  if(!ingredients.length){showToast('Add at least one ingredient','error');return;}
+  try {
+    const{error}=await sb.from('item_recipes').upsert([{branch:activeBranch,item_name:itemName,ingredients,updated_at:new Date().toISOString()}],{onConflict:'branch,item_name'});
+    if(error)throw error;
+    _aRecipes[itemName]=ingredients;
+    showToast('Recipe saved for '+itemName+' ✅','success');
+    aLoadAllRecipes();
+  } catch(e){showToast('Save failed: '+e.message,'error');}
+}
+
+function aEditRecipe(itemName, ingredients) {
+  document.getElementById('a-recipe-sel').value=itemName;
+  const list=document.getElementById('a-ing-list');list.innerHTML='';
+  ingredients.forEach(ing=>aAddIngRow(ing.name,ing.qty,ing.unit));
+  showToast('Editing: '+itemName,'success');
+}
+
+async function aDeleteRecipe(itemName, btn) {
+  if(!confirm('Delete recipe for '+itemName+'?'))return;
+  try {
+    await sb.from('item_recipes').delete().eq('branch',activeBranch).eq('item_name',itemName);
+    delete _aRecipes[itemName];
+    btn.closest('[style]').remove();
+    showToast('Deleted','error');
+  } catch(e){showToast('Delete failed','error');}
+}
+
+async function aCalcConsumption() {
+  const el=document.getElementById('a-consumption-content');
+  el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">Calculating...</div>';
+  if(!_aTxData.length)await aLoadTransactions();
+  try {
+    const{data}=await sb.from('item_recipes').select('*').eq('branch',activeBranch);
+    _aRecipes={};(data||[]).forEach(r=>{_aRecipes[r.item_name]=r.ingredients;});
+  } catch(e){}
+  if(!Object.keys(_aRecipes).length){el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">No recipes found. Add recipes in the Ingredients tab first.</div>';return;}
+  const soldItems=aParseItems(_aTxData);
+  const soldMap={};soldItems.forEach(i=>{soldMap[i.name]=i.qty;});
+  const ingMap={};let matched=0;
+  Object.entries(_aRecipes).forEach(([itemName,ingredients])=>{
+    let soldQty=0;
+    Object.entries(soldMap).forEach(([soldName,qty])=>{
+      const sn=soldName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
+      const rn=itemName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
+      if(sn.includes(rn)||rn.includes(sn)||soldName.toLowerCase()===itemName.toLowerCase())soldQty+=qty;
+    });
+    if(!soldQty)return;matched++;
+    ingredients.forEach(ing=>{
+      const key=ing.name+'||'+ing.unit;
+      if(!ingMap[key])ingMap[key]={name:ing.name,unit:ing.unit,qty:0,items:[]};
+      ingMap[key].qty+=ing.qty*soldQty;
+      ingMap[key].items.push({item:itemName,sold:soldQty,each:ing.qty});
+    });
+  });
+  if(!Object.keys(ingMap).length){el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">No matches found. '+Object.keys(_aRecipes).length+' recipes, '+soldItems.length+' items sold.</div>';return;}
+  const sorted=Object.values(ingMap).sort((a,b)=>a.name.localeCompare(b.name));
+  el.innerHTML=`
+    <div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#27ae60;font-weight:700;">
+      ✅ ${matched} recipes matched | ${sorted.length} ingredients | ${document.getElementById('a-date-from').value} to ${document.getElementById('a-date-to').value}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+    ${sorted.map(ing=>{
+      const dq=ing.qty>=1000&&ing.unit==='g'?(ing.qty/1000).toFixed(2)+' kg':ing.qty>=1000&&ing.unit==='ml'?(ing.qty/1000).toFixed(2)+' L':Math.round(ing.qty*100)/100+' '+ing.unit;
+      return `<div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;color:#f0f0f0;margin-bottom:5px;">${ing.name}</div>
+        <div style="font-size:26px;font-weight:900;color:#e67e22;">${dq}</div>
+        <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:7px;">
+          ${ing.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555d70;padding:2px 0;">${i.item.slice(0,26)}<span>${i.sold}x${i.each}${ing.unit}</span></div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+function exportACSV() {
+  if(!_aTxData.length){showToast('Load data first','error');return;}
+  const lines=['Date,Time,Type,Table,Items,Method,SC,Discount,DeliveryCharge,Total,Staff'];
+  _aTxData.forEach(t=>{
+    const time=new Date(t.created_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+    const clean=s=>(s||'—').toString().replace(/,/g,';').replace(/\n/g,' ');
+    lines.push([t.date,time,t.type||'—',clean(t.table_loc),clean(t.items_text),t.method||'—',t.sc||0,t.discount||0,t.delivery_charge||0,t.total||0,t.staff||'—'].join(','));
+  });
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=`OvenX_${activeBranch}_Analytics.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('CSV exported ✅','success');
+}
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
