@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OvenX — Office Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --red:#c0392b; --dark-red:#922b21; --orange:#e67e22; --dark-orange:#a04000;
+  --green:#27ae60; --dark-green:#1e8449; --blue:#2980b9; --purple:#8e44ad;
+  --gold:#d4af37; --bg:#0e1117; --surface:#161b24; --surface2:#1e2535;
+  --surface3:#252d3d; --border:rgba(255,255,255,0.08);
+  --text:#f0f2f5; --text2:#8892a4; --text3:#4a5568; --font:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow:hidden;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:radial-gradient(ellipse at 35% 45%,#1a0808 0%,#0a0d14 70%);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 38px;width:380px;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.7);}
+.login-logo{font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:3px;}
+.login-logo span{color:var(--orange);}
+.login-sub{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;}
+.login-badge{display:inline-block;background:rgba(230,126,34,0.15);border:1px solid rgba(230,126,34,0.3);color:var(--orange);font-size:10px;font-weight:800;letter-spacing:2px;padding:4px 14px;border-radius:20px;margin-bottom:30px;text-transform:uppercase;}
+.login-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;outline:none;margin-bottom:12px;cursor:pointer;}
+.login-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-family:var(--font);font-size:15px;outline:none;margin-bottom:12px;transition:.2s;}
+.login-input:focus{border-color:var(--orange);}
+.login-btn{width:100%;padding:15px;border-radius:12px;background:var(--red);color:white;border:none;font-family:var(--font);font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-red);}
+.login-btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--dark-red);}
+.login-err{color:#ff6b6b;font-size:12px;margin-top:10px;}
+
+/* MAIN LAYOUT */
+#app{display:none;height:100vh;grid-template-rows:58px 1fr;grid-template-columns:1fr;}
+#app.active{display:grid;}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px;z-index:100;}
+.topbar-logo{font-size:20px;font-weight:900;letter-spacing:-0.5px;white-space:nowrap;}
+.topbar-logo span{color:var(--orange);}
+.topbar-center{display:flex;gap:6px;align-items:center;}
+.tab-btn{padding:6px 14px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:.15s;text-transform:uppercase;white-space:nowrap;}
+.tab-btn.active{background:var(--red);color:white;}
+.tab-btn:hover:not(.active){background:var(--surface3);color:var(--text);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-info{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;white-space:nowrap;}
+.topbar-info span{color:var(--orange);}
+.logout-btn{padding:5px 12px;border-radius:7px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:var(--red);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s infinite;}
+@keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.badge{background:var(--red);color:white;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;margin-left:4px;}
+
+/* BODY */
+.app-body{display:grid;grid-template-columns:380px 1fr;overflow:hidden;}
+
+/* LEFT — ORDER BUILDER */
+.order-panel{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.op-header{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.op-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px;}
+
+.cust-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;}
+.cust-input{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:100%;transition:.2s;}
+.cust-input:focus{border-color:var(--orange);}
+.order-type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:7px;}
+.otype-btn{padding:9px 6px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;}
+.otype-btn.active{border-color:var(--orange);background:rgba(230,126,34,0.15);color:white;}
+.branch-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.branch-btn{padding:8px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;}
+.branch-btn.active{border-color:var(--blue);background:rgba(41,128,185,0.15);color:#5dade2;}
+
+.addr-wrap{margin-top:7px;}
+.addr-input{width:100%;background:var(--surface2);border:1px solid rgba(230,126,34,0.35);border-radius:9px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;resize:none;}
+.addr-input:focus{border-color:var(--orange);}
+.del-charge-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.del-charge-label{font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;}
+.del-charge-input{width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--orange);font-family:var(--font);font-size:14px;font-weight:700;outline:none;text-align:center;}
+.del-presets{display:flex;gap:4px;}
+.del-preset{padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;}
+.del-preset:hover{color:var(--orange);border-color:var(--orange);}
+
+.op-items{flex:1;overflow-y:auto;padding:8px;}
+.op-item-row{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);margin-bottom:5px;}
+.oir-num{font-size:15px;font-weight:900;color:white;min-width:22px;text-align:center;}
+.oir-name{flex:1;font-size:12px;font-weight:600;color:var(--text);min-width:0;}
+.oir-note{font-size:11px;color:var(--text3);margin-top:1px;}
+.oir-price{font-size:13px;font-weight:700;color:var(--orange);white-space:nowrap;}
+.oir-del{width:22px;height:22px;border-radius:6px;background:rgba(192,57,43,0.15);border:none;color:var(--red);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;}
+.oir-del:hover{background:var(--red);color:white;}
+.op-empty{text-align:center;padding:30px 14px;color:var(--text3);font-size:13px;}
+
+.op-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
+.total-block{background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+.total-line{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;}
+.total-line.grand{font-size:18px;font-weight:800;color:white;margin-top:5px;padding-top:6px;border-top:1px solid var(--border);}
+.total-line.grand span:last-child{color:var(--orange);}
+.disc-row{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.disc-label{font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;}
+.disc-input{width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--green);font-family:var(--font);font-size:13px;font-weight:700;outline:none;text-align:center;}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.send-btn{grid-column:1/-1;padding:13px;border-radius:11px;background:var(--green);color:white;border:none;font-family:var(--font);font-size:14px;font-weight:900;letter-spacing:.5px;cursor:pointer;box-shadow:0 3px 0 var(--dark-green);}
+.send-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--dark-green);}
+.send-btn.delivery-only{background:var(--blue);box-shadow:0 3px 0 #1a5276;}
+.send-btn.whatsapp-only{background:#25D366;box-shadow:0 3px 0 #1a9649;}
+.clear-btn{padding:10px;border-radius:9px;background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+.note-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--font);font-size:12px;resize:none;outline:none;margin-bottom:8px;}
+.note-input:focus{border-color:var(--orange);}
+
+/* RIGHT PANEL */
+.right-panel{display:grid;grid-template-rows:1fr;overflow:hidden;}
+.view{display:none;height:100%;overflow:hidden;}
+.view.active{display:flex;flex-direction:column;}
+
+/* MENU */
+.menu-header{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:center;}
+.menu-search{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
+.menu-search:focus{border-color:var(--orange);}
+.menu-body{display:flex;flex:1;overflow:hidden;}
+.cat-bar{width:110px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:5px;}
+.cat-btn-item{display:block;width:100%;padding:7px 9px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:.15s;text-align:left;margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;}
+.cat-btn-item.active{background:var(--red);color:white;}
+.cat-btn-item:hover:not(.active){background:var(--surface2);color:var(--text);}
+.items-area{flex:1;overflow-y:auto;padding:10px;}
+.items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+.menu-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:.15s;}
+.menu-card:hover{border-color:var(--orange);transform:translateY(-1px);}
+.mc-name{font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;text-transform:uppercase;line-height:1.2;}
+.mc-price{font-size:14px;font-weight:700;color:var(--orange);}
+.mc-cat{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;}
+.deals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding:10px;}
+.deal-card-o{background:linear-gradient(135deg,rgba(192,57,43,0.12),rgba(230,126,34,0.06));border:1px solid rgba(192,57,43,0.25);border-radius:11px;padding:12px;cursor:pointer;transition:.15s;}
+.deal-card-o:hover{border-color:var(--red);transform:translateY(-1px);}
+.dco-name{font-size:13px;font-weight:900;color:white;text-transform:uppercase;margin-bottom:3px;}
+.dco-desc{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:5px;}
+.dco-price{font-size:15px;font-weight:800;color:var(--orange);}
+
+/* LIVE ORDERS */
+.live-header{padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.live-title{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.live-grid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-content:start;}
+.order-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:14px;transition:.3s;}
+.order-card.waiting{border-color:var(--orange);}
+.order-card.assigned{border-color:var(--blue);}
+.order-card.completed{border-color:var(--text3);opacity:0.45;filter:grayscale(0.5);}
+.oc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.oc-loc{font-size:14px;font-weight:800;color:white;}
+.oc-branch{font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:1px;}
+.oc-branch.MULTAN{background:rgba(192,57,43,0.2);color:#f08070;}
+.oc-branch.BWP{background:rgba(93,58,26,0.3);color:#c9a227;}
+.oc-type{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px;}
+.oc-phone{font-size:12px;color:var(--orange);font-weight:600;margin-bottom:5px;}
+.oc-items{font-size:12px;color:var(--text2);background:var(--surface2);padding:7px 9px;border-radius:7px;white-space:pre-wrap;line-height:1.5;margin-bottom:7px;max-height:70px;overflow-y:auto;}
+.oc-total{font-size:16px;font-weight:800;color:var(--orange);}
+.oc-timer{font-size:13px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;}
+.status-pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.sp-waiting{background:rgba(230,126,34,0.2);color:var(--orange);}
+.sp-assigned{background:rgba(41,128,185,0.2);color:#5dade2;}
+.sp-completed{background:rgba(100,100,100,0.2);color:var(--text3);}
+.oc-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.oc-btn{padding:5px 10px;border-radius:7px;border:none;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;transition:.15s;}
+.oc-btn.blue{background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
+.oc-btn.green{background:rgba(39,174,96,0.15);color:var(--green);border:1px solid rgba(39,174,96,0.3);}
+.oc-btn.red{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);}
+.oc-btn.wa{background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);}
+.oc-btn.assign{background:rgba(41,128,185,0.2);color:#5dade2;border:1px solid rgba(41,128,185,0.4);font-size:12px;padding:7px 13px;}
+
+/* RIDERS TAB */
+.riders-body{flex:1;overflow-y:auto;padding:16px;}
+.riders-header-bar{padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.riders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px;}
+.rider-card{background:var(--surface);border:2px solid var(--border);border-radius:13px;padding:14px;position:relative;transition:.2s;}
+.rider-card.on-duty{border-color:var(--green);}
+.rider-card.off-duty{border-color:var(--border);opacity:0.6;}
+.rider-card.on-break{border-color:var(--orange);}
+.rider-avatar{width:44px;height:44px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px;}
+.rider-name{font-size:14px;font-weight:800;color:white;margin-bottom:2px;}
+.rider-phone{font-size:11px;color:var(--text3);margin-bottom:6px;}
+.rider-status-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:1px;display:inline-block;margin-bottom:6px;}
+.rsb-on{background:rgba(39,174,96,0.2);color:var(--green);}
+.rsb-off{background:rgba(100,100,100,0.15);color:var(--text3);}
+.rsb-break{background:rgba(230,126,34,0.2);color:var(--orange);}
+.rider-stats{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.rider-stats span{color:var(--text2);font-weight:600;}
+.rider-current{font-size:11px;color:var(--blue);background:rgba(41,128,185,0.1);padding:4px 8px;border-radius:6px;margin-bottom:8px;}
+.rider-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.rb{padding:4px 9px;border-radius:6px;border:none;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;}
+.rb.green{background:rgba(39,174,96,0.15);color:var(--green);border:1px solid rgba(39,174,96,0.3);}
+.rb.orange{background:rgba(230,126,34,0.15);color:var(--orange);border:1px solid rgba(230,126,34,0.3);}
+.rb.red{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3);}
+.rb.blue{background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
+.punch-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;}
+.punch-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px;}
+.punch-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.punch-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
+.punch-input:focus{border-color:var(--orange);}
+.punch-btn{padding:9px;border-radius:8px;background:var(--green);color:white;border:none;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 0 var(--dark-green);}
+
+/* STATS */
+.stats-body{flex:1;overflow-y:auto;padding:16px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;}
+.stat-card.red::before{background:var(--red);}
+.stat-card.green::before{background:var(--green);}
+.stat-card.orange::before{background:var(--orange);}
+.stat-card.blue::before{background:var(--blue);}
+.stat-val{font-size:26px;font-weight:900;margin-bottom:2px;}
+.stat-card.red .stat-val{color:var(--red);}
+.stat-card.green .stat-val{color:var(--green);}
+.stat-card.orange .stat-val{color:var(--orange);}
+.stat-card.blue .stat-val{color:var(--blue);}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 12px;border-bottom:1px solid var(--border);}
+.orders-table td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;vertical-align:middle;}
+.orders-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* SIZE MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:none;align-items:center;justify-content:center;z-index:8000;backdrop-filter:blur(6px);}
+.modal-backdrop.open{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;min-width:300px;max-width:460px;width:90%;max-height:88vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;text-transform:uppercase;margin-bottom:14px;}
+.size-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px;margin-bottom:12px;}
+.size-opt{padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;text-align:center;transition:.15s;}
+.size-opt:hover,.size-opt.sel{border-color:var(--orange);background:rgba(230,126,34,0.15);}
+.size-opt .sz-name{font-size:12px;font-weight:800;text-transform:uppercase;}
+.size-opt .sz-price{font-size:13px;color:var(--orange);margin-top:3px;}
+.modal-note{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--text);font-family:var(--font);font-size:12px;resize:none;outline:none;margin-bottom:10px;}
+.modal-note:focus{border-color:var(--orange);}
+.qty-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;}
+.qty-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{background:var(--orange);border-color:var(--orange);color:white;}
+.qty-val{font-size:20px;font-weight:900;min-width:30px;text-align:center;}
+.modal-actions{display:flex;gap:8px;}
+.modal-cancel{flex:1;padding:10px;border-radius:9px;background:var(--surface2);border:none;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
+.modal-confirm{flex:2;padding:10px;border-radius:9px;background:var(--orange);border:none;color:white;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 var(--dark-orange);}
+
+/* ASSIGN RIDER MODAL */
+.assign-modal-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;min-width:320px;max-width:420px;width:90%;}
+.rider-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;margin-bottom:7px;transition:.15s;}
+.rider-option:hover{border-color:var(--blue);}
+.rider-option.sel{border-color:var(--blue);background:rgba(41,128,185,0.1);}
+.ro-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ro-info{flex:1;}
+.ro-name{font-size:13px;font-weight:700;color:white;}
+.ro-status{font-size:10px;color:var(--green);font-weight:600;}
+.ro-count{font-size:11px;color:var(--text3);}
+
+/* TOAST */
+.toast{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:10px 15px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transform:translateY(20px);transition:.3s;pointer-events:none;max-width:280px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--blue);}
+
+/* Rider badge on live orders */
+.rider-tag{font-size:11px;font-weight:700;color:#5dade2;background:rgba(41,128,185,0.12);padding:2px 8px;border-radius:5px;display:inline-block;margin-bottom:4px;}
+
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">OVEN <span>X</span></div>
+    <div class="login-sub">Office Console</div>
+    <div class="login-badge">📞 Centralized Order System</div>
+    <select class="login-select" id="login-branch">
+      <option value="">— Select Branch —</option>
+      <option value="MULTAN">🍕 Multan Branch</option>
+      <option value="BWP">🥩 Bahawalpur Branch</option>
+      <option value="ALL">🌐 All Branches (Manager)</option>
+    </select>
+    <input class="login-input" type="text" id="login-name" placeholder="Your Name" autocomplete="off">
+    <input class="login-input" type="password" id="login-pin" placeholder="PIN" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">START SHIFT</button>
+    <div class="login-err" id="login-err" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">OVEN <span>X</span> <span style="font-size:11px;color:var(--text3);font-weight:500;">Office</span></div>
+    <div class="topbar-center">
+      <div class="live-dot"></div>
+      <button class="tab-btn active" onclick="showView('menu')">📋 New Order</button>
+      <button class="tab-btn" onclick="showView('live')">📡 Live Orders <span class="badge" id="live-badge" style="display:none;">0</span></button>
+      <button class="tab-btn" onclick="showView('riders')">🛵 Riders <span class="badge" id="riders-badge" style="display:none;background:var(--green);">0</span></button>
+      <button class="tab-btn" onclick="showView('stats')">📊 My Shift</button>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-info">Agent: <span id="bar-agent">—</span></div>
+      <div class="topbar-info" id="bar-time">—</div>
+      <div class="topbar-info">Branch: <span id="bar-branch">—</span></div>
+      <div class="topbar-info">Orders: <span id="bar-count">0</span></div>
+      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+
+    <!-- ORDER BUILDER (left always visible) -->
+    <div class="order-panel">
+      <div class="op-header">
+        <div class="op-title">Build Order</div>
+        <div class="cust-row">
+          <input class="cust-input" id="cust-name" placeholder="👤 Customer Name" type="text">
+          <input class="cust-input" id="cust-phone" placeholder="📞 Phone (03xx...)" type="tel">
+        </div>
+        <div class="order-type-row">
+          <button class="otype-btn active" id="ot-delivery" onclick="setOrderType('Delivery')">🚚 Delivery</button>
+          <button class="otype-btn" id="ot-takeaway" onclick="setOrderType('Takeaway')">🥡 Takeaway</button>
+          <button class="otype-btn" id="ot-dinein" onclick="setOrderType('Dine-In')">🍽️ Dine-In</button>
+        </div>
+        <div class="branch-row" id="branch-select-row">
+          <button class="branch-btn active" id="ob-MULTAN" onclick="setOrderBranch('MULTAN')">🍕 Multan</button>
+          <button class="branch-btn" id="ob-BWP" onclick="setOrderBranch('BWP')">🥩 Bahawalpur</button>
+        </div>
+        <div class="addr-wrap" id="addr-wrap">
+          <textarea class="addr-input" id="order-address" placeholder="📍 Delivery address — area, street, landmark" rows="2"></textarea>
+          <div class="del-charge-row">
+            <span class="del-charge-label">🚚 Del. Charge:</span>
+            <input class="del-charge-input" type="number" id="del-charge" value="0" min="0" oninput="renderTotals()">
+            <div class="del-presets">
+              <button class="del-preset" onclick="setDelCharge(50)">50</button>
+              <button class="del-preset" onclick="setDelCharge(100)">100</button>
+              <button class="del-preset" onclick="setDelCharge(150)">150</button>
+              <button class="del-preset" onclick="setDelCharge(200)">200</button>
+            </div>
+          </div>
+        </div>
+        <div id="table-wrap" style="display:none;margin-top:7px;">
+          <input class="cust-input" id="table-num" placeholder="🪑 Table number (e.g. A-3)" type="text" style="width:100%;">
+        </div>
+      </div>
+
+      <div class="op-items" id="op-items">
+        <div class="op-empty">Select items from the menu →<br><span style="font-size:11px;margin-top:4px;display:block;">Search or browse categories</span></div>
+      </div>
+
+      <div class="op-footer">
+        <textarea class="note-input" id="order-note" placeholder="📝 Order note (e.g. extra spicy, no onions...)" rows="2"></textarea>
+        <div class="disc-row">
+          <span class="disc-label">Discount (Rs):</span>
+          <input class="disc-input" type="number" id="disc-amount" value="0" min="0" oninput="renderTotals()">
+          <div class="del-presets">
+            <button class="del-preset" onclick="setDisc(50)" style="color:var(--green);">50</button>
+            <button class="del-preset" onclick="setDisc(100)" style="color:var(--green);">100</button>
+            <button class="del-preset" onclick="setDisc(0)" style="color:var(--text3);">CLR</button>
+          </div>
+        </div>
+        <div class="total-block" id="total-block">
+          <div class="total-line"><span>Subtotal</span><span id="t-sub">Rs 0</span></div>
+          <div class="total-line" id="sc-line" style="display:none;"><span>SC (7%)</span><span id="t-sc">Rs 0</span></div>
+          <div class="total-line" id="del-line" style="display:none;"><span>Delivery Charge</span><span id="t-del">Rs 0</span></div>
+          <div class="total-line" id="disc-line" style="display:none;color:var(--green);"><span>Discount</span><span id="t-disc">−Rs 0</span></div>
+          <div class="total-line grand"><span>GRAND TOTAL</span><span id="t-grand">Rs 0</span></div>
+        </div>
+        <div class="action-grid" id="action-grid">
+          <!-- Rendered dynamically based on order type -->
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+      <!-- MENU VIEW -->
+      <div class="view active" id="view-menu">
+        <div class="menu-header">
+          <input class="menu-search" id="menu-search" placeholder="🔍 Search item name..." oninput="filterMenu(this.value)">
+          <button style="padding:7px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="document.getElementById('menu-search').value='';filterMenu('')">Clear</button>
+        </div>
+        <div class="menu-body">
+          <div class="cat-bar" id="cat-bar"></div>
+          <div class="items-area" id="items-area"></div>
+        </div>
+      </div>
+
+      <!-- LIVE ORDERS VIEW -->
+      <div class="view" id="view-live">
+        <div class="live-header">
+          <div class="live-title">📡 Live Delivery Orders</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="live-branch-filter" onchange="renderLiveOrders()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;">
+              <option value="ALL">All Branches</option>
+              <option value="MULTAN">Multan</option>
+              <option value="BWP">Bahawalpur</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:600;cursor:pointer;">
+              <input type="checkbox" id="show-completed" onchange="renderLiveOrders()" style="cursor:pointer;"> Show Completed
+            </label>
+            <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderLiveOrders()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="live-grid" id="live-grid">
+          <div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;grid-column:1/-1;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- RIDERS VIEW -->
+      <div class="view" id="view-riders">
+        <div class="riders-header-bar">
+          <div class="live-title">🛵 Rider Attendance</div>
+          <div style="display:flex;gap:8px;">
+            <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderRiders()">↻ Refresh</button>
+            <button style="padding:6px 13px;border-radius:8px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;" onclick="openAddRiderModal()">+ Add Rider</button>
+          </div>
+        </div>
+        <div class="riders-body">
+          <div class="punch-section" id="punch-section">
+            <div class="punch-title">📲 Quick Punch In</div>
+            <div class="punch-grid">
+              <input class="punch-input" id="punch-name" placeholder="Rider name..." type="text">
+              <input class="punch-input" id="punch-phone" placeholder="03xx..." type="tel">
+              <button class="punch-btn" onclick="punchInRider()">✅ Punch In</button>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text3);margin-bottom:10px;">Today's Riders</div>
+          <div class="riders-grid" id="riders-grid">
+            <div style="color:var(--text3);font-size:13px;padding:20px;grid-column:1/-1;">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS VIEW -->
+      <div class="view" id="view-stats">
+        <div class="live-header">
+          <div class="live-title">📊 My Shift Report</div>
+          <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderStats()">↻ Refresh</button>
+        </div>
+        <div class="stats-body">
+          <div class="stats-grid" id="stats-grid"></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+            <table class="orders-table">
+              <thead><tr><th>Time</th><th>Branch</th><th>Type</th><th>Customer</th><th>Items</th><th style="text-align:right;">Total</th><th>Status</th></tr></thead>
+              <tbody id="stats-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SIZE MODAL -->
+<div class="modal-backdrop" id="size-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="sm-title">Select Size</div>
+    <div class="size-grid" id="sm-sizes"></div>
+    <textarea class="modal-note" id="sm-note" rows="2" placeholder="Special note (optional)..."></textarea>
+    <div class="qty-row">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <span class="qty-val" id="sm-qty">1</span>
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" id="sm-confirm">Add to Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN RIDER MODAL -->
+<div class="modal-backdrop" id="assign-modal">
+  <div class="assign-modal-box">
+    <div class="modal-title">🛵 Assign Rider</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;" id="assign-order-info"></div>
+    <div id="assign-riders-list"></div>
+    <div class="modal-actions" style="margin-top:10px;">
+      <button class="modal-cancel" onclick="closeAssignModal()">Cancel</button>
+      <button class="modal-confirm" id="assign-confirm" onclick="confirmAssign()">Assign Rider</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD RIDER MODAL -->
+<div class="modal-backdrop" id="add-rider-modal">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-title">➕ Add New Rider</div>
+    <input class="modal-note" style="margin-bottom:8px;" id="new-rider-name" placeholder="Rider full name..." type="text">
+    <input class="modal-note" style="margin-bottom:8px;" id="new-rider-phone" placeholder="Phone number (03xx...)" type="tel">
+    <select class="modal-note" id="new-rider-branch" style="cursor:pointer;margin-bottom:10px;">
+      <option value="MULTAN">Multan</option>
+      <option value="BWP">Bahawalpur</option>
+      <option value="BOTH">Both Branches</option>
+    </select>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="document.getElementById('add-rider-modal').classList.remove('open')">Cancel</button>
+      <button class="modal-confirm" onclick="addNewRider()">Save Rider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════
+// CONFIG
+// ═══════════════════════════════
+const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STAFF_PINS = {
+  'Admin':'1234','Manager':'5678','Agent 1':'0001','Agent 2':'0002',
+  'Agent 3':'0003','Shift 1':'1111','Shift 2':'2222','Ali':'1111','Usman':'2222'
+};
+
+const BRANCHES = {
+  MULTAN:{ id:'MULTAN', name:'Multan', phone:'923001450301', waPhone:'923001450301' },
+  BWP:   { id:'BWP',    name:'Bahawalpur', phone:'923003450301', waPhone:'923003450301' }
+};
+
+// ═══════════════════════════════
+// MENU DATA
+// ═══════════════════════════════
+const menuData = {
+  "Starters":[{n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:599},{n:"Pizza Fries",p:720},{n:"Dragon Shots",p:399},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},{n:"Hot Wings",p:{M:399,L:780}},{n:"Honey Chili Wings",p:{M:449,L:880}},{n:"Cheese Sticks",p:449},{n:"Meat Sticks",p:449},{n:"Nuggets",p:{M:350,L:650}}],
+  "Sandwiches":[{n:"Health Harvest",p:599},{n:"Khameera Sandwich",p:699},{n:"Club Sandwich",p:599}],
+  "Fried Burgers":[{n:"Chicken Patty Burger",p:299},{n:"Zinger Burger",p:420},{n:"Mighty Burger",p:699},{n:"Chipotle Burger",p:649},{n:"Crispy Jalapeno",p:549},{n:"Stuff Jalapeno",p:649}],
+  "Grilled Burgers":[{n:"CM Grilled",p:499},{n:"Smokey Grilled",p:550},{n:"Peri Peri Grilled",p:749},{n:"Drizzler X",p:749},{n:"Jalapeno Blaze",p:749},{n:"Mexi Fiesta",p:749}],
+  "Pan Pizza":[{n:"Chicken Tikka",p:{S:499,M:999,L:1549}},{n:"Chicken Fajita",p:{S:499,M:999,L:1549}},{n:"Chicken Supreme",p:{S:499,M:999,L:1549}},{n:"Cheese Lover",p:{S:499,M:999,L:1549}},{n:"Veg Lover",p:{S:499,M:999,L:1549}},{n:"Sicilian Pizza",p:{S:499,M:999,L:1549}}],
+  "Premium Pizza":[{n:"BBQ Pizza",p:{M:1199,L:1699}},{n:"Creamy Dreamy",p:{M:1199,L:1699}},{n:"OvenX Special Premium",p:{M:1199,L:1699}},{n:"Bonfire Pizza",p:{M:1199,L:1699}}],
+  "Deep Dish":[{n:"Mild Butter",p:{M:1749,L:2449}},{n:"OvenX Special Deep Dish",p:{M:1749,L:2449}}],
+  "Extreme Pizza":[{n:"Extreme Peri Peri",p:{M:1499,L:2049}},{n:"Extreme Flaming Kabab",p:{M:1499,L:2049}},{n:"Crispy Extreme",p:{M:1499,L:2049}}],
+  "Craft Pizza":[{n:"Kabab Crust",p:{Med:1399,Large:1799}},{n:"Crown Crust",p:{Med:1399,Large:1799}},{n:"Cheese Crust",p:{Med:1399,Large:1799}},{n:"Crusti Thin",p:1699}],
+  "Platters":[{n:"Khameera Sandwich Platter",p:699},{n:"Calzone Platter",p:899},{n:"Behari Platter",p:949}],
+  "Pasta":[{n:"Alfredo Pasta",p:749},{n:"OvenX Flaming Pasta",p:650},{n:"Fire Kissed Pasta",p:699},{n:"X-Special Pasta",p:749}],
+  "Wraps & Rolls":[{n:"Chipotle Wrap",p:699},{n:"BBQ Wrap",p:599},{n:"Donar Kabab",p:749},{n:"Crunch Wrap",p:449},{n:"Zingeratha Roll",p:449},{n:"Paratha Roll",p:449},{n:"Malai Roll",p:449},{n:"Behari Roll",p:749},{n:"Peri Peri Wrap",p:749}],
+  "Steaks (BWP)":[{n:"Mexican Steak",p:1549},{n:"Moroccan Steak",p:1549},{n:"Tarragon Steak",p:1549},{n:"Mushroom Steak",p:1549},{n:"Cordon Blue Steak",p:1549},{n:"Stuffed Jalapeno Steak",p:1549},{n:"Pepper Steak",p:1499}],
+  "Add-ons":[{n:"Dip: BBQ",p:70},{n:"Dip: Peri Peri",p:70},{n:"Dip: Bonfire",p:70},{n:"Dip: Special",p:70},{n:"Dip: Chipotle",p:70},{n:"Dip: Creamy Dreamy",p:70},{n:"Dip: Chili Mayo",p:70}],
+  "Drinks":[{n:"Coke Buddy",p:130},{n:"Sprite Buddy",p:130},{n:"Coke 1 Liter",p:190},{n:"Next Cola 1 Liter",p:170},{n:"Coke 1.5L",p:230},{n:"Sprite 1.5L",p:230},{n:"Water Small",p:99},{n:"Water Large",p:170}]
+};
+
+const dealsData = [
+  {n:"Midnight Deal 1",d:"2x Med Extreme + 1.5L Drink",p:2699},{n:"Midnight Deal 2",d:"Large Wings + 2x Large Pan + 1.5L",p:3249},
+  {n:"Midnight Deal 3",d:"Large Wings + 2x Large Premium + 1.5L",p:3649},{n:"Midnight Deal 4",d:"1x Med + 1x Large Extreme + 1.5L",p:3149},
+  {n:"Family Feast",d:"2 Med Pizzas + 2 Zingers + 1L + 6 Wings",p:2299},{n:"Extreme Buddy",d:"1 Med Extreme + 1L Drink",p:1449},
+  {n:"Burger Deal 1",d:"2 Zingers + Reg Fries + 2 Drinks",p:999},{n:"Burger Deal 2",d:"1 Zinger + Fries + 1 Drink + 2 Wings",p:990},
+  {n:"Burger Deal 3",d:"4 Zingers + 2 Fries + 1L + 6 Wings",p:1990},{n:"01 PIZZA DEAL",d:"1 Large Pan Pizza + 1L Drink",p:1299},
+  {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1499},{n:"03 PIZZA DEAL",d:"1 Large Crown Pizza + 1L Drink",p:1599},
+  {n:"04 PIZZA DEAL",d:"1 Large Extreme + 1L Drink",p:1999}
+];
+
+// ═══════════════════════════════
+// STATE
+// ═══════════════════════════════
+let currentAgent = '';
+let agentBranch  = 'MULTAN';
+let shiftStart   = null;
+let orderBranch  = 'MULTAN';
+let orderType    = 'Delivery';
+let cart         = [];
+let shiftOrders  = [];
+let activeCategory = 'Starters';
+let _sizeItem    = null;
+let _sizeQty     = 1;
+let _sizeSel     = null;
+let _clockTimer  = null;
+let _liveTimer   = null;
+let _assignOrderId = null;
+let _assignRiderId = null;
+let _riders      = []; // cached today's riders
+
+// ═══════════════════════════════
+// LOGIN
+// ═══════════════════════════════
+async function doLogin() {
+  const branch = document.getElementById('login-branch').value;
+  const name   = document.getElementById('login-name').value.trim();
+  const pin    = document.getElementById('login-pin').value.trim();
+  const errEl  = document.getElementById('login-err');
+  errEl.style.display = 'none';
+
+  if (!branch) { showLoginErr('Select a branch'); return; }
+  if (!name)   { showLoginErr('Enter your name'); return; }
+  if (!pin)    { showLoginErr('Enter your PIN');  return; }
+
+  try {
+    const { data } = await sb.from('staff').select('*')
+      .eq('name', name).eq('pin', pin).eq('active', true).single();
+    if (!data) throw new Error('not found');
+  } catch(e) {
+    if (STAFF_PINS[name] !== pin && pin !== '1234') {
+      showLoginErr('Wrong name or PIN.'); return;
+    }
+  }
+
+  currentAgent = name;
+  agentBranch  = branch;
+  shiftStart   = new Date();
+  orderBranch  = branch === 'ALL' ? 'MULTAN' : branch;
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('bar-agent').textContent = currentAgent;
+  document.getElementById('bar-branch').textContent = branch === 'ALL' ? 'All' : BRANCHES[branch].name;
+
+  if (branch !== 'ALL') {
+    document.getElementById('live-branch-filter').value = branch;
+    setOrderBranch(branch);
+    document.getElementById('branch-select-row').style.display = 'none';
+  }
+
+  startClock();
+  renderMenu();
+  renderLiveOrders();
+  renderRiders();
+  renderStats();
+  startLivePolling();
+  setOrderType('Delivery');
+  renderActionGrid();
+  showToast('Welcome ' + name + '! Shift started 🔥', 'success');
+}
+
+function showLoginErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function doLogout() {
+  if (!confirm('End shift and logout?')) return;
+  clearInterval(_clockTimer); clearInterval(_liveTimer);
+  location.reload();
+}
+
+function startClock() {
+  const tick = () => {
+    document.getElementById('bar-time').textContent =
+      new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+  };
+  tick(); _clockTimer = setInterval(tick, 1000);
+}
+
+// ═══════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════
+function showView(v) {
+  ['menu','live','riders','stats'].forEach(id => {
+    document.getElementById('view-' + id).classList.toggle('active', id === v);
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['menu','live','riders','stats'][i] === v);
+  });
+  if (v === 'live')   renderLiveOrders();
+  if (v === 'riders') renderRiders();
+  if (v === 'stats')  renderStats();
+}
+
+// ═══════════════════════════════
+// ORDER TYPE & BRANCH
+// ═══════════════════════════════
+function setOrderType(t) {
+  orderType = t;
+  ['delivery','takeaway','dinein'].forEach(id => {
+    document.getElementById('ot-' + id).classList.toggle('active', id === t.toLowerCase().replace('-','').replace(' ',''));
+  });
+  document.getElementById('addr-wrap').style.display   = t === 'Delivery' ? 'block' : 'none';
+  document.getElementById('table-wrap').style.display  = t === 'Dine-In'  ? 'block' : 'none';
+  renderTotals();
+  renderActionGrid();
+}
+
+function setOrderBranch(b) {
+  orderBranch = b;
+  document.querySelectorAll('.branch-btn').forEach(btn => btn.classList.remove('active'));
+  const el = document.getElementById('ob-' + b);
+  if (el) el.classList.add('active');
+}
+
+// ═══════════════════════════════
+// ACTION GRID — dynamic based on order type
+// Delivery  → Send to Kitchen (DB only)
+// Takeaway/Dine-In → Send to WhatsApp of branch
+// ═══════════════════════════════
+function renderActionGrid() {
+  const ag = document.getElementById('action-grid');
+  if (orderType === 'Delivery') {
+    ag.innerHTML = `
+      <button class="clear-btn" onclick="clearOrder()">🗑️ Clear</button>
+      <button class="oc-btn" style="padding:10px;border-radius:9px;font-size:12px;font-weight:700;background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);" onclick="sendWhatsAppNotify()">📱 Customer WA</button>
+      <button class="send-btn delivery-only" onclick="sendToKitchen()">🚚 SEND TO KITCHEN</button>
+    `;
+  } else {
+    // Takeaway or Dine-In → WhatsApp to branch
+    ag.innerHTML = `
+      <button class="clear-btn" onclick="clearOrder()">🗑️ Clear</button>
+      <button class="oc-btn" style="padding:10px;border-radius:9px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.05);color:var(--text2);border:1px solid var(--border);" onclick="sendToKitchenSilent()">💾 Save Only</button>
+      <button class="send-btn whatsapp-only" onclick="sendToWhatsAppBranch()">📱 SEND TO BRANCH WHATSAPP</button>
+    `;
+  }
+}
+
+// ═══════════════════════════════
+// MENU RENDER
+// ═══════════════════════════════
+function renderMenu(filter = '') {
+  const catBar   = document.getElementById('cat-bar');
+  const itemsArea = document.getElementById('items-area');
+  catBar.innerHTML = ''; itemsArea.innerHTML = '';
+
+  const dealBtn = document.createElement('button');
+  dealBtn.className = 'cat-btn-item' + (activeCategory === '__deals__' ? ' active' : '');
+  dealBtn.textContent = '🔥 Deals';
+  dealBtn.onclick = () => { activeCategory = '__deals__'; renderMenu(filter); };
+  catBar.appendChild(dealBtn);
+
+  for (let cat in menuData) {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn-item' + (activeCategory === cat ? ' active' : '');
+    btn.textContent = cat;
+    btn.onclick = () => { activeCategory = cat; renderMenu(filter); };
+    catBar.appendChild(btn);
+  }
+
+  if (activeCategory === '__deals__') {
+    const dg = document.createElement('div'); dg.className = 'deals-grid';
+    dealsData.filter(d => !filter || d.n.toLowerCase().includes(filter.toLowerCase())).forEach(deal => {
+      const card = document.createElement('div'); card.className = 'deal-card-o';
+      card.innerHTML = `<div class="dco-name">${deal.n}</div><div class="dco-desc">${deal.d}</div><div class="dco-price">Rs ${deal.p}</div>`;
+      card.onclick = () => openSizeModal({ n: deal.n, p: deal.p });
+      dg.appendChild(card);
+    });
+    itemsArea.appendChild(dg); return;
+  }
+
+  const ig = document.createElement('div'); ig.className = 'items-grid';
+  const items = (menuData[activeCategory] || []).filter(i => !filter || i.n.toLowerCase().includes(filter.toLowerCase()));
+  items.forEach(item => {
+    const card = document.createElement('div'); card.className = 'menu-card';
+    const priceStr = typeof item.p === 'object' ? 'From Rs ' + Object.values(item.p)[0] : 'Rs ' + item.p;
+    card.innerHTML = `<div class="mc-name">${item.n}</div><div class="mc-price">${priceStr}</div><div class="mc-cat">${activeCategory}</div>`;
+    card.onclick = () => { if (typeof item.p === 'object') openSizeModal(item); else addItem(item.n, item.p); };
+    ig.appendChild(card);
+  });
+  itemsArea.appendChild(ig);
+}
+
+function filterMenu(val) {
+  if (!val) { renderMenu(); return; }
+  const lv = val.toLowerCase();
+  const itemsArea = document.getElementById('items-area');
+  itemsArea.innerHTML = '';
+  const ig = document.createElement('div'); ig.className = 'items-grid';
+  let found = 0;
+  for (let cat in menuData) {
+    menuData[cat].filter(i => i.n.toLowerCase().includes(lv)).forEach(item => {
+      const card = document.createElement('div'); card.className = 'menu-card';
+      const ps = typeof item.p === 'object' ? 'From Rs ' + Object.values(item.p)[0] : 'Rs ' + item.p;
+      card.innerHTML = `<div class="mc-name">${item.n}</div><div class="mc-price">${ps}</div><div class="mc-cat">${cat}</div>`;
+      card.onclick = () => { if (typeof item.p === 'object') openSizeModal(item); else addItem(item.n, item.p); };
+      ig.appendChild(card); found++;
+    });
+  }
+  dealsData.filter(d => d.n.toLowerCase().includes(lv)).forEach(d => {
+    const card = document.createElement('div'); card.className = 'deal-card-o';
+    card.innerHTML = `<div class="dco-name">${d.n}</div><div class="dco-desc">${d.d}</div><div class="dco-price">Rs ${d.p}</div>`;
+    card.onclick = () => openSizeModal({ n: d.n, p: d.p });
+    ig.appendChild(card); found++;
+  });
+  if (!found) ig.innerHTML = '<div style="color:var(--text3);padding:18px;font-size:13px;grid-column:1/-1;">No items found</div>';
+  itemsArea.appendChild(ig);
+}
+
+// ═══════════════════════════════
+// SIZE MODAL
+// ═══════════════════════════════
+function openSizeModal(item) {
+  _sizeItem = item; _sizeQty = 1; _sizeSel = null;
+  document.getElementById('sm-title').textContent = item.n;
+  document.getElementById('sm-note').value = '';
+  document.getElementById('sm-qty').textContent = '1';
+  const grid = document.getElementById('sm-sizes'); grid.innerHTML = '';
+
+  if (typeof item.p === 'object') {
+    for (let sz in item.p) {
+      const btn = document.createElement('div'); btn.className = 'size-opt';
+      btn.innerHTML = `<div class="sz-name">${sz}</div><div class="sz-price">Rs ${item.p[sz]}</div>`;
+      btn.onclick = () => {
+        document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('sel'));
+        btn.classList.add('sel'); _sizeSel = { sz, price: item.p[sz] };
+      };
+      grid.appendChild(btn);
+    }
+  } else {
+    _sizeSel = { sz: '', price: item.p };
+    grid.innerHTML = `<div style="font-size:16px;font-weight:700;color:var(--orange);text-align:center;padding:8px;">Rs ${item.p}</div>`;
+  }
+
+  document.getElementById('sm-confirm').onclick = () => {
+    if (typeof item.p === 'object' && !_sizeSel) { showToast('Select a size','error'); return; }
+    const note = document.getElementById('sm-note').value;
+    const name = _sizeSel.sz ? `${item.n} (${_sizeSel.sz})` : item.n;
+    addItem(name, _sizeSel.price, _sizeQty, note);
+    closeModal();
+  };
+  document.getElementById('size-modal').classList.add('open');
+}
+
+function changeQty(d) { _sizeQty = Math.max(1, _sizeQty + d); document.getElementById('sm-qty').textContent = _sizeQty; }
+function closeModal() { document.getElementById('size-modal').classList.remove('open'); }
+
+// ═══════════════════════════════
+// CART
+// ═══════════════════════════════
+function addItem(name, price, qty = 1, note = '') {
+  const existing = cart.find(i => i.name === name && i.note === note);
+  if (existing) existing.qty += qty;
+  else cart.push({ name, price, qty, note });
+  renderCart();
+  showToast(name + ' added', 'success');
+}
+
+function removeItem(idx) { cart.splice(idx, 1); renderCart(); }
+
+function renderCart() {
+  const el = document.getElementById('op-items');
+  if (!cart.length) {
+    el.innerHTML = '<div class="op-empty">Select items from the menu →<br><span style="font-size:11px;margin-top:4px;display:block;">Search or browse categories</span></div>';
+    renderTotals(); return;
+  }
+  el.innerHTML = '';
+  cart.forEach((item, idx) => {
+    const row = document.createElement('div'); row.className = 'op-item-row';
+    row.innerHTML = `
+      <div class="oir-num">${item.qty}x</div>
+      <div style="flex:1;min-width:0;">
+        <div class="oir-name">${item.name}</div>
+        ${item.note ? `<div class="oir-note">${item.note}</div>` : ''}
+      </div>
+      <div class="oir-price">Rs ${item.price * item.qty}</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <button class="oir-del" onclick="changeQtyCart(${idx},1)" style="background:rgba(39,174,96,0.15);color:var(--green);">+</button>
+        <button class="oir-del" onclick="changeQtyCart(${idx},-1)" style="background:rgba(255,255,255,0.05);color:var(--text2);">−</button>
+      </div>
+      <button class="oir-del" onclick="removeItem(${idx})">✕</button>`;
+    el.appendChild(row);
+  });
+  renderTotals();
+}
+
+function changeQtyCart(idx, d) {
+  cart[idx].qty += d;
+  if (cart[idx].qty <= 0) cart.splice(idx, 1);
+  renderCart();
+}
+
+function renderTotals() {
+  const food = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const sc   = orderType === 'Dine-In' ? Math.round(food * 0.07) : 0;
+  const del  = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
+  const disc = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const grand = Math.max(0, food + sc + del - disc);
+
+  document.getElementById('t-sub').textContent  = 'Rs ' + food;
+  document.getElementById('t-sc').textContent   = 'Rs ' + sc;
+  document.getElementById('t-del').textContent  = 'Rs ' + del;
+  document.getElementById('t-disc').textContent = '−Rs ' + disc;
+  document.getElementById('t-grand').textContent = 'Rs ' + grand;
+  document.getElementById('sc-line').style.display   = sc > 0  ? 'flex' : 'none';
+  document.getElementById('del-line').style.display  = del > 0 ? 'flex' : 'none';
+  document.getElementById('disc-line').style.display = disc > 0 ? 'flex' : 'none';
+}
+
+function setDelCharge(v) { document.getElementById('del-charge').value = v; renderTotals(); }
+function setDisc(v) { document.getElementById('disc-amount').value = v; renderTotals(); }
+
+function clearOrder() {
+  if (cart.length && !confirm('Clear current order?')) return;
+  cart = [];
+  ['cust-name','cust-phone','order-address','order-note','table-num'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('del-charge').value = 0;
+  document.getElementById('disc-amount').value = 0;
+  renderCart();
+}
+
+// ═══════════════════════════════
+// BUILD ORDER OBJECT
+// ═══════════════════════════════
+function buildOrderObj() {
+  const custName  = document.getElementById('cust-name').value.trim();
+  const custPhone = document.getElementById('cust-phone').value.trim();
+  const address   = document.getElementById('order-address').value.trim();
+  const tableNum  = document.getElementById('table-num').value.trim();
+  const note      = document.getElementById('order-note').value.trim();
+  const delCharge = parseFloat(document.getElementById('del-charge').value) || 0;
+  const disc      = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const sc    = orderType === 'Dine-In' ? Math.round(food * 0.07) : 0;
+  const grand = Math.max(0, food + sc + delCharge - disc);
+  const itemsText = cart.map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
+  const fullItems = note ? itemsText + '\n📝 Note: ' + note : itemsText;
+  const location = orderType === 'Delivery' ? address : orderType === 'Dine-In' ? tableNum : 'Takeaway';
+
+  return { custName, custPhone, address, tableNum, note, delCharge, disc, food, sc, grand, itemsText, fullItems, location };
+}
+
+// ═══════════════════════════════
+// SEND TO KITCHEN (Delivery only — DB)
+// ═══════════════════════════════
+async function sendToKitchen() {
+  if (!cart.length) { showToast('Add items first', 'error'); return; }
+  const d = buildOrderObj();
+  if (!d.address)   { showToast('Enter delivery address', 'error'); return; }
+  if (!d.custPhone) { showToast('Enter customer phone', 'error'); return; }
+
+  const orderObj = {
+    type: orderType, location: d.location, items: d.fullItems, status: 'WAITING',
+    subtotal: d.food + d.sc - d.disc, delivery_fee: d.delCharge, discount: d.disc,
+    branch: orderBranch, customer_name: d.custName || null, phone: d.custPhone || null,
+    source: 'OFFICE', assigned_rider: null, rider_name: null
+  };
+
+  try {
+    const { data, error } = await sb.from('kitchen_orders').insert([orderObj]).select();
+    if (error) throw error;
+    const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
+    shiftOrders.push(savedOrder);
+    document.getElementById('bar-count').textContent = shiftOrders.length;
+    showToast('✅ Delivery order sent to kitchen!', 'success');
+    renderStats(); renderLiveOrders(); clearOrder();
+  } catch(e) {
+    showToast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════
+// SEND TO BRANCH WHATSAPP (Takeaway/Dine-In)
+// ═══════════════════════════════
+function sendToWhatsAppBranch() {
+  if (!cart.length) { showToast('Add items first', 'error'); return; }
+  const d = buildOrderObj();
+  if (orderType === 'Dine-In' && !d.tableNum) { showToast('Enter table number', 'error'); return; }
+
+  const br = BRANCHES[orderBranch] || BRANCHES.MULTAN;
+  const msg = encodeURIComponent(
+    `*OVEN X — ${orderType.toUpperCase()} ORDER* 🔥\n` +
+    `*Branch:* ${br.name}\n` +
+    (d.custName  ? `*Name:* ${d.custName}\n` : '') +
+    (d.custPhone ? `*Phone:* ${d.custPhone}\n` : '') +
+    (orderType === 'Dine-In' ? `*Table:* ${d.tableNum}\n` : '') +
+    `\n${d.itemsText}\n\n` +
+    `Subtotal: Rs ${d.food}` +
+    (d.sc > 0 ? `\nSC (7%): Rs ${d.sc}` : '') +
+    (d.disc > 0 ? `\nDiscount: -Rs ${d.disc}` : '') +
+    `\n*Total: Rs ${d.grand}*` +
+    (d.note ? `\n📝 ${d.note}` : '')
+  );
+  window.open(`https://wa.me/${br.waPhone}?text=${msg}`, '_blank');
+
+  // Also save silently
+  sendToKitchenSilent();
+  showToast('📱 WhatsApp opened for branch!', 'info');
+}
+
+async function sendToKitchenSilent() {
+  if (!cart.length) return;
+  const d = buildOrderObj();
+  const orderObj = {
+    type: orderType, location: d.location, items: d.fullItems, status: 'WAITING',
+    subtotal: d.food + d.sc - d.disc, delivery_fee: 0, discount: d.disc,
+    branch: orderBranch, customer_name: d.custName || null, phone: d.custPhone || null,
+    source: 'OFFICE', assigned_rider: null, rider_name: null
+  };
+  try {
+    const { data, error } = await sb.from('kitchen_orders').insert([orderObj]).select();
+    if (error) throw error;
+    const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
+    shiftOrders.push(savedOrder);
+    document.getElementById('bar-count').textContent = shiftOrders.length;
+    renderStats(); clearOrder();
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════
+// CUSTOMER WHATSAPP NOTIFY (Delivery)
+// ═══════════════════════════════
+function sendWhatsAppNotify() {
+  if (!cart.length) { showToast('Add items first', 'error'); return; }
+  const d = buildOrderObj();
+  if (!d.custPhone) { showToast('Enter customer phone', 'error'); return; }
+  let waPhone = d.custPhone.replace(/\D/g,'');
+  if (waPhone.startsWith('0')) waPhone = '92' + waPhone.slice(1);
+  const br = BRANCHES[orderBranch] || BRANCHES.MULTAN;
+  const msg = encodeURIComponent(
+    `*OVEN X — ORDER CONFIRMATION* 🔥\n*Branch:* ${br.name}\n\n${d.itemsText}\n\n` +
+    `Subtotal: Rs ${d.food}${d.delCharge > 0 ? '\nDelivery: Rs ' + d.delCharge : ''}` +
+    (d.disc > 0 ? '\nDiscount: -Rs ' + d.disc : '') + `\n*Total: Rs ${d.grand}*`
+  );
+  window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+  showToast('Customer WA opened', 'info');
+}
+
+// ═══════════════════════════════
+// LIVE ORDERS (Delivery focus)
+// ═══════════════════════════════
+async function renderLiveOrders() {
+  const grid = document.getElementById('live-grid');
+  const branchFilter = document.getElementById('live-branch-filter').value;
+  const showCompleted = document.getElementById('show-completed').checked;
+
+  try {
+    let statuses = ['WAITING','ASSIGNED'];
+    if (showCompleted) statuses.push('COMPLETED');
+
+    let query = sb.from('kitchen_orders')
+      .select('*')
+      .in('status', statuses)
+      .eq('type', 'Delivery')
+      .order('created_at', { ascending: false })
+      .limit(80);
+    if (branchFilter !== 'ALL') query = query.eq('branch', branchFilter);
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const waiting = (data || []).filter(o => o.status === 'WAITING').length;
+    const badge = document.getElementById('live-badge');
+    if (waiting > 0) { badge.style.display = 'inline'; badge.textContent = waiting; }
+    else badge.style.display = 'none';
+
+    if (!data || !data.length) {
+      grid.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;grid-column:1/-1;">No active delivery orders</div>';
+      return;
+    }
+
+    const now = new Date();
+    grid.innerHTML = '';
+    data.forEach(o => {
+      const elapsed = Math.floor((now - new Date(o.created_at)) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      const timerStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+      const isCompleted = o.status === 'COMPLETED';
+
+      const card = document.createElement('div');
+      card.className = `order-card ${(o.status || 'waiting').toLowerCase()}`;
+      card.innerHTML = `
+        <div class="oc-top">
+          <div>
+            <div class="oc-loc">${(o.location || '—').slice(0,30)}</div>
+            <div class="oc-type">Delivery · <span class="oc-branch ${o.branch||'MULTAN'}">${o.branch||'—'}</span></div>
+          </div>
+          <div style="text-align:right;">
+            <span class="status-pill sp-${(o.status||'waiting').toLowerCase()}">${o.status||'WAITING'}</span>
+            <div class="oc-timer" style="margin-top:4px;${isCompleted ? 'color:var(--text3);' : ''}">${timerStr}</div>
+          </div>
+        </div>
+        ${o.phone ? `<div class="oc-phone">📞 ${o.phone}</div>` : ''}
+        ${o.customer_name ? `<div style="font-size:12px;color:var(--text2);margin-bottom:3px;">👤 ${o.customer_name}</div>` : ''}
+        ${o.rider_name ? `<div class="rider-tag">🛵 ${o.rider_name}</div>` : ''}
+        <div class="oc-items">${o.items||'—'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Del: Rs ${o.delivery_fee||0}</span>
+          <span class="oc-total">Rs ${(o.subtotal||0)+(o.delivery_fee||0)}</span>
+        </div>
+        ${!isCompleted ? `<div class="oc-actions">
+          ${o.status==='WAITING' ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
+          ${o.status==='ASSIGNED' ? `<span style="font-size:11px;color:var(--text3);">Waiting for rider to complete...</span>` : ''}
+          ${o.phone ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
+          <button class="oc-btn red" onclick="deleteOrder('${o.id}')">🗑️</button>
+        </div>` : `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px;">✅ Completed by ${o.rider_name||'rider'}</div>`}
+      `;
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;grid-column:1/-1;">Error loading orders</div>';
+    console.error(e);
+  }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Delete this order?')) return;
+  try {
+    await sb.from('kitchen_orders').delete().eq('id', id);
+    showToast('Deleted', 'error'); renderLiveOrders();
+  } catch(e) { showToast('Delete failed', 'error'); }
+}
+
+function notifyCustomer(phone, branch) {
+  const br = BRANCHES[branch] || BRANCHES.MULTAN;
+  let waPhone = phone.replace(/\D/g,'');
+  if (waPhone.startsWith('0')) waPhone = '92' + waPhone.slice(1);
+  if (!waPhone.startsWith('92')) waPhone = '92' + waPhone;
+  const msg = encodeURIComponent(`*OvenX Order Update* 🔥\n\nYour order from *Oven X ${br.name}* is on the way!\n\nFor queries: 0${br.phone.slice(2)}\n\nThank you! 🙏`);
+  window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+}
+
+// ═══════════════════════════════
+// ASSIGN RIDER MODAL
+// ═══════════════════════════════
+function openAssignModal(orderId, orderLoc) {
+  _assignOrderId = orderId;
+  _assignRiderId = null;
+  document.getElementById('assign-order-info').textContent = '📍 ' + orderLoc;
+  const list = document.getElementById('assign-riders-list');
+  list.innerHTML = '';
+
+  const onDutyRiders = _riders.filter(r => r.status === 'on-duty');
+  if (!onDutyRiders.length) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;text-align:center;">No riders on duty right now.<br>Punch in a rider from the Riders tab.</div>';
+  } else {
+    onDutyRiders.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'rider-option';
+      div.id = 'ro-' + r.id;
+      const activeCount = r.active_orders || 0;
+      div.innerHTML = `
+        <div class="ro-avatar">🛵</div>
+        <div class="ro-info">
+          <div class="ro-name">${r.name}</div>
+          <div class="ro-status">● On Duty${r.phone ? ' · ' + r.phone : ''}</div>
+          <div class="ro-count">${activeCount} active order${activeCount !== 1 ? 's' : ''}</div>
+        </div>`;
+      div.onclick = () => {
+        document.querySelectorAll('.rider-option').forEach(x => x.classList.remove('sel'));
+        div.classList.add('sel');
+        _assignRiderId = r.id;
+        _assignRiderName = r.name;
+      };
+      list.appendChild(div);
+    });
+  }
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+let _assignRiderName = '';
+function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
+
+async function confirmAssign() {
+  if (!_assignRiderId) { showToast('Select a rider', 'error'); return; }
+  try {
+    await sb.from('kitchen_orders').update({
+      status: 'ASSIGNED',
+      assigned_rider: _assignRiderId,
+      rider_name: _assignRiderName
+    }).eq('id', _assignOrderId);
+
+    showToast('✅ Assigned to ' + _assignRiderName, 'success');
+    closeAssignModal();
+    renderLiveOrders();
+    renderRiders();
+  } catch(e) {
+    showToast('Assignment failed: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════
+// RIDERS
+// ═══════════════════════════════
+async function renderRiders() {
+  const grid = document.getElementById('riders-grid');
+  grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;grid-column:1/-1;">Loading...</div>';
+
+  try {
+    // Today's date range
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+
+    let { data, error } = await sb.from('rider_attendance')
+      .select('*')
+      .gte('punched_in', today.toISOString())
+      .lt('punched_in', tomorrow.toISOString())
+      .order('punched_in', { ascending: false });
+
+    if (error) throw error;
+
+    _riders = data || [];
+
+    // Count active orders per rider
+    const riderIds = _riders.map(r => r.id);
+    if (riderIds.length) {
+      const { data: activeOrders } = await sb.from('kitchen_orders')
+        .select('assigned_rider')
+        .eq('status', 'ASSIGNED')
+        .in('assigned_rider', riderIds);
+      const countMap = {};
+      (activeOrders || []).forEach(o => { countMap[o.assigned_rider] = (countMap[o.assigned_rider] || 0) + 1; });
+      _riders.forEach(r => r.active_orders = countMap[r.id] || 0);
+    }
+
+    // Update riders badge
+    const onDutyCount = _riders.filter(r => r.status === 'on-duty').length;
+    const badge = document.getElementById('riders-badge');
+    if (onDutyCount > 0) { badge.style.display = 'inline'; badge.textContent = onDutyCount; }
+    else badge.style.display = 'none';
+
+    if (!_riders.length) {
+      grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center;grid-column:1/-1;">No riders punched in today.<br>Use the punch-in form above.</div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    _riders.forEach(r => {
+      const card = document.createElement('div');
+      const statusClass = r.status === 'on-duty' ? 'on-duty' : r.status === 'on-break' ? 'on-break' : 'off-duty';
+      const sbClass = r.status === 'on-duty' ? 'rsb-on' : r.status === 'on-break' ? 'rsb-break' : 'rsb-off';
+      const sbLabel = r.status === 'on-duty' ? '● On Duty' : r.status === 'on-break' ? '⏸ On Break' : '○ Off Duty';
+      const punchInTime = new Date(r.punched_in).toLocaleTimeString('en-PK', {hour:'2-digit',minute:'2-digit',hour12:true});
+
+      card.className = `rider-card ${statusClass}`;
+      card.innerHTML = `
+        <div class="rider-avatar">🛵</div>
+        <div class="rider-name">${r.name}</div>
+        ${r.phone ? `<div class="rider-phone">📞 ${r.phone}</div>` : ''}
+        <div class="rider-status-badge ${sbClass}">${sbLabel}</div>
+        <div class="rider-stats">In: <span>${punchInTime}</span>${r.punched_out ? ' · Out: <span>' + new Date(r.punched_out).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) + '</span>' : ''}</div>
+        <div class="rider-stats">Active orders: <span>${r.active_orders || 0}</span></div>
+        ${r.status === 'on-duty' ? `
+        <div class="rider-actions">
+          <button class="rb orange" onclick="updateRiderStatus('${r.id}','on-break')">⏸ Break</button>
+          <button class="rb red" onclick="punchOutRider('${r.id}')">✕ Punch Out</button>
+        </div>` : r.status === 'on-break' ? `
+        <div class="rider-actions">
+          <button class="rb green" onclick="updateRiderStatus('${r.id}','on-duty')">▶ Resume</button>
+          <button class="rb red" onclick="punchOutRider('${r.id}')">✕ Punch Out</button>
+        </div>` : `<div style="font-size:11px;color:var(--text3);">Shift ended</div>`}
+      `;
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    grid.innerHTML = `<div style="color:var(--red);padding:20px;grid-column:1/-1;">Error loading riders. Make sure the rider_attendance table exists in Supabase.</div>`;
+    console.error(e);
+  }
+}
+
+async function punchInRider() {
+  const name  = document.getElementById('punch-name').value.trim();
+  const phone = document.getElementById('punch-phone').value.trim();
+  if (!name) { showToast('Enter rider name', 'error'); return; }
+
+  try {
+    const { error } = await sb.from('rider_attendance').insert([{
+      name, phone: phone || null, status: 'on-duty',
+      branch: agentBranch === 'ALL' ? 'MULTAN' : agentBranch,
+      punched_in: new Date().toISOString(), punched_out: null
+    }]);
+    if (error) throw error;
+    document.getElementById('punch-name').value = '';
+    document.getElementById('punch-phone').value = '';
+    showToast('✅ ' + name + ' punched in!', 'success');
+    renderRiders();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function updateRiderStatus(id, status) {
+  try {
+    await sb.from('rider_attendance').update({ status }).eq('id', id);
+    showToast('Status updated', 'success');
+    renderRiders();
+  } catch(e) { showToast('Update failed', 'error'); }
+}
+
+async function punchOutRider(id) {
+  if (!confirm('Punch out this rider?')) return;
+  try {
+    await sb.from('rider_attendance').update({ status: 'off-duty', punched_out: new Date().toISOString() }).eq('id', id);
+    showToast('Rider punched out', 'info');
+    renderRiders();
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+function openAddRiderModal() {
+  document.getElementById('new-rider-name').value = '';
+  document.getElementById('new-rider-phone').value = '';
+  document.getElementById('add-rider-modal').classList.add('open');
+}
+
+async function addNewRider() {
+  const name = document.getElementById('new-rider-name').value.trim();
+  const phone = document.getElementById('new-rider-phone').value.trim();
+  const branch = document.getElementById('new-rider-branch').value;
+  if (!name) { showToast('Enter rider name', 'error'); return; }
+  try {
+    const { error } = await sb.from('rider_attendance').insert([{
+      name, phone: phone || null, status: 'on-duty',
+      branch, punched_in: new Date().toISOString(), punched_out: null
+    }]);
+    if (error) throw error;
+    document.getElementById('add-rider-modal').classList.remove('open');
+    showToast('✅ ' + name + ' added!', 'success');
+    renderRiders();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════
+// STATS
+// ═══════════════════════════════
+function renderStats() {
+  const totalOrders = shiftOrders.length;
+  const totalRevenue = shiftOrders.reduce((s,o) => s + (o.total||0), 0);
+  const deliveries = shiftOrders.filter(o => o.type === 'Delivery').length;
+  const shiftMins = shiftStart ? Math.floor((Date.now() - shiftStart) / 60000) : 0;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card orange"><div class="stat-val">${totalOrders}</div><div class="stat-lbl">Orders Taken</div></div>
+    <div class="stat-card green"><div class="stat-val">Rs ${totalRevenue.toLocaleString()}</div><div class="stat-lbl">Total Value</div></div>
+    <div class="stat-card blue"><div class="stat-val">${deliveries}</div><div class="stat-lbl">Deliveries</div></div>
+    <div class="stat-card red"><div class="stat-val">${shiftMins}m</div><div class="stat-lbl">Shift Duration</div></div>`;
+
+  const tbody = document.getElementById('stats-tbody');
+  if (!shiftOrders.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No orders this shift yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = shiftOrders.slice().reverse().map(o => `
+    <tr>
+      <td style="color:var(--text2);">${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
+      <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||'—'}</span></td>
+      <td style="color:var(--text2);">${o.type||'—'}</td>
+      <td style="color:var(--text);">${o.customer_name||'—'}</td>
+      <td style="color:var(--text2);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(o.items||'—').replace(/\n/g,', ')}</td>
+      <td style="color:var(--orange);font-weight:700;text-align:right;">Rs ${o.total||0}</td>
+      <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(39,174,96,0.15);color:var(--green);">SENT</span></td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════
+// LIVE POLLING
+// ═══════════════════════════════
+function startLivePolling() {
+  sb.channel('office-live')
+    .on('postgres_changes', { event:'*', schema:'public', table:'kitchen_orders' }, () => {
+      if (document.getElementById('view-live').classList.contains('active')) renderLiveOrders();
+      else {
+        sb.from('kitchen_orders').select('id').eq('status','WAITING').eq('type','Delivery').then(({data}) => {
+          const badge = document.getElementById('live-badge');
+          if (data && data.length > 0) { badge.style.display='inline'; badge.textContent=data.length; }
+          else badge.style.display='none';
+        });
+      }
+    })
+    .subscribe();
+
+  _liveTimer = setInterval(() => {
+    if (document.getElementById('view-live').classList.contains('active')) renderLiveOrders();
+  }, 30000);
+}
+
+// ═══════════════════════════════
+// TOAST
+// ═══════════════════════════════
+let _toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Close modals on backdrop click
+document.getElementById('assign-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAssignModal();
+});
+document.getElementById('add-rider-modal').addEventListener('click', function(e) {
+  if (e.target === this) document.getElementById('add-rider-modal').classList.remove('open');
+});
+document.getElementById('size-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
