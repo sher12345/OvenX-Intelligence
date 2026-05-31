@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OvenX Rider App</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#0a0d12; --surface:#141920; --surface2:#1c2330; --border:rgba(255,255,255,0.09);
+  --text:#f0f2f5; --text2:#8892a4; --text3:#4a5568;
+  --green:#27ae60; --dark-green:#1e8449; --orange:#e67e22; --red:#c0392b;
+  --blue:#2980b9; --font:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;max-width:430px;margin:0 auto;}
+
+/* SPLASH / LOGIN */
+#splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;background:radial-gradient(ellipse at 40% 40%,#0d1a0a 0%,#0a0d12 70%);}
+.splash-logo{font-size:48px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;}
+.splash-logo span{color:var(--orange);}
+.splash-sub{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:4px;text-transform:uppercase;margin-bottom:8px;}
+.splash-badge{background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-size:11px;font-weight:800;letter-spacing:2px;padding:5px 16px;border-radius:20px;margin-bottom:40px;text-transform:uppercase;}
+.splash-label{font-size:12px;color:var(--text3);font-weight:700;text-align:left;width:100%;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
+.splash-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 18px;color:var(--text);font-family:var(--font);font-size:16px;outline:none;margin-bottom:14px;-webkit-appearance:none;}
+.splash-input:focus{border-color:var(--green);}
+.splash-btn{width:100%;padding:17px;border-radius:14px;background:var(--green);color:white;border:none;font-family:var(--font);font-size:16px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 0 var(--dark-green);margin-top:4px;}
+.splash-btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--dark-green);}
+.splash-err{color:#ff6b6b;font-size:13px;margin-top:12px;text-align:center;}
+
+/* MAIN APP */
+#app{display:none;flex-direction:column;min-height:100vh;}
+#app.active{display:flex;}
+
+/* HEADER */
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{}
+.header-name{font-size:16px;font-weight:800;color:var(--text);}
+.header-status{font-size:11px;font-weight:700;color:var(--green);letter-spacing:1px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.status-toggle{padding:8px 14px;border-radius:20px;border:none;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;}
+.st-on-duty{background:rgba(39,174,96,0.2);color:var(--green);border:1px solid rgba(39,174,96,0.4);}
+.st-on-break{background:rgba(230,126,34,0.2);color:var(--orange);border:1px solid rgba(230,126,34,0.4);}
+.logout-sm{padding:7px 12px;border-radius:10px;background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.25);color:var(--red);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;}
+
+/* BODY */
+.app-body{flex:1;overflow-y:auto;padding:16px;}
+
+/* SUMMARY BAR */
+.summary-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+.sum-val{font-size:22px;font-weight:900;}
+.sum-val.green{color:var(--green);}
+.sum-val.orange{color:var(--orange);}
+.sum-val.blue{color:var(--blue);}
+.sum-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-top:2px;}
+
+/* SECTION TITLE */
+.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text3);margin-bottom:10px;}
+
+/* ORDER CARDS */
+.order-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;transition:.2s;}
+.order-card.new-order{border-color:var(--orange);animation:newpulse 2s ease-in-out infinite;}
+.order-card.in-progress{border-color:var(--blue);}
+.order-card.done{border-color:var(--text3);opacity:0.5;filter:grayscale(0.4);}
+@keyframes newpulse{0%,100%{box-shadow:0 0 0 0 rgba(230,126,34,0);}50%{box-shadow:0 0 0 6px rgba(230,126,34,0.12);}}
+
+.oc-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.oc-badge.new{background:rgba(230,126,34,0.2);color:var(--orange);}
+.oc-badge.active{background:rgba(41,128,185,0.2);color:#5dade2;}
+.oc-badge.done{background:rgba(100,100,100,0.15);color:var(--text3);}
+
+.oc-addr{font-size:16px;font-weight:800;color:var(--text);margin-bottom:5px;line-height:1.3;}
+.oc-phone{font-size:14px;color:var(--orange);font-weight:600;margin-bottom:8px;}
+.oc-branch-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;display:inline-block;margin-bottom:8px;}
+.oc-items-block{background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:var(--text2);white-space:pre-wrap;line-height:1.6;}
+.oc-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.oc-total-label{font-size:12px;color:var(--text3);}
+.oc-total-val{font-size:20px;font-weight:900;color:var(--orange);}
+.oc-del-info{font-size:12px;color:var(--text2);}
+
+.oc-timer{font-size:13px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;margin-bottom:10px;}
+
+.oc-actions{display:flex;flex-direction:column;gap:8px;}
+.big-btn{width:100%;padding:16px;border-radius:13px;border:none;font-family:var(--font);font-size:15px;font-weight:900;letter-spacing:.5px;cursor:pointer;text-transform:uppercase;}
+.big-btn.start{background:var(--blue);color:white;box-shadow:0 3px 0 #1a5276;}
+.big-btn.start:active{transform:translateY(2px);box-shadow:0 1px 0 #1a5276;}
+.big-btn.complete{background:var(--green);color:white;box-shadow:0 3px 0 var(--dark-green);}
+.big-btn.complete:active{transform:translateY(2px);box-shadow:0 1px 0 var(--dark-green);}
+.small-btn-row{display:flex;gap:8px;}
+.sm-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;}
+.sm-btn.wa{background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);}
+.sm-btn.map{background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:60px 20px;}
+.empty-icon{font-size:48px;margin-bottom:14px;}
+.empty-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--text3);}
+
+/* REFRESH BTN */
+.refresh-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.refresh-btn{padding:7px 14px;border-radius:9px;background:var(--surface);border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--blue);}
+
+/* Completed orders section */
+.completed-toggle{width:100%;padding:11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- SPLASH / LOGIN -->
+<div id="splash">
+  <div class="splash-logo">OVEN <span>X</span></div>
+  <div class="splash-sub">Rider App</div>
+  <div class="splash-badge">🛵 Delivery Partner Portal</div>
+
+  <div style="width:100%;max-width:360px;">
+    <div class="splash-label">Your Name</div>
+    <input class="splash-input" id="rider-name-input" type="text" placeholder="e.g. Muhammad Ali" autocomplete="name">
+    <div class="splash-label">Your Phone</div>
+    <input class="splash-input" id="rider-phone-input" type="tel" placeholder="03xx-xxxxxxx" autocomplete="tel">
+    <div class="splash-label">Branch</div>
+    <select class="splash-input" id="rider-branch-input" style="cursor:pointer;">
+      <option value="MULTAN">🍕 Multan</option>
+      <option value="BWP">🥩 Bahawalpur</option>
+    </select>
+    <button class="splash-btn" onclick="riderLogin()">🛵 START MY SHIFT</button>
+  </div>
+  <div class="splash-err" id="splash-err" style="display:none;"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-left">
+      <div class="header-name" id="hdr-name">Rider</div>
+      <div class="header-status" id="hdr-status">● On Duty</div>
+    </div>
+    <div class="header-right">
+      <button class="status-toggle st-on-duty" id="duty-toggle" onclick="toggleDutyStatus()">On Duty</button>
+      <button class="logout-sm" onclick="riderLogout()">Exit</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- SUMMARY -->
+    <div class="summary-bar">
+      <div class="sum-card">
+        <div class="sum-val orange" id="stat-assigned">0</div>
+        <div class="sum-lbl">Assigned</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val green" id="stat-completed">0</div>
+        <div class="sum-lbl">Done Today</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val blue" id="stat-earnings">0</div>
+        <div class="sum-lbl">Del. Fees</div>
+      </div>
+    </div>
+
+    <!-- ACTIVE ORDERS -->
+    <div class="refresh-bar">
+      <div class="section-title" style="margin:0;">My Orders</div>
+      <button class="refresh-btn" onclick="loadOrders()">↻ Refresh</button>
+    </div>
+    <div id="orders-list">
+      <div class="empty-state">
+        <div class="empty-icon">🛵</div>
+        <div class="empty-title">Loading your orders...</div>
+        <div class="empty-sub">Pull to refresh or tap Refresh</div>
+      </div>
+    </div>
+
+    <!-- COMPLETED TOGGLE -->
+    <button class="completed-toggle" id="toggle-completed" onclick="toggleCompleted()" style="display:none;">
+      📦 Show Completed Orders
+    </button>
+    <div id="completed-list" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let riderRecord  = null; // attendance row
+let riderId      = null;
+let riderName    = '';
+let riderPhone   = '';
+let riderBranch  = 'MULTAN';
+let dutyStatus   = 'on-duty';
+let completedVisible = false;
+let _pollTimer   = null;
+let _allOrders   = [];
+
+// ═══════════════════════════════
+// LOGIN / PUNCH IN
+// ═══════════════════════════════
+async function riderLogin() {
+  const name   = document.getElementById('rider-name-input').value.trim();
+  const phone  = document.getElementById('rider-phone-input').value.trim();
+  const branch = document.getElementById('rider-branch-input').value;
+  const errEl  = document.getElementById('splash-err');
+
+  if (!name) { showSplashErr('Enter your name'); return; }
+
+  riderName   = name;
+  riderPhone  = phone;
+  riderBranch = branch;
+
+  // Try to find existing punch-in for today
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+
+  try {
+    let { data: existing } = await sb.from('rider_attendance')
+      .select('*')
+      .eq('name', name)
+      .gte('punched_in', today.toISOString())
+      .lt('punched_in', tomorrow.toISOString())
+      .neq('status', 'off-duty')
+      .single();
+
+    if (existing) {
+      riderRecord = existing;
+      riderId = existing.id;
+      dutyStatus = existing.status;
+    } else {
+      // Punch in fresh
+      const { data, error } = await sb.from('rider_attendance').insert([{
+        name, phone: phone || null, branch, status: 'on-duty',
+        punched_in: new Date().toISOString()
+      }]).select().single();
+      if (error) throw error;
+      riderRecord = data;
+      riderId = data.id;
+      dutyStatus = 'on-duty';
+    }
+  } catch(e) {
+    // If table doesn't exist or other error, use local session
+    riderId = 'local-' + Date.now();
+    riderRecord = { id: riderId, name, phone, branch, status: 'on-duty' };
+  }
+
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('hdr-name').textContent = '🛵 ' + name;
+  updateDutyUI();
+  loadOrders();
+  startPolling();
+  showToast('Welcome back, ' + name + '! 🔥', 'success');
+}
+
+function showSplashErr(msg) {
+  const el = document.getElementById('splash-err');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+async function riderLogout() {
+  if (!confirm('End your shift?')) return;
+  clearInterval(_pollTimer);
+  if (riderId && !riderId.startsWith('local-')) {
+    await sb.from('rider_attendance').update({ status: 'off-duty', punched_out: new Date().toISOString() }).eq('id', riderId);
+  }
+  location.reload();
+}
+
+// ═══════════════════════════════
+// DUTY STATUS
+// ═══════════════════════════════
+async function toggleDutyStatus() {
+  dutyStatus = dutyStatus === 'on-duty' ? 'on-break' : 'on-duty';
+  if (riderId && !riderId.startsWith('local-')) {
+    await sb.from('rider_attendance').update({ status: dutyStatus }).eq('id', riderId);
+  }
+  updateDutyUI();
+  showToast(dutyStatus === 'on-duty' ? '▶ Back on duty!' : '⏸ On break', 'info');
+}
+
+function updateDutyUI() {
+  const btn = document.getElementById('duty-toggle');
+  const hdrStatus = document.getElementById('hdr-status');
+  if (dutyStatus === 'on-duty') {
+    btn.textContent = '● On Duty';
+    btn.className = 'status-toggle st-on-duty';
+    hdrStatus.style.color = 'var(--green)';
+    hdrStatus.textContent = '● On Duty';
+  } else {
+    btn.textContent = '⏸ On Break';
+    btn.className = 'status-toggle st-on-break';
+    hdrStatus.style.color = 'var(--orange)';
+    hdrStatus.textContent = '⏸ On Break';
+  }
+}
+
+// ═══════════════════════════════
+// LOAD ORDERS
+// ═══════════════════════════════
+async function loadOrders() {
+  try {
+    // Get assigned orders for this rider
+    const { data: assigned, error: e1 } = await sb.from('kitchen_orders')
+      .select('*')
+      .eq('assigned_rider', riderId)
+      .in('status', ['ASSIGNED', 'DELIVERING'])
+      .order('created_at', { ascending: true });
+
+    // Get today's completed by this rider
+    const today = new Date(); today.setHours(0,0,0,0);
+    const { data: completed } = await sb.from('kitchen_orders')
+      .select('*')
+      .eq('assigned_rider', riderId)
+      .eq('status', 'COMPLETED')
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (e1) throw e1;
+
+    const activeList   = assigned  || [];
+    const doneList     = completed || [];
+
+    // Update stats
+    document.getElementById('stat-assigned').textContent  = activeList.length;
+    document.getElementById('stat-completed').textContent = doneList.length;
+    const totalFees = [...activeList, ...doneList].reduce((s,o) => s + (o.delivery_fee || 0), 0);
+    document.getElementById('stat-earnings').textContent  = 'Rs ' + totalFees;
+
+    renderOrders(activeList, doneList);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('orders-list').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">Error loading orders</div>
+        <div class="empty-sub">${e.message}</div>
+      </div>`;
+  }
+}
+
+function renderOrders(activeList, doneList) {
+  const list = document.getElementById('orders-list');
+  const now  = new Date();
+
+  if (!activeList.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <div class="empty-title">No orders assigned</div>
+        <div class="empty-sub">The office will assign deliveries to you.<br>Stay on duty to receive orders!</div>
+      </div>`;
+  } else {
+    list.innerHTML = '';
+    activeList.forEach(o => {
+      const elapsed = Math.floor((now - new Date(o.created_at)) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      const isDelivering = o.status === 'DELIVERING';
+
+      const card = document.createElement('div');
+      card.className = `order-card ${isDelivering ? 'in-progress' : 'new-order'}`;
+      card.innerHTML = `
+        <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 Delivering' : '🔔 New Order'}</span>
+        <span class="oc-branch-tag">${o.branch || 'MULTAN'}</span>
+        <div class="oc-addr">📍 ${o.location || 'No address'}</div>
+        ${o.phone ? `<div class="oc-phone">📞 ${o.phone}</div>` : ''}
+        ${o.customer_name ? `<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">👤 ${o.customer_name}</div>` : ''}
+        <div class="oc-items-block">${o.items || '—'}</div>
+        <div class="oc-total-row">
+          <div>
+            <div class="oc-total-label">Shop Total: Rs ${o.subtotal || 0}</div>
+            <div class="oc-del-info">+ Del: <strong style="color:var(--green);">Rs ${o.delivery_fee || 0}</strong></div>
+          </div>
+          <div class="oc-total-val">Rs ${(o.subtotal||0) + (o.delivery_fee||0)}</div>
+        </div>
+        <div class="oc-timer">⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} ago</div>
+        <div class="oc-actions">
+          ${!isDelivering ? `<button class="big-btn start" onclick="startDelivery('${o.id}')">▶ START DELIVERY</button>` : ''}
+          ${isDelivering ? `<button class="big-btn complete" onclick="markComplete('${o.id}')">✅ MARK DELIVERED</button>` : ''}
+          <div class="small-btn-row">
+            ${o.phone ? `<button class="sm-btn wa" onclick="callCustomer('${o.phone}')">📞 Call/WA</button>` : ''}
+            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${encodeURIComponent(o.location)}')">🗺 Maps</button>` : ''}
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+  }
+
+  // Completed section
+  const toggleBtn = document.getElementById('toggle-completed');
+  if (doneList.length) {
+    toggleBtn.style.display = 'block';
+    toggleBtn.textContent = completedVisible
+      ? `📦 Hide Completed (${doneList.length})`
+      : `📦 Show Completed (${doneList.length})`;
+    renderCompleted(doneList);
+  } else {
+    toggleBtn.style.display = 'none';
+  }
+}
+
+function renderCompleted(doneList) {
+  const el = document.getElementById('completed-list');
+  el.style.display = completedVisible ? 'block' : 'none';
+  if (!completedVisible) return;
+  el.innerHTML = '<div class="section-title" style="margin-bottom:10px;">Completed Today</div>';
+  doneList.forEach(o => {
+    const card = document.createElement('div');
+    card.className = 'order-card done';
+    card.innerHTML = `
+      <span class="oc-badge done">✅ Completed</span>
+      <div class="oc-addr">📍 ${o.location || 'No address'}</div>
+      <div class="oc-items-block" style="font-size:12px;">${o.items || '—'}</div>
+      <div class="oc-total-row">
+        <div class="oc-total-label">Collected: Rs ${(o.subtotal||0)+(o.delivery_fee||0)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text3);">Rs ${o.delivery_fee||0} fee</div>
+      </div>`;
+    el.appendChild(card);
+  });
+}
+
+function toggleCompleted() {
+  completedVisible = !completedVisible;
+  loadOrders();
+}
+
+// ═══════════════════════════════
+// ORDER ACTIONS
+// ═══════════════════════════════
+async function startDelivery(orderId) {
+  try {
+    await sb.from('kitchen_orders').update({ status: 'DELIVERING' }).eq('id', orderId);
+    showToast('🚚 Delivery started!', 'success');
+    loadOrders();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function markComplete(orderId) {
+  if (!confirm('Confirm delivery completed?')) return;
+  try {
+    await sb.from('kitchen_orders').update({
+      status: 'COMPLETED',
+      completed_at: new Date().toISOString()
+    }).eq('id', orderId);
+    showToast('✅ Delivery marked complete!', 'success');
+    loadOrders();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function callCustomer(phone) {
+  let waPhone = phone.replace(/\D/g,'');
+  if (waPhone.startsWith('0')) waPhone = '92' + waPhone.slice(1);
+  if (!waPhone.startsWith('92')) waPhone = '92' + waPhone;
+  // Offer call or WA
+  const choice = confirm('Open WhatsApp? (Cancel = Call directly)');
+  if (choice) window.open(`https://wa.me/${waPhone}`, '_blank');
+  else window.open(`tel:${phone}`, '_self');
+}
+
+function openMaps(address) {
+  window.open(`https://maps.google.com/maps?q=${address}`, '_blank');
+}
+
+// ═══════════════════════════════
+// POLLING
+// ═══════════════════════════════
+function startPolling() {
+  // Real-time subscription for new assignments
+  sb.channel('rider-orders-' + riderId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'kitchen_orders',
+      filter: `assigned_rider=eq.${riderId}`
+    }, (payload) => {
+      if (payload.new.status === 'ASSIGNED') showToast('🔔 New order assigned!', 'success');
+      loadOrders();
+    })
+    .subscribe();
+
+  // Fallback every 20 seconds
+  _pollTimer = setInterval(loadOrders, 20000);
+}
+
+// ═══════════════════════════════
+// TOAST
+// ═══════════════════════════════
+let _toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
