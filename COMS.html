@@ -1095,18 +1095,63 @@ async function sendToKitchenSilent() {
 // ═══════════════════════════════
 function sendWhatsAppNotify() {
   if (!cart.length) { showToast('Add items first', 'error'); return; }
-  const d = buildOrderObj();
-  if (!d.custPhone) { showToast('Enter customer phone', 'error'); return; }
-  let waPhone = d.custPhone.replace(/\D/g,'');
-  if (waPhone.startsWith('0')) waPhone = '92' + waPhone.slice(1);
-  const br = BRANCHES[orderBranch] || BRANCHES.MULTAN;
-  const msg = encodeURIComponent(
-    `*OVEN X — ORDER CONFIRMATION* 🔥\n*Branch:* ${br.name}\n\n${d.itemsText}\n\n` +
-    `Subtotal: Rs ${d.food}${d.delCharge > 0 ? '\nDelivery: Rs ' + d.delCharge : ''}` +
-    (d.disc > 0 ? '\nDiscount: -Rs ' + d.disc : '') + `\n*Total: Rs ${d.grand}*`
-  );
-  window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
-  showToast('Customer WA opened', 'info');
+
+  const custPhone = document.getElementById('cust-phone').value.trim();
+  const custName  = document.getElementById('cust-name').value.trim();
+  const address   = document.getElementById('order-address').value.trim();
+  const note      = document.getElementById('order-note').value.trim();
+
+  if (!custPhone) { showToast('Enter customer phone number first', 'error'); return; }
+
+  let waPhone = custPhone.replace(/\D/g, '');
+  if (waPhone.startsWith('0092'))   waPhone = waPhone.slice(2);
+  else if (waPhone.startsWith('0')) waPhone = '92' + waPhone.slice(1);
+  else if (waPhone.startsWith('3') && waPhone.length === 10) waPhone = '92' + waPhone;
+
+  const br       = BRANCHES[orderBranch] || BRANCHES.MULTAN;
+  const food     = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const scPct    = parseInt(document.getElementById('sc-pct')?.value) || 7;
+  const sc       = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
+  const del      = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
+  const discVal  = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const disc     = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  const grand    = Math.max(0, food + sc + del - disc);
+  const discPct  = discType === 'pct' ? ` (${discVal}% off)` : '';
+
+  const itemLines = cart.map(i =>
+    `  • ${i.qty}x ${i.name}${i.note ? ' (' + i.note + ')' : ''}  —  Rs ${i.price * i.qty}`
+  ).join('\n');
+
+  const msg = [
+    `*OVEN X — Order Confirmed!*`,
+    `*${br.name} Branch*`,
+    ``,
+    orderType === 'Delivery' && address ? `*Delivering to:* ${address}` : null,
+    orderType === 'Dine-In'             ? `*Dine-In*` : null,
+    orderType === 'Takeaway'            ? `*Takeaway — please collect from counter*` : null,
+    ``,
+    `*YOUR ORDER:*`,
+    itemLines,
+    ``,
+    `-----------------------------`,
+    `Subtotal:          Rs ${food}`,
+    sc   > 0 ? `Service Charge (${scPct}%): Rs ${sc}` : null,
+    del  > 0 ? `Delivery Charge:   Rs ${del}` : null,
+    disc > 0 ? `Discount${discPct}:        -Rs ${disc}` : null,
+    `-----------------------------`,
+    `*TOTAL:  Rs ${grand}*`,
+    ``,
+    note ? `*Note:* ${note}` : null,
+    ``,
+    `Thank you for choosing *Oven X*!`,
+    `Your order is being prepared and will reach you shortly.`,
+    ``,
+    `*theovenx.com*`,
+  ].filter(line => line !== null).join('\n');
+
+  const url = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  showToast('WhatsApp opened for customer', 'success');
 }
 
 // ═══════════════════════════════
