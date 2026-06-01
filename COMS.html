@@ -760,7 +760,7 @@ function renderActionGrid() {
     ag.innerHTML = `
       <button class="clear-btn" onclick="clearOrder()">🗑️ Clear</button>
       <button class="oc-btn" style="padding:10px;border-radius:9px;font-size:12px;font-weight:700;background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);" onclick="sendWhatsAppNotify()">📱 Customer WA</button>
-      <button class="send-btn delivery-only" onclick="sendToKitchen()">🚚 SEND TO KITCHEN</button>
+      <button class="send-btn delivery-only" onclick="sendToKitchen()">📡 SEND TO LIVE ORDERS</button>
     `;
   } else {
     // Takeaway or Dine-In → WhatsApp to branch
@@ -1001,10 +1001,13 @@ function buildOrderObj() {
   const note      = document.getElementById('order-note').value.trim();
   const delCharge = parseFloat(document.getElementById('del-charge').value) || 0;
   const discVal   = parseFloat(document.getElementById('disc-amount').value) || 0;
-const disc      = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
-const scPct     = parseInt(document.getElementById('sc-pct')?.value) || 7;
-const sc        = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
+
+  // ✅ food must be declared BEFORE disc and sc use it
   const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const disc  = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  const scPct = parseInt(document.getElementById('sc-pct')?.value) || 7;
+  const sc    = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
+
   const grand = Math.max(0, food + sc + delCharge - disc);
   const itemsText = cart.map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
   const fullItems = note ? itemsText + '\n📝 Note: ' + note : itemsText;
@@ -1551,14 +1554,14 @@ function renderStats() {
   } else {
     document.getElementById('stats-tbody').innerHTML = salesOnly.slice().reverse().map((o, idx) => {
       const time     = new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
-      const subtotal = o.items ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
+      const subtotal = Array.isArray(o.items) ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
       const delFee   = o.delCharge || o.delivery_fee || 0;
       const sc       = o.sc || 0;
       const disc     = o.disc || o.discount || 0;
       const grand    = o.total || 0;
-      const itemsStr = o.items
-        ? o.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
-        : (o.itemsText || o.items_text || '—').replace(/\n/g,', ');
+      const itemsStr = Array.isArray(o.items)
+  ? o.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
+  : (o.itemsText || o.items_text || o.items || '—').toString().replace(/\n/g,', ');
       const statusColor = o.status==='COMPLETED'?'var(--green)':o.status==='ASSIGNED'?'var(--blue)':'var(--orange)';
 
       return `<tr>
@@ -1617,8 +1620,8 @@ function exportShiftCSV() {
   ];
   shiftOrders.filter(o=>!['void','return'].includes(o.method)).forEach((o,i) => {
     const clean = s => (s||'—').toString().replace(/,/g,';').replace(/\n/g,' ');
-    const items = o.items ? o.items.map(i=>`${i.qty}x ${i.name}`).join(' | ') : clean(o.itemsText||o.items_text);
-    const subtotal = o.items ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
+    const items = Array.isArray(o.items) ? o.items.map(i=>`${i.qty}x ${i.name}`).join(' | ') : clean(o.itemsText||o.items_text||o.items);
+const subtotal = Array.isArray(o.items) ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
     lines.push([
       i+1,
       new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}),
