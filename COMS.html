@@ -344,15 +344,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
       <div class="op-footer">
         <textarea class="note-input" id="order-note" placeholder="📝 Order note (e.g. extra spicy, no onions...)" rows="2"></textarea>
-        <div class="disc-row">
-          <span class="disc-label">Discount (Rs):</span>
-          <input class="disc-input" type="number" id="disc-amount" value="0" min="0" oninput="renderTotals()">
-          <div class="del-presets">
-            <button class="del-preset" onclick="setDisc(50)" style="color:var(--green);">50</button>
-            <button class="del-preset" onclick="setDisc(100)" style="color:var(--green);">100</button>
-            <button class="del-preset" onclick="setDisc(0)" style="color:var(--text3);">CLR</button>
-          </div>
-        </div>
+        <!-- SERVICE CHARGE ROW -->
+<div class="disc-row" id="sc-row" style="display:none;">
+  <span class="disc-label">SC:</span>
+  <button class="del-preset" id="sc-toggle-btn" onclick="toggleSC()"
+    style="padding:5px 12px;border-radius:7px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-weight:800;font-size:12px;cursor:pointer;">
+    ON
+  </button>
+  <input class="disc-input" type="number" id="sc-pct" value="7" min="0" max="30"
+    style="width:48px;color:var(--blue);" oninput="renderTotals()">
+  <span style="font-size:12px;color:var(--text3);">%</span>
+  <span style="margin-left:auto;font-size:12px;color:var(--text3);" id="sc-preview"></span>
+</div>
+
+<!-- DISCOUNT ROW -->
+<div class="disc-row">
+  <span class="disc-label">Disc:</span>
+  <input class="disc-input" type="number" id="disc-amount" value="0" min="0" oninput="renderTotals()"
+    style="width:70px;">
+  <button class="del-preset" id="disc-flat-btn" onclick="setDiscType('flat')"
+    style="color:var(--green);background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.4);">Rs</button>
+  <button class="del-preset" id="disc-pct-btn" onclick="setDiscType('pct')"
+    style="color:var(--text2);">%</button>
+  <div class="del-presets">
+    <button class="del-preset" onclick="setDisc(50)"  style="color:var(--green);">50</button>
+    <button class="del-preset" onclick="setDisc(100)" style="color:var(--green);">100</button>
+    <button class="del-preset" onclick="setDisc(0)"   style="color:var(--text3);">CLR</button>
+  </div>
+</div>
         <div class="total-block" id="total-block">
           <div class="total-line"><span>Subtotal</span><span id="t-sub">Rs 0</span></div>
           <div class="total-line" id="sc-line" style="display:none;"><span>SC (7%)</span><span id="t-sc">Rs 0</span></div>
@@ -428,23 +447,72 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       </div>
 
       <!-- STATS VIEW -->
-      <div class="view" id="view-stats">
-        <div class="live-header">
-          <div class="live-title">📊 My Shift Report</div>
-          <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderStats()">↻ Refresh</button>
-        </div>
-        <div class="stats-body">
-          <div class="stats-grid" id="stats-grid"></div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-            <table class="orders-table">
-              <thead><tr><th>Time</th><th>Branch</th><th>Type</th><th>Customer</th><th>Items</th><th style="text-align:right;">Total</th><th>Status</th></tr></thead>
-              <tbody id="stats-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
+<div class="view" id="view-stats">
+  <div class="live-header">
+    <div class="live-title">📊 My Shift Report</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderStats()">↻ Refresh</button>
+      <button style="padding:6px 13px;border-radius:8px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;" onclick="exportShiftCSV()">📊 Export</button>
     </div>
+  </div>
+  <div class="stats-body">
+
+    <!-- SHIFT INFO BAR -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:13px;color:var(--text2);">👤 Agent: <span style="color:white;font-weight:700;" id="shift-agent-name">—</span></div>
+      <div style="font-size:13px;color:var(--text2);">🌿 Branch: <span style="color:var(--orange);font-weight:700;" id="shift-branch-name">—</span></div>
+      <div style="font-size:13px;color:var(--text2);">🕐 Started: <span style="color:white;font-weight:700;" id="shift-start-time">—</span></div>
+      <div style="font-size:13px;color:var(--text2);">🕐 Now: <span style="color:white;font-weight:700;" id="shift-current-time">—</span></div>
+      <div style="font-size:13px;color:var(--text2);">⏱ Duration: <span style="color:var(--green);font-weight:700;" id="shift-duration">—</span></div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- PAYMENT BREAKDOWN -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;" id="payment-breakdown"></div>
+
+    <!-- ORDER TYPE BREAKDOWN -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:14px;">
+      <div style="padding:11px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Order Type Breakdown</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;" id="type-breakdown"></div>
+    </div>
+
+    <!-- DETAILED ORDERS TABLE -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+      <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">All Orders This Shift</div>
+        <div style="font-size:11px;color:var(--text3);" id="orders-count-label">0 orders</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="orders-table" style="min-width:900px;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Time</th>
+              <th>Branch</th>
+              <th>Type</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Items</th>
+              <th>Subtotal</th>
+              <th>Del. Charge</th>
+              <th>SC</th>
+              <th>Discount</th>
+              <th style="text-align:right;">Grand Total</th>
+              <th>Status</th>
+              <th>Rider</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANOMALY ALERTS -->
+    <div id="anomaly-section"></div>
+
   </div>
 </div>
 
@@ -658,10 +726,18 @@ function showView(v) {
 function setOrderType(t) {
   orderType = t;
   ['delivery','takeaway','dinein'].forEach(id => {
-    document.getElementById('ot-' + id).classList.toggle('active', id === t.toLowerCase().replace('-','').replace(' ',''));
+    document.getElementById('ot-' + id).classList.toggle('active',
+      id === t.toLowerCase().replace('-','').replace(' ',''));
   });
-  document.getElementById('addr-wrap').style.display   = t === 'Delivery' ? 'block' : 'none';
-  document.getElementById('table-wrap').style.display  = t === 'Dine-In'  ? 'block' : 'none';
+  document.getElementById('addr-wrap').style.display  = t === 'Delivery' ? 'block' : 'none';
+  document.getElementById('table-wrap').style.display = t === 'Dine-In'  ? 'block' : 'none';
+
+  // Show SC row only for Dine-In
+  const scRow = document.getElementById('sc-row');
+  if (scRow) scRow.style.display = t === 'Dine-In' ? 'flex' : 'none';
+  // Reset SC state when switching
+  scEnabled = t === 'Dine-In';
+
   renderTotals();
   renderActionGrid();
 }
@@ -850,21 +926,54 @@ function changeQtyCart(idx, d) {
   renderCart();
 }
 
-function renderTotals() {
-  const food = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const sc   = orderType === 'Dine-In' ? Math.round(food * 0.07) : 0;
-  const del  = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
-  const disc = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const grand = Math.max(0, food + sc + del - disc);
+let scEnabled  = false;
+let discType   = 'flat';
 
-  document.getElementById('t-sub').textContent  = 'Rs ' + food;
-  document.getElementById('t-sc').textContent   = 'Rs ' + sc;
-  document.getElementById('t-del').textContent  = 'Rs ' + del;
-  document.getElementById('t-disc').textContent = '−Rs ' + disc;
+function toggleSC() {
+  scEnabled = !scEnabled;
+  const btn = document.getElementById('sc-toggle-btn');
+  btn.textContent = scEnabled ? 'ON' : 'OFF';
+  btn.style.background = scEnabled ? 'rgba(39,174,96,0.15)' : 'rgba(192,57,43,0.1)';
+  btn.style.borderColor = scEnabled ? 'rgba(39,174,96,0.3)' : 'rgba(192,57,43,0.3)';
+  btn.style.color = scEnabled ? 'var(--green)' : 'var(--red)';
+  renderTotals();
+}
+
+function setDiscType(type) {
+  discType = type;
+  document.getElementById('disc-flat-btn').style.cssText =
+    type === 'flat'
+      ? 'color:var(--green);background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.4);'
+      : 'color:var(--text2);background:transparent;';
+  document.getElementById('disc-pct-btn').style.cssText =
+    type === 'pct'
+      ? 'color:var(--green);background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.4);'
+      : 'color:var(--text2);background:transparent;';
+  renderTotals();
+}
+
+function renderTotals() {
+  const food    = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const scPct   = parseInt(document.getElementById('sc-pct')?.value) || 7;
+  const sc      = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
+  const del     = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
+  const discVal = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const disc    = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  const grand   = Math.max(0, food + sc + del - disc);
+
+  document.getElementById('t-sub').textContent   = 'Rs ' + food;
+  document.getElementById('t-sc').textContent    = 'Rs ' + sc;
+  document.getElementById('t-del').textContent   = 'Rs ' + del;
+  document.getElementById('t-disc').textContent  = '−Rs ' + disc;
   document.getElementById('t-grand').textContent = 'Rs ' + grand;
-  document.getElementById('sc-line').style.display   = sc > 0  ? 'flex' : 'none';
-  document.getElementById('del-line').style.display  = del > 0 ? 'flex' : 'none';
+
+  document.getElementById('sc-line').style.display   = sc > 0   ? 'flex' : 'none';
+  document.getElementById('del-line').style.display  = del > 0  ? 'flex' : 'none';
   document.getElementById('disc-line').style.display = disc > 0 ? 'flex' : 'none';
+
+  // SC preview next to toggle
+  const scPreview = document.getElementById('sc-preview');
+  if (scPreview) scPreview.textContent = sc > 0 ? 'Rs ' + sc : '';
 }
 
 function setDelCharge(v) { document.getElementById('del-charge').value = v; renderTotals(); }
@@ -891,9 +1000,11 @@ function buildOrderObj() {
   const tableNum  = document.getElementById('table-num').value.trim();
   const note      = document.getElementById('order-note').value.trim();
   const delCharge = parseFloat(document.getElementById('del-charge').value) || 0;
-  const disc      = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const discVal   = parseFloat(document.getElementById('disc-amount').value) || 0;
+const disc      = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+const scPct     = parseInt(document.getElementById('sc-pct')?.value) || 7;
+const sc        = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
   const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const sc    = orderType === 'Dine-In' ? Math.round(food * 0.07) : 0;
   const grand = Math.max(0, food + sc + delCharge - disc);
   const itemsText = cart.map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
   const fullItems = note ? itemsText + '\n📝 Note: ' + note : itemsText;
@@ -1295,32 +1406,196 @@ async function addNewRider() {
 // STATS
 // ═══════════════════════════════
 function renderStats() {
-  const totalOrders = shiftOrders.length;
-  const totalRevenue = shiftOrders.reduce((s,o) => s + (o.total||0), 0);
-  const deliveries = shiftOrders.filter(o => o.type === 'Delivery').length;
-  const shiftMins = shiftStart ? Math.floor((Date.now() - shiftStart) / 60000) : 0;
+  // Shift info bar
+  const now = new Date();
+  document.getElementById('shift-agent-name').textContent   = currentAgent || '—';
+  document.getElementById('shift-branch-name').textContent  = agentBranch === 'ALL' ? 'All Branches' : (BRANCHES[agentBranch]?.name || agentBranch);
+  document.getElementById('shift-start-time').textContent   = shiftStart ? shiftStart.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+  document.getElementById('shift-current-time').textContent = now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+  const shiftMins = shiftStart ? Math.floor((now - shiftStart) / 60000) : 0;
+  const shiftHrs  = Math.floor(shiftMins / 60);
+  const shiftRem  = shiftMins % 60;
+  document.getElementById('shift-duration').textContent = shiftHrs > 0 ? `${shiftHrs}h ${shiftRem}m` : `${shiftMins}m`;
 
+  const orders    = shiftOrders;
+  const salesOnly = orders.filter(o => !['void','return'].includes(o.method));
+
+  // Totals
+  const totalOrders    = salesOnly.length;
+  const totalRevenue   = salesOnly.reduce((s,o) => s + (o.total||0), 0);
+  const totalDelFees   = salesOnly.filter(o=>o.type==='Delivery').reduce((s,o) => s + (o.delCharge||o.delivery_fee||0), 0);
+  const totalDisc      = salesOnly.reduce((s,o) => s + (o.disc||o.discount||0), 0);
+  const totalSC        = salesOnly.reduce((s,o) => s + (o.sc||0), 0);
+  const shopRevenue    = totalRevenue - totalDelFees;
+  const deliveries     = salesOnly.filter(o=>o.type==='Delivery').length;
+  const takeaways      = salesOnly.filter(o=>o.type==='Takeaway').length;
+  const dineins        = salesOnly.filter(o=>o.type==='Dine-In').length;
+  const avgBill        = totalOrders > 0 ? Math.round(shopRevenue / totalOrders) : 0;
+
+  // Stat cards
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card orange"><div class="stat-val">${totalOrders}</div><div class="stat-lbl">Orders Taken</div></div>
-    <div class="stat-card green"><div class="stat-val">Rs ${totalRevenue.toLocaleString()}</div><div class="stat-lbl">Total Value</div></div>
-    <div class="stat-card blue"><div class="stat-val">${deliveries}</div><div class="stat-lbl">Deliveries</div></div>
-    <div class="stat-card red"><div class="stat-val">${shiftMins}m</div><div class="stat-lbl">Shift Duration</div></div>`;
+    <div class="stat-card green"><div class="stat-val">Rs ${shopRevenue.toLocaleString()}</div><div class="stat-lbl">Shop Revenue</div></div>
+    <div class="stat-card blue"><div class="stat-val">Rs ${totalDelFees.toLocaleString()}</div><div class="stat-lbl">Delivery Fees</div></div>
+    <div class="stat-card red"><div class="stat-val">Rs ${totalDisc.toLocaleString()}</div><div class="stat-lbl">Discounts Given</div></div>
+    <div class="stat-card orange"><div class="stat-val">Rs ${avgBill.toLocaleString()}</div><div class="stat-lbl">Avg Bill</div></div>
+    <div class="stat-card green"><div class="stat-val">Rs ${totalSC.toLocaleString()}</div><div class="stat-lbl">SC Collected</div></div>
+  `;
 
-  const tbody = document.getElementById('stats-tbody');
-  if (!shiftOrders.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No orders this shift yet</td></tr>';
-    return;
+  // Payment breakdown
+  const cashOrders     = salesOnly.filter(o=>o.method==='cash');
+  const cardOrders     = salesOnly.filter(o=>['card','bank'].includes(o.method));
+  const jazzOrders     = salesOnly.filter(o=>o.method==='jazzcash');
+  const fpOrders       = salesOnly.filter(o=>o.method==='foodpanda');
+  const cashTotal      = cashOrders.reduce((s,o)=>s+o.total,0);
+  const cardTotal      = cardOrders.reduce((s,o)=>s+o.total,0);
+  const jazzTotal      = jazzOrders.reduce((s,o)=>s+o.total,0);
+  const fpTotal        = fpOrders.reduce((s,o)=>s+o.total,0);
+
+  document.getElementById('payment-breakdown').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Payment Methods</div>
+      ${[
+        {label:'💵 Cash',    val:cashTotal, count:cashOrders.length,   col:'var(--green)'},
+        {label:'💳 Card/Bank',val:cardTotal,count:cardOrders.length,   col:'var(--blue)'},
+        {label:'📱 JazzCash', val:jazzTotal, count:jazzOrders.length,  col:'var(--orange)'},
+        {label:'🐼 FoodPanda',val:fpTotal,   count:fpOrders.length,    col:'var(--red)'},
+      ].map(p=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);">${p.label}</div>
+            <div style="font-size:11px;color:var(--text3);">${p.count} order${p.count!==1?'s':''}</div>
+          </div>
+          <div style="font-size:15px;font-weight:800;color:${p.col};">Rs ${p.val.toLocaleString()}</div>
+        </div>`).join('')}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Charges Summary</div>
+      ${[
+        {label:'Total Billed',      val:'Rs '+totalRevenue.toLocaleString(),   col:'white'},
+        {label:'Shop Revenue',      val:'Rs '+shopRevenue.toLocaleString(),     col:'var(--green)'},
+        {label:'Delivery Fees',     val:'Rs '+totalDelFees.toLocaleString(),    col:'var(--orange)'},
+        {label:'Service Charges',   val:'Rs '+totalSC.toLocaleString(),         col:'var(--blue)'},
+        {label:'Discounts Applied', val:'− Rs '+totalDisc.toLocaleString(),     col:'var(--red)'},
+        {label:'Shift Duration',    val:(shiftHrs>0?shiftHrs+'h ':'')+shiftRem+'m', col:'var(--text2)'},
+      ].map(r=>`
+        <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:12px;color:var(--text2);">${r.label}</span>
+          <span style="font-size:13px;font-weight:700;color:${r.col};">${r.val}</span>
+        </div>`).join('')}
+    </div>`;
+
+  // Order type breakdown
+  document.getElementById('type-breakdown').innerHTML = [
+    {label:'🚚 Delivery', count:deliveries, val:salesOnly.filter(o=>o.type==='Delivery').reduce((s,o)=>s+o.total,0), col:'var(--red)'},
+    {label:'🥡 Takeaway', count:takeaways,  val:salesOnly.filter(o=>o.type==='Takeaway').reduce((s,o)=>s+o.total,0), col:'var(--green)'},
+    {label:'🍽️ Dine-In', count:dineins,    val:salesOnly.filter(o=>o.type==='Dine-In').reduce((s,o)=>s+o.total,0),  col:'var(--blue)'},
+  ].map(t=>`
+    <div style="padding:14px;border-right:1px solid var(--border);text-align:center;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:5px;">${t.label}</div>
+      <div style="font-size:22px;font-weight:900;color:${t.col};">${t.count}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px;">Rs ${t.val.toLocaleString()}</div>
+    </div>`).join('');
+
+  // Detailed orders table
+  document.getElementById('orders-count-label').textContent = totalOrders + ' order' + (totalOrders!==1?'s':'');
+
+  if (!salesOnly.length) {
+    document.getElementById('stats-tbody').innerHTML =
+      '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:24px;">No orders this shift yet</td></tr>';
+  } else {
+    document.getElementById('stats-tbody').innerHTML = salesOnly.slice().reverse().map((o, idx) => {
+      const time     = new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const subtotal = o.items ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
+      const delFee   = o.delCharge || o.delivery_fee || 0;
+      const sc       = o.sc || 0;
+      const disc     = o.disc || o.discount || 0;
+      const grand    = o.total || 0;
+      const itemsStr = o.items
+        ? o.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
+        : (o.itemsText || o.items_text || '—').replace(/\n/g,', ');
+      const statusColor = o.status==='COMPLETED'?'var(--green)':o.status==='ASSIGNED'?'var(--blue)':'var(--orange)';
+
+      return `<tr>
+        <td style="color:var(--text3);font-size:11px;">${salesOnly.length - idx}</td>
+        <td style="color:var(--text2);white-space:nowrap;">${time}</td>
+        <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||orderBranch}</span></td>
+        <td style="color:var(--text2);">${o.type||'—'}</td>
+        <td style="color:white;font-weight:600;">${o.customer_name||o.custName||'—'}</td>
+        <td style="color:var(--orange);font-size:12px;">${o.phone||o.custPhone||'—'}</td>
+        <td style="color:var(--text2);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.location||o.address||''}">${(o.location||o.address||'—').slice(0,25)}</td>
+        <td style="color:var(--text2);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${itemsStr}">${itemsStr.slice(0,35)}${itemsStr.length>35?'…':''}</td>
+        <td style="color:var(--text);">Rs ${subtotal}</td>
+        <td style="color:${delFee>0?'var(--orange)':'var(--text3)'};">${delFee>0?'Rs '+delFee:'—'}</td>
+        <td style="color:${sc>0?'var(--blue)':'var(--text3)'};">${sc>0?'Rs '+sc:'—'}</td>
+        <td style="color:${disc>0?'var(--red)':'var(--text3)'};">${disc>0?'−Rs '+disc:'—'}</td>
+        <td style="text-align:right;font-weight:800;color:var(--orange);">Rs ${grand}</td>
+        <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(39,174,96,0.1);color:${statusColor};">${o.status||'SENT'}</span></td>
+        <td style="color:var(--blue);font-size:11px;">${o.rider_name||o.riderName||'—'}</td>
+      </tr>`;
+    }).join('');
   }
-  tbody.innerHTML = shiftOrders.slice().reverse().map(o => `
-    <tr>
-      <td style="color:var(--text2);">${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
-      <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||'—'}</span></td>
-      <td style="color:var(--text2);">${o.type||'—'}</td>
-      <td style="color:var(--text);">${o.customer_name||'—'}</td>
-      <td style="color:var(--text2);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(o.items||'—').replace(/\n/g,', ')}</td>
-      <td style="color:var(--orange);font-weight:700;text-align:right;">Rs ${o.total||0}</td>
-      <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(39,174,96,0.15);color:var(--green);">SENT</span></td>
-    </tr>`).join('');
+
+  // Anomaly detection — flags suspicious patterns
+  const anomalies = [];
+  salesOnly.forEach((o,i) => {
+    const disc = o.disc||o.discount||0;
+    const total = o.total||0;
+    if (disc > 200)                         anomalies.push(`⚠️ Order #${salesOnly.length-i} — Large discount of Rs ${disc} given to ${o.customer_name||'unknown'}`);
+    if (total === 0 && o.items?.length > 0) anomalies.push(`🚨 Order #${salesOnly.length-i} — Items added but total is Rs 0`);
+    if (disc > total * 0.5 && total > 0)    anomalies.push(`🚨 Order #${salesOnly.length-i} — Discount (Rs ${disc}) is more than 50% of bill (Rs ${total})`);
+  });
+  if (totalDisc > 500) anomalies.push(`⚠️ Total discounts this shift: Rs ${totalDisc} — above normal`);
+
+  const anomalyEl = document.getElementById('anomaly-section');
+  if (anomalies.length) {
+    anomalyEl.innerHTML = `
+      <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:10px;">🚨 Anomaly Alerts — Review Required</div>
+        ${anomalies.map(a=>`<div style="font-size:13px;color:#f08070;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">${a}</div>`).join('')}
+      </div>`;
+  } else {
+    anomalyEl.innerHTML = `
+      <div style="background:rgba(39,174,96,0.06);border:1px solid rgba(39,174,96,0.2);border-radius:11px;padding:12px 16px;margin-bottom:14px;">
+        <div style="font-size:12px;color:var(--green);font-weight:700;">✅ No anomalies detected — shift looks clean</div>
+      </div>`;
+  }
+}
+
+function exportShiftCSV() {
+  if (!shiftOrders.length) { showToast('No orders to export', 'error'); return; }
+  const lines = [
+    `OVEN X — Office Shift Report`,
+    `Agent: ${currentAgent} | Branch: ${agentBranch} | Start: ${shiftStart?.toLocaleString('en-PK')||'—'} | Export: ${new Date().toLocaleString('en-PK')}`,
+    '',
+    '#,Time,Branch,Type,Customer,Phone,Address,Items,Subtotal,Del Charge,SC,Discount,Grand Total,Status,Rider'
+  ];
+  shiftOrders.filter(o=>!['void','return'].includes(o.method)).forEach((o,i) => {
+    const clean = s => (s||'—').toString().replace(/,/g,';').replace(/\n/g,' ');
+    const items = o.items ? o.items.map(i=>`${i.qty}x ${i.name}`).join(' | ') : clean(o.itemsText||o.items_text);
+    const subtotal = o.items ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
+    lines.push([
+      i+1,
+      new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}),
+      o.branch||orderBranch, o.type||'—',
+      clean(o.customer_name||o.custName),
+      clean(o.phone||o.custPhone),
+      clean(o.location||o.address),
+      clean(items), subtotal,
+      o.delCharge||o.delivery_fee||0,
+      o.sc||0, o.disc||o.discount||0,
+      o.total||0, o.status||'SENT',
+      clean(o.rider_name||o.riderName)
+    ].join(','));
+  });
+  const blob = new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `OvenX_Shift_${currentAgent}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('Shift exported ✅', 'success');
 }
 
 // ═══════════════════════════════
