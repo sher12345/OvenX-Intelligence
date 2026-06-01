@@ -1453,7 +1453,68 @@ async function addNewRider() {
 // ═══════════════════════════════
 // STATS
 // ═══════════════════════════════
-function renderStats() {
+async function renderStats() {
+  // Fetch today's orders fresh from Supabase
+  let liveDbOrders = [];
+  try {
+    const today = new Date(); today.setHours(0,0,0,0);
+    let query = sb.from('kitchen_orders')
+      .select('*')
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: true });
+    if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
+    const { data } = await query;
+
+    // Filter: all deliveries + only this agent's takeaway/dine-in
+    liveDbOrders = (data || []).filter(o => {
+      if (o.type === 'Delivery') return true;
+      if (['Takeaway','Dine-In'].includes(o.type)) {
+        return shiftOrders.some(local => local.id === o.id);
+      }
+      return false;
+    });
+
+    // Sync back into shiftOrders
+    liveDbOrders.forEach(dbOrder => {
+      const localIdx = shiftOrders.findIndex(o => o.id === dbOrder.id);
+      if (localIdx >= 0) {
+        // Update existing local order with latest DB fields
+        shiftOrders[localIdx] = {
+          ...shiftOrders[localIdx],
+          payment_method: dbOrder.payment_method,
+          status:         dbOrder.status,
+          rider_name:     dbOrder.rider_name,
+          completed_at:   dbOrder.completed_at,
+        };
+      } else {
+        // Delivery from DB not in local memory — add it
+        shiftOrders.push({
+          id:             dbOrder.id,
+          type:           dbOrder.type,
+          branch:         dbOrder.branch,
+          location:       dbOrder.location,
+          items:          dbOrder.items,
+          status:         dbOrder.status,
+          subtotal:       dbOrder.subtotal,
+          delivery_fee:   dbOrder.delivery_fee,
+          discount:       dbOrder.discount,
+          sc:             0,
+          total:          (dbOrder.subtotal||0) + (dbOrder.delivery_fee||0) - (dbOrder.discount||0),
+          customer_name:  dbOrder.customer_name,
+          phone:          dbOrder.phone,
+          rider_name:     dbOrder.rider_name,
+          payment_method: dbOrder.payment_method,
+          time:           new Date(dbOrder.created_at),
+          agent:          dbOrder.source === 'OFFICE' ? (dbOrder.agent_name || currentAgent) : 'Online/App',
+        });
+      }
+    });
+
+    // Update order count in topbar
+    document.getElementById('bar-count').textContent = shiftOrders.length;
+
+  } catch(e) { console.warn('Stats refresh error:', e); }
+
   // Shift info bar
   const now = new Date();
   document.getElementById('shift-agent-name').textContent   = currentAgent || '—';
@@ -1469,16 +1530,16 @@ function renderStats() {
   const salesOnly = orders.filter(o => !['void','return'].includes(o.method));
 
   // Totals
-  const totalOrders    = salesOnly.length;
-  const totalRevenue   = salesOnly.reduce((s,o) => s + (o.total||0), 0);
-  const totalDelFees   = salesOnly.filter(o=>o.type==='Delivery').reduce((s,o) => s + (o.delCharge||o.delivery_fee||0), 0);
-  const totalDisc      = salesOnly.reduce((s,o) => s + (o.disc||o.discount||0), 0);
-  const totalSC        = salesOnly.reduce((s,o) => s + (o.sc||0), 0);
-  const shopRevenue    = totalRevenue - totalDelFees;
-  const deliveries     = salesOnly.filter(o=>o.type==='Delivery').length;
-  const takeaways      = salesOnly.filter(o=>o.type==='Takeaway').length;
-  const dineins        = salesOnly.filter(o=>o.type==='Dine-In').length;
-  const avgBill        = totalOrders > 0 ? Math.round(shopRevenue / totalOrders) : 0;
+  const totalOrders  = salesOnly.length;
+  const totalRevenue = salesOnly.reduce((s,o) => s + (o.total||0), 0);
+  const totalDelFees = salesOnly.filter(o=>o.type==='Delivery').reduce((s,o) => s + (o.delCharge||o.delivery_fee||0), 0);
+  const totalDisc    = salesOnly.reduce((s,o) => s + (o.disc||o.discount||0), 0);
+  const totalSC      = salesOnly.reduce((s,o) => s + (o.sc||0), 0);
+  const shopRevenue  = totalRevenue - totalDelFees;
+  const deliveries   = salesOnly.filter(o=>o.type==='Delivery').length;
+  const takeaways    = salesOnly.filter(o=>o.type==='Takeaway').length;
+  const dineins      = salesOnly.filter(o=>o.type==='Dine-In').length;
+  const avgBill      = totalOrders > 0 ? Math.round(shopRevenue / totalOrders) : 0;
 
   // Stat cards
   document.getElementById('stats-grid').innerHTML = `
@@ -1490,31 +1551,37 @@ function renderStats() {
     <div class="stat-card green"><div class="stat-val">Rs ${totalSC.toLocaleString()}</div><div class="stat-lbl">SC Collected</div></div>
   `;
 
-  // Payment breakdown
-  const cashOrders     = salesOnly.filter(o=>o.method==='cash');
-  const cardOrders     = salesOnly.filter(o=>['card','bank'].includes(o.method));
-  const jazzOrders     = salesOnly.filter(o=>o.method==='jazzcash');
-  const fpOrders       = salesOnly.filter(o=>o.method==='foodpanda');
-  const cashTotal      = cashOrders.reduce((s,o)=>s+o.total,0);
-  const cardTotal      = cardOrders.reduce((s,o)=>s+o.total,0);
-  const jazzTotal      = jazzOrders.reduce((s,o)=>s+o.total,0);
-  const fpTotal        = fpOrders.reduce((s,o)=>s+o.total,0);
+  // Payment breakdown — reads payment_method set by rider
+  const cashOrders   = salesOnly.filter(o=>o.payment_method==='cash');
+  const cardOrders   = salesOnly.filter(o=>['card','bank'].includes(o.payment_method||''));
+  const jazzOrders   = salesOnly.filter(o=>o.payment_method==='jazzcash');
+  const fpOrders     = salesOnly.filter(o=>o.payment_method==='foodpanda');
+  const creditOrders = salesOnly.filter(o=>o.payment_method==='credited');
+  const unpaidOrders = salesOnly.filter(o=>!o.payment_method);
+
+  const cashTotal   = cashOrders.reduce((s,o)=>s+(o.total||0),0);
+  const cardTotal   = cardOrders.reduce((s,o)=>s+(o.total||0),0);
+  const jazzTotal   = jazzOrders.reduce((s,o)=>s+(o.total||0),0);
+  const fpTotal     = fpOrders.reduce((s,o)=>s+(o.total||0),0);
+  const creditTotal = creditOrders.reduce((s,o)=>s+(o.total||0),0);
 
   document.getElementById('payment-breakdown').innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;">
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Payment Methods</div>
       ${[
-        {label:'💵 Cash',    val:cashTotal, count:cashOrders.length,   col:'var(--green)'},
-        {label:'💳 Card/Bank',val:cardTotal,count:cardOrders.length,   col:'var(--blue)'},
-        {label:'📱 JazzCash', val:jazzTotal, count:jazzOrders.length,  col:'var(--orange)'},
-        {label:'🐼 FoodPanda',val:fpTotal,   count:fpOrders.length,    col:'var(--red)'},
+        {label:'💵 Cash',         val:cashTotal,   count:cashOrders.length,   col:'var(--green)'},
+        {label:'💳 Card/Bank',    val:cardTotal,   count:cardOrders.length,   col:'var(--blue)'},
+        {label:'📱 JazzCash',     val:jazzTotal,   count:jazzOrders.length,   col:'var(--orange)'},
+        {label:'🐼 FoodPanda',    val:fpTotal,     count:fpOrders.length,     col:'var(--red)'},
+        {label:'📋 Credited',     val:creditTotal, count:creditOrders.length, col:'var(--red)'},
+        {label:'⏳ Pending',      val:0,           count:unpaidOrders.length, col:'var(--text3)'},
       ].map(p=>`
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">
           <div>
             <div style="font-size:13px;font-weight:700;color:var(--text);">${p.label}</div>
             <div style="font-size:11px;color:var(--text3);">${p.count} order${p.count!==1?'s':''}</div>
           </div>
-          <div style="font-size:15px;font-weight:800;color:${p.col};">Rs ${p.val.toLocaleString()}</div>
+          <div style="font-size:15px;font-weight:800;color:${p.col};">${p.label==='⏳ Pending' ? '—' : 'Rs '+p.val.toLocaleString()}</div>
         </div>`).join('')}
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;">
@@ -1525,6 +1592,7 @@ function renderStats() {
         {label:'Delivery Fees',     val:'Rs '+totalDelFees.toLocaleString(),    col:'var(--orange)'},
         {label:'Service Charges',   val:'Rs '+totalSC.toLocaleString(),         col:'var(--blue)'},
         {label:'Discounts Applied', val:'− Rs '+totalDisc.toLocaleString(),     col:'var(--red)'},
+        {label:'Credited (Unpaid)', val:'Rs '+creditTotal.toLocaleString(),     col:'var(--red)'},
         {label:'Shift Duration',    val:(shiftHrs>0?shiftHrs+'h ':'')+shiftRem+'m', col:'var(--text2)'},
       ].map(r=>`
         <div style="display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">
@@ -1585,29 +1653,77 @@ function renderStats() {
   }
 
   // Anomaly detection — flags suspicious patterns
-  const anomalies = [];
+  // Anomaly detection
+  const anomalies  = [];
+  const mildAlerts = [];
+
   salesOnly.forEach((o,i) => {
-    const disc = o.disc||o.discount||0;
-    const total = o.total||0;
-    if (disc > 200)                         anomalies.push(`⚠️ Order #${salesOnly.length-i} — Large discount of Rs ${disc} given to ${o.customer_name||'unknown'}`);
-    if (total === 0 && o.items?.length > 0) anomalies.push(`🚨 Order #${salesOnly.length-i} — Items added but total is Rs 0`);
-    if (disc > total * 0.5 && total > 0)    anomalies.push(`🚨 Order #${salesOnly.length-i} — Discount (Rs ${disc}) is more than 50% of bill (Rs ${total})`);
+    const disc     = o.disc || o.discount || 0;
+    const total    = o.total || 0;
+    const food     = total - (o.delCharge || o.delivery_fee || 0);
+    const discPct  = food > 0 ? Math.round((disc / food) * 100) : 0;
+    const orderNum = salesOnly.length - i;
+    const custName = o.customer_name || o.custName || 'unknown';
+
+    // MILD — 10–20%, informational only
+    if (discPct >= 10 && discPct <= 20 && disc > 0) {
+      mildAlerts.push(`ℹ️ Order #${orderNum} — ${discPct}% discount (Rs ${disc}) given to ${custName} — within acceptable range`);
+    }
+
+    // REVIEW — above 20%
+    if (discPct > 20 && disc > 0) {
+      anomalies.push(`⚠️ Order #${orderNum} — ${discPct}% discount (Rs ${disc}) given to ${custName} — exceeds 20% threshold`);
+    }
+
+    // CRITICAL — above 50%
+    if (discPct > 50 && total > 0) {
+      anomalies.push(`🚨 Order #${orderNum} — Discount (Rs ${disc}) is more than 50% of bill (Rs ${total}) — immediate review needed`);
+    }
+
+    // Zero total with items
+    if (total === 0 && o.items?.length > 0) {
+      anomalies.push(`🚨 Order #${orderNum} — Items added but total is Rs 0`);
+    }
   });
-  if (totalDisc > 500) anomalies.push(`⚠️ Total discounts this shift: Rs ${totalDisc} — above normal`);
+
+  // Shift-level total discount warning
+  if (totalDisc > 1000) {
+    anomalies.push(`⚠️ Total discounts this shift: Rs ${totalDisc} — above normal, review required`);
+  } else if (totalDisc > 500) {
+    mildAlerts.push(`ℹ️ Total discounts this shift: Rs ${totalDisc} — slightly elevated but acceptable`);
+  }
 
   const anomalyEl = document.getElementById('anomaly-section');
+  let html = '';
+
   if (anomalies.length) {
-    anomalyEl.innerHTML = `
-      <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:14px;margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:10px;">🚨 Anomaly Alerts — Review Required</div>
-        ${anomalies.map(a=>`<div style="font-size:13px;color:#f08070;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">${a}</div>`).join('')}
+    html += `
+      <div style="background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);border-radius:11px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:10px;">🚨 Review Required — Action Needed</div>
+        ${anomalies.map(a=>`
+          <div style="font-size:13px;color:#f08070;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">${a}</div>
+        `).join('')}
       </div>`;
-  } else {
-    anomalyEl.innerHTML = `
+  }
+
+  if (mildAlerts.length) {
+    html += `
+      <div style="background:rgba(230,126,34,0.06);border:1px solid rgba(230,126,34,0.2);border-radius:11px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin-bottom:10px;">ℹ️ Mild Alerts — No Action Needed</div>
+        ${mildAlerts.map(a=>`
+          <div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${a}</div>
+        `).join('')}
+      </div>`;
+  }
+
+  if (!anomalies.length && !mildAlerts.length) {
+    html = `
       <div style="background:rgba(39,174,96,0.06);border:1px solid rgba(39,174,96,0.2);border-radius:11px;padding:12px 16px;margin-bottom:14px;">
         <div style="font-size:12px;color:var(--green);font-weight:700;">✅ No anomalies detected — shift looks clean</div>
       </div>`;
   }
+
+  anomalyEl.innerHTML = html;
 }
 
 function exportShiftCSV() {
