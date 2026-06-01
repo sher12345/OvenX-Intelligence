@@ -211,7 +211,6 @@ async function riderLogin() {
   const name   = document.getElementById('rider-name-input').value.trim();
   const phone  = document.getElementById('rider-phone-input').value.trim();
   const branch = document.getElementById('rider-branch-input').value;
-  const errEl  = document.getElementById('splash-err');
 
   if (!name) { showSplashErr('Enter your name'); return; }
 
@@ -219,38 +218,48 @@ async function riderLogin() {
   riderPhone  = phone;
   riderBranch = branch;
 
-  // Try to find existing punch-in for today
-  const today = new Date(); today.setHours(0,0,0,0);
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
-
   try {
-    let { data: existing } = await sb.from('rider_attendance')
+    // Check if already punched in today
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+
+    const { data: existing } = await sb.from('rider_attendance')
       .select('*')
       .eq('name', name)
       .gte('punched_in', today.toISOString())
       .lt('punched_in', tomorrow.toISOString())
       .neq('status', 'off-duty')
-      .single();
+      .maybeSingle();
 
     if (existing) {
+      // Already punched in — just resume session
       riderRecord = existing;
-      riderId = existing.id;
-      dutyStatus = existing.status;
+      riderId     = existing.id;
+      dutyStatus  = existing.status;
+      showToast('Welcome back ' + name + '! Resuming shift 🔥', 'success');
     } else {
-      // Punch in fresh
+      // Fresh punch in — insert row, office sees it instantly
       const { data, error } = await sb.from('rider_attendance').insert([{
-        name, phone: phone || null, branch, status: 'on-duty',
-        punched_in: new Date().toISOString()
+        name,
+        phone: phone || null,
+        branch,
+        status: 'on-duty',
+        punched_in: new Date().toISOString(),
+        punched_out: null
       }]).select().single();
+
       if (error) throw error;
       riderRecord = data;
-      riderId = data.id;
-      dutyStatus = 'on-duty';
+      riderId     = data.id;
+      dutyStatus  = 'on-duty';
+      showToast('Punched in! Office can see you now 🟢', 'success');
     }
   } catch(e) {
-    // If table doesn't exist or other error, use local session
-    riderId = 'local-' + Date.now();
+    // Fallback if Supabase fails
+    riderId     = 'local-' + Date.now();
     riderRecord = { id: riderId, name, phone, branch, status: 'on-duty' };
+    showToast('Logged in (offline mode)', 'info');
+    console.error(e);
   }
 
   document.getElementById('splash').style.display = 'none';
@@ -259,7 +268,6 @@ async function riderLogin() {
   updateDutyUI();
   loadOrders();
   startPolling();
-  showToast('Welcome back, ' + name + '! 🔥', 'success');
 }
 
 function showSplashErr(msg) {
@@ -390,7 +398,7 @@ function renderOrders(activeList, doneList) {
           ${isDelivering ? `<button class="big-btn complete" onclick="markComplete('${o.id}')">✅ MARK DELIVERED</button>` : ''}
           <div class="small-btn-row">
             ${o.phone ? `<button class="sm-btn wa" onclick="callCustomer('${o.phone}')">📞 Call/WA</button>` : ''}
-            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${encodeURIComponent(o.location)}')">🗺 Maps</button>` : ''}
+            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${o.id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
           </div>
         </div>`;
       list.appendChild(card);
@@ -414,20 +422,122 @@ function renderCompleted(doneList) {
   const el = document.getElementById('completed-list');
   el.style.display = completedVisible ? 'block' : 'none';
   if (!completedVisible) return;
-  el.innerHTML = '<div class="section-title" style="margin-bottom:10px;">Completed Today</div>';
-  doneList.forEach(o => {
-    const card = document.createElement('div');
-    card.className = 'order-card done';
-    card.innerHTML = `
-      <span class="oc-badge done">✅ Completed</span>
-      <div class="oc-addr">📍 ${o.location || 'No address'}</div>
-      <div class="oc-items-block" style="font-size:12px;">${o.items || '—'}</div>
-      <div class="oc-total-row">
-        <div class="oc-total-label">Collected: Rs ${(o.subtotal||0)+(o.delivery_fee||0)}</div>
-        <div style="font-size:16px;font-weight:800;color:var(--text3);">Rs ${o.delivery_fee||0} fee</div>
-      </div>`;
-    el.appendChild(card);
-  });
+
+  const totalFees     = doneList.reduce((s,o) => s+(o.delivery_fee||0), 0);
+  const totalShop     = doneList.reduce((s,o) => s+(o.subtotal||0), 0);
+  const totalCash     = doneList.reduce((s,o) => s+(o.subtotal||0)+(o.delivery_fee||0), 0);
+
+  el.innerHTML = `
+    <!-- SUMMARY HEADER -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#4a5568;margin-bottom:10px;">Completed Today</div>
+
+    <!-- AUDIT SUMMARY CARD -->
+    <div style="background:#141920;border:2px solid rgba(39,174,96,0.4);border-radius:16px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#27ae60;margin-bottom:12px;">📋 End of Day Audit Summary</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:#1c2330;border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#27ae60;">${doneList.length}</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4a5568;margin-top:2px;">Deliveries Done</div>
+        </div>
+        <div style="background:#1c2330;border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#e67e22;">Rs ${totalCash.toLocaleString()}</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4a5568;margin-top:2px;">Total Collected</div>
+        </div>
+        <div style="background:#1c2330;border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#2980b9;">Rs ${totalShop.toLocaleString()}</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4a5568;margin-top:2px;">Shop Amount</div>
+        </div>
+        <div style="background:#1c2330;border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#27ae60;">Rs ${totalFees.toLocaleString()}</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4a5568;margin-top:2px;">My Del. Fees</div>
+        </div>
+      </div>
+
+      <!-- WHAT TO HAND OVER -->
+      <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:11px;color:#e67e22;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">💰 Hand Over to Manager</div>
+        <div style="font-size:28px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
+        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Total collected Rs ${totalCash} − Your fees Rs ${totalFees} = Rs ${totalShop}</div>
+      </div>
+
+      <!-- MY EARNINGS -->
+      <div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:10px;padding:12px;">
+        <div style="font-size:11px;color:#27ae60;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">🛵 My Earnings Today</div>
+        <div style="font-size:28px;font-weight:900;color:#27ae60;">Rs ${totalFees.toLocaleString()}</div>
+        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Delivery fee from ${doneList.length} order${doneList.length!==1?'s':''}</div>
+      </div>
+    </div>
+
+    <!-- ORDER BY ORDER BREAKDOWN -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#4a5568;margin-bottom:8px;">Order by Order</div>
+    ${doneList.map((o, idx) => {
+      const completedAt  = o.completed_at ? new Date(o.completed_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+      const createdAt    = o.created_at   ? new Date(o.created_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+      const shopAmt      = o.subtotal || 0;
+      const delFee       = o.delivery_fee || 0;
+      const totalAmt     = shopAmt + delFee;
+      const timeTaken    = (o.completed_at && o.created_at)
+        ? Math.round((new Date(o.completed_at) - new Date(o.created_at)) / 60000)
+        : null;
+
+      return `
+        <div style="background:#141920;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:10px;">
+
+          <!-- ORDER HEADER -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <div style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:#27ae60;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:1px;">✅ #${doneList.length - idx}</div>
+            ${timeTaken !== null ? `<div style="font-size:11px;color:#4a5568;font-weight:600;">⏱ ${timeTaken} min delivery</div>` : ''}
+          </div>
+
+          <!-- ADDRESS -->
+          <div style="font-size:15px;font-weight:800;color:#f0f2f5;margin-bottom:5px;">📍 ${o.location || 'No address'}</div>
+
+          <!-- CUSTOMER -->
+          ${o.customer_name ? `<div style="font-size:12px;color:#8892a4;margin-bottom:3px;">👤 ${o.customer_name}</div>` : ''}
+          ${o.phone ? `<div style="font-size:12px;color:#e67e22;margin-bottom:8px;">📞 ${o.phone}</div>` : ''}
+
+          <!-- ITEMS -->
+          <div style="background:#1c2330;border-radius:8px;padding:9px 11px;font-size:12px;color:#8892a4;white-space:pre-wrap;line-height:1.6;margin-bottom:10px;">${o.items || '—'}</div>
+
+          <!-- TIME ROW -->
+          <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+            <div style="font-size:11px;color:#4a5568;">🕐 Received: <span style="color:#f0f2f5;font-weight:600;">${createdAt}</span></div>
+            <div style="font-size:11px;color:#4a5568;">✅ Delivered: <span style="color:#27ae60;font-weight:600;">${completedAt}</span></div>
+          </div>
+
+          <!-- MONEY BREAKDOWN -->
+          <div style="background:#1c2330;border-radius:10px;overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:12px;color:#8892a4;">Shop Amount</span>
+              <span style="font-size:13px;font-weight:700;color:#f0f2f5;">Rs ${shopAmt}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:12px;color:#8892a4;">Delivery Fee (mine)</span>
+              <span style="font-size:13px;font-weight:700;color:#27ae60;">Rs ${delFee}</span>
+            </div>
+            ${(o.discount||0) > 0 ? `
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:12px;color:#8892a4;">Discount Applied</span>
+              <span style="font-size:13px;font-weight:700;color:#c0392b;">−Rs ${o.discount}</span>
+            </div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:10px 12px;background:rgba(230,126,34,0.08);">
+              <span style="font-size:13px;font-weight:700;color:#f0f2f5;">Collected from Customer</span>
+              <span style="font-size:16px;font-weight:900;color:#e67e22;">Rs ${totalAmt}</span>
+            </div>
+          </div>
+
+        </div>`;
+    }).join('')}
+
+    <!-- FINAL HAND OVER REMINDER -->
+    <div style="background:rgba(192,57,43,0.1);border:2px dashed rgba(192,57,43,0.4);border-radius:14px;padding:16px;margin-top:4px;text-align:center;">
+      <div style="font-size:12px;color:#c0392b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔴 End of Shift — Hand Over</div>
+      <div style="font-size:32px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
+      <div style="font-size:12px;color:#8892a4;margin-top:5px;">to the manager or cashier</div>
+      <div style="font-size:11px;color:#4a5568;margin-top:8px;">Keep your delivery fees: <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
+    </div>
+  `;
 }
 
 function toggleCompleted() {
@@ -468,8 +578,21 @@ function callCustomer(phone) {
   else window.open(`tel:${phone}`, '_self');
 }
 
-function openMaps(address) {
-  window.open(`https://maps.google.com/maps?q=${address}`, '_blank');
+function openMaps(orderId, address) {
+  // Try to get exact GPS coordinates from Supabase first
+  sb.from('kitchen_orders')
+    .select('latitude, longitude, location')
+    .eq('id', orderId)
+    .single()
+    .then(({ data, error }) => {
+      if (!error && data && data.latitude && data.longitude) {
+        // Has exact GPS — open precise pin
+        window.open(`https://maps.google.com/maps?q=${data.latitude},${data.longitude}`, '_blank');
+      } else {
+        // Fallback to address text search
+        window.open(`https://maps.google.com/maps?q=${encodeURIComponent(address)}`, '_blank');
+      }
+    });
 }
 
 // ═══════════════════════════════
