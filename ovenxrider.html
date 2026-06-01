@@ -394,13 +394,18 @@ function renderOrders(activeList, doneList) {
         </div>
         <div class="oc-timer">⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} ago</div>
         <div class="oc-actions">
-          ${!isDelivering ? `<button class="big-btn start" onclick="startDelivery('${o.id}')">▶ START DELIVERY</button>` : ''}
-          ${isDelivering ? `<button class="big-btn complete" onclick="markComplete('${o.id}')">✅ MARK DELIVERED</button>` : ''}
-          <div class="small-btn-row">
-            ${o.phone ? `<button class="sm-btn wa" onclick="callCustomer('${o.phone}')">📞 Call/WA</button>` : ''}
-            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${o.id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
-          </div>
-        </div>`;
+  ${!isDelivering ? `<button class="big-btn start" onclick="startDelivery('${o.id}')">▶ START DELIVERY</button>` : ''}
+  ${isDelivering ? `<button class="big-btn complete" onclick="markComplete('${o.id}')">✅ MARK DELIVERED</button>` : ''}
+  <div class="small-btn-row">
+    ${o.phone ? `<button class="sm-btn wa" onclick="directCall('${o.phone}')" style="background:rgba(39,174,96,0.15);color:#27ae60;border:1px solid rgba(39,174,96,0.3);">📞 Call</button>
+<button class="sm-btn wa" onclick="openWhatsApp('${o.phone}')">💬 WA</button>` : ''}
+    ${o.location ? `<button class="sm-btn map" onclick="openMaps('${o.id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
+  </div>
+  <button onclick="cancelOrder('${o.id}')"
+    style="width:100%;padding:11px;border-radius:10px;background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.3);color:#c0392b;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">
+    🚫 Report Cancellation
+  </button>
+</div>`;
       list.appendChild(card);
     });
   }
@@ -625,30 +630,30 @@ const choice = prompt(
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
-function callCustomer(phone) {
-  let waPhone = phone.replace(/\D/g,'');
-if (waPhone.startsWith('0092'))                              waPhone = waPhone.slice(2);
-else if (waPhone.startsWith('0'))                            waPhone = '92' + waPhone.slice(1);
-else if (waPhone.startsWith('3') && waPhone.length === 10)  waPhone = '92' + waPhone;
-  // Offer call or WA
-  const choice = confirm('Open WhatsApp? (Cancel = Call directly)');
-  if (choice) window.open(`https://wa.me/${waPhone}`, '_blank');
-  else window.open(`tel:${phone}`, '_self');
+function directCall(phone) {
+  window.open('tel:' + phone, '_self');
+}
+
+function openWhatsApp(phone) {
+  let waPhone = phone.replace(/\D/g, '');
+  if (waPhone.startsWith('0'))     waPhone = '92' + waPhone.slice(1);
+  if (waPhone.startsWith('3') && waPhone.length === 10) waPhone = '92' + waPhone;
+  if (!waPhone.startsWith('92') && !waPhone.startsWith('9')) waPhone = '92' + waPhone;
+  window.open('https://wa.me/' + waPhone, '_blank');
 }
 
 function openMaps(orderId, address) {
-  // Try to get exact GPS coordinates from Supabase first
   sb.from('kitchen_orders')
-    .select('latitude, longitude, location')
+    .select('latitude, longitude')
     .eq('id', orderId)
     .single()
     .then(({ data, error }) => {
       if (!error && data && data.latitude && data.longitude) {
-        // Has exact GPS — open precise pin
-        window.open(`https://maps.google.com/maps?q=${data.latitude},${data.longitude}`, '_blank');
+        window.open(`https://www.google.com/maps?q=${data.latitude},${data.longitude}&z=16`, '_blank');
+        showToast('Opening exact location 📍', 'success');
       } else {
-        // Fallback to address text search
-        window.open(`https://maps.google.com/maps?q=${encodeURIComponent(address)}`, '_blank');
+        window.open(`https://maps.google.com/maps?q=${encodeURIComponent(decodeURIComponent(address))}`, '_blank');
+        showToast('No GPS — searching address', 'info');
       }
     });
 }
@@ -682,6 +687,38 @@ function showToast(msg, type = 'success') {
   t.className = 'toast ' + type + ' show';
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+async function cancelOrder(orderId) {
+  const reason = prompt(
+    'Why is this order being cancelled?\n\n' +
+    '1. Customer not available\n' +
+    '2. Customer refused order\n' +
+    '3. Wrong address\n' +
+    '4. Customer called to cancel\n' +
+    '5. Other\n\n' +
+    'Type the reason:'
+  );
+  if (!reason) return; // rider pressed Cancel on prompt
+
+  const confirmed = confirm(
+    'Report this order as cancelled?\n\nReason: ' + reason +
+    '\n\nThis will notify the office.'
+  );
+  if (!confirmed) return;
+
+  try {
+    await sb.from('kitchen_orders').update({
+      status: 'CANCELLED',
+      cancel_reason: reason,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: riderName
+    }).eq('id', orderId);
+
+    showToast('Order reported as cancelled', 'error');
+    loadOrders();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
 </script>
 </body>
