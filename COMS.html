@@ -587,31 +587,97 @@ const BRANCHES = {
 // MENU DATA
 // ═══════════════════════════════
 const menuData = {
-  "Starters":[{n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:599},{n:"Pizza Fries",p:720},{n:"Dragon Shots",p:399},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},{n:"Hot Wings",p:{M:399,L:780}},{n:"Honey Chili Wings",p:{M:449,L:880}},{n:"Cheese Sticks",p:449},{n:"Meat Sticks",p:449},{n:"Nuggets",p:{M:350,L:650}}],
-  "Sandwiches":[{n:"Health Harvest",p:599},{n:"Khameera Sandwich",p:699},{n:"Club Sandwich",p:599}],
-  "Fried Burgers":[{n:"Chicken Patty Burger",p:299},{n:"Zinger Burger",p:420},{n:"Mighty Burger",p:699},{n:"Chipotle Burger",p:649},{n:"Crispy Jalapeno",p:549},{n:"Stuff Jalapeno",p:649}],
-  "Grilled Burgers":[{n:"CM Grilled",p:499},{n:"Smokey Grilled",p:550},{n:"Peri Peri Grilled",p:749},{n:"Drizzler X",p:749},{n:"Jalapeno Blaze",p:749},{n:"Mexi Fiesta",p:749}],
-  "Pan Pizza":[{n:"Chicken Tikka",p:{S:499,M:999,L:1549}},{n:"Chicken Fajita",p:{S:499,M:999,L:1549}},{n:"Chicken Supreme",p:{S:499,M:999,L:1549}},{n:"Cheese Lover",p:{S:499,M:999,L:1549}},{n:"Veg Lover",p:{S:499,M:999,L:1549}},{n:"Sicilian Pizza",p:{S:499,M:999,L:1549}}],
-  "Premium Pizza":[{n:"BBQ Pizza",p:{M:1199,L:1699}},{n:"Creamy Dreamy",p:{M:1199,L:1699}},{n:"OvenX Special Premium",p:{M:1199,L:1699}},{n:"Bonfire Pizza",p:{M:1199,L:1699}}],
-  "Deep Dish":[{n:"Mild Butter",p:{M:1749,L:2449}},{n:"OvenX Special Deep Dish",p:{M:1749,L:2449}}],
-  "Extreme Pizza":[{n:"Extreme Peri Peri",p:{M:1499,L:2049}},{n:"Extreme Flaming Kabab",p:{M:1499,L:2049}},{n:"Crispy Extreme",p:{M:1499,L:2049}}],
-  "Craft Pizza":[{n:"Kabab Crust",p:{Med:1399,Large:1799}},{n:"Crown Crust",p:{Med:1399,Large:1799}},{n:"Cheese Crust",p:{Med:1399,Large:1799}},{n:"Crusti Thin",p:1699}],
-  "Platters":[{n:"Khameera Sandwich Platter",p:699},{n:"Calzone Platter",p:899},{n:"Behari Platter",p:949}],
-  "Pasta":[{n:"Alfredo Pasta",p:749},{n:"OvenX Flaming Pasta",p:650},{n:"Fire Kissed Pasta",p:699},{n:"X-Special Pasta",p:749}],
-  "Wraps & Rolls":[{n:"Chipotle Wrap",p:699},{n:"BBQ Wrap",p:599},{n:"Donar Kabab",p:749},{n:"Crunch Wrap",p:449},{n:"Zingeratha Roll",p:449},{n:"Paratha Roll",p:449},{n:"Malai Roll",p:449},{n:"Behari Roll",p:749},{n:"Peri Peri Wrap",p:749}],
-  "Steaks (BWP)":[{n:"Mexican Steak",p:1549},{n:"Moroccan Steak",p:1549},{n:"Tarragon Steak",p:1549},{n:"Mushroom Steak",p:1549},{n:"Cordon Blue Steak",p:1549},{n:"Stuffed Jalapeno Steak",p:1549},{n:"Pepper Steak",p:1499}],
-  "Add-ons":[{n:"Dip: BBQ",p:70},{n:"Dip: Peri Peri",p:70},{n:"Dip: Bonfire",p:70},{n:"Dip: Special",p:70},{n:"Dip: Chipotle",p:70},{n:"Dip: Creamy Dreamy",p:70},{n:"Dip: Chili Mayo",p:70}],
-  "Drinks":[{n:"Coke Buddy",p:130},{n:"Sprite Buddy",p:130},{n:"Coke 1 Liter",p:190},{n:"Next Cola 1 Liter",p:170},{n:"Coke 1.5L",p:230},{n:"Sprite 1.5L",p:230},{n:"Water Small",p:99},{n:"Water Large",p:170}]
+  "Starters":[
+    {n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:599},{n:"Pizza Fries",p:720},
+    {n:"Dragon Shots",p:399},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},
+    {n:"Hot Wings",p:{M:399,L:780}},{n:"Honey Chili Wings",p:{M:449,L:880}},
+    {n:"Cheese Sticks",p:449},{n:"Meat Sticks",p:449},{n:"Nuggets",p:{M:350,L:650}}
+  ],
+  "Sandwiches":[
+    {n:"Health Harvest",p:599},{n:"Khameera Sandwich",p:699},{n:"Club Sandwich",p:599}
+  ],
+  "Fried Burgers":[
+    {n:"Chicken Patty Burger",p:299},{n:"Zinger Burger",p:420},{n:"Mighty Burger",p:699},
+    {n:"Chipotle Burger",p:699},{n:"Crispy Jalapeno",p:549},{n:"Stuff Jalapeno",p:649}
+  ],
+  "Grilled Burgers":[
+    {n:"CM Grilled",p:599},{n:"Smokey Grilled",p:550},{n:"Peri Peri Grilled",p:749},
+    {n:"Drizzler X",p:799},{n:"Jalapeno Blaze",p:749},{n:"Mexi Fiesta",p:749}
+  ],
+  "Pan Pizza":[
+    {n:"Chicken Tikka",p:{S:499,M:999,L:1549}},{n:"Chicken Fajita",p:{S:499,M:999,L:1549}},
+    {n:"Chicken Supreme",p:{S:499,M:999,L:1549}},{n:"Cheese Lover",p:{S:499,M:999,L:1549}},
+    {n:"Veg Lover",p:{S:499,M:999,L:1549}},{n:"Sicilian Pizza",p:{S:499,M:999,L:1549}}
+  ],
+  "Premium Pizza":[
+    {n:"BBQ Pizza",p:{M:1199,L:1699}},{n:"Creamy Dreamy",p:{M:1199,L:1699}},
+    {n:"OvenX Special Premium",p:{M:1199,L:1699}},{n:"Bonfire Pizza",p:{M:1199,L:1699}}
+  ],
+  "Deep Dish":[
+    {n:"Mild Butter",p:{M:1749,L:2449}},{n:"OvenX Special Deep Dish",p:{M:1749,L:2449}}
+  ],
+  "Extreme Pizza":[
+    {n:"Extreme Peri Peri",p:{M:1549,L:2099}},{n:"Extreme Flaming Kabab",p:{M:1549,L:2099}},
+    {n:"Crispy Extreme",p:{M:1549,L:2099}}
+  ],
+  "Craft Pizza":[
+    {n:"Kabab Crust",p:{Med:1399,Large:1799}},{n:"Crown Crust",p:{Med:1399,Large:1799}},
+    {n:"Cheese Crust",p:{Med:1399,Large:1799}},{n:"Crusti Thin",p:1699}
+  ],
+  "Platters":[
+    {n:"Khameera Sandwich Platter",p:699},{n:"Calzone Platter",p:899},{n:"Behari Platter",p:999}
+  ],
+  "Pasta":[
+    {n:"Alfredo Pasta",p:799},{n:"OvenX Flaming Pasta",p:650},
+    {n:"Fire Kissed Pasta",p:749},{n:"X-Special Pasta",p:749}
+  ],
+  "Wraps & Rolls":[
+    {n:"Chipotle Wrap",p:699},{n:"BBQ Wrap",p:699},{n:"Donar Kabab",p:799},
+    {n:"Crunch Wrap",p:550},{n:"Zingeratha Roll",p:449},{n:"Paratha Roll",p:449},
+    {n:"Malai Roll",p:449},{n:"Behari Roll",p:749},{n:"Peri Peri Wrap",p:749}
+  ],
+  "Steaks (BWP)":[
+    {n:"Mexican Steak",p:1549,bwp:true},{n:"Moroccan Steak",p:1549,bwp:true},
+    {n:"Tarragon Steak",p:1549,bwp:true},{n:"Mushroom Steak",p:1549,bwp:true},
+    {n:"Cordon Blue Steak",p:1549,bwp:true},{n:"Stuffed Jalapeno Steak",p:1549,bwp:true},
+    {n:"Pepper Steak",p:1499,bwp:true}
+  ],
+  "Bar Menu":[
+    {n:"Coke Buddy",p:130},{n:"Sprite Buddy",p:130},{n:"Coke 1 Liter",p:190},
+    {n:"Next Cola 1 Liter",p:170},{n:"Coke 1.5L",p:230},{n:"Sprite 1.5L",p:230},
+    {n:"Water Small",p:99},{n:"Water Large",p:170},{n:"Coke Tin",p:210},
+    {n:"7up Buddy",p:130},{n:"7up Litter",p:190},{n:"7up Tin",p:210},
+    {n:"7up Tin Diet",p:220},{n:"Coke Tin Diet",p:220},
+    {n:"Pepsi Buddy",p:130,bwp:true},{n:"Pepsi Litter",p:190,bwp:true},
+    {n:"Pepsi Tin",p:210,bwp:true},{n:"Pepsi Tin Diet",p:220,bwp:true},
+    {n:"Sprite Tin",p:210},{n:"Sprite Tin Diet",p:220},{n:"Sprite Litter",p:190},
+    {n:"Blue Lagoon",p:220,bwp:true}
+  ],
+  "Add-ons":[
+    {n:"Dip: BBQ",p:70},{n:"Dip: Peri Peri",p:70},{n:"Dip: Bonfire",p:70},
+    {n:"Dip: Special",p:70},{n:"Dip: Chipotle",p:70},{n:"Dip: Creamy Dreamy",p:70},
+    {n:"Dip: Chili Mayo",p:70}
+  ]
 };
 
 const dealsData = [
-  {n:"Midnight Deal 1",d:"2x Med Extreme + 1.5L Drink",p:2699},{n:"Midnight Deal 2",d:"Large Wings + 2x Large Pan + 1.5L",p:3249},
-  {n:"Midnight Deal 3",d:"Large Wings + 2x Large Premium + 1.5L",p:3649},{n:"Midnight Deal 4",d:"1x Med + 1x Large Extreme + 1.5L",p:3149},
-  {n:"Family Feast",d:"2 Med Pizzas + 2 Zingers + 1L + 6 Wings",p:2299},{n:"Extreme Buddy",d:"1 Med Extreme + 1L Drink",p:1449},
-  {n:"Burger Deal 1",d:"2 Zingers + Reg Fries + 2 Drinks",p:999},{n:"Burger Deal 2",d:"1 Zinger + Fries + 1 Drink + 2 Wings",p:990},
-  {n:"Burger Deal 3",d:"4 Zingers + 2 Fries + 1L + 6 Wings",p:1990},{n:"01 PIZZA DEAL",d:"1 Large Pan Pizza + 1L Drink",p:1299},
-  {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1499},{n:"03 PIZZA DEAL",d:"1 Large Crown Pizza + 1L Drink",p:1599},
-  {n:"04 PIZZA DEAL",d:"1 Large Extreme + 1L Drink",p:1999}
+  {n:"01 PIZZA DEAL",d:"1 Large Pan Pizza + 1L Drink",p:1299},
+  {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1599},
+  {n:"03 PIZZA DEAL",d:"1 Large Crown Pizza + 1L Drink",p:1699},
+  {n:"04 PIZZA DEAL",d:"1 Large Extreme Pizza + 1L Drink",p:2150},
+  {n:"Extreme Buddy",d:"1 Med Extreme Pizza + 1L Drink",p:1649},
+  {n:"Family Feast",d:"2 Med Pizzas + 2 Zingers + 1L + 6 Wings",p:2499},
+  {n:"Solo Inferno",d:"1x Small Pizza + 1x Buddy Drink + 2 Wings",p:699},
+  {n:"The X Bite",d:"1x Zinger + 1x Buddy Drink + 2 Wings",p:650},
+  {n:"The Duo Hit",d:"2x Zinger Burger + 1x Reg Fries + 2x Buddy Drink",p:999},
+  {n:"Double Crunch",d:"2x Crunch Wrap + 2x Buddy Drink",p:1299},
+  {n:"The Roll Out",d:"2x Roll + 2x Buddy Drink",p:1099},
+  {n:"Triple Blaze",d:"3x Zinger + 1L Drink",p:1349},
+  {n:"Flame & Fame",d:"2x CM Grilled (Single Patty) + 2x Buddy Drink",p:1199},
+  {n:"Midnight Deal 1",d:"2x Med Extreme + 1.5L Drink",p:2699},
+  {n:"Midnight Deal 2",d:"Large Wings + 2x Large Pan + 1.5L",p:3249},
+  {n:"Midnight Deal 3",d:"Large Wings + 2x Large Premium + 1.5L",p:3649},
+  {n:"Midnight Deal 4",d:"1x Med + 1x Large Extreme + 1.5L",p:3149}
 ];
 
 // ═══════════════════════════════
@@ -958,7 +1024,14 @@ function renderTotals() {
   const sc      = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
   const del     = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
   const discVal = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const disc    = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+const discountableFood = cart.reduce((s, i) => {
+  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
+  return s + (excluded ? 0 : i.price * i.qty);
+}, 0);
+const disc = discType === 'pct'
+  ? Math.round(discountableFood * discVal / 100)
+  : Math.min(discVal, discountableFood);
   const grand   = Math.max(0, food + sc + del - disc);
 
   document.getElementById('t-sub').textContent   = 'Rs ' + food;
@@ -1004,7 +1077,14 @@ function buildOrderObj() {
 
   // ✅ food must be declared BEFORE disc and sc use it
   const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const disc  = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+const discountableFood = cart.reduce((s, i) => {
+  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
+  return s + (excluded ? 0 : i.price * i.qty);
+}, 0);
+const disc = discType === 'pct'
+  ? Math.round(discountableFood * discVal / 100)
+  : Math.min(discVal, discountableFood);
   const scPct = parseInt(document.getElementById('sc-pct')?.value) || 7;
   const sc    = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
 
@@ -1117,7 +1197,15 @@ function sendWhatsAppNotify() {
   const sc       = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
   const del      = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
   const discVal  = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const disc     = discType === 'pct' ? Math.round(food * discVal / 100) : Math.min(discVal, food);
+  // Exclude drinks and deals from discount — same as POS
+const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+const discountableFood = cart.reduce((s, i) => {
+  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
+  return s + (excluded ? 0 : i.price * i.qty);
+}, 0);
+const disc = discType === 'pct'
+  ? Math.round(discountableFood * discVal / 100)
+  : Math.min(discVal, discountableFood);
   const grand    = Math.max(0, food + sc + del - disc);
   const discPct  = discType === 'pct' ? ` (${discVal}% off)` : '';
 
