@@ -3745,7 +3745,9 @@ let orderObj = {
     delivery_fee: delCharge,
     discount: deliveryDiscount,
     discount_claimed: window._discountClaimed === true,
-    branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
+    branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
+    latitude: orderType === 'Delivery' ? (currentCalcData?.userLat || null) : null,
+    longitude: orderType === 'Delivery' ? (currentCalcData?.userLng || null) : null
 };
 
 /// Add customer info based on order type
