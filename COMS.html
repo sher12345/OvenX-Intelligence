@@ -586,6 +586,7 @@ const BRANCHES = {
 // ═══════════════════════════════
 // MENU DATA
 // ═══════════════════════════════
+// ── MENU DATA ──
 const menuData = {
   "Starters":[
     {n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:599},{n:"Pizza Fries",p:720},
@@ -659,7 +660,6 @@ const menuData = {
     {n:"Dip: Chili Mayo",p:70}
   ]
 };
-
 const dealsData = [
   {n:"01 PIZZA DEAL",d:"1 Large Pan Pizza + 1L Drink",p:1299},
   {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1599},
@@ -679,6 +679,25 @@ const dealsData = [
   {n:"Midnight Deal 3",d:"Large Wings + 2x Large Premium + 1.5L",p:3649},
   {n:"Midnight Deal 4",d:"1x Med + 1x Large Extreme + 1.5L",p:3149}
 ];
+// ══════════════════════════════════
+// DEAL FLAVOR MAP (matches web app)
+// ══════════════════════════════════
+const dealFlavorMap = {
+  'Family Feast':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza','BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  'Extreme Buddy':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  '01 PIZZA DEAL':   ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  '02 PIZZA DEAL':   ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  '03 PIZZA DEAL':   ['Kabab Crust','Crown Crust','Cheese Crust'],
+  '04 PIZZA DEAL':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  'Midnight Deal 1': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  'Midnight Deal 2': ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  'Midnight Deal 3': ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
+  'Midnight Deal 4': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  // Custom deals
+  'Solo Inferno':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
+  'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
+  'Double Crunch':   ['Crunch Wrap','Chipotle Wrap','BBQ Wrap','Peri Peri Wrap'],
+};
 
 // ═══════════════════════════════
 // STATE
