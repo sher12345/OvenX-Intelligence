@@ -1677,64 +1677,60 @@ async function renderStats() {
 
   // Fetch today's orders fresh from Supabase
   let liveDbOrders = [];
-  try {
-    const today = new Date(); today.setHours(0,0,0,0);
-    let query = sb.from('kitchen_orders')
-      .select('*')
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: true });
-    if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
-    const { data } = await query;
+  if (!_shiftClosed && shiftStart) {
+    try {
+      let query = sb.from('kitchen_orders')
+        .select('*')
+        .gte('created_at', shiftStart.toISOString())
+        .order('created_at', { ascending: true });
+      if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
+      const { data } = await query;
 
-    // Filter: all deliveries + only this agent's takeaway/dine-in
-    liveDbOrders = (data || []).filter(o => {
-      if (o.type === 'Delivery') return true;
-      if (['Takeaway','Dine-In'].includes(o.type)) {
-        return shiftOrders.some(local => local.id === o.id);
-      }
-      return false;
-    });
+      liveDbOrders = (data || []).filter(o => {
+        if (o.type === 'Delivery') return true;
+        if (['Takeaway','Dine-In'].includes(o.type)) {
+          return shiftOrders.some(local => local.id === o.id);
+        }
+        return false;
+      });
 
-    // Sync back into shiftOrders
-    liveDbOrders.forEach(dbOrder => {
-      const localIdx = shiftOrders.findIndex(o => o.id === dbOrder.id);
-      if (localIdx >= 0) {
-        // Update existing local order with latest DB fields
-        shiftOrders[localIdx] = {
-          ...shiftOrders[localIdx],
-          payment_method: dbOrder.payment_method,
-          status:         dbOrder.status,
-          rider_name:     dbOrder.rider_name,
-          completed_at:   dbOrder.completed_at,
-        };
-      } else {
-        // Delivery from DB not in local memory — add it
-        shiftOrders.push({
-          id:             dbOrder.id,
-          type:           dbOrder.type,
-          branch:         dbOrder.branch,
-          location:       dbOrder.location,
-          items:          dbOrder.items,
-          status:         dbOrder.status,
-          subtotal:       dbOrder.subtotal,
-          delivery_fee:   dbOrder.delivery_fee,
-          discount:       dbOrder.discount,
-          sc:             0,
-          total:          (dbOrder.subtotal||0) + (dbOrder.delivery_fee||0) - (dbOrder.discount||0),
-          customer_name:  dbOrder.customer_name,
-          phone:          dbOrder.phone,
-          rider_name:     dbOrder.rider_name,
-          payment_method: dbOrder.payment_method,
-          time:           new Date(dbOrder.created_at),
-          agent:          dbOrder.source === 'OFFICE' ? (dbOrder.agent_name || currentAgent) : 'Online/App',
-        });
-      }
-    });
+      liveDbOrders.forEach(dbOrder => {
+        const localIdx = shiftOrders.findIndex(o => o.id === dbOrder.id);
+        if (localIdx >= 0) {
+          shiftOrders[localIdx] = {
+            ...shiftOrders[localIdx],
+            payment_method: dbOrder.payment_method,
+            status:         dbOrder.status,
+            rider_name:     dbOrder.rider_name,
+            completed_at:   dbOrder.completed_at,
+          };
+        } else {
+          shiftOrders.push({
+            id:             dbOrder.id,
+            type:           dbOrder.type,
+            branch:         dbOrder.branch,
+            location:       dbOrder.location,
+            items:          dbOrder.items,
+            status:         dbOrder.status,
+            subtotal:       dbOrder.subtotal,
+            delivery_fee:   dbOrder.delivery_fee,
+            discount:       dbOrder.discount,
+            sc:             0,
+            total:          (dbOrder.subtotal||0) + (dbOrder.delivery_fee||0) - (dbOrder.discount||0),
+            customer_name:  dbOrder.customer_name,
+            phone:          dbOrder.phone,
+            rider_name:     dbOrder.rider_name,
+            payment_method: dbOrder.payment_method,
+            time:           new Date(dbOrder.created_at),
+            agent:          dbOrder.source === 'OFFICE' ? (dbOrder.agent_name || currentAgent) : 'Online/App',
+          });
+        }
+      });
 
-    // Update order count in topbar
-    document.getElementById('bar-count').textContent = shiftOrders.length;
+      document.getElementById('bar-count').textContent = shiftOrders.length;
 
-  } catch(e) { console.warn('Stats refresh error:', e); }
+    } catch(e) { console.warn('Stats refresh error:', e); }
+  }
 
   // Shift info bar
   const now = new Date();
@@ -1881,8 +1877,9 @@ async function renderStats() {
   salesOnly.forEach((o,i) => {
     const disc     = o.disc || o.discount || 0;
     const total    = o.total || 0;
-    const food     = total - (o.delCharge || o.delivery_fee || 0);
-    const discPct  = food > 0 ? Math.round((disc / food) * 100) : 0;
+    const delFee   = o.delCharge || o.delivery_fee || 0;
+    const subtotal = o.subtotal || (total - delFee);
+    const discPct  = subtotal > 0 ? Math.round((disc / subtotal) * 100) : 0;
     const orderNum = salesOnly.length - i;
     const custName = o.customer_name || o.custName || 'unknown';
 
@@ -2001,6 +1998,7 @@ function startLivePolling() {
     .subscribe();
 
   _liveTimer = setInterval(() => {
+    if (_shiftClosed) { clearInterval(_liveTimer); return; }
     if (document.getElementById('view-live').classList.contains('active')) renderLiveOrders();
   }, 30000);
 }
@@ -2048,11 +2046,17 @@ function closeModal() {
 }
 async function closeShift() {
   if (!confirm('Close shift?\n\nThis will:\n• Export your full shift report as CSV\n• Reset order count to 0\n• Log you out\n\nContinue?')) return;
+  const shiftStartSnapshot = shiftStart;
+_shiftClosed = true;
+shiftStart = null;
+sb.removeAllChannels();
+clearInterval(_liveTimer);
+clearInterval(_clockTimer);
 
   // Build CSV exactly like exportShiftCSV but auto-download
   const lines = [
     `OVEN X — Office Shift Report`,
-    `Agent: ${currentAgent} | Branch: ${agentBranch} | Start: ${shiftStart?.toLocaleString('en-PK')||'—'} | End: ${new Date().toLocaleString('en-PK')}`,
+    `Agent: ${currentAgent} | Branch: ${agentBranch} | Start: ${shiftStartSnapshot?.toLocaleString('en-PK')||'—'} | End: ${new Date().toLocaleString('en-PK')}`,
     ``,
     `SUMMARY`,
     `Total Orders,${shiftOrders.length}`,
@@ -2123,10 +2127,15 @@ async function closeShift() {
     } catch(e) { console.warn('Shift report save error:', e); }
   }
 
-  // Reset everything
-  shiftOrders = [];
-  _shiftClosed = true;
-  document.getElementById('bar-count').textContent = '0';
+  // Reset everything (already set above)
+shiftOrders = [];
+  // Force clear the UI immediately
+document.getElementById('stats-grid').innerHTML = '<div style="text-align:center;padding:40px;color:var(--green);font-size:14px;font-weight:700;">✅ Shift closed — CSV downloaded — logging out in 2s...</div>';
+document.getElementById('payment-breakdown').innerHTML = '';
+document.getElementById('type-breakdown').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;grid-column:1/-1;">Shift ended</div>';
+document.getElementById('stats-tbody').innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:var(--text3);">Shift closed</td></tr>';
+document.getElementById('anomaly-section').innerHTML = '';
+document.getElementById('bar-count').textContent = '0';
 
   showToast('Shift closed and exported ✅', 'success');
 
@@ -2138,5 +2147,6 @@ async function closeShift() {
   }, 1500);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
