@@ -297,7 +297,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div class="topbar-info" id="bar-time">—</div>
       <div class="topbar-info">Branch: <span id="bar-branch">—</span></div>
       <div class="topbar-info">Orders: <span id="bar-count">0</span></div>
-      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+      <button class="logout-btn" style="background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.3);color:var(--green);font-size:11px;padding:4px 9px;" onclick="closeShift()">✅ Close</button>
+<button class="logout-btn" onclick="doLogout()">LOGOUT</button>
     </div>
   </div>
 
@@ -698,10 +699,19 @@ const dealFlavorMap = {
   'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
   'Double Crunch':   ['Crunch Wrap','Chipotle Wrap','BBQ Wrap','Peri Peri Wrap'],
 };
+const dealConfig = {
+  'Family Feast': 2,
+  'Midnight Deal 1': 2,
+  'Midnight Deal 2': 2,
+  'Midnight Deal 3': 2,
+  'Midnight Deal 4': 2,
+  'The Roll Out': 2,
+};
 
 // ═══════════════════════════════
 // STATE
 // ═══════════════════════════════
+let _shiftClosed = false;
 let currentAgent = '';
 let agentBranch  = 'MULTAN';
 let shiftStart   = null;
@@ -718,6 +728,8 @@ let _liveTimer   = null;
 let _assignOrderId = null;
 let _assignRiderId = null;
 let _riders      = []; // cached today's riders
+let _selectedFlavors = [];
+let _requiredCount = 1;
 
 // ═══════════════════════════════
 // LOGIN
@@ -776,8 +788,8 @@ function showLoginErr(msg) {
   setTimeout(() => el.style.display = 'none', 3000);
 }
 
-function doLogout() {
-  if (!confirm('End shift and logout?')) return;
+async function doLogout() {
+  if (!confirm('Logout without closing shift?\n\nUse "Close Shift" button to export data first.')) return;
   clearInterval(_clockTimer); clearInterval(_liveTimer);
   location.reload();
 }
@@ -932,39 +944,111 @@ function filterMenu(val) {
 // SIZE MODAL
 // ═══════════════════════════════
 function openSizeModal(item) {
-  _sizeItem = item; _sizeQty = 1; _sizeSel = null;
-  document.getElementById('sm-title').textContent = item.n;
-  document.getElementById('sm-note').value = '';
-  document.getElementById('sm-qty').textContent = '1';
-  const grid = document.getElementById('sm-sizes'); grid.innerHTML = '';
+  // 1. Reset Internal State
+  _sizeItem = item; 
+  _sizeQty = 1; 
+  _sizeSel = null;
+  _selectedFlavors = []; 
+  _requiredCount = dealConfig[item.n] || 1; 
 
-  if (typeof item.p === 'object') {
+  const modal = document.getElementById('size-modal');
+  const modalTitle = document.getElementById('sm-title');
+  const grid = document.getElementById('sm-sizes');
+  const noteInput = document.getElementById('sm-note');
+  const confirmBtn = document.getElementById('sm-confirm');
+  
+  // 2. Setup UI
+  modalTitle.textContent = item.n;
+  noteInput.value = '';
+  noteInput.placeholder = "Special note (optional)...";
+  document.getElementById('sm-qty').textContent = '1';
+  grid.innerHTML = '';
+
+  const dealFlavors = dealFlavorMap[item.n];
+
+  // Logic for Deals with Flavors
+  if (dealFlavors) {
+    updateModalTitleProgress(); 
+
+    dealFlavors.forEach(flavor => {
+      const btn = document.createElement('div');
+      btn.className = 'size-opt';
+      btn.innerHTML = `<div class="sz-name">${flavor}</div>`;
+      
+      btn.onclick = () => {
+        if (_selectedFlavors.length < _requiredCount) {
+          _selectedFlavors.push(flavor);
+          
+          // Selection logic
+          if (_requiredCount > 1) {
+  btn.style.background = 'rgba(39, 174, 96, 0.2)';
+  btn.style.borderColor = 'var(--green)';
+  btn.style.color = 'white';
+} else {
+  document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+updateModalTitleProgress();
+        }
+
+        if (_selectedFlavors.length === _requiredCount) {
+          _sizeSel = { sz: _selectedFlavors.join(' + '), price: item.p };
+        }
+      };
+      grid.appendChild(btn);
+    });
+  } 
+  // Logic for Standard Items with Sizes
+  else if (typeof item.p === 'object') {
     for (let sz in item.p) {
-      const btn = document.createElement('div'); btn.className = 'size-opt';
+      const btn = document.createElement('div');
+      btn.className = 'size-opt';
       btn.innerHTML = `<div class="sz-name">${sz}</div><div class="sz-price">Rs ${item.p[sz]}</div>`;
       btn.onclick = () => {
         document.querySelectorAll('.size-opt').forEach(x => x.classList.remove('sel'));
-        btn.classList.add('sel'); _sizeSel = { sz, price: item.p[sz] };
+        btn.classList.add('sel');
+        _sizeSel = { sz, price: item.p[sz] };
       };
       grid.appendChild(btn);
     }
-  } else {
+  } 
+  // Flat Price Items
+  else {
     _sizeSel = { sz: '', price: item.p };
-    grid.innerHTML = `<div style="font-size:16px;font-weight:700;color:var(--orange);text-align:center;padding:8px;">Rs ${item.p}</div>`;
+    grid.innerHTML = `<div style="font-size:16px;font-weight:700;color:var(--orange);text-align:center;padding:15px;width:100%;">Price: Rs ${item.p}</div>`;
   }
 
-  document.getElementById('sm-confirm').onclick = () => {
-    if (typeof item.p === 'object' && !_sizeSel) { showToast('Select a size','error'); return; }
-    const note = document.getElementById('sm-note').value;
-    const name = _sizeSel.sz ? `${item.n} (${_sizeSel.sz})` : item.n;
-    addItem(name, _sizeSel.price, _sizeQty, note);
-    closeModal();
-  };
-  document.getElementById('size-modal').classList.add('open');
+  // 3. THE FIX: Handle "Add to Order"
+  confirmBtn.onclick = () => {
+    // Validation
+    if (dealFlavors && !_sizeSel) {
+  showToast(`Please select ${_requiredCount} flavor${_requiredCount > 1 ? 's' : ''}`, 'error');
+  return;
 }
+if (!dealFlavors && typeof item.p === 'object' && !_sizeSel) {
+  showToast('Please select a size', 'error');
+  return;
+}
+    
+    // Capture data
+    const note = noteInput.value;
+    const finalName = _sizeSel.sz ? `${item.n} (${_sizeSel.sz})` : item.n;
+    const finalPrice = _sizeSel.price;
 
-function changeQty(d) { _sizeQty = Math.max(1, _sizeQty + d); document.getElementById('sm-qty').textContent = _sizeQty; }
-function closeModal() { document.getElementById('size-modal').classList.remove('open'); }
+    // A. Close the modal first (Prevents "stuck" UI)
+    closeModal();
+    
+    // B. Add to cart with a tiny delay to allow UI to breathe
+    setTimeout(() => {
+        addItem(finalName, finalPrice, _sizeQty, note);
+        // Clear variables so they don't ghost into the next item
+        _selectedFlavors = [];
+        _sizeSel = null;
+      }, 50);
+  };
+
+  modal.classList.add('open');
+}
 
 // ═══════════════════════════════
 // CART
@@ -1043,7 +1127,14 @@ function renderTotals() {
   const sc      = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
   const del     = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
   const discVal = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+  const DISCOUNT_EXCLUDED = [
+  // Bar menu
+  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
+  // All deals by name
+  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
+  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
+  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
+];
 const discountableFood = cart.reduce((s, i) => {
   const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
   return s + (excluded ? 0 : i.price * i.qty);
@@ -1096,7 +1187,14 @@ function buildOrderObj() {
 
   // ✅ food must be declared BEFORE disc and sc use it
   const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+  const DISCOUNT_EXCLUDED = [
+  // Bar menu
+  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
+  // All deals by name
+  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
+  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
+  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
+];
 const discountableFood = cart.reduce((s, i) => {
   const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
   return s + (excluded ? 0 : i.price * i.qty);
@@ -1217,7 +1315,14 @@ function sendWhatsAppNotify() {
   const del      = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
   const discVal  = parseFloat(document.getElementById('disc-amount').value) || 0;
   // Exclude drinks and deals from discount — same as POS
-const DISCOUNT_EXCLUDED = ['Coke','Sprite','Water','Next Cola','Deal','Midnight Deal','Family Feast','Extreme Buddy','Burger Deal','PIZZA DEAL'];
+const DISCOUNT_EXCLUDED = [
+  // Bar menu
+  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
+  // All deals by name
+  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
+  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
+  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
+];
 const discountableFood = cart.reduce((s, i) => {
   const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
   return s + (excluded ? 0 : i.price * i.qty);
@@ -1561,6 +1666,15 @@ async function addNewRider() {
 // STATS
 // ═══════════════════════════════
 async function renderStats() {
+  if (_shiftClosed) {
+    document.getElementById('stats-grid').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px;">Shift closed. Export downloaded. Logging out...</div>';
+    document.getElementById('payment-breakdown').innerHTML = '';
+    document.getElementById('type-breakdown').innerHTML = '';
+    document.getElementById('stats-tbody').innerHTML = '';
+    document.getElementById('anomaly-section').innerHTML = '';
+    return;
+  }
+
   // Fetch today's orders fresh from Supabase
   let liveDbOrders = [];
   try {
@@ -1913,6 +2027,116 @@ document.getElementById('add-rider-modal').addEventListener('click', function(e)
 document.getElementById('size-modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+function updateModalTitleProgress() {
+  const title = document.getElementById('sm-title');
+  if (_requiredCount > 1) {
+    title.textContent = _sizeItem.n + 
+      ' — Pick ' + _requiredCount + 
+      ' (' + _selectedFlavors.length + '/' + _requiredCount + ' selected)';
+  } else {
+    title.textContent = _sizeItem.n;
+  }
+}
+
+function changeQty(d) { 
+  _sizeQty = Math.max(1, _sizeQty + d); 
+  document.getElementById('sm-qty').textContent = _sizeQty; 
+}
+
+function closeModal() { 
+  document.getElementById('size-modal').classList.remove('open'); 
+}
+async function closeShift() {
+  if (!confirm('Close shift?\n\nThis will:\n• Export your full shift report as CSV\n• Reset order count to 0\n• Log you out\n\nContinue?')) return;
+
+  // Build CSV exactly like exportShiftCSV but auto-download
+  const lines = [
+    `OVEN X — Office Shift Report`,
+    `Agent: ${currentAgent} | Branch: ${agentBranch} | Start: ${shiftStart?.toLocaleString('en-PK')||'—'} | End: ${new Date().toLocaleString('en-PK')}`,
+    ``,
+    `SUMMARY`,
+    `Total Orders,${shiftOrders.length}`,
+    `Total Revenue,Rs ${shiftOrders.reduce((s,o)=>s+(o.total||0),0).toLocaleString()}`,
+    `Delivery Fees,Rs ${shiftOrders.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.delivery_fee||o.delCharge||0),0).toLocaleString()}`,
+    `Discounts Given,Rs ${shiftOrders.reduce((s,o)=>s+(o.disc||o.discount||0),0).toLocaleString()}`,
+    ``,
+    `#,Time,Branch,Type,Customer,Phone,Address,Items,Subtotal,Del Charge,SC,Discount,Grand Total,Status,Rider,Payment`
+  ];
+
+  shiftOrders.forEach((o, i) => {
+    const clean = s => (s||'—').toString().replace(/,/g,';').replace(/\n/g,' ');
+    const items = Array.isArray(o.items)
+      ? o.items.map(i => `${i.qty}x ${i.name}`).join(' | ')
+      : clean(o.itemsText || o.items_text || o.items);
+    const subtotal = Array.isArray(o.items)
+      ? o.items.reduce((s,i) => s + (i.price*i.qty), 0)
+      : (o.subtotal || 0);
+    lines.push([
+      i+1,
+      new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}),
+      o.branch || orderBranch,
+      o.type || '—',
+      clean(o.customer_name || o.custName),
+      clean(o.phone || o.custPhone),
+      clean(o.location || o.address),
+      clean(items),
+      subtotal,
+      o.delCharge || o.delivery_fee || 0,
+      o.sc || 0,
+      o.disc || o.discount || 0,
+      o.total || 0,
+      o.status || 'SENT',
+      clean(o.rider_name || o.riderName),
+      o.payment_method || '—'
+    ].join(','));
+  });
+
+  // Auto download CSV
+  const csv  = lines.join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `OvenX_Shift_${currentAgent}_${new Date().toISOString().slice(0,10)}_${new Date().toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:false}).replace(':','h')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Save shift report to Supabase before clearing
+  if (sb) {
+    try {
+      const total = shiftOrders.reduce((s,o) => s+(o.total||0), 0);
+      const delFees = shiftOrders.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.delivery_fee||o.delCharge||0),0);
+      await sb.from('shift_reports').insert([{
+        branch: agentBranch === 'ALL' ? 'ALL' : agentBranch,
+        date: new Date().toISOString().slice(0,10),
+        staff: currentAgent,
+        shift_start: shiftStart?.toISOString() || null,
+        shift_end: new Date().toISOString(),
+        total_sales: total - delFees,
+        bills_count: shiftOrders.length,
+        delivery_fees: delFees,
+        discounts_given: shiftOrders.reduce((s,o)=>s+(o.disc||o.discount||0),0),
+        source: 'OFFICE'
+      }]);
+    } catch(e) { console.warn('Shift report save error:', e); }
+  }
+
+  // Reset everything
+  shiftOrders = [];
+  _shiftClosed = true;
+  document.getElementById('bar-count').textContent = '0';
+
+  showToast('Shift closed and exported ✅', 'success');
+
+  // Small delay so toast shows, then logout
+  setTimeout(() => {
+    clearInterval(_clockTimer);
+    clearInterval(_liveTimer);
+    location.reload();
+  }, 1500);
+}
 </script>
 </body>
 </html>
