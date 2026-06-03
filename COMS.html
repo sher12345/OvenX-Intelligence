@@ -154,6 +154,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .oc-timer{font-size:13px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;}
 .status-pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
 .sp-waiting{background:rgba(230,126,34,0.2);color:var(--orange);}
+.sp-pending{background:rgba(230,126,34,0.2);color:var(--orange);}
 .sp-assigned{background:rgba(41,128,185,0.2);color:#5dade2;}
 .sp-completed{background:rgba(100,100,100,0.2);color:var(--text3);}
 .oc-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
@@ -293,13 +294,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <button class="tab-btn" onclick="showView('stats')">📊 My Shift</button>
     </div>
     <div class="topbar-right">
-      <div class="topbar-info">Agent: <span id="bar-agent">—</span></div>
-      <div class="topbar-info" id="bar-time">—</div>
-      <div class="topbar-info">Branch: <span id="bar-branch">—</span></div>
-      <div class="topbar-info">Orders: <span id="bar-count">0</span></div>
-      <button class="logout-btn" style="background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.3);color:var(--green);font-size:11px;padding:4px 9px;" onclick="closeShift()">✅ Close</button>
-<button class="logout-btn" onclick="doLogout()">LOGOUT</button>
-    </div>
+  <div class="topbar-info">Agent: <span id="bar-agent">—</span></div>
+  <div class="topbar-info" id="bar-time">—</div>
+  <div class="topbar-info">Branch: <span id="bar-branch">—</span></div>
+  <div class="topbar-info">Orders: <span id="bar-count">0</span></div>
+  <button class="logout-btn" style="background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.3);color:var(--green);font-size:11px;padding:4px 9px;" onclick="closeShift()">✅ Close</button>
+  <button id="pending-toggle-btn" onclick="togglePendingMode()" style="padding:5px 12px;border-radius:7px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">🔒 Confirm Mode: ON</button>
+  <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+</div>
   </div>
 
   <div class="app-body">
@@ -711,6 +713,7 @@ const dealConfig = {
 // ═══════════════════════════════
 // STATE
 // ═══════════════════════════════
+let pendingModeEnabled = true;
 let _shiftClosed = false;
 let currentAgent = '';
 let agentBranch  = 'MULTAN';
@@ -780,6 +783,7 @@ async function doLogin() {
   setOrderType('Delivery');
   renderActionGrid();
   showToast('Welcome ' + name + '! Shift started 🔥', 'success');
+  loadPendingModeSetting();
 }
 
 function showLoginErr(msg) {
@@ -1376,11 +1380,9 @@ async function renderLiveOrders() {
   const grid = document.getElementById('live-grid');
   const branchFilter = document.getElementById('live-branch-filter').value;
   const showCompleted = document.getElementById('show-completed').checked;
-
   try {
-    let statuses = ['WAITING','ASSIGNED'];
+    let statuses = ['PENDING','WAITING','ASSIGNED'];
     if (showCompleted) statuses.push('COMPLETED');
-
     let query = sb.from('kitchen_orders')
       .select('*')
       .in('status', statuses)
@@ -1391,9 +1393,11 @@ async function renderLiveOrders() {
     const { data, error } = await query;
     if (error) throw error;
 
+    const pending = (data || []).filter(o => o.status === 'PENDING').length;
     const waiting = (data || []).filter(o => o.status === 'WAITING').length;
     const badge = document.getElementById('live-badge');
-    if (waiting > 0) { badge.style.display = 'inline'; badge.textContent = waiting; }
+    const urgentCount = pending + waiting;
+    if (urgentCount > 0) { badge.style.display = 'inline'; badge.textContent = urgentCount; }
     else badge.style.display = 'none';
 
     if (!data || !data.length) {
@@ -1401,18 +1405,39 @@ async function renderLiveOrders() {
       return;
     }
 
+    // Sort: PENDING first, then WAITING, then rest
+    const sorted = [...data].sort((a, b) => {
+      const order = { PENDING: 0, WAITING: 1, ASSIGNED: 2, COMPLETED: 3 };
+      return (order[a.status] ?? 9) - (order[b.status] ?? 9);
+    });
+
     const now = new Date();
     grid.innerHTML = '';
-    data.forEach(o => {
+    sorted.forEach(o => {
       const elapsed = Math.floor((now - new Date(o.created_at)) / 1000);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
       const timerStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
       const isCompleted = o.status === 'COMPLETED';
+      const isPending = o.status === 'PENDING';
 
       const card = document.createElement('div');
       card.className = `order-card ${(o.status || 'waiting').toLowerCase()}`;
+
+      // Extra border for pending
+      if (isPending) {
+        card.style.borderColor = 'var(--orange)';
+        card.style.boxShadow = '0 0 0 2px rgba(230,126,34,0.3)';
+      }
+
       card.innerHTML = `
+        ${isPending ? `
+          <div style="background:rgba(230,126,34,0.15);border:2px solid var(--orange);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center;">
+            <div style="font-size:11px;font-weight:800;color:var(--orange);margin-bottom:6px;letter-spacing:1px;">⚠️ WEBSITE ORDER — CALL TO CONFIRM</div>
+            ${o.phone ? `<div style="font-size:13px;font-weight:700;color:white;margin-bottom:8px;">📞 Call: ${o.phone}</div>` : ''}
+            <button class="oc-btn" style="background:var(--green);color:white;border:none;padding:10px 16px;border-radius:8px;font-weight:800;font-size:12px;width:100%;cursor:pointer;letter-spacing:1px;" onclick="confirmOrder('${o.id}')">✅ CONFIRM — SEND TO KITCHEN</button>
+            <button class="oc-btn red" style="margin-top:6px;width:100%;padding:7px;" onclick="deleteOrder('${o.id}')">❌ CANCEL ORDER</button>
+          </div>` : ''}
         <div class="oc-top">
           <div>
             <div class="oc-loc">${(o.location || '—').slice(0,30)}</div>
@@ -1431,12 +1456,13 @@ async function renderLiveOrders() {
           <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Del: Rs ${o.delivery_fee||0}</span>
           <span class="oc-total">Rs ${(o.subtotal||0)+(o.delivery_fee||0)}</span>
         </div>
-        ${!isCompleted ? `<div class="oc-actions">
+        ${!isCompleted && !isPending ? `<div class="oc-actions">
           ${o.status==='WAITING' ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
           ${o.status==='ASSIGNED' ? `<span style="font-size:11px;color:var(--text3);">Waiting for rider to complete...</span>` : ''}
           ${o.phone ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
           <button class="oc-btn red" onclick="deleteOrder('${o.id}')">🗑️</button>
-        </div>` : `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px;">✅ Completed by ${o.rider_name||'rider'}</div>`}
+        </div>` : ''}
+        ${isCompleted ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px;">✅ Completed by ${o.rider_name||'rider'}</div>` : ''}
       `;
       grid.appendChild(card);
     });
@@ -1444,6 +1470,56 @@ async function renderLiveOrders() {
     grid.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;grid-column:1/-1;">Error loading orders</div>';
     console.error(e);
   }
+}
+
+async function confirmOrder(id) {
+  try {
+    await sb.from('kitchen_orders').update({ status: 'WAITING' }).eq('id', id);
+    showToast('✅ Order confirmed — sent to kitchen!', 'success');
+    renderLiveOrders();
+  } catch(e) {
+    showToast('Error confirming order', 'error');
+  }
+}
+async function togglePendingMode() {
+  pendingModeEnabled = !pendingModeEnabled;
+  try {
+    await sb.from('app_settings').upsert([{
+      key: 'pending_mode',
+      value: pendingModeEnabled ? 'true' : 'false'
+    }], { onConflict: 'key' });
+  } catch(e) { console.error(e); }
+
+  const btn = document.getElementById('pending-toggle-btn');
+  if (pendingModeEnabled) {
+    btn.textContent = '🔒 Confirm Mode: ON';
+    btn.style.background = 'rgba(39,174,96,0.15)';
+    btn.style.borderColor = 'rgba(39,174,96,0.3)';
+    btn.style.color = 'var(--green)';
+    showToast('Confirm mode ON — website orders need approval', 'success');
+  } else {
+    btn.textContent = '🔓 Confirm Mode: OFF';
+    btn.style.background = 'rgba(192,57,43,0.15)';
+    btn.style.borderColor = 'rgba(192,57,43,0.3)';
+    btn.style.color = 'var(--red)';
+    showToast('Confirm mode OFF — all orders go straight to kitchen', 'info');
+  }
+}
+
+async function loadPendingModeSetting() {
+  try {
+    const { data } = await sb.from('app_settings').select('value').eq('key', 'pending_mode').single();
+    if (data) {
+      pendingModeEnabled = data.value === 'true';
+      const btn = document.getElementById('pending-toggle-btn');
+      if (!pendingModeEnabled) {
+        btn.textContent = '🔓 Confirm Mode: OFF';
+        btn.style.background = 'rgba(192,57,43,0.15)';
+        btn.style.borderColor = 'rgba(192,57,43,0.3)';
+        btn.style.color = 'var(--red)';
+      }
+    }
+  } catch(e) {}
 }
 
 async function deleteOrder(id) {
@@ -1988,11 +2064,11 @@ function startLivePolling() {
     .on('postgres_changes', { event:'*', schema:'public', table:'kitchen_orders' }, () => {
       if (document.getElementById('view-live').classList.contains('active')) renderLiveOrders();
       else {
-        sb.from('kitchen_orders').select('id').eq('status','WAITING').eq('type','Delivery').then(({data}) => {
-          const badge = document.getElementById('live-badge');
-          if (data && data.length > 0) { badge.style.display='inline'; badge.textContent=data.length; }
-          else badge.style.display='none';
-        });
+        sb.from('kitchen_orders').select('id').in('status',['PENDING','WAITING']).eq('type','Delivery').then(({data}) => {
+  const badge = document.getElementById('live-badge');
+  if (data && data.length > 0) { badge.style.display='inline'; badge.textContent=data.length; }
+  else badge.style.display='none';
+});
       }
     })
     .subscribe();
