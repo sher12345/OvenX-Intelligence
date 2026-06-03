@@ -3740,7 +3740,7 @@ let orderObj = {
     type: orderType, 
     location: orderType === 'Dine-In' ? tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
     items: itemsText, 
-    status: 'WAITING', 
+    status: 'PENDING', 
     subtotal: foodTotal + sc - deliveryDiscount,
     delivery_fee: delCharge,
     discount: deliveryDiscount,
@@ -4534,7 +4534,7 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
         if(!sb) return; 
         
         if (currentKitchenFilter !== 'CALC_HISTORY') {
-            let query = sb.from('kitchen_orders').select('*').order('created_at', { ascending: false });
+            let query = sb.from('kitchen_orders').select('*').neq('status','PENDING').order('created_at', { ascending: false });
             if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
             if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
             const { data: orders } = await query; 
