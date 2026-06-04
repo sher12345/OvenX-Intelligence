@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -735,6 +736,52 @@ let _selectedFlavors = [];
 let _requiredCount = 1;
 
 // ═══════════════════════════════
+// SESSION PERSISTENCE
+// ═══════════════════════════════
+function saveSession() {
+  if (!currentAgent || !shiftStart) return;
+  try {
+    localStorage.setItem('ovx_session', JSON.stringify({
+      currentAgent,
+      agentBranch,
+      shiftStart: shiftStart.toISOString(),
+      orderBranch,
+      shiftOrders
+    }));
+  } catch(e) { console.warn('Session save failed:', e); }
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem('ovx_session');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s.currentAgent || !s.shiftStart) return false;
+
+    // Check if session is from today
+    const sessionDate = new Date(s.shiftStart).toDateString();
+    if (sessionDate !== new Date().toDateString()) {
+      localStorage.removeItem('ovx_session');
+      return false;
+    }
+
+    currentAgent = s.currentAgent;
+    agentBranch  = s.agentBranch;
+    shiftStart   = new Date(s.shiftStart);
+    orderBranch  = s.orderBranch;
+    shiftOrders  = s.shiftOrders || [];
+    return true;
+  } catch(e) {
+    localStorage.removeItem('ovx_session');
+    return false;
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem('ovx_session');
+}
+
+// ═══════════════════════════════
 // LOGIN
 // ═══════════════════════════════
 async function doLogin() {
@@ -782,9 +829,40 @@ async function doLogin() {
   startLivePolling();
   setOrderType('Delivery');
   renderActionGrid();
+  saveSession();
   showToast('Welcome ' + name + '! Shift started 🔥', 'success');
   loadPendingModeSetting();
 }
+
+// ═══════════════════════════════
+// AUTO-RESTORE SESSION ON LOAD
+// ═══════════════════════════════
+(function() {
+  if (!loadSession()) return;
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('bar-agent').textContent = currentAgent;
+  document.getElementById('bar-branch').textContent = agentBranch === 'ALL' ? 'All' : (BRANCHES[agentBranch]?.name || agentBranch);
+  document.getElementById('bar-count').textContent = shiftOrders.length;
+
+  if (agentBranch !== 'ALL') {
+    document.getElementById('live-branch-filter').value = agentBranch;
+    setOrderBranch(agentBranch);
+    document.getElementById('branch-select-row').style.display = 'none';
+  }
+
+  startClock();
+  renderMenu();
+  renderLiveOrders();
+  renderRiders();
+  renderStats();
+  startLivePolling();
+  setOrderType('Delivery');
+  renderActionGrid();
+  loadPendingModeSetting();
+  showToast('Session restored — welcome back ' + currentAgent + '!', 'info');
+})();
 
 function showLoginErr(msg) {
   const el = document.getElementById('login-err');
@@ -795,6 +873,7 @@ function showLoginErr(msg) {
 async function doLogout() {
   if (!confirm('Logout without closing shift?\n\nUse "Close Shift" button to export data first.')) return;
   clearInterval(_clockTimer); clearInterval(_liveTimer);
+  clearSession();
   location.reload();
 }
 
@@ -1238,6 +1317,7 @@ async function sendToKitchen() {
     if (error) throw error;
     const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
     shiftOrders.push(savedOrder);
+    saveSession();
     document.getElementById('bar-count').textContent = shiftOrders.length;
     showToast('✅ Delivery order sent to kitchen!', 'success');
     renderStats(); renderLiveOrders(); clearOrder();
@@ -1289,6 +1369,7 @@ async function sendToKitchenSilent() {
     if (error) throw error;
     const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
     shiftOrders.push(savedOrder);
+    saveSession();
     document.getElementById('bar-count').textContent = shiftOrders.length;
     renderStats(); clearOrder();
   } catch(e) { console.error(e); }
@@ -1758,15 +1839,14 @@ async function renderStats() {
       let query = sb.from('kitchen_orders')
         .select('*')
         .gte('created_at', shiftStart.toISOString())
+        .in('type', ['Delivery', 'Takeaway'])
         .order('created_at', { ascending: true });
       if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
       const { data } = await query;
-
       liveDbOrders = (data || []).filter(o => {
         if (o.type === 'Delivery') return true;
-        if (['Takeaway','Dine-In'].includes(o.type)) {
-          return shiftOrders.some(local => local.id === o.id);
-        }
+        if (o.type === 'Takeaway') return true;
+        if (o.type === 'Dine-In') return shiftOrders.some(local => local.id === o.id);
         return false;
       });
 
@@ -2219,10 +2299,12 @@ document.getElementById('bar-count').textContent = '0';
   setTimeout(() => {
     clearInterval(_clockTimer);
     clearInterval(_liveTimer);
+    clearSession();
     location.reload();
   }, 1500);
 }
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
