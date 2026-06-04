@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -407,7 +406,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <!-- LIVE ORDERS VIEW -->
       <div class="view" id="view-live">
         <div class="live-header">
-          <div class="live-title">📡 Live Delivery Orders</div>
+          <div class="live-title">📡 Live Orders</div>
           <div style="display:flex;gap:8px;align-items:center;">
             <select id="live-branch-filter" onchange="renderLiveOrders()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;">
               <option value="ALL">All Branches</option>
@@ -736,52 +735,6 @@ let _selectedFlavors = [];
 let _requiredCount = 1;
 
 // ═══════════════════════════════
-// SESSION PERSISTENCE
-// ═══════════════════════════════
-function saveSession() {
-  if (!currentAgent || !shiftStart) return;
-  try {
-    localStorage.setItem('ovx_session', JSON.stringify({
-      currentAgent,
-      agentBranch,
-      shiftStart: shiftStart.toISOString(),
-      orderBranch,
-      shiftOrders
-    }));
-  } catch(e) { console.warn('Session save failed:', e); }
-}
-
-function loadSession() {
-  try {
-    const raw = localStorage.getItem('ovx_session');
-    if (!raw) return false;
-    const s = JSON.parse(raw);
-    if (!s.currentAgent || !s.shiftStart) return false;
-
-    // Check if session is from today
-    const sessionDate = new Date(s.shiftStart).toDateString();
-    if (sessionDate !== new Date().toDateString()) {
-      localStorage.removeItem('ovx_session');
-      return false;
-    }
-
-    currentAgent = s.currentAgent;
-    agentBranch  = s.agentBranch;
-    shiftStart   = new Date(s.shiftStart);
-    orderBranch  = s.orderBranch;
-    shiftOrders  = s.shiftOrders || [];
-    return true;
-  } catch(e) {
-    localStorage.removeItem('ovx_session');
-    return false;
-  }
-}
-
-function clearSession() {
-  localStorage.removeItem('ovx_session');
-}
-
-// ═══════════════════════════════
 // LOGIN
 // ═══════════════════════════════
 async function doLogin() {
@@ -829,40 +782,9 @@ async function doLogin() {
   startLivePolling();
   setOrderType('Delivery');
   renderActionGrid();
-  saveSession();
   showToast('Welcome ' + name + '! Shift started 🔥', 'success');
   loadPendingModeSetting();
 }
-
-// ═══════════════════════════════
-// AUTO-RESTORE SESSION ON LOAD
-// ═══════════════════════════════
-(function() {
-  if (!loadSession()) return;
-
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').classList.add('active');
-  document.getElementById('bar-agent').textContent = currentAgent;
-  document.getElementById('bar-branch').textContent = agentBranch === 'ALL' ? 'All' : (BRANCHES[agentBranch]?.name || agentBranch);
-  document.getElementById('bar-count').textContent = shiftOrders.length;
-
-  if (agentBranch !== 'ALL') {
-    document.getElementById('live-branch-filter').value = agentBranch;
-    setOrderBranch(agentBranch);
-    document.getElementById('branch-select-row').style.display = 'none';
-  }
-
-  startClock();
-  renderMenu();
-  renderLiveOrders();
-  renderRiders();
-  renderStats();
-  startLivePolling();
-  setOrderType('Delivery');
-  renderActionGrid();
-  loadPendingModeSetting();
-  showToast('Session restored — welcome back ' + currentAgent + '!', 'info');
-})();
 
 function showLoginErr(msg) {
   const el = document.getElementById('login-err');
@@ -873,7 +795,6 @@ function showLoginErr(msg) {
 async function doLogout() {
   if (!confirm('Logout without closing shift?\n\nUse "Close Shift" button to export data first.')) return;
   clearInterval(_clockTimer); clearInterval(_liveTimer);
-  clearSession();
   location.reload();
 }
 
@@ -1317,7 +1238,6 @@ async function sendToKitchen() {
     if (error) throw error;
     const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
     shiftOrders.push(savedOrder);
-    saveSession();
     document.getElementById('bar-count').textContent = shiftOrders.length;
     showToast('✅ Delivery order sent to kitchen!', 'success');
     renderStats(); renderLiveOrders(); clearOrder();
@@ -1369,7 +1289,6 @@ async function sendToKitchenSilent() {
     if (error) throw error;
     const savedOrder = { ...orderObj, id: data[0].id, time: new Date(), total: d.grand, agent: currentAgent };
     shiftOrders.push(savedOrder);
-    saveSession();
     document.getElementById('bar-count').textContent = shiftOrders.length;
     renderStats(); clearOrder();
   } catch(e) { console.error(e); }
@@ -1467,7 +1386,7 @@ async function renderLiveOrders() {
     let query = sb.from('kitchen_orders')
       .select('*')
       .in('status', statuses)
-      .eq('type', 'Delivery')
+      .in('type', ['Delivery', 'Takeaway'])
       .order('created_at', { ascending: false })
       .limit(80);
     if (branchFilter !== 'ALL') query = query.eq('branch', branchFilter);
@@ -1836,13 +1755,14 @@ async function renderStats() {
   let liveDbOrders = [];
   if (!_shiftClosed && shiftStart) {
     try {
-      let query = sb.from('kitchen_orders')
+     let query = sb.from('kitchen_orders')
         .select('*')
         .gte('created_at', shiftStart.toISOString())
         .in('type', ['Delivery', 'Takeaway'])
         .order('created_at', { ascending: true });
       if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
       const { data } = await query;
+
       liveDbOrders = (data || []).filter(o => {
         if (o.type === 'Delivery') return true;
         if (o.type === 'Takeaway') return true;
@@ -2144,7 +2064,7 @@ function startLivePolling() {
     .on('postgres_changes', { event:'*', schema:'public', table:'kitchen_orders' }, () => {
       if (document.getElementById('view-live').classList.contains('active')) renderLiveOrders();
       else {
-        sb.from('kitchen_orders').select('id').in('status',['PENDING','WAITING']).eq('type','Delivery').then(({data}) => {
+        sb.from('kitchen_orders').select('id').in('status',['PENDING','WAITING']).in('type',['Delivery','Takeaway']).then(({data}) => {
   const badge = document.getElementById('live-badge');
   if (data && data.length > 0) { badge.style.display='inline'; badge.textContent=data.length; }
   else badge.style.display='none';
@@ -2299,7 +2219,6 @@ document.getElementById('bar-count').textContent = '0';
   setTimeout(() => {
     clearInterval(_clockTimer);
     clearInterval(_liveTimer);
-    clearSession();
     location.reload();
   }, 1500);
 }
