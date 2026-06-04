@@ -3736,11 +3736,21 @@ if (orderType === 'Delivery') {
     }).join("\n");
 
 // Build order object for database
+// REPLACE WITH:
+let pendingMode = true;
+try {
+    if (sb) {
+        const { data: setting } = await sb.from('app_settings')
+            .select('value').eq('key', 'pending_mode').single();
+        if (setting) pendingMode = setting.value === 'true';
+    }
+} catch(e) {}
+
 let orderObj = { 
     type: orderType, 
     location: orderType === 'Dine-In' ? tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
     items: itemsText, 
-    status: 'PENDING', 
+    status: (orderType === 'Delivery' && pendingMode) ? 'PENDING' : 'WAITING', 
     subtotal: foodTotal + sc - deliveryDiscount,
     delivery_fee: delCharge,
     discount: deliveryDiscount,
