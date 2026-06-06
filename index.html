@@ -3777,42 +3777,6 @@ if (orderType === 'Takeaway') {
     try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
 if (orderId) initCustomerTracking(orderId, orderObj);
 // REPLACE WITH:
-let bonus = "";
-const memberPhone = localStorage.getItem('ovenx_member_phone');
-
-if (memberPhone && sb) {
-    try {
-        // Always fetch current stamps from DB — never trust localStorage alone
-        const { data: memberData } = await sb.from('gold_club_members')
-            .select('*').eq('phone', memberPhone);
-
-        if (memberData && memberData.length > 0) {
-            const member = memberData[0];
-            let stamps = member.stamps || 0;
-
-            if (stamps >= 10) {
-                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-                // Reset stamps in DB
-                await sb.from('gold_club_members')
-                    .update({ stamps: 0 })
-                    .eq('phone', memberPhone);
-                localStorage.setItem('ovenx_stamps', 0);
-
-            } else if (foodTotal >= 1000) {
-                const newStamps = stamps + 1;
-                // Save to DB
-                await sb.from('gold_club_members')
-                    .update({ stamps: newStamps })
-                    .eq('phone', memberPhone);
-                localStorage.setItem('ovenx_stamps', newStamps);
-            }
-        }
-    } catch(e) {
-        console.error('Stamp sync error:', e);
-    }
-}
-
     let headerInfo = `*OVEN X - ${window.carPlateNumber ? 'CAR DINE' : orderType.toUpperCase()} ORDER*`; 
 
 if (orderType === 'Dine-In' && tableNum) {
@@ -3835,30 +3799,57 @@ if (orderType === 'Takeaway') {
     customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
 }
 // Dine-in: no phone needed
-const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
-    // ============================================
-    // NEW: Dual WhatsApp for Delivery Orders
-    // ============================================
-    
-    const br = activeBranch || BRANCH_CONFIG.MULTAN;
-    const KITCHEN_NUMBER = br.phone;
-    const CUSTOMER_CARE_NUMBER = br.cc_phone;
+// waMsg and WhatsApp send moved to AFTER stamps logic below
+}
 
-    if (orderType === 'Delivery') {
-        // Delivery: Send to BOTH numbers
-        
-        // 1. Kitchen (main order) - same tab
-        window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
-        
-        // 2. Customer Care (copy) - new tab after delay
-        setTimeout(() => {
-            window.open(`https://wa.me/${CUSTOMER_CARE_NUMBER}?text=${waMsg}`, '_blank');
-        }, 1500);
-        
-    } else {
-        // Dine-in/Takeaway: Only to Kitchen (original behavior)
-        window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
+let bonus = "";
+const memberPhone = localStorage.getItem('ovenx_member_phone');
+
+if (memberPhone && sb) {
+    try {
+        const { data: memberData } = await sb.from('gold_club_members')
+            .select('*').eq('phone', memberPhone);
+
+        if (memberData && memberData.length > 0) {
+            const member = memberData[0];
+            let stamps = member.stamps || 0;
+
+            if (stamps >= 10) {
+                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
+                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+                await sb.from('gold_club_members')
+                    .update({ stamps: 0 })
+                    .eq('phone', memberPhone);
+                localStorage.setItem('ovenx_stamps', 0);
+
+            } else if (foodTotal >= 1000) {
+                const newStamps = stamps + 1;
+                await sb.from('gold_club_members')
+                    .update({ stamps: newStamps })
+                    .eq('phone', memberPhone);
+                localStorage.setItem('ovenx_stamps', newStamps);
+            }
+        }
+    } catch(e) {
+        console.error('Stamp sync error:', e);
     }
+}
+
+// NOW build waMsg AFTER bonus is set
+const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
+
+const br = activeBranch || BRANCH_CONFIG.MULTAN;
+const KITCHEN_NUMBER = br.phone;
+const CUSTOMER_CARE_NUMBER = br.cc_phone;
+
+if (orderType === 'Delivery') {
+    window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
+    setTimeout(() => {
+        window.open(`https://wa.me/${CUSTOMER_CARE_NUMBER}?text=${waMsg}`, '_blank');
+    }, 1500);
+} else {
+    window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
+}
 }
 
     function addToCartFinal() { 
