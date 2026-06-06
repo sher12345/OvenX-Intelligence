@@ -3698,165 +3698,165 @@ function validateAndSubmitOrder() {
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
     
     // === 10% DELIVERY DISCOUNT — FOOD ONLY (Excludes Deals + All Drinks) ===
-const isDealItem = (name) => dealsData.some(d => 
-    name.toLowerCase().includes(d.name.toLowerCase())
-);
+    const isDealItem = (name) => dealsData.some(d => 
+        name.toLowerCase().includes(d.name.toLowerCase())
+    );
 
-const drinkKeywords = [
-    "coke", "sprite", "cola", "buddy", "1 liter", "1.5l", "1.5 l", 
-    "water", "margarita", "lemonade", "pina colada", "red rose", 
-    "fresh lime", "blue lagoon", "mint", "drink", "next cola"
-];
+    const drinkKeywords = [
+        "coke", "sprite", "cola", "buddy", "1 liter", "1.5l", "1.5 l", 
+        "water", "margarita", "lemonade", "pina colada", "red rose", 
+        "fresh lime", "blue lagoon", "mint", "drink", "next cola"
+    ];
 
-let deliveryDiscount = 0;
+    let deliveryDiscount = 0;
 
-if (orderType === 'Delivery') {
-    const eligibleTotal = cart
-        .filter(item => {
-            const n = item.name.toLowerCase();
-
-            // Exclude Deals / Combos
-            if (isDealItem(n)) return false;
-
-            // Exclude Drinks
-            if (drinkKeywords.some(kw => n.includes(kw))) return false;
-
-            return true;   // Regular food item → eligible for 10%
-        })
-        .reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-    deliveryDiscount = Math.round(eligibleTotal * 0.10);
-}
+    if (orderType === 'Delivery') {
+        const eligibleTotal = cart
+            .filter(item => {
+                const n = item.name.toLowerCase();
+                if (isDealItem(n)) return false;
+                if (drinkKeywords.some(kw => n.includes(kw))) return false;
+                return true;
+            })
+            .reduce((sum, item) => sum + (item.price * item.qty), 0);
+        deliveryDiscount = Math.round(eligibleTotal * 0.10);
+    }
     
     const grand = foodTotal + sc + delCharge - deliveryDiscount;
+    
     const itemsText = cart.map(i => {
         let detail = i.qty + "x " + i.name;
         if (i.note) detail += " [" + i.note + "]"; 
         return detail;
     }).join("\n");
 
-// Build order object for database
-// REPLACE WITH:
-let pendingMode = true;
-try {
-    if (sb) {
-        const { data: setting } = await sb.from('app_settings')
-            .select('value').eq('key', 'pending_mode').single();
-        if (setting) pendingMode = setting.value === 'true';
-    }
-} catch(e) {}
-
-let orderObj = { 
-    type: orderType, 
-    location: orderType === 'Dine-In' ? tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
-    items: itemsText, 
-    status: (orderType === 'Delivery' && pendingMode) ? 'PENDING' : 'WAITING', 
-    subtotal: foodTotal + sc - deliveryDiscount,
-    delivery_fee: delCharge,
-    discount: deliveryDiscount,
-    discount_claimed: window._discountClaimed === true,
-    branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
-    latitude: orderType === 'Delivery' ? (currentCalcData?.userLat || null) : null,
-    longitude: orderType === 'Delivery' ? (currentCalcData?.userLng || null) : null
-};
-
-/// Add customer info based on order type
-if (orderType === 'Takeaway') {
-    orderObj.customer_name = window.takeawayCustomerName || '';
-    orderObj.phone = window.takeawayCustomerPhone || '';
-    if (window.carPlateNumber) {
-        orderObj.location = 'Car Dine: ' + window.carPlateNumber;
-    } else {
-        orderObj.location = 'Takeaway';
-    }
-} else if (orderType === 'Delivery') {
-    orderObj.phone = deliveryPhone;
-}
-// Dine-in: no phone, no name needed    
-    let orderId = null;
-    try { if(sb) { const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); if(data && data[0]) orderId = data[0].id; } } catch(e) { }
-if (orderId) initCustomerTracking(orderId, orderObj);
-// REPLACE WITH:
-let bonus = "";
-const memberPhone = localStorage.getItem('ovenx_member_phone');
-
-if (memberPhone && sb) {
+    // Check pending mode
+    let pendingMode = true;
     try {
-        // Always fetch current stamps from DB — never trust localStorage alone
-        const { data: memberData } = await sb.from('gold_club_members')
-            .select('*').eq('phone', memberPhone);
-
-        if (memberData && memberData.length > 0) {
-            const member = memberData[0];
-            let stamps = member.stamps || 0;
-
-            if (stamps >= 10) {
-                const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-                bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-                // Reset stamps in DB
-                await sb.from('gold_club_members')
-                    .update({ stamps: 0 })
-                    .eq('phone', memberPhone);
-                localStorage.setItem('ovenx_stamps', 0);
-
-            } else if (foodTotal >= 1000) {
-                const newStamps = stamps + 1;
-                // Save to DB
-                await sb.from('gold_club_members')
-                    .update({ stamps: newStamps })
-                    .eq('phone', memberPhone);
-                localStorage.setItem('ovenx_stamps', newStamps);
-            }
+        if (sb) {
+            const { data: setting } = await sb.from('app_settings')
+                .select('value').eq('key', 'pending_mode').single();
+            if (setting) pendingMode = setting.value === 'true';
         }
-    } catch(e) {
-        console.error('Stamp sync error:', e);
-    }
-}
+    } catch(e) {}
 
+    // Build order object
+    let orderObj = { 
+        type: orderType, 
+        location: orderType === 'Dine-In' ? tableNum : (orderType === 'Takeaway' ? 'Takeaway' : userAddress),
+        items: itemsText, 
+        status: (orderType === 'Delivery' && pendingMode) ? 'PENDING' : 'WAITING', 
+        subtotal: foodTotal + sc - deliveryDiscount,
+        delivery_fee: delCharge,
+        discount: deliveryDiscount,
+        discount_claimed: window._discountClaimed === true,
+        branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
+        latitude: orderType === 'Delivery' ? (currentCalcData?.userLat || null) : null,
+        longitude: orderType === 'Delivery' ? (currentCalcData?.userLng || null) : null
+    };
+
+    // Add customer info based on order type
+    if (orderType === 'Takeaway') {
+        orderObj.customer_name = window.takeawayCustomerName || '';
+        orderObj.phone = window.takeawayCustomerPhone || '';
+        if (window.carPlateNumber) {
+            orderObj.location = 'Car Dine: ' + window.carPlateNumber;
+        } else {
+            orderObj.location = 'Takeaway';
+        }
+    } else if (orderType === 'Delivery') {
+        orderObj.phone = deliveryPhone;
+    }
+
+    // Save to Supabase
+    let orderId = null;
+    try { 
+        if (sb) { 
+            const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); 
+            if (data && data[0]) orderId = data[0].id; 
+        } 
+    } catch(e) { }
+
+    // Start customer tracking
+    if (orderId) initCustomerTracking(orderId, orderObj);
+
+    // Build WhatsApp message header
     let headerInfo = `*OVEN X - ${window.carPlateNumber ? 'CAR DINE' : orderType.toUpperCase()} ORDER*`; 
 
-if (orderType === 'Dine-In' && tableNum) {
-    headerInfo += `\n*TABLE: ${tableNum}*`;
-}
+    if (orderType === 'Dine-In' && tableNum) {
+        headerInfo += `\n*TABLE: ${tableNum}*`;
+    }
+    if (orderType === 'Delivery' && userAddress) {
+        headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
+    }
 
-if (orderType === 'Delivery' && userAddress) {
-    headerInfo += `\n📍 *ADDRESS:* ${userAddress}`;
-}
+    // Build customer info section
+    let customerInfo = "";
+    if (orderType === 'Takeaway') {
+        const custName = window.takeawayCustomerName || '';
+        const custPhone = window.takeawayCustomerPhone || '';
+        const carPlate = window.carPlateNumber || '';
+        customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${custPhone}`;
+        if (carPlate) customerInfo += `\n🚗 *Car Plate:* ${carPlate}`;
+    } else if (orderType === 'Delivery') {
+        customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
+    }
 
-// Build customer info section
-let customerInfo = "";
-if (orderType === 'Takeaway') {
-    const custName = window.takeawayCustomerName || '';
-    const custPhone = window.takeawayCustomerPhone || '';
-    const carPlate = window.carPlateNumber || '';
-    customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${custPhone}`;
-    if (carPlate) customerInfo += `\n🚗 *Car Plate:* ${carPlate}`;
-} else if (orderType === 'Delivery') {
-    customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
-}
-// Dine-in: no phone needed
-const waMsg = encodeURIComponent(`${headerInfo}${customerInfo}\n\n${itemsText}\n\nSubtotal: Rs ${foodTotal}${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}\n*Grand Total: Rs ${grand}*${bonus}`);
-    // ============================================
-    // NEW: Dual WhatsApp for Delivery Orders
-    // ============================================
-    
+    // Handle loyalty stamps — must run BEFORE building waMsg
+    let bonus = "";
+    const memberPhone = localStorage.getItem('ovenx_member_phone');
+
+    if (memberPhone && sb) {
+        try {
+            const { data: memberData } = await sb.from('gold_club_members')
+                .select('*').eq('phone', memberPhone);
+
+            if (memberData && memberData.length > 0) {
+                const member = memberData[0];
+                let stamps = member.stamps || 0;
+
+                if (stamps >= 10) {
+                    const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
+                    bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+                    await sb.from('gold_club_members')
+                        .update({ stamps: 0 })
+                        .eq('phone', memberPhone);
+                    localStorage.setItem('ovenx_stamps', 0);
+                } else if (foodTotal >= 1000) {
+                    const newStamps = stamps + 1;
+                    await sb.from('gold_club_members')
+                        .update({ stamps: newStamps })
+                        .eq('phone', memberPhone);
+                    localStorage.setItem('ovenx_stamps', newStamps);
+                }
+            }
+        } catch(e) {
+            console.error('Stamp sync error:', e);
+        }
+    }
+
+    // Build waMsg AFTER bonus is set
+    const waMsg = encodeURIComponent(
+        `${headerInfo}${customerInfo}\n\n${itemsText}` +
+        `\n\nSubtotal: Rs ${foodTotal}` +
+        `${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}` +
+        `${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}` +
+        `${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}` +
+        `\n*Grand Total: Rs ${grand}*` +
+        `${bonus}`
+    );
+
+    // Send to WhatsApp
     const br = activeBranch || BRANCH_CONFIG.MULTAN;
     const KITCHEN_NUMBER = br.phone;
     const CUSTOMER_CARE_NUMBER = br.cc_phone;
 
     if (orderType === 'Delivery') {
-        // Delivery: Send to BOTH numbers
-        
-        // 1. Kitchen (main order) - same tab
         window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
-        
-        // 2. Customer Care (copy) - new tab after delay
         setTimeout(() => {
             window.open(`https://wa.me/${CUSTOMER_CARE_NUMBER}?text=${waMsg}`, '_blank');
         }, 1500);
-        
     } else {
-        // Dine-in/Takeaway: Only to Kitchen (original behavior)
         window.location.href = `https://wa.me/${KITCHEN_NUMBER}?text=${waMsg}`;
     }
 }
