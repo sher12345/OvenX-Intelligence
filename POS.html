@@ -590,6 +590,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">📦 Ingredient Consumption</div>
         <button onclick="aCalcConsumption()" style="padding:7px 16px;border-radius:8px;background:#c0392b;color:white;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">↻ Calculate</button>
+<button onclick="exportConsumptionCSV()" style="padding:7px 16px;border-radius:8px;background:#27ae60;color:white;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">📊 Export CSV</button>
       </div>
       <p style="color:#555d70;font-size:13px;margin-bottom:16px;">Actual ingredients used based on items sold × your recipes in the selected date range.</p>
       <div id="a-consumption-content"><div style="text-align:center;padding:30px;color:#555d70;font-size:13px;">Set date range above then click Calculate</div></div>
@@ -5502,8 +5503,113 @@ function exportACSV() {
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   showToast('CSV exported ✅','success');
 }
+function exportConsumptionCSV() {
+  if (!_aTxData.length) { showToast('Load data first and click Calculate', 'error'); return; }
+  if (!Object.keys(_aRecipes).length) { showToast('No recipes found — add recipes in Ingredients tab', 'error'); return; }
+
+  const from = document.getElementById('a-date-from').value;
+  const to   = document.getElementById('a-date-to').value;
+
+  // Build sold items map (same logic as aCalcConsumption)
+  const soldItems = aParseItems(_aTxData);
+  const soldMap = {};
+  soldItems.forEach(i => { soldMap[i.name] = i.qty; });
+
+  // Build ingredient consumption totals
+  const ingMap = {};
+  const matchedItems = [];
+
+  Object.entries(_aRecipes).forEach(([itemName, ingredients]) => {
+    let soldQty = 0;
+    Object.entries(soldMap).forEach(([soldName, qty]) => {
+      const sn = soldName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
+      const rn = itemName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
+      if (sn.includes(rn) || rn.includes(sn) || soldName.toLowerCase() === itemName.toLowerCase()) soldQty += qty;
+    });
+    if (!soldQty) return;
+
+    matchedItems.push({ item: itemName, qty: soldQty });
+    ingredients.forEach(ing => {
+      const key = ing.name + '||' + ing.unit;
+      if (!ingMap[key]) ingMap[key] = { name: ing.name, unit: ing.unit, total: 0, breakdown: [] };
+      ingMap[key].total += ing.qty * soldQty;
+      ingMap[key].breakdown.push({ item: itemName, sold: soldQty, perUnit: ing.qty });
+    });
+  });
+
+  if (!Object.keys(ingMap).length) {
+    showToast('No consumption data — calculate first', 'error'); return;
+  }
+
+  const sorted = Object.values(ingMap).sort((a, b) => a.name.localeCompare(b.name));
+  const lines = [];
+
+  // Header
+  lines.push(`OVEN X — ${activeBranch} BRANCH`);
+  lines.push(`Ingredient Consumption Report`);
+  lines.push(`Date Range: ${from} to ${to}`);
+  lines.push(`Generated: ${new Date().toLocaleString('en-PK')} by ${currentStaff}`);
+  lines.push('');
+
+  // Summary stats
+  lines.push(`Items Sold Summary`);
+  lines.push(`Item,Qty Sold`);
+  matchedItems.sort((a,b) => b.qty - a.qty).forEach(m => {
+    lines.push(`${m.item},${m.qty}`);
+  });
+  lines.push('');
+
+  // Ingredient totals — this is the main section
+  lines.push(`Ingredient Consumption Totals`);
+  lines.push(`Ingredient,Total Used,Unit,Display Amount`);
+  sorted.forEach(ing => {
+    // Human-readable display (convert g→kg, ml→L when >= 1000)
+    let display = '';
+    if (ing.total >= 1000 && ing.unit === 'g') display = (ing.total / 1000).toFixed(2) + ' kg';
+    else if (ing.total >= 1000 && ing.unit === 'ml') display = (ing.total / 1000).toFixed(2) + ' L';
+    else display = Math.round(ing.total * 100) / 100 + ' ' + ing.unit;
+
+    lines.push(`${ing.name},${Math.round(ing.total * 100) / 100},${ing.unit},${display}`);
+  });
+  lines.push('');
+
+  // Detailed breakdown per ingredient
+  lines.push(`Detailed Breakdown (which items used each ingredient)`);
+  lines.push(`Ingredient,Used By,Qty Sold,Per Unit,Total Used`);
+  sorted.forEach(ing => {
+    ing.breakdown.forEach((b, idx) => {
+      const totalForThis = Math.round(b.perUnit * b.sold * 100) / 100;
+      if (idx === 0) {
+        lines.push(`${ing.name},${b.item},${b.sold},${b.perUnit}${ing.unit},${totalForThis}${ing.unit}`);
+      } else {
+        lines.push(`,${b.item},${b.sold},${b.perUnit}${ing.unit},${totalForThis}${ing.unit}`);
+      }
+    });
+    // Subtotal row
+    let displayTotal = '';
+    if (ing.total >= 1000 && ing.unit === 'g') displayTotal = (ing.total / 1000).toFixed(2) + ' kg';
+    else if (ing.total >= 1000 && ing.unit === 'ml') displayTotal = (ing.total / 1000).toFixed(2) + ' L';
+    else displayTotal = Math.round(ing.total * 100) / 100 + ' ' + ing.unit;
+    lines.push(`,,,TOTAL:,${displayTotal}`);
+    lines.push(''); // blank line between ingredients
+  });
+
+  // Download
+  const csv = lines.join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `OvenX_${activeBranch}_Ingredients_${from}_to_${to}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Ingredient consumption exported ✅', 'success');
+}
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
