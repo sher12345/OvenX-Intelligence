@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Oven X POS v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --red:#c0392b;--dark-red:#922b21;--orange:#e67e22;--dark-orange:#a04000;
@@ -5041,6 +5042,7 @@ async function adminTxSave() {
 let _aTxData = [];
 let _aRecipes = {};
 let _aCharts = {};
+  let _aMonthlyMap = {};
 
 function toggleAnalyticsPanel() {
   const panel = document.getElementById('analytics-panel');
@@ -5284,62 +5286,51 @@ function aSearchItem() {
   });
   aRenderAllItemsTable();
 }
-
 async function aLoadMonthlyHistory() {
-  const grid=document.getElementById('a-monthly-grid');
-  grid.innerHTML='<div style="color:#555d70;font-size:12px;padding:12px;">Loading...</div>';
+  const grid = document.getElementById('a-monthly-grid');
+  grid.innerHTML = '<div style="color:#555d70;font-size:12px;padding:12px;">Loading...</div>';
   try {
-    const{data}=await sb.from('shift_transactions').select('date,total,method,type,items_text,sc,discount,split_cash,split_card,delivery_charge').eq('branch',activeBranch).not('method','in','("cash-in","cash-out","void")').order('date',{ascending:false});
-    if (!data||!data.length){grid.innerHTML='<div style="color:#555d70;font-size:12px;padding:12px;">No history found</div>';return;}
-    const mMap={};
-    data.forEach(t=>{if(!t.date)return;const mk=t.date.slice(0,7);if(!mMap[mk])mMap[mk]={total:0,bills:0,txs:[]};mMap[mk].total+=t.total||0;mMap[mk].bills++;mMap[mk].txs.push(t);});
-    const months=Object.keys(mMap).sort().reverse();
-    const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    grid.innerHTML=months.map(m=>{
-      const[yr,mo]=m.split('-');
-      return `<div class="a-month-card" onclick="aShowMonthDetail('${m}',${JSON.stringify(mMap[m].txs).replace(/"/g,'&quot;')})">
+    const { data } = await sb.from('shift_transactions')
+      .select('date,total,method,type,items_text,sc,discount,split_cash,split_card,delivery_charge')
+      .eq('branch', activeBranch)
+      .not('method', 'in', '("cash-in","cash-out","void")')
+      .order('date', { ascending: false });
+ 
+    if (!data || !data.length) {
+      grid.innerHTML = '<div style="color:#555d70;font-size:12px;padding:12px;">No history found</div>';
+      return;
+    }
+ 
+    // Build month map and STORE GLOBALLY — no JSON-in-HTML-attribute
+    _aMonthlyMap = {};
+    data.forEach(t => {
+      if (!t.date) return;
+      const mk = t.date.slice(0, 7);
+      if (!_aMonthlyMap[mk]) _aMonthlyMap[mk] = { total: 0, bills: 0, txs: [] };
+      _aMonthlyMap[mk].total += t.total || 0;
+      _aMonthlyMap[mk].bills++;
+      _aMonthlyMap[mk].txs.push(t);
+    });
+ 
+    const months = Object.keys(_aMonthlyMap).sort().reverse();
+    const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ 
+    grid.innerHTML = months.map(m => {
+      const [yr, mo] = m.split('-');
+      // Note: onclick now passes only the key string — no inline JSON
+      return `<div class="a-month-card" onclick="aShowMonthDetail('${m}')">
         <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9aa0b0;margin-bottom:3px;">${mn[parseInt(mo)-1]} ${yr}</div>
-        <div style="font-size:20px;font-weight:900;color:#e67e22;">Rs ${Math.round(mMap[m].total/1000)}K</div>
-        <div style="font-size:11px;color:#555d70;margin-top:2px;">${mMap[m].bills} bills</div>
+        <div style="font-size:20px;font-weight:900;color:#e67e22;">Rs ${Math.round(_aMonthlyMap[m].total / 1000)}K</div>
+        <div style="font-size:11px;color:#555d70;margin-top:2px;">${_aMonthlyMap[m].bills} bills</div>
       </div>`;
     }).join('');
-  } catch(e){grid.innerHTML='<div style="color:#c0392b;font-size:12px;padding:12px;">Error loading</div>';}
+ 
+  } catch(e) {
+    grid.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:12px;">Error loading</div>';
+    console.error('aLoadMonthlyHistory:', e);
+  }
 }
 
-function aShowMonthDetail(mKey, txs) {
-  document.getElementById('a-month-detail').style.display='block';
-  const[yr,mn]=mKey.split('-');
-  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('a-month-detail-title').textContent=monthNames[parseInt(mn)-1]+' '+yr+' — Daily';
-  const dayMap={};
-  txs.forEach(t=>{
-    if(!t.date)return;
-    if(!dayMap[t.date])dayMap[t.date]={bills:0,total:0,cash:0,card:0,items:{}};
-    dayMap[t.date].bills++;dayMap[t.date].total+=t.total||0;
-    if(t.method==='cash')dayMap[t.date].cash+=t.total||0;
-    if(['card','bank','jazzcash','foodpanda'].includes(t.method))dayMap[t.date].card+=t.total||0;
-    if(t.items_text)t.items_text.split(',').forEach(line=>{const m2=line.trim().match(/^(\d+)x\s+(.+)/);if(!m2)return;dayMap[t.date].items[m2[2].trim()]=(dayMap[t.date].items[m2[2].trim()]||0)+parseInt(m2[1]);});
-  });
-  const days=Object.keys(dayMap).sort();
-  aDestroyChart('a-monthDetailChart');
-  _aCharts['a-monthDetailChart']=new Chart(document.getElementById('a-monthDetailChart'),{
-    type:'bar',
-    data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Sales',data:days.map(d=>dayMap[d].total),backgroundColor:'rgba(41,128,185,0.7)',borderRadius:5}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa0b0',autoSkip:false,maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#9aa0b0',callback:v=>'Rs '+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.05)'}}}}
-  });
-  document.getElementById('a-month-detail-body').innerHTML=days.slice().reverse().map(d=>{
-    const day=dayMap[d];const top=Object.entries(day.items).sort((a,b)=>b[1]-a[1])[0];
-    return `<tr>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:#f0f0f0;">${d}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e67e22;">${day.bills}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#27ae60;font-weight:700;">Rs ${Math.round(day.total).toLocaleString()}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.cash).toLocaleString()}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.card).toLocaleString()}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#9aa0b0;">${top?top[0].slice(0,24)+' ('+top[1]+')':'—'}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('a-month-detail').scrollIntoView({behavior:'smooth'});
-}
 
 function aPopulateMenuSelector() {
   const sel=document.getElementById('a-recipe-sel');
@@ -5607,8 +5598,105 @@ function exportConsumptionCSV() {
   URL.revokeObjectURL(url);
   showToast('Ingredient consumption exported ✅', 'success');
 }
+function aShowMonthDetail(mKey) {
+  const monthData = _aMonthlyMap[mKey];
+  if (!monthData || !monthData.txs || !monthData.txs.length) {
+    showToast('No data for ' + mKey, 'error');
+    return;
+  }
+  const txs = monthData.txs;
+ 
+  document.getElementById('a-month-detail').style.display = 'block';
+  const [yr, mn] = mKey.split('-');
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('a-month-detail-title').textContent = monthNames[parseInt(mn)-1] + ' ' + yr + ' — Daily Breakdown';
+ 
+  // Build day-level aggregates
+  const dayMap = {};
+  txs.forEach(t => {
+    if (!t.date) return;
+    if (!dayMap[t.date]) dayMap[t.date] = { bills: 0, total: 0, cash: 0, card: 0, items: {} };
+    dayMap[t.date].bills++;
+    dayMap[t.date].total += t.total || 0;
+ 
+    if (t.method === 'cash')
+      dayMap[t.date].cash += t.total || 0;
+    if (t.method === 'split') {
+      dayMap[t.date].cash += t.split_cash || 0;
+      dayMap[t.date].card += t.split_card || 0;
+    }
+    if (['card','bank','jazzcash','foodpanda'].includes(t.method))
+      dayMap[t.date].card += t.total || 0;
+ 
+    // Parse items
+    if (t.items_text) {
+      t.items_text.split(',').forEach(line => {
+        const m2 = line.trim().match(/^(\d+)x\s+(.+)/);
+        if (!m2) return;
+        const name = m2[2].trim();
+        dayMap[t.date].items[name] = (dayMap[t.date].items[name] || 0) + parseInt(m2[1]);
+      });
+    }
+  });
+ 
+  const days = Object.keys(dayMap).sort();
+ 
+  // Render chart
+  aDestroyChart('a-monthDetailChart');
+  const ctx = document.getElementById('a-monthDetailChart');
+  if (ctx) {
+    _aCharts['a-monthDetailChart'] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: days.map(d => d.slice(5)),
+        datasets: [{
+          label: 'Sales (Rs)',
+          data: days.map(d => dayMap[d].total),
+          backgroundColor: 'rgba(41,128,185,0.75)',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { color: '#9aa0b0', autoSkip: false, maxRotation: 45 },
+            grid: { color: 'rgba(255,255,255,0.03)' }
+          },
+          y: {
+            ticks: { color: '#9aa0b0', callback: v => 'Rs ' + Math.round(v/1000) + 'K' },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          }
+        }
+      }
+    });
+  }
+ 
+  // Render table — newest first
+  const tbody = document.getElementById('a-month-detail-body');
+  if (tbody) {
+    tbody.innerHTML = days.slice().reverse().map(d => {
+      const day = dayMap[d];
+      const topEntry = Object.entries(day.items).sort((a,b) => b[1] - a[1])[0];
+      const topItem = topEntry ? topEntry[0].slice(0, 24) + (topEntry[0].length > 24 ? '…' : '') + ' (' + topEntry[1] + ')' : '—';
+      return `<tr>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:#f0f0f0;">${d}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e67e22;">${day.bills}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#27ae60;font-weight:700;">Rs ${Math.round(day.total).toLocaleString()}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.cash).toLocaleString()}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">Rs ${Math.round(day.card).toLocaleString()}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#9aa0b0;">${topItem}</td>
+      </tr>`;
+    }).join('');
+  }
+ 
+  document.getElementById('a-month-detail').scrollIntoView({ behavior: 'smooth' });
+}
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
