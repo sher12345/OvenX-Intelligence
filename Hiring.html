@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join the Team — Oven X Hiring</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --red: #e8231a;
+  --dark-red: #b01a13;
+  --amber: #f5a623;
+  --dark-amber: #c47d0e;
+  --black: #1a1a1a;
+  --slate: #f4f4f4;
+  --white: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --success: #16a34a;
+  --font: 'Outfit', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--slate);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── TOP BANNER ─── */
+.top-banner {
+  background: var(--black);
+  color: white;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.top-banner span { color: var(--amber); }
+
+/* ─── HEADER ─── */
+.site-header {
+  background: var(--red);
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(232,35,26,0.3);
+}
+.logo {
+  font-size: 24px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -1px;
+}
+.logo span { color: var(--amber); }
+.header-badge {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+/* ─── PIPELINE TRACKER ─── */
+.pipeline-wrap {
+  background: white;
+  border-bottom: 2px solid var(--border);
+  padding: 20px 32px;
+}
+.pipeline {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.pipe-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  position: relative;
+  cursor: default;
+}
+.pipe-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+  height: 3px;
+  background: var(--border);
+  z-index: 0;
+  transition: background 0.4s;
+}
+.pipe-step.done:not(:last-child)::after { background: var(--red); }
+.pipe-step.active:not(:last-child)::after { background: linear-gradient(90deg, var(--red), var(--border)); }
+
+.pipe-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s;
+  border: 3px solid transparent;
+}
+.pipe-step.active .pipe-dot {
+  background: var(--red);
+  color: white;
+  border-color: rgba(232,35,26,0.3);
+  box-shadow: 0 0 0 5px rgba(232,35,26,0.12);
+  animation: pipe-pulse 2s infinite;
+}
+.pipe-step.done .pipe-dot {
+  background: var(--black);
+  color: white;
+  border-color: transparent;
+}
+@keyframes pipe-pulse {
+  0%,100% { box-shadow: 0 0 0 5px rgba(232,35,26,0.12); }
+  50% { box-shadow: 0 0 0 10px rgba(232,35,26,0.06); }
+}
+.pipe-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.pipe-step.active .pipe-label { color: var(--red); }
+.pipe-step.done .pipe-label { color: var(--black); }
+
+/* ─── MAIN LAYOUT ─── */
+.main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 36px 20px 80px;
+}
+
+/* ─── STAGE PANELS ─── */
+.stage { display: none; }
+.stage.active { display: block; animation: fadeUp 0.4s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── STAGE HERO ─── */
+.stage-hero {
+  background: var(--black);
+  border-radius: 20px;
+  padding: 36px 40px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.stage-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,35,26,0.2), transparent 70%);
+}
+.stage-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 10px;
+}
+.stage-title {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 900;
+  color: white;
+  line-height: 1.1;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+.stage-title span { color: var(--amber); }
+.stage-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 500px;
+}
+
+/* ─── CARD ─── */
+.card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.card-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.card-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: rgba(232,35,26,0.08);
+  color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--black);
+}
+.card-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.card-body { padding: 24px; }
+
+/* ─── FORM FIELDS ─── */
+.field-grid {
+  display: grid;
+  gap: 20px;
+}
+.field-grid.two { grid-template-columns: 1fr 1fr; }
+.field-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+@media(max-width:600px) {
+  .field-grid.two, .field-grid.three { grid-template-columns: 1fr; }
+}
+
+.field { display: flex; flex-direction: column; gap: 7px; }
+.field label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--black);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.req { color: var(--red); font-size: 14px; line-height: 1; }
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--red);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(232,35,26,0.08);
+}
+.field input.error,
+.field select.error,
+.field textarea.error {
+  border-color: var(--red);
+  background: #fff5f5;
+}
+.field .err-msg {
+  font-size: 11px;
+  color: var(--red);
+  font-weight: 600;
+  display: none;
+}
+.field.has-error .err-msg { display: block; }
+.field textarea { resize: vertical; min-height: 80px; }
+.field select { cursor: pointer; }
+
+/* ─── RADIO / CHECKBOX GROUPS ─── */
+.radio-group, .check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.radio-pill, .check-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: #fafafa;
+  transition: all 0.2s;
+  user-select: none;
+}
+.radio-pill input, .check-pill input { display: none; }
+.radio-pill:has(input:checked),
+.check-pill:has(input:checked) {
+  border-color: var(--red);
+  background: rgba(232,35,26,0.06);
+  color: var(--red);
+}
+
+/* ─── SUBMIT BUTTON ─── */
+.submit-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--dark-red);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+}
+.submit-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--dark-red); }
+.submit-btn:disabled { background: #ccc; box-shadow: 0 3px 0 #aaa; cursor: not-allowed; }
+.submit-btn.amber {
+  background: var(--amber);
+  box-shadow: 0 5px 0 var(--dark-amber);
+}
+.submit-btn.amber:active { box-shadow: 0 2px 0 var(--dark-amber); }
+.submit-btn.black {
+  background: var(--black);
+  box-shadow: 0 5px 0 #000;
+}
+
+.btn-row {
+  display: flex;
+  gap: 12px;
+}
+.btn-row .submit-btn { flex: 1; }
+.btn-back {
+  padding: 16px 20px;
+  background: white;
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-back:hover { border-color: var(--black); color: var(--black); }
+
+/* ─── PROGRESS BAR (test) ─── */
+.test-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.q-counter {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.timer-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(232,35,26,0.08);
+  border: 1px solid rgba(232,35,26,0.2);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.timer-box.warning { background: rgba(245,166,35,0.1); border-color: var(--amber); color: var(--amber); animation: timer-pulse 1s infinite; }
+.timer-box.danger { background: rgba(232,35,26,0.15); border-color: var(--red); color: var(--red); animation: timer-pulse 0.5s infinite; }
+@keyframes timer-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+.progress-bar-wrap {
+  background: var(--border);
+  border-radius: 4px;
+  height: 5px;
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--red), var(--amber));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ─── QUESTION CARD ─── */
+.q-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.q-card-header {
+  padding: 16px 22px;
+  background: var(--black);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.q-num {
+  background: var(--red);
+  color: white;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 9px;
+  border-radius: 5px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.q-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  line-height: 1.5;
+}
+.q-card-body { padding: 18px 22px; }
+.q-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.q-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: #fafafa;
+  transition: all 0.18s;
+  user-select: none;
+}
+.q-opt:hover { border-color: var(--amber); background: rgba(245,166,35,0.05); }
+.q-opt.selected { border-color: var(--red); background: rgba(232,35,26,0.06); color: var(--red); font-weight: 700; }
+.q-opt.correct { border-color: var(--success); background: rgba(22,163,74,0.06); color: var(--success); }
+.q-opt.wrong { border-color: var(--red); background: rgba(232,35,26,0.06); color: var(--red); }
+.q-opt input { display: none; }
+.opt-key {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+.q-opt.selected .opt-key { background: var(--red); color: white; }
+.q-opt.correct .opt-key { background: var(--success); color: white; }
+.q-opt.wrong .opt-key { background: var(--red); color: white; }
+
+/* ─── RESULT PANEL ─── */
+.result-hero {
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.result-hero.pass {
+  background: linear-gradient(135deg, #0a2a1a 0%, #0d4a2a 100%);
+}
+.result-hero.fail {
+  background: linear-gradient(135deg, #2a0a0a 0%, #1a0808 100%);
+}
+.result-icon { font-size: 64px; margin-bottom: 16px; display: block; }
+.result-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.result-title.pass-text { color: #4ade80; }
+.result-title.fail-text { color: #f87171; }
+.result-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.6);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: white;
+  padding: 10px 22px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 18px;
+}
+.score-badge.pass-bg { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.3); color: #4ade80; }
+.score-badge.fail-bg { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.3); color: #f87171; }
+
+/* ─── INTERVIEW CARD ─── */
+.interview-card {
+  background: linear-gradient(135deg, var(--black) 0%, #2d1a00 100%);
+  border-radius: 20px;
+  padding: 36px;
+  color: white;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--amber);
+}
+.interview-card::before {
+  content: '🎉';
+  position: absolute;
+  font-size: 120px;
+  right: -20px;
+  top: -20px;
+  opacity: 0.08;
+}
+.interview-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+}
+.int-detail {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.int-detail-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.int-detail-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+}
+.int-detail-val.amber { color: var(--amber); }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--black);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-left: 4px solid var(--red);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: all 0.3s;
+  z-index: 9999;
+  max-width: 300px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-left-color: var(--success); }
+
+/* ─── LOADING SPINNER ─── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── MISC ─── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+.info-box {
+  background: rgba(245,166,35,0.08);
+  border: 1px solid rgba(245,166,35,0.3);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #92400e;
+  font-weight: 500;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.info-box-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.pill-red { background: rgba(232,35,26,0.1); color: var(--red); border: 1px solid rgba(232,35,26,0.2); }
+.pill-green { background: rgba(22,163,74,0.1); color: var(--success); border: 1px solid rgba(22,163,74,0.2); }
+.pill-amber { background: rgba(245,166,35,0.1); color: var(--dark-amber); border: 1px solid rgba(245,166,35,0.3); }
+
+@media(max-width: 600px) {
+  .pipeline-wrap { padding: 16px; }
+  .pipe-label { font-size: 9px; }
+  .stage-hero { padding: 24px 22px; }
+  .card-body { padding: 18px 16px; }
+  .main { padding: 20px 14px 60px; }
+  .interview-details { grid-template-columns: 1fr; }
+  .site-header { padding: 0 16px; }
+  .logo { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="top-banner">
+  Positions open in <span>Multan & Bahawalpur</span> — Apply now, join the team
+</div>
+
+<header class="site-header">
+  <div class="logo">OVEN <span>X</span></div>
+  <div class="header-badge">Hiring 2025</div>
+</header>
+
+<!-- PIPELINE -->
+<div class="pipeline-wrap">
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-step active" data-step="0">
+      <div class="pipe-dot">1</div>
+      <div class="pipe-label">Application</div>
+    </div>
+    <div class="pipe-step" data-step="1">
+      <div class="pipe-dot">2</div>
+      <div class="pipe-label">Aptitude<br>Test</div>
+    </div>
+    <div class="pipe-step" data-step="2">
+      <div class="pipe-dot">3</div>
+      <div class="pipe-label">Situational<br>Test</div>
+    </div>
+    <div class="pipe-step" data-step="3">
+      <div class="pipe-dot">4</div>
+      <div class="pipe-label">Personality<br>Check</div>
+    </div>
+    <div class="pipe-step" data-step="4">
+      <div class="pipe-dot">🏆</div>
+      <div class="pipe-label">Interview<br>Invite</div>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+
+<!-- ════════════════════════ STAGE 0: APPLICATION FORM ════════════════════════ -->
+<div class="stage active" id="stage-0">
+  <div class="stage-hero">
+    <div class="stage-eyebrow">Step 1 of 4 — Application</div>
+    <div class="stage-title">Start Your<br>Journey at <span>Oven X</span></div>
+    <div class="stage-sub">Fill in your details honestly. This takes about 3 minutes. We screen everyone equally — your attitude matters more than your experience.</div>
+  </div>
+
+  <div class="info-box">
+    <span class="info-box-icon">⚠️</span>
+    <span>After submitting this form, you will be taken to a <strong>timed test</strong>. Make sure you are in a quiet place before clicking Submit.</span>
+  </div>
+
+  <!-- PERSONAL INFO -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">👤</div>
+      <div>
+        <div class="card-title">Personal Information</div>
+        <div class="card-sub">Basic details about you</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field-grid two">
+        <div class="field" id="f-fullname">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="fullname" placeholder="e.g. Muhammad Ali Khan" autocomplete="name">
+          <span class="err-msg">Please enter your full name</span>
+        </div>
+        <div class="field" id="f-fathername">
+          <label>Father's Name <span class="req">*</span></label>
+          <input type="text" id="fathername" placeholder="e.g. Muhammad Akram Khan">
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="field" id="f-cnic">
+          <label>CNIC Number <span class="req">*</span></label>
+          <input type="text" id="cnic" placeholder="12345-1234567-1" maxlength="15">
+          <span class="err-msg">Enter valid CNIC (e.g. 36302-1234567-1)</span>
+        </div>
+        <div class="field" id="f-dob">
+          <label>Date of Birth <span class="req">*</span></label>
+          <input type="date" id="dob" max="">
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="field" id="f-gender">
+          <label>Gender <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-pill"><input type="radio" name="gender" value="Male"> Male</label>
+            <label class="radio-pill"><input type="radio" name="gender" value="Female"> Female</label>
+            <label class="radio-pill"><input type="radio" name="gender" value="Prefer not to say"> Prefer not to say</label>
+          </div>
+          <span class="err-msg" id="gender-err">Select a gender</span>
+        </div>
+        <div class="field" id="f-marital">
+          <label>Marital Status</label>
+          <div class="radio-group">
+            <label class="radio-pill"><input type="radio" name="marital" value="Single"> Single</label>
+            <label class="radio-pill"><input type="radio" name="marital" value="Married"> Married</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📞</div>
+      <div>
+        <div class="card-title">Contact & Location</div>
+        <div class="card-sub">How we can reach you</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field-grid two">
+        <div class="field" id="f-phone">
+          <label>WhatsApp Number <span class="req">*</span></label>
+          <input type="tel" id="phone" placeholder="0300-1234567" maxlength="15">
+          <span class="err-msg">Enter a valid Pakistani number</span>
+        </div>
+        <div class="field" id="f-email">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="you@gmail.com">
+          <span class="err-msg">Enter a valid email</span>
+        </div>
+        <div class="field" id="f-city">
+          <label>City <span class="req">*</span></label>
+          <select id="city">
+            <option value="">Select city</option>
+            <option>Multan</option>
+            <option>Bahawalpur</option>
+            <option>Lahore</option>
+            <option>Karachi</option>
+            <option>Islamabad</option>
+            <option>Other</option>
+          </select>
+          <span class="err-msg">Select your city</span>
+        </div>
+        <div class="field">
+          <label>Preferred Branch</label>
+          <select id="branch">
+            <option value="">No preference</option>
+            <option value="MULTAN">Multan — Gulgasht Colony</option>
+            <option value="BWP">Bahawalpur — SS Tower, Sadiq Colony</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column: 1 / -1" id="f-address">
+          <label>Current Address <span class="req">*</span></label>
+          <input type="text" id="address" placeholder="House #, Street, Area, City">
+          <span class="err-msg">Required</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATION & EXPERIENCE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">🎓</div>
+      <div>
+        <div class="card-title">Education & Experience</div>
+        <div class="card-sub">Your background</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field-grid two">
+        <div class="field" id="f-education">
+          <label>Highest Education <span class="req">*</span></label>
+          <select id="education">
+            <option value="">Select level</option>
+            <option>Matric (10th)</option>
+            <option>Intermediate (12th / FA / FSc)</option>
+            <option>Bachelor's Degree (BA / BSc / BCS)</option>
+            <option>Master's Degree</option>
+            <option>Diploma / Vocational</option>
+            <option>Below Matric</option>
+          </select>
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="field" id="f-experience">
+          <label>Work Experience <span class="req">*</span></label>
+          <select id="experience">
+            <option value="">Select</option>
+            <option>No experience (Fresh)</option>
+            <option>Less than 6 months</option>
+            <option>6 months – 1 year</option>
+            <option>1 – 2 years</option>
+            <option>2 – 5 years</option>
+            <option>5+ years</option>
+          </select>
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="field" id="f-prev-employer">
+          <label>Previous Employer <small style="font-size:10px;color:#9ca3af;">(if any)</small></label>
+          <input type="text" id="prev-employer" placeholder="Company or restaurant name">
+        </div>
+        <div class="field">
+          <label>Previous Role</label>
+          <input type="text" id="prev-role" placeholder="e.g. Cashier, Cook, Waiter">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POSITION -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">💼</div>
+      <div>
+        <div class="card-title">Position & Availability</div>
+        <div class="card-sub">What role are you applying for?</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field-grid two">
+        <div class="field" id="f-position">
+          <label>Applying For <span class="req">*</span></label>
+          <select id="position">
+            <option value="">Select position</option>
+            <option>Cashier / Counter Staff</option>
+            <option>Kitchen Staff / Cook</option>
+            <option>Delivery Rider</option>
+            <option>Floor / Service Staff</option>
+            <option>Shift Supervisor</option>
+            <option>Kitchen Manager</option>
+            <option>Branch Manager</option>
+            <option>Any Available Position</option>
+          </select>
+          <span class="err-msg">Select a position</span>
+        </div>
+        <div class="field" id="f-shift">
+          <label>Preferred Shift <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-pill"><input type="radio" name="shift" value="Morning (9am–4pm)"> Morning</label>
+            <label class="radio-pill"><input type="radio" name="shift" value="Evening (4pm–12am)"> Evening</label>
+            <label class="radio-pill"><input type="radio" name="shift" value="Night (12am–8am)"> Night</label>
+            <label class="radio-pill"><input type="radio" name="shift" value="Any shift"> Any shift</label>
+          </div>
+          <span class="err-msg" id="shift-err">Select preferred shift</span>
+        </div>
+        <div class="field" id="f-joining">
+          <label>Can join within <span class="req">*</span></label>
+          <select id="joining">
+            <option value="">Select</option>
+            <option>Immediately</option>
+            <option>1 week</option>
+            <option>2 weeks</option>
+            <option>1 month</option>
+          </select>
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="field">
+          <label>Salary Expectation (Rs / month)</label>
+          <select id="salary">
+            <option value="">Negotiable</option>
+            <option>25,000 – 35,000</option>
+            <option>35,000 – 50,000</option>
+            <option>50,000 – 75,000</option>
+            <option>75,000+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>Skills & Strengths <small style="font-size:10px;color:#9ca3af;">(tick all that apply)</small></label>
+          <div class="check-group">
+            <label class="check-pill"><input type="checkbox" name="skills" value="Customer service"> Customer Service</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Cash handling"> Cash Handling</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Food preparation"> Food Prep</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Delivery & navigation"> Delivery & Navigation</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Team leadership"> Team Leadership</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Urdu reading/writing"> Urdu Literacy</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Basic English"> Basic English</label>
+            <label class="check-pill"><input type="checkbox" name="skills" value="Computer/POS"> Computer / POS</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Languages</label>
+          <div class="check-group">
+            <label class="check-pill"><input type="checkbox" name="lang" value="Urdu"> Urdu</label>
+            <label class="check-pill"><input type="checkbox" name="lang" value="Punjabi"> Punjabi</label>
+            <label class="check-pill"><input type="checkbox" name="lang" value="Saraiki"> Saraiki</label>
+            <label class="check-pill"><input type="checkbox" name="lang" value="English"> English</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Why do you want to join Oven X? <span class="req">*</span></label>
+          <textarea id="motivation" placeholder="Write a few sentences about why you want this job. Be honest — we value real answers." rows="3"></textarea>
+          <span class="err-msg">Please write at least 20 characters</span>
+        </div>
+        <div class="field">
+          <label>Anything else you want to tell us?</label>
+          <textarea id="extra" placeholder="Any other relevant information, special circumstances, or questions" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box" style="background:rgba(232,35,26,0.06); border-color:rgba(232,35,26,0.2); color:#7f1d1d;">
+    <span class="info-box-icon">📝</span>
+    <span>By submitting you agree that all information is truthful. False information will result in immediate disqualification. The next screen will be a <strong>30-minute timed aptitude test</strong> — have a pen and paper ready.</span>
+  </div>
+
+  <button class="submit-btn" id="submit-form-btn" onclick="submitApplicationForm()">
+    <span class="spinner" id="form-spinner"></span>
+    <span id="form-btn-text">Submit Application & Start Test →</span>
+  </button>
+</div>
+
+<!-- ════════════════════════ STAGE 1: APTITUDE TEST ════════════════════════ -->
+<div class="stage" id="stage-1">
+  <div class="stage-hero">
+    <div class="stage-eyebrow">Step 2 of 4 — Aptitude Test</div>
+    <div class="stage-title">Test Your <span>Basic Skills</span></div>
+    <div class="stage-sub">20 questions · 25 minutes · Math, Urdu comprehension, and logical reasoning. No going back once you answer. Stay focused.</div>
+  </div>
+
+  <div class="test-meta">
+    <div class="q-counter" id="apt-q-counter">Question 1 of 20</div>
+    <div class="timer-box" id="apt-timer">⏱ 25:00</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="apt-progress" style="width:5%"></div>
+  </div>
+
+  <div id="apt-question-area"></div>
+
+  <div class="btn-row">
+    <button class="submit-btn" id="apt-next-btn" onclick="aptNext()">Next Question →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════ STAGE 1 RESULT ════════════════════════ -->
+<div class="stage" id="stage-1-result">
+  <div class="result-hero" id="apt-result-hero">
+    <span class="result-icon" id="apt-result-icon">✅</span>
+    <div class="result-title" id="apt-result-title">Aptitude Cleared!</div>
+    <div class="result-sub" id="apt-result-sub"></div>
+    <div class="score-badge" id="apt-score-badge"></div>
+  </div>
+  <div id="apt-result-action"></div>
+</div>
+
+<!-- ════════════════════════ STAGE 2: SITUATIONAL TEST ════════════════════════ -->
+<div class="stage" id="stage-2">
+  <div class="stage-hero">
+    <div class="stage-eyebrow">Step 3 of 4 — Situational Test</div>
+    <div class="stage-title">Real <span>Work Scenarios</span></div>
+    <div class="stage-sub">15 scenarios from a real fast food shift. Choose the best action. No "trick" questions — we want to see how you think under pressure.</div>
+  </div>
+
+  <div class="test-meta">
+    <div class="q-counter" id="sit-q-counter">Scenario 1 of 15</div>
+    <div class="timer-box" id="sit-timer">⏱ 20:00</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="sit-progress" style="width:6.7%"></div>
+  </div>
+
+  <div id="sit-question-area"></div>
+
+  <div class="btn-row">
+    <button class="submit-btn amber" id="sit-next-btn" onclick="sitNext()">Next Scenario →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════ STAGE 2 RESULT ════════════════════════ -->
+<div class="stage" id="stage-2-result">
+  <div class="result-hero" id="sit-result-hero">
+    <span class="result-icon" id="sit-result-icon">✅</span>
+    <div class="result-title" id="sit-result-title"></div>
+    <div class="result-sub" id="sit-result-sub"></div>
+    <div class="score-badge" id="sit-score-badge"></div>
+  </div>
+  <div id="sit-result-action"></div>
+</div>
+
+<!-- ════════════════════════ STAGE 3: PERSONALITY CHECK ════════════════════════ -->
+<div class="stage" id="stage-3">
+  <div class="stage-hero">
+    <div class="stage-eyebrow">Step 4 of 4 — Personality Check</div>
+    <div class="stage-title">Tell Us Who<br><span>You Really Are</span></div>
+    <div class="stage-sub">10 quick questions about how you work. There are no wrong answers here — just be honest. This helps us put you in the right role.</div>
+  </div>
+
+  <div class="test-meta">
+    <div class="q-counter" id="per-q-counter">Question 1 of 10</div>
+    <div class="timer-box" id="per-timer" style="background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.2);color:var(--success);">🟢 No timer</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="per-progress" style="width:10%; background: linear-gradient(90deg, #16a34a, #4ade80);"></div>
+  </div>
+
+  <div id="per-question-area"></div>
+
+  <div class="btn-row">
+    <button class="submit-btn black" id="per-next-btn" onclick="perNext()">Next →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════ STAGE 4: INTERVIEW INVITE ════════════════════════ -->
+<div class="stage" id="stage-4">
+  <div class="interview-card">
+    <div style="font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--amber);margin-bottom:12px;">🎉 Congratulations!</div>
+    <div style="font-size:32px;font-weight:900;color:white;margin-bottom:10px;letter-spacing:-0.5px;">You Made It Through!</div>
+    <div style="font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;margin-bottom:20px;">You've passed all screening stages. Our hiring team will contact you within <strong style="color:var(--amber);">24–48 hours</strong> via WhatsApp to schedule your in-person interview.</div>
+    <div class="interview-details">
+      <div class="int-detail">
+        <div class="int-detail-label">Applicant</div>
+        <div class="int-detail-val" id="final-name">—</div>
+      </div>
+      <div class="int-detail">
+        <div class="int-detail-label">Position Applied</div>
+        <div class="int-detail-val amber" id="final-position">—</div>
+      </div>
+      <div class="int-detail">
+        <div class="int-detail-label">WhatsApp Number</div>
+        <div class="int-detail-val" id="final-phone">—</div>
+      </div>
+      <div class="int-detail">
+        <div class="int-detail-label">Preferred Branch</div>
+        <div class="int-detail-val" id="final-branch">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(22,163,74,0.1);color:var(--success);">📋</div>
+      <div>
+        <div class="card-title">What Happens Next</div>
+        <div class="card-sub">Your final steps before joining the team</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--black);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px;">Wait for WhatsApp contact</div><div style="font-size:13px;color:var(--muted);">Our HR team will message you on the number you provided within 48 hours.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--black);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px;">Bring your documents</div><div style="font-size:13px;color:var(--muted);">CNIC original + photocopy, 2 passport photos, and any certificates you have.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--black);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px;">In-person interview</div><div style="font-size:13px;color:var(--muted);">15–20 minute interview at your chosen branch. Dress neatly and arrive 5 minutes early.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">🔥</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px;">Get your offer letter</div><div style="font-size:13px;color:var(--muted);">Successful candidates receive a joining date within the same week.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px;line-height:1.6;">
+    Questions? WhatsApp us at <strong style="color:var(--black);">0300-245-0301</strong><br>
+    <span style="font-size:12px;">Please do not call during rush hours (12pm–3pm, 7pm–10pm)</span>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ─── SUPABASE ───────────────────────────────────────────────────
+const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
+let sb = null;
+try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+
+// ─── STATE ──────────────────────────────────────────────────────
+let currentStage = 0;
+let applicantData = {};
+let applicationId = null;
+
+// ─── APTITUDE QUESTIONS (20) ────────────────────────────────────
+const aptQuestions = [
+  { q: "Ek customer ka bill Rs 1,450 hai. Usne Rs 2,000 diye. Kitna change waapis dena hoga?", opts: ["Rs 450", "Rs 550", "Rs 650", "Rs 500"], ans: 1 },
+  { q: "Agar aap 1 ghante mein 24 burgers banate hain, toh 2.5 ghante mein kitne burgers banenge?", opts: ["48", "60", "52", "72"], ans: 1 },
+  { q: "3 customers ne order diya: Rs 350, Rs 720, aur Rs 450. Total kitna hoga?", opts: ["Rs 1,400", "Rs 1,520", "Rs 1,480", "Rs 1,350"], ans: 1 },
+  { q: "Aapka shift 4 PM pe shuru hoti hai aur 12 AM pe khatam hoti hai. Aap kitne ghante kaam karte hain?", opts: ["6 ghante", "7 ghante", "8 ghante", "9 ghante"], ans: 2 },
+  { q: "Agar Rs 850 ka item hai aur 10% discount dena ho, toh final price kya hogi?", opts: ["Rs 750", "Rs 800", "Rs 765", "Rs 720"], ans: 2 },
+  { q: "Counter pe queue mein 7 customers hain. Har customer ko serve karne mein average 3 minute lagte hain. Sab ko serve karne mein kitna time lagega?", opts: ["15 minute", "18 minute", "21 minute", "24 minute"], ans: 2 },
+  { q: "Ek pizza ka cost Rs 999 hai. 3 pizzas ka bill kya hoga, agar ek par Rs 100 discount milti hai?", opts: ["Rs 2,697", "Rs 2,797", "Rs 2,897", "Rs 2,997"], ans: 1 },
+  { q: "Urdu mein 'معاوضہ' ka matlab kya hai?", opts: ["Khana", "Compensation / Payment", "Protest", "Meeting"], ans: 1 },
+  { q: "9 × 8 + 4 ÷ 2 = ?", opts: ["76", "74", "72", "78"], ans: 0 },
+  { q: "Ek customer ne credit card se Rs 2,200 pay kiya aur cashback 5% milti hai. Cashback kitna hoga?", opts: ["Rs 90", "Rs 110", "Rs 100", "Rs 120"], ans: 1 },
+  { q: "Agar aaj 250 plates serve hui aur average selling price Rs 600 hai, toh total revenue kya hogi?", opts: ["Rs 130,000", "Rs 150,000", "Rs 100,000", "Rs 120,000"], ans: 1 },
+  { q: "Ek staff member din mein 8 ghante kaam karta hai aur Rs 700 rozan milte hain. Mahine (30 din) mein kitni salary hogi?", opts: ["Rs 18,000", "Rs 21,000", "Rs 24,000", "Rs 16,000"], ans: 1 },
+  { q: "Fast food mein FIFO ka matlab kya hai?", opts: ["First In First Out (pehle jo aaya pehle serve ho)", "Food Item Follow Order", "Full Inventory Follow Overview", "First Invoice Final Order"], ans: 0 },
+  { q: "Ek delivery order 7:30 PM pe receive hua aur 8:05 PM pe deliver hua. Delivery mein kitna time laga?", opts: ["30 minute", "35 minute", "40 minute", "25 minute"], ans: 1 },
+  { q: "Rs 4,500 ki total sales hua. Agar 7% service charge lagaya jaye, toh total kitna hoga?", opts: ["Rs 4,715", "Rs 4,765", "Rs 4,815", "Rs 4,700"], ans: 1 },
+  { q: "Customer ka order galat aa gaya. Sahi reaction kya hai?", opts: ["Ignore karo, busy hain", "Maafi maango aur foran replace karo", "Customer se argue karo", "Manager ko baad mein batao"], ans: 1 },
+  { q: "Urdu mein 'استقبال' ka matlab kya hai?", opts: ["Goodbye / Farewell", "Welcome / Reception", "Complaint", "Payment"], ans: 1 },
+  { q: "100 – 37 + 15 – 8 = ?", opts: ["70", "72", "68", "74"], ans: 0 },
+  { q: "Agar ek item ki expiry kal hai, toh aap kya karein ge?", opts: ["Kuch nahi, customers ko serve karo", "Supervisor ko immediately report karo", "Chupa do aur baad mein dekho", "Apni marzi se use karo"], ans: 1 },
+  { q: "Rs 1,750 ka bill hai. Customer ne Rs 2,000 diye. Change dene ke baad register mein remaining Rs 500 hain. Register mein total kitna tha?", opts: ["Rs 250", "Rs 750", "Rs 700", "Rs 500"], ans: 0 },
+];
+
+// ─── SITUATIONAL QUESTIONS (15) ────────────────────────────────
+const sitQuestions = [
+  { q: "Rush hour hai. Queue mein 12 customers hain. Ek customer counter pe aakar bolte hain ke unhe bohot jaldi hai aur please pehle serve karo. Aap kya karein ge?", opts: ["Haan, jaldi se unhe serve karo taake wo jaayein", "Politely explain karo ke queue system fair hai, unki baari par zaroor serve karein ge", "Manager ko bulate ho", "Queue mein peeche bhej do, koi explanation nahin"], ans: 1 },
+  { q: "Aap kitchen mein hain. Aapko notice hota hai ke ek colleague ne haath dhoye baghair raw chicken handle kar ke seedha bread cut karne lagi hain. Aap kya karein ge?", opts: ["Chup raho, unka kaam unhe pata hai", "Foran politely rok ke unhe haath dhone ko kaho — food safety emergency hai", "Baad mein manager ko batao", "Khud hi bread change karo, kuch mat bolo"], ans: 1 },
+  { q: "Ek customer bohot zor se shikayat kar raha hai ke uska order 40 minute delay hua. Dukaan mein dusre customers bhi hain aur sab dekh rahe hain. Aap kya karein ge?", opts: ["Usse seedha argument karo ke yeh aapki galti nahi", "Quietly apologize karo, manager ko batao, aur complimentary item offer karo", "Ignore karo, order bana kar de do", "Security ko bulate ho"], ans: 1 },
+  { q: "Shift khatam hone se 10 minute pehle aapka colleague sick ho jaata hai aur band nahi ho sakta. Replacement nahin hai. Manager ne aapko ek ghanta aur rukne ko kaha. Aap kya karein ge?", opts: ["Haan bolte hain, team ki zaroorat hai", "Seedha nahin bolte aur nikal jaate ho", "Argue karo ke aapki shift khatam ho gayi", "Doctor ka bahana lagate ho"], ans: 0 },
+  { q: "Aap cashier hain. Ek customer ne order diya aur payment ki. Jab aap receipt dekhte hain toh pata chalta hai ke customer ko ek item miss hua. Customer ja chuka hai. Aap kya karein ge?", opts: ["Kuch nahin — who gone hai", "Manager ko report karo aur customer ka number ho toh contact karo", "Paise pocket mein rakho", "Ignore karo — accident tha"], ans: 1 },
+  { q: "Aap kitchen mein kaam kar rahe hain. Ek item ki stock khatam hone wali hai aur customer ne wohi order diya hai. Aap kya karein ge?", opts: ["Order le lo aur phir baad mein batao ke available nahin", "Pehle customer ko honestly bataao aur substitute suggest karo", "Order refuse karo bina kuch bataye", "Kisi dusre ki plate se leke serve karo"], ans: 1 },
+  { q: "Manager ne aapko ek kaam diya hai jo aapke samajh mein nahin aaya. Aap kya karein ge?", opts: ["Apni marzi se karo", "Clarity le lo — 'Sir, aise karna hai ya aise?' — poochna weakness nahin, aqal hai", "Kuch bhi kar do", "Kaam hi mat karo"], ans: 1 },
+  { q: "Closing time hai. Aap saaf kar rahe hain. Ek customer aakar bolta hai ke 'sirf ek order chahiye.' Manager bolta hai officially band hai. Customer annoyed ho raha hai. Best response?", opts: ["Loudly bolo 'BAND HAI' aur door band karo", "Politely bolao 'Humara kitchen band ho gaya hai, kal zaroor aaiye, aapka swagat hai'", "Argue karo ke rules hain", "Chup raho aur ignore karo"], ans: 1 },
+  { q: "Aap notice karte hain ke ek colleague paise register mein nahin dal raha, seedha apni pocket mein rakh raha hai. Aap kya karein ge?", opts: ["Chup raho, colleague ka mamla hai", "Seedha manager ya owner ko report karo — yeh serious dishonesty hai", "Colleague se seedha poocho", "Aap bhi wohi karo"], ans: 1 },
+  { q: "Customer ne spicy food order ki par jab mili toh bola ke usne non-spicy manga tha. Receipt check karte hain toh customer ki hi galti hai. Aap kya karein ge?", opts: ["Customer ko blame karo receipt dikha ke", "Apologize karo aur ask karo ke kya aap replace kar sakte hain (manager permission se)", "Ignore karo", "Argue karo ke tumhara kaam theek tha"], ans: 1 },
+  { q: "Shift pe bohot rush hai. Aap akele counter pe hain, kitchen mein bhi understaffed hai. Order delay ho raha hai. Aapka next step?", opts: ["Panic karo aur customers ko bura bolte jao", "Calmly customers ko update karo, prioritize karo, aur supervisor ko immediately alert karo", "Counter chhod do aur kitchen mein help karne jao", "Sab orders cancel karo"], ans: 1 },
+  { q: "Ek regular customer aata hai jo hamesha extra sauces maangta hai bina pay kiye. Aaj manager nearby hai. Aap kya karein ge?", opts: ["Chup kar ke de do jaise pehle dete the", "Politely bolo ke extra sauces ka charge Rs 70 hai — consistently apply karo policy", "Customer ko embarrass karo", "Manager ki taraf ishaara karo"], ans: 1 },
+  { q: "Aap sirf 2 mahine se kaam kar rahe hain. Senior colleague galat technique use kar raha hai jo aapne training mein sahi seekhi hai. Aap kya karein ge?", opts: ["Chup raho, senior hain", "Respectfully aur privately mention karo: 'Mujhe training mein yeh bataya gaya tha, main check karoon?'", "Loudly sab ke saamne correct karo", "Manager ko complaint karo"], ans: 1 },
+  { q: "Last order aa gaya. Delivery rider bohot late hai. Customer ka phone aa raha hai. Rider ka phone nahin lag raha. Aap kya karein ge?", opts: ["Customer ko ignore karo", "Customer ko honestly update karo, rider ka manager se dhundho, delay ke liye apologize karo", "Customer ko jhoot bolo ke order rasta mein hai", "Order cancel kar do"], ans: 1 },
+  { q: "Aap apni galti se ek customer ka order mix-up karte hain jisse usse allergy reaction hone ka risk hai. Aap kya karein ge?", opts: ["Ummeed karo ke kuch nahin hoga", "Foran customer ko rok ke situation bataao, order replace karo, aur supervisor ko immediately inform karo", "Customer ko silently replace karo bagair bataye", "Kuch nahin karo"], ans: 1 },
+];
+
+// ─── PERSONALITY QUESTIONS (10) ────────────────────────────────
+const perQuestions = [
+  { q: "Kaam ke dauran pressure aur rush handle karne ka aapka tarika kya hai?", opts: ["Mujhe pressure pasand hai, main better perform karta hoon", "Main try karta hoon par sometimes overwhelm hota hoon", "Main quiet rehta hoon aur kaam pe focus karta hoon", "Main generally calm rehta hoon aur ek cheez ek waqt mein karta hoon"] },
+  { q: "Agar koi colleague aapka kaam nahin kar raha toh aap kya karein ge?", opts: ["Main khud sab kar leta hoon", "Main politely bat karta hoon unse", "Main manager ko batata hoon", "Main ignore kar deta hoon"] },
+  { q: "Fast food ki job mein sab se important cheez kya hai?", opts: ["Tezi (Speed)", "Quality aur cleanliness", "Customer satisfaction", "Sab tino — ek cheez bhi miss nahin honi chahiye"] },
+  { q: "Aap raat ki shift mein zyada comfortable hain ya din ki?", opts: ["Din ki — fresh hota hoon", "Raat ki — quiet hoti hai", "Koi bhi — flexible hoon", "Weekends prefer karta hoon"] },
+  { q: "Agar aapka manager aapko kuch galat karne ko kahe, toh aap kya karein ge?", opts: ["Haan bol deta hoon, manager hai", "Politely apni concern express karta hoon", "Seedha refuse kar deta hoon", "Pehle samjhta hoon phir decide karta hoon"] },
+  { q: "Team mein aapka role generally kya hota hai?", opts: ["Leader — main guide karta hoon", "Executor — mujhe kaam batao, main karta hoon", "Problem solver — mushkilaat mein step up karta hoon", "Support — main dusron ki help karta hoon"] },
+  { q: "Agar aapko koi naya skill seekhna ho jo aapki naukri ke liye zarori hai, toh aap kya karein ge?", opts: ["Wait karo ke koi sikhaye", "Khud YouTube/online dekh ke seekhta hoon", "Colleague se poochta hoon", "Practice se seekhta hoon"] },
+  { q: "Customer ne aapko personally insult kiya. Aapka immediate reaction?", opts: ["Waapis bolta hoon", "Deep breath, professional rehta hoon, manager ko batata hoon baad mein", "Cry ya upset ho jaata hoon", "Situation ignore karta hoon aur kaam karta rehta hoon"] },
+  { q: "Aap Oven X mein 1 saal baad khud ko kahan dekhte hain?", opts: ["Wohi position pe jo hai", "Promotion mein — supervisor ya manager banna chahta hoon", "More skills seekhna chahta hoon", "Business khud start karna chahta hoon eventually"] },
+  { q: "Khana aur cleanliness ke baare mein aapka attitude kya hai?", opts: ["Decent hai kaafi hai", "Strict hoon — cleanliness non-negotiable hai", "Depends on how busy we are", "Customer ko dikh nahin raha toh theek hai"] },
+];
+
+// ─── TEST STATE ─────────────────────────────────────────────────
+let aptIdx = 0, aptAnswers = [], aptTimerVal = 25*60, aptTimerInt = null;
+let sitIdx = 0, sitAnswers = [], sitTimerVal = 20*60, sitTimerInt = null;
+let perIdx = 0, perAnswers = [];
+let selectedOpt = null;
+
+// ─── PIPELINE UPDATE ────────────────────────────────────────────
+function setPipelineStage(stage) {
+  document.querySelectorAll('.pipe-step').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < stage) el.classList.add('done');
+    else if (i === stage) el.classList.add('active');
+  });
+}
+
+// ─── STAGE SWITCH ───────────────────────────────────────────────
+function goToStage(id) {
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── TOAST ──────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ─── FORM VALIDATION ────────────────────────────────────────────
+function validateField(id, check) {
+  const wrap = document.getElementById('f-' + id);
+  const el = document.getElementById(id);
+  if (!wrap || !el) return check;
+  if (!check) { wrap.classList.add('has-error'); el.classList.add('error'); }
+  else { wrap.classList.remove('has-error'); el.classList.remove('error'); }
+  return check;
+}
+
+function submitApplicationForm() {
+  let valid = true;
+
+  valid = validateField('fullname', document.getElementById('fullname').value.trim().length >= 3) && valid;
+  valid = validateField('fathername', document.getElementById('fathername').value.trim().length >= 3) && valid;
+
+  const cnic = document.getElementById('cnic').value.trim();
+  valid = validateField('cnic', /^\d{5}-\d{7}-\d$/.test(cnic)) && valid;
+
+  valid = validateField('dob', document.getElementById('dob').value !== '') && valid;
+
+  const gender = document.querySelector('input[name="gender"]:checked');
+  if (!gender) {
+    document.getElementById('gender-err').style.display = 'block';
+    valid = false;
+  } else {
+    document.getElementById('gender-err').style.display = 'none';
+  }
+
+  const phone = document.getElementById('phone').value.trim();
+  valid = validateField('phone', /^0\d{9,11}$/.test(phone.replace(/[-\s]/g, ''))) && valid;
+
+  valid = validateField('city', document.getElementById('city').value !== '') && valid;
+  valid = validateField('address', document.getElementById('address').value.trim().length >= 5) && valid;
+  valid = validateField('education', document.getElementById('education').value !== '') && valid;
+  valid = validateField('experience', document.getElementById('experience').value !== '') && valid;
+  valid = validateField('position', document.getElementById('position').value !== '') && valid;
+
+  const shift = document.querySelector('input[name="shift"]:checked');
+  if (!shift) {
+    document.getElementById('shift-err').style.display = 'block';
+    valid = false;
+  } else {
+    document.getElementById('shift-err').style.display = 'none';
+  }
+
+  valid = validateField('joining', document.getElementById('joining').value !== '') && valid;
+
+  const motivation = document.getElementById('motivation').value.trim();
+  const motivWrap = document.getElementById('f-motivation') || (() => {
+    const el = document.getElementById('motivation').parentElement;
+    el.id = 'f-motivation'; return el;
+  })();
+  if (motivation.length < 20) {
+    motivWrap.classList.add('has-error');
+    document.getElementById('motivation').classList.add('error');
+    valid = false;
+  } else {
+    motivWrap.classList.remove('has-error');
+    document.getElementById('motivation').classList.remove('error');
+  }
+
+  if (!valid) {
+    showToast('Please fill all required fields correctly.', '');
+    document.querySelector('.has-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const skills = [...document.querySelectorAll('input[name="skills"]:checked')].map(c => c.value);
+  const langs = [...document.querySelectorAll('input[name="lang"]:checked')].map(c => c.value);
+
+  applicantData = {
+    full_name: document.getElementById('fullname').value.trim(),
+    father_name: document.getElementById('fathername').value.trim(),
+    cnic: document.getElementById('cnic').value.trim(),
+    dob: document.getElementById('dob').value,
+    gender: gender.value,
+    marital_status: document.querySelector('input[name="marital"]:checked')?.value || '',
+    phone: document.getElementById('phone').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    city: document.getElementById('city').value,
+    preferred_branch: document.getElementById('branch').value,
+    address: document.getElementById('address').value.trim(),
+    education: document.getElementById('education').value,
+    experience: document.getElementById('experience').value,
+    prev_employer: document.getElementById('prev-employer').value.trim(),
+    prev_role: document.getElementById('prev-role').value.trim(),
+    position: document.getElementById('position').value,
+    shift_pref: shift.value,
+    joining: document.getElementById('joining').value,
+    salary_exp: document.getElementById('salary').value,
+    skills: skills.join(', '),
+    languages: langs.join(', '),
+    motivation: document.getElementById('motivation').value.trim(),
+    extra_notes: document.getElementById('extra').value.trim(),
+    status: 'applied',
+    applied_at: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('submit-form-btn');
+  const spinner = document.getElementById('form-spinner');
+  const btnText = document.getElementById('form-btn-text');
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  btnText.textContent = 'Saving...';
+
+  const save = sb
+    ? sb.from('job_applications').insert([applicantData]).select().then(({ data, error }) => {
+        if (!error && data && data[0]) applicationId = data[0].id;
+      }).catch(() => {})
+    : Promise.resolve();
+
+  save.finally(() => {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Submit Application & Start Test →';
+    showToast('Application saved! Starting aptitude test...', 'success');
+    setPipelineStage(1);
+    startAptitudeTest();
+  });
+}
+
+// ─── APTITUDE TEST ──────────────────────────────────────────────
+function startAptitudeTest() {
+  aptIdx = 0; aptAnswers = []; selectedOpt = null;
+  goToStage('stage-1');
+  renderAptQuestion();
+  startTimer('apt', aptTimerVal, () => {
+    showToast('Time is up! Submitting your answers...', '');
+    evaluateAptitude();
+  });
+}
+
+function renderAptQuestion() {
+  const q = aptQuestions[aptIdx];
+  selectedOpt = null;
+  document.getElementById('apt-q-counter').textContent = `Question ${aptIdx + 1} of ${aptQuestions.length}`;
+  document.getElementById('apt-progress').style.width = ((aptIdx + 1) / aptQuestions.length * 100) + '%';
+  document.getElementById('apt-next-btn').textContent = aptIdx === aptQuestions.length - 1 ? 'Submit Test →' : 'Next Question →';
+
+  document.getElementById('apt-question-area').innerHTML = `
+    <div class="q-card">
+      <div class="q-card-header">
+        <span class="q-num">Q${aptIdx + 1}</span>
+        <div class="q-text">${q.q}</div>
+      </div>
+      <div class="q-card-body">
+        <div class="q-options">
+          ${q.opts.map((opt, i) => `
+            <div class="q-opt" id="apt-opt-${i}" onclick="selectAptOpt(${i})">
+              <span class="opt-key">${String.fromCharCode(65+i)}</span>
+              ${opt}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectAptOpt(i) {
+  document.querySelectorAll('[id^="apt-opt-"]').forEach(el => el.classList.remove('selected'));
+  document.getElementById('apt-opt-' + i).classList.add('selected');
+  selectedOpt = i;
+}
+
+function aptNext() {
+  if (selectedOpt === null) { showToast('Please select an answer first.', ''); return; }
+  aptAnswers[aptIdx] = selectedOpt;
+  aptIdx++;
+  if (aptIdx >= aptQuestions.length) { clearInterval(aptTimerInt); evaluateAptitude(); return; }
+  renderAptQuestion();
+}
+
+function evaluateAptitude() {
+  let correct = 0;
+  aptAnswers.forEach((a, i) => { if (a === aptQuestions[i].ans) correct++; });
+  const pct = Math.round(correct / aptQuestions.length * 100);
+  const pass = pct >= 60;
+
+  updateApplicationStatus('aptitude_score', pct);
+  setPipelineStage(pass ? 2 : 1);
+  showAptResult(correct, pct, pass);
+}
+
+function showAptResult(correct, pct, pass) {
+  const hero = document.getElementById('apt-result-hero');
+  hero.className = 'result-hero ' + (pass ? 'pass' : 'fail');
+  document.getElementById('apt-result-icon').textContent = pass ? '✅' : '❌';
+  document.getElementById('apt-result-title').textContent = pass ? 'Aptitude Test Cleared!' : 'Not Enough This Time';
+  document.getElementById('apt-result-title').className = 'result-title ' + (pass ? 'pass-text' : 'fail-text');
+  document.getElementById('apt-result-sub').textContent = pass
+    ? `You got ${correct} out of ${aptQuestions.length} correct. Well done! Proceeding to the situational test.`
+    : `You scored ${correct} out of ${aptQuestions.length}. Minimum score is 60%. You can reapply in 30 days.`;
+  document.getElementById('apt-score-badge').textContent = `${pct}% — ${correct}/${aptQuestions.length} correct`;
+  document.getElementById('apt-score-badge').className = 'score-badge ' + (pass ? 'pass-bg' : 'fail-bg');
+  document.getElementById('apt-result-action').innerHTML = pass
+    ? `<button class="submit-btn" onclick="startSituationalTest()">Continue to Situational Test →</button>`
+    : `<div class="info-box"><span class="info-box-icon">📅</span><span>Thank you for applying to Oven X. We encourage you to reapply after 30 days. Keep practicing basic math and reading comprehension.</span></div>`;
+  goToStage('stage-1-result');
+}
+
+// ─── SITUATIONAL TEST ───────────────────────────────────────────
+function startSituationalTest() {
+  sitIdx = 0; sitAnswers = []; selectedOpt = null;
+  goToStage('stage-2');
+  setPipelineStage(2);
+  renderSitQuestion();
+  startTimer('sit', sitTimerVal, () => {
+    showToast('Time is up! Submitting...', '');
+    evaluateSituational();
+  });
+}
+
+function renderSitQuestion() {
+  const q = sitQuestions[sitIdx];
+  selectedOpt = null;
+  document.getElementById('sit-q-counter').textContent = `Scenario ${sitIdx + 1} of ${sitQuestions.length}`;
+  document.getElementById('sit-progress').style.width = ((sitIdx + 1) / sitQuestions.length * 100) + '%';
+  document.getElementById('sit-next-btn').textContent = sitIdx === sitQuestions.length - 1 ? 'Submit & See Results →' : 'Next Scenario →';
+
+  document.getElementById('sit-question-area').innerHTML = `
+    <div class="q-card">
+      <div class="q-card-header" style="background:linear-gradient(135deg,#1a1a1a,#2d1a00);">
+        <span class="q-num" style="background:var(--amber);color:#1a1a1a;">S${sitIdx + 1}</span>
+        <div class="q-text">${q.q}</div>
+      </div>
+      <div class="q-card-body">
+        <div class="q-options">
+          ${q.opts.map((opt, i) => `
+            <div class="q-opt" id="sit-opt-${i}" onclick="selectSitOpt(${i})">
+              <span class="opt-key">${String.fromCharCode(65+i)}</span>
+              ${opt}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectSitOpt(i) {
+  document.querySelectorAll('[id^="sit-opt-"]').forEach(el => el.classList.remove('selected'));
+  document.getElementById('sit-opt-' + i).classList.add('selected');
+  selectedOpt = i;
+}
+
+function sitNext() {
+  if (selectedOpt === null) { showToast('Please select an answer first.', ''); return; }
+  sitAnswers[sitIdx] = selectedOpt;
+  sitIdx++;
+  if (sitIdx >= sitQuestions.length) { clearInterval(sitTimerInt); evaluateSituational(); return; }
+  renderSitQuestion();
+}
+
+function evaluateSituational() {
+  let correct = 0;
+  sitAnswers.forEach((a, i) => { if (a === sitQuestions[i].ans) correct++; });
+  const pct = Math.round(correct / sitQuestions.length * 100);
+  const pass = pct >= 65;
+
+  updateApplicationStatus('situational_score', pct);
+  setPipelineStage(pass ? 3 : 2);
+
+  const hero = document.getElementById('sit-result-hero');
+  hero.className = 'result-hero ' + (pass ? 'pass' : 'fail');
+  document.getElementById('sit-result-icon').textContent = pass ? '🌟' : '❌';
+  document.getElementById('sit-result-title').textContent = pass ? 'Great Situational Judgment!' : 'Below Passing Score';
+  document.getElementById('sit-result-title').className = 'result-title ' + (pass ? 'pass-text' : 'fail-text');
+  document.getElementById('sit-result-sub').textContent = pass
+    ? `You got ${correct} of ${sitQuestions.length} scenarios right. You think well under pressure. One last step!`
+    : `You scored ${correct} of ${sitQuestions.length}. Minimum is 65%. You can reapply in 30 days after reviewing customer service fundamentals.`;
+  document.getElementById('sit-score-badge').textContent = `${pct}% — ${correct}/${sitQuestions.length} scenarios`;
+  document.getElementById('sit-score-badge').className = 'score-badge ' + (pass ? 'pass-bg' : 'fail-bg');
+  document.getElementById('sit-result-action').innerHTML = pass
+    ? `<button class="submit-btn amber" onclick="startPersonalityCheck()">Continue to Personality Check →</button>`
+    : `<div class="info-box"><span class="info-box-icon">📅</span><span>Thank you for applying. We encourage you to think about how to handle difficult customer situations and reapply in 30 days.</span></div>`;
+
+  goToStage('stage-2-result');
+}
+
+// ─── PERSONALITY CHECK ──────────────────────────────────────────
+function startPersonalityCheck() {
+  perIdx = 0; perAnswers = []; selectedOpt = null;
+  goToStage('stage-3');
+  setPipelineStage(3);
+  renderPerQuestion();
+}
+
+function renderPerQuestion() {
+  const q = perQuestions[perIdx];
+  selectedOpt = null;
+  document.getElementById('per-q-counter').textContent = `Question ${perIdx + 1} of ${perQuestions.length}`;
+  document.getElementById('per-progress').style.width = ((perIdx + 1) / perQuestions.length * 100) + '%';
+  document.getElementById('per-next-btn').textContent = perIdx === perQuestions.length - 1 ? 'Submit & Get Result →' : 'Next →';
+
+  document.getElementById('per-question-area').innerHTML = `
+    <div class="q-card">
+      <div class="q-card-header" style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);">
+        <span class="q-num" style="background:var(--success);color:white;">P${perIdx + 1}</span>
+        <div class="q-text">${q.q}</div>
+      </div>
+      <div class="q-card-body">
+        <div class="q-options">
+          ${q.opts.map((opt, i) => `
+            <div class="q-opt" id="per-opt-${i}" onclick="selectPerOpt(${i})">
+              <span class="opt-key">${String.fromCharCode(65+i)}</span>
+              ${opt}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectPerOpt(i) {
+  document.querySelectorAll('[id^="per-opt-"]').forEach(el => el.classList.remove('selected'));
+  document.getElementById('per-opt-' + i).classList.add('selected');
+  selectedOpt = i;
+}
+
+function perNext() {
+  if (selectedOpt === null) { showToast('Please select an answer first.', ''); return; }
+  perAnswers[perIdx] = selectedOpt;
+  perIdx++;
+  if (perIdx >= perQuestions.length) { finishFunnel(); return; }
+  renderPerQuestion();
+}
+
+// ─── FINISH ─────────────────────────────────────────────────────
+function finishFunnel() {
+  setPipelineStage(4);
+
+  const perSummary = perAnswers.map((a, i) => `Q${i+1}: ${perQuestions[i].opts[a]}`).join(' | ');
+  updateApplicationStatus('personality_summary', perSummary);
+  updateApplicationStatus('status', 'interview_shortlisted');
+
+  document.getElementById('final-name').textContent = applicantData.full_name || '—';
+  document.getElementById('final-position').textContent = applicantData.position || '—';
+  document.getElementById('final-phone').textContent = applicantData.phone || '—';
+  document.getElementById('final-branch').textContent =
+    applicantData.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht Colony' :
+    applicantData.preferred_branch === 'BWP' ? 'Bahawalpur — SS Tower' : 'Any Branch';
+
+  showToast('🎉 Congratulations! You have been shortlisted!', 'success');
+  goToStage('stage-4');
+}
+
+// ─── TIMER ──────────────────────────────────────────────────────
+function startTimer(prefix, seconds, onEnd) {
+  let remaining = seconds;
+  const timerEl = document.getElementById(prefix + '-timer');
+  const interval = setInterval(() => {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timerEl.textContent = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (remaining <= 120) timerEl.className = 'timer-box warning';
+    if (remaining <= 60) timerEl.className = 'timer-box danger';
+    if (remaining <= 0) { clearInterval(interval); onEnd(); }
+  }, 1000);
+  if (prefix === 'apt') aptTimerInt = interval;
+  if (prefix === 'sit') sitTimerInt = interval;
+}
+
+// ─── UPDATE STATUS ──────────────────────────────────────────────
+async function updateApplicationStatus(field, value) {
+  if (!sb || !applicationId) return;
+  try {
+    await sb.from('job_applications').update({ [field]: value }).eq('id', applicationId);
+  } catch(e) {}
+}
+
+// ─── CNIC AUTO-FORMAT ───────────────────────────────────────────
+document.getElementById('cnic').addEventListener('input', function() {
+  let v = this.value.replace(/[^0-9]/g, '');
+  if (v.length > 5 && v.length <= 12) v = v.slice(0,5) + '-' + v.slice(5);
+  else if (v.length > 12) v = v.slice(0,5) + '-' + v.slice(5,12) + '-' + v.slice(12,13);
+  this.value = v;
+});
+
+// Set max DOB (must be 18+)
+const maxDob = new Date();
+maxDob.setFullYear(maxDob.getFullYear() - 18);
+document.getElementById('dob').max = maxDob.toISOString().split('T')[0];
+</script>
+</body>
+</html>
