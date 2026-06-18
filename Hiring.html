@@ -287,8 +287,11 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
   <div class="top-banner">Positions open in <span>Multan & Bahawalpur</span> — Apply now, join the team</div>
   <header class="site-header">
     <div class="logo">OVEN <span>X</span></div>
-    <div class="header-badge">Hiring 2025</div>
-  </header>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="header-badge">Hiring 2025</div>
+        <a href="?hr" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;border:1px solid rgba(255,255,255,0.25);text-decoration:none;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">🔒 HR Login</a>
+    </div>
+</header>
   <div class="pipeline-wrap">
     <div class="pipeline" id="pipeline">
       <div class="pipe-step active" data-step="0"><div class="pipe-dot">1</div><div class="pipe-label">Application</div></div>
@@ -533,13 +536,20 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
 // ═══════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════
-const SUPABASE_URL  = "https://frjcefugnvitexxcated.supabase.co";
-const SUPABASE_KEY  = "sb_publishable_ZJ3_w3fFKpPlZhjwPMJpmA_96Kii_yiO7FaLEe51o"; // publishable key from screenshot
+const SUPABASE_URL  = "https://dauesiuxkvwugraggdjp.supabase.co";
+const SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdWVzaXV4a3Z3dWdyYWdnZGpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTA1OTAsImV4cCI6MjA5NzI2NjU5MH0.kkfk2LieOFs2NIwMADohpyGOyno9bfF29f9yVYD0lmY";
 const EDGE_FUNC_URL = `${SUPABASE_URL}/functions/v1/send-whatsapp-pdf`;
 
 let sb = null;
-try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
-
+try { 
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+        }
+    }); 
+} catch(e) { console.error('Supabase init failed:', e); }
 // ═══════════════════════════════════════════
 //  ROUTE: detect ?hr in URL
 // ═══════════════════════════════════════════
