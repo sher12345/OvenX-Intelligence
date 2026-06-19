@@ -278,6 +278,16 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
 </head>
 <body>
 
+  <!-- ANTI-CHEAT OVERLAY -->
+<div id="cheat-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:30px;">
+  <div id="cheat-icon" style="font-size:64px;">⚠️</div>
+  <div id="cheat-title" style="font-size:26px;font-weight:900;color:white;">Tab Switch Detected</div>
+  <div id="cheat-message" style="font-size:15px;color:rgba(255,255,255,.6);max-width:400px;line-height:1.6;">We noticed you switched away from the test. This is recorded. 3 violations = automatic disqualification.</div>
+  <button id="cheat-resume-btn" onclick="resumeTest()" style="padding:14px 32px;background:#e8231a;color:white;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;text-transform:uppercase;">I Understand — Resume Test</button>
+  <div id="cheat-warning-counter" style="font-size:12px;color:rgba(255,255,255,.3);margin-top:4px;">Warning <span id="cheat-count">1</span> of 3</div>
+  <div id="cheat-disqualified-msg" style="display:none;font-size:13px;color:#f87171;max-width:400px;line-height:1.7;margin-top:8px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:12px;padding:16px 20px;">Your application has been permanently disqualified.<br>You cannot continue this session.<br><span style="font-size:12px;color:rgba(255,255,255,0.3);">You may reapply after 30 days.</span></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════════
@@ -360,18 +370,18 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
             <div class="field"><label>Skills & Strengths</label><div class="check-group"><label class="check-pill"><input type="checkbox" name="skills" value="Customer service"> Customer Service</label><label class="check-pill"><input type="checkbox" name="skills" value="Cash handling"> Cash Handling</label><label class="check-pill"><input type="checkbox" name="skills" value="Food preparation"> Food Prep</label><label class="check-pill"><input type="checkbox" name="skills" value="Delivery & navigation"> Delivery & Navigation</label><label class="check-pill"><input type="checkbox" name="skills" value="Team leadership"> Team Leadership</label><label class="check-pill"><input type="checkbox" name="skills" value="Urdu reading/writing"> Urdu Literacy</label><label class="check-pill"><input type="checkbox" name="skills" value="Basic English"> Basic English</label><label class="check-pill"><input type="checkbox" name="skills" value="Computer/POS"> Computer / POS</label></div></div>
             <div class="field"><label>Languages</label><div class="check-group"><label class="check-pill"><input type="checkbox" name="lang" value="Urdu"> Urdu</label><label class="check-pill"><input type="checkbox" name="lang" value="Punjabi"> Punjabi</label><label class="check-pill"><input type="checkbox" name="lang" value="Saraiki"> Saraiki</label><label class="check-pill"><input type="checkbox" name="lang" value="English"> English</label></div></div>
             <div class="field"><label>Why do you want to join Oven X? <span class="req">*</span></label><textarea id="motivation" placeholder="Write a few sentences about why you want this job." rows="3"></textarea><span class="err-msg">Please write at least 20 characters</span></div>
-            <div class="field"><label>Anything else?</label><textarea id="extra" placeholder="Any other relevant information" rows="2"></textarea></div>
+<div class="field"><label>Anything else?</label><textarea id="extra" placeholder="Any other relevant information" rows="2"></textarea></div>
           </div>
         </div>
       </div>
-      <div class="info-box" style="background:rgba(232,35,26,0.06); border-color:rgba(232,35,26,0.2); color:#7f1d1d;"><span class="info-box-icon">📝</span><span>By submitting you agree that all information is truthful. The next screen will be a <strong>30-minute timed aptitude test</strong>.</span></div>
+      <div class="info-box" style="background:rgba(232,35,26,0.06); border-color:rgba(232,35,26,0.2); color:#7f1d1d;"><span class="info-box-icon">📝</span><span>By submitting you agree that all information is truthful. The next screen will be a <strong>15-minute timed aptitude test</strong>.</span></div>
       <button class="submit-btn" id="submit-form-btn" onclick="submitApplicationForm()"><span class="spinner" id="form-spinner"></span><span id="form-btn-text">Submit Application & Start Test →</span></button>
     </div>
 
     <!-- STAGE 1: APTITUDE TEST -->
     <div class="stage" id="stage-1">
-      <div class="stage-hero"><div class="stage-eyebrow">Step 2 of 4 — Aptitude Test</div><div class="stage-title">Test Your <span>Basic Skills</span></div><div class="stage-sub">20 questions · 25 minutes · Math, Urdu comprehension, and logical reasoning.</div></div>
-      <div class="test-meta"><div class="q-counter" id="apt-q-counter">Question 1 of 20</div><div class="timer-box" id="apt-timer">⏱ 25:00</div></div>
+      <div class="stage-hero"><div class="stage-eyebrow">Step 2 of 4 — Aptitude Test</div><div class="stage-title">Test Your <span>Basic Skills</span></div><div class="stage-sub">20 questions · 15 minutes · Math, Urdu comprehension, and logical reasoning.</div></div>
+      <div class="test-meta"><div class="q-counter" id="apt-q-counter">Question 1 of 20</div><div class="timer-box" id="apt-timer">⏱ 15:00</div></div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="apt-progress" style="width:5%"></div></div>
       <div id="apt-question-area"></div>
       <div class="btn-row"><button class="submit-btn" id="apt-next-btn" onclick="aptNext()">Next Question →</button></div>
@@ -385,8 +395,8 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
 
     <!-- STAGE 2: SITUATIONAL TEST -->
     <div class="stage" id="stage-2">
-      <div class="stage-hero"><div class="stage-eyebrow">Step 3 of 4 — Situational Test</div><div class="stage-title">Real <span>Work Scenarios</span></div><div class="stage-sub">15 scenarios from a real fast food shift. Choose the best action.</div></div>
-      <div class="test-meta"><div class="q-counter" id="sit-q-counter">Scenario 1 of 15</div><div class="timer-box" id="sit-timer">⏱ 20:00</div></div>
+      <div class="stage-hero"><div class="stage-eyebrow">Step 3 of 4 — Situational Test</div><div class="stage-title">Real <span>Work Scenarios</span></div><div class="stage-sub">15 scenarios from a real fast food shift · 18 minutes · Choose the best action.</div></div>
+      <div class="test-meta"><div class="q-counter" id="sit-q-counter">Scenario 1 of 15</div><div class="timer-box" id="sit-timer">⏱ 18:00</div></div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="sit-progress" style="width:6.7%"></div></div>
       <div id="sit-question-area"></div>
       <div class="btn-row"><button class="submit-btn amber" id="sit-next-btn" onclick="sitNext()">Next Scenario →</button></div>
@@ -936,74 +946,139 @@ function downloadPDFFor(id) {
 // ═══════════════════════════════════════════
 //  PUBLIC APP — STATE
 // ═══════════════════════════════════════════
-let currentStage  = 0;
-let applicantData = {};
-let applicationId = localStorage.getItem('ovx_application_id') || null;
-let aptScore      = 0;
-let sitScore      = 0;
+let currentStage   = 0;
+let applicantData  = {};
+let applicationId  = null;
+let aptScore       = 0;
+let sitScore       = 0;
+let testActive     = false;
+let cheatCount     = 0;
+let disqualified   = false;
 
 // ═══════════════════════════════════════════
 //  QUESTIONS
 // ═══════════════════════════════════════════
-const aptQuestions = [
-  { q: "Ek customer ka bill Rs 1,450 hai. Usne Rs 2,000 diye. Kitna change waapis dena hoga?", opts: ["Rs 450", "Rs 550", "Rs 650", "Rs 500"], ans: 1 },
-  { q: "Agar aap 1 ghante mein 24 burgers banate hain, toh 2.5 ghante mein kitne burgers banenge?", opts: ["48", "60", "52", "72"], ans: 1 },
-  { q: "3 customers ne order diya: Rs 350, Rs 720, aur Rs 450. Total kitna hoga?", opts: ["Rs 1,400", "Rs 1,520", "Rs 1,480", "Rs 1,350"], ans: 1 },
-  { q: "Aapka shift 4 PM pe shuru hoti hai aur 12 AM pe khatam hoti hai. Aap kitne ghante kaam karte hain?", opts: ["6 ghante", "7 ghante", "8 ghante", "9 ghante"], ans: 2 },
-  { q: "Agar Rs 850 ka item hai aur 10% discount dena ho, toh final price kya hogi?", opts: ["Rs 750", "Rs 800", "Rs 765", "Rs 720"], ans: 2 },
-  { q: "Counter pe queue mein 7 customers hain. Har customer ko serve karne mein average 3 minute lagte hain. Sab ko serve karne mein kitna time lagega?", opts: ["15 minute", "18 minute", "21 minute", "24 minute"], ans: 2 },
-  { q: "Ek pizza ka cost Rs 999 hai. 3 pizzas ka bill kya hoga, agar ek par Rs 100 discount milti hai?", opts: ["Rs 2,697", "Rs 2,797", "Rs 2,897", "Rs 2,997"], ans: 1 },
-  { q: "Urdu mein 'معاوضہ' ka matlab kya hai?", opts: ["Khana", "Compensation / Payment", "Protest", "Meeting"], ans: 1 },
-  { q: "9 × 8 + 4 ÷ 2 = ?", opts: ["76", "74", "72", "78"], ans: 0 },
-  { q: "Ek customer ne credit card se Rs 2,200 pay kiya aur cashback 5% milti hai. Cashback kitna hoga?", opts: ["Rs 90", "Rs 110", "Rs 100", "Rs 120"], ans: 1 },
-  { q: "Agar aaj 250 plates serve hui aur average selling price Rs 600 hai, toh total revenue kya hogi?", opts: ["Rs 130,000", "Rs 150,000", "Rs 100,000", "Rs 120,000"], ans: 1 },
-  { q: "Ek staff member din mein 8 ghante kaam karta hai aur Rs 700 rozan milte hain. Mahine (30 din) mein kitni salary hogi?", opts: ["Rs 18,000", "Rs 21,000", "Rs 24,000", "Rs 16,000"], ans: 1 },
-  { q: "Fast food mein FIFO ka matlab kya hai?", opts: ["First In First Out (pehle jo aaya pehle serve ho)", "Food Item Follow Order", "Full Inventory Follow Overview", "First Invoice Final Order"], ans: 0 },
-  { q: "Ek delivery order 7:30 PM pe receive hua aur 8:05 PM pe deliver hua. Delivery mein kitna time laga?", opts: ["30 minute", "35 minute", "40 minute", "25 minute"], ans: 1 },
-  { q: "Rs 4,500 ki total sales hua. Agar 7% service charge lagaya jaye, toh total kitna hoga?", opts: ["Rs 4,715", "Rs 4,765", "Rs 4,815", "Rs 4,700"], ans: 1 },
-  { q: "Customer ka order galat aa gaya. Sahi reaction kya hai?", opts: ["Ignore karo, busy hain", "Maafi maango aur foran replace karo", "Customer se argue karo", "Manager ko baad mein batao"], ans: 1 },
-  { q: "Urdu mein 'استقبال' ka matlab kya hai?", opts: ["Goodbye / Farewell", "Welcome / Reception", "Complaint", "Payment"], ans: 1 },
-  { q: "100 - 37 + 15 - 8 = ?", opts: ["70", "72", "68", "74"], ans: 0 },
-  { q: "Agar ek item ki expiry kal hai, toh aap kya karein ge?", opts: ["Kuch nahi, customers ko serve karo", "Supervisor ko immediately report karo", "Chupa do aur baad mein dekho", "Apni marzi se use karo"], ans: 1 },
-  { q: "Rs 1,750 ka bill hai. Customer ne Rs 2,000 diye. Change dene ke baad register mein remaining Rs 500 hain. Register mein total kitna tha?", opts: ["Rs 250", "Rs 750", "Rs 700", "Rs 500"], ans: 0 },
+const aptBank = [
+  // EASY
+  { q:"Ek customer ka bill Rs 1,450 hai. Usne Rs 2,000 diye. Kitna change?", opts:["Rs 450","Rs 550","Rs 650","Rs 500"], ans:1, diff:"easy" },
+  { q:"3 customers ne order diya: Rs 350, Rs 720, Rs 450. Total?", opts:["Rs 1,400","Rs 1,520","Rs 1,480","Rs 1,350"], ans:1, diff:"easy" },
+  { q:"Shift 4 PM shuru, 12 AM khatam. Kitne ghante?", opts:["6","7","8","9"], ans:2, diff:"easy" },
+  { q:"Customer ka order galat aa gaya. Sahi reaction?", opts:["Ignore karo","Maafi maango aur foran replace karo","Argue karo","Manager ko baad mein batao"], ans:1, diff:"easy" },
+  { q:"100 − 37 + 15 − 8 = ?", opts:["70","72","68","74"], ans:0, diff:"easy" },
+  { q:"Ek item ki expiry kal hai. Aap kya karein ge?", opts:["Serve karte raho","Supervisor ko immediately report karo","Chupa do","Apni marzi se use karo"], ans:1, diff:"easy" },
+  { q:"Delivery order 7:30 PM receive, 8:05 PM deliver. Kitna time laga?", opts:["30 min","35 min","40 min","25 min"], ans:1, diff:"easy" },
+  { q:"Urdu mein 'استقبال' ka matlab?", opts:["Alvida","Khush aamdeed / Welcome","Shikayat","Payment"], ans:1, diff:"easy" },
+  { q:"1 ghante mein 24 orders. 2.5 ghante mein kitne?", opts:["48","60","52","72"], ans:1, diff:"easy" },
+  // MEDIUM
+  { q:"Rs 850 ka item, 10% discount. Final price?", opts:["Rs 750","Rs 800","Rs 765","Rs 720"], ans:2, diff:"medium" },
+  { q:"Queue mein 7 customers, har ek ko 3 min. Total time?", opts:["15 min","18 min","21 min","24 min"], ans:2, diff:"medium" },
+  { q:"Urdu mein 'معاوضہ' ka matlab?", opts:["Khana","Compensation / Payment","Protest","Meeting"], ans:1, diff:"medium" },
+  { q:"9 × 8 + 4 ÷ 2 = ?", opts:["76","74","72","78"], ans:0, diff:"medium" },
+  { q:"Fast food mein FIFO ka matlab?", opts:["First In First Out — pehle jo aaya pehle serve ho","Food Item Follow Order","Full Inventory Follow Overview","First Invoice Final Order"], ans:0, diff:"medium" },
+  { q:"Rs 4,500 ki sales. 7% service charge ke baad total?", opts:["Rs 4,715","Rs 4,765","Rs 4,815","Rs 4,700"], ans:1, diff:"medium" },
+  { q:"Staff 8 ghante/din, Rs 700/din. 30 din mein salary?", opts:["Rs 18,000","Rs 21,000","Rs 24,000","Rs 16,000"], ans:1, diff:"medium" },
+  { q:"250 plates, average Rs 600. Total revenue?", opts:["Rs 130,000","Rs 150,000","Rs 100,000","Rs 120,000"], ans:1, diff:"medium" },
+  { q:"Credit card Rs 2,200, 5% cashback. Cashback kitna?", opts:["Rs 90","Rs 110","Rs 100","Rs 120"], ans:1, diff:"medium" },
+  { q:"3 pizzas Rs 999 each, ek par Rs 100 discount. Total?", opts:["Rs 2,697","Rs 2,797","Rs 2,897","Rs 2,997"], ans:1, diff:"medium" },
+  // HARD
+  { q:"Rs 1,750 bill, Rs 2,000 diye. Change ke baad register mein Rs 500. Pehle register mein kitna tha?", opts:["Rs 250","Rs 750","Rs 700","Rs 500"], ans:0, diff:"hard" },
+  { q:"Agar kitchen temperature 60°C se upar ho toh bacteria?", opts:["Mar jaata hai — safe hai","Grow karta hai","Temperature matter nahin karta","Depends on food"], ans:0, diff:"hard" },
+  { q:"15 × 4 − 8 ÷ 2 = ?", opts:["56","54","58","52"], ans:0, diff:"hard" },
+  { q:"Urdu mein 'اعتراض' ka matlab?", opts:["Agreement","Objection / Complaint","Thanks","Payment"], ans:1, diff:"hard" },
+  { q:"End of day cash Rs 300 kam hain. Aap kya karein ge?", opts:["Apni jeb se nikalo","Immediately report karein, log karein","Ignore karo","Kal dekh lena"], ans:1, diff:"hard" },
+  // CASHIER-SPECIFIC
+  { q:"POS pe galti se Rs 5,000 ki jagah Rs 500 enter kiya. Kya karna chahiye?", opts:["Chhod do","Immediately manager ko batao aur reverse karein","Customer se maango","Kal dekhna"], ans:1, diff:"hard", pos:["Cashier / Counter Staff"] },
+  { q:"Void transaction ka correct tarika?", opts:["Seedha delete karo","Manager approval se void karein aur reason note karein","Ignore karo","Customer ko paise wapis do"], ans:1, diff:"hard", pos:["Cashier / Counter Staff"] },
+  // KITCHEN-SPECIFIC
+  { q:"Raw chicken aur cooked food same surface pe rakhna?", opts:["Theek hai","Cross-contamination — serious health risk","Taste better hoti hai","Cold chain break hoti hai"], ans:1, diff:"hard", pos:["Kitchen Staff / Cook"] },
+  { q:"Fridge temperature food safety ke liye kitni honi chahiye?", opts:["10°C se neeche","5°C se neeche","0°C se neeche","15°C se neeche"], ans:1, diff:"hard", pos:["Kitchen Staff / Cook"] },
+  { q:"HACCP ka matlab?", opts:["Hazard Analysis Critical Control Points","High Accuracy Cooking Control Protocol","Hygiene And Cleaning Compliance Policy","Hazardous Area Check"], ans:0, diff:"hard", pos:["Kitchen Staff / Cook"] },
+  // RIDER-SPECIFIC
+  { q:"GPS ne galat route dikhaya delivery mein. Aap kya karein ge?", opts:["GPS follow karo","Offline map use karo ya customer se address confirm karo","Order wapis le jao","Cancel karo"], ans:1, diff:"medium", pos:["Delivery Rider"] },
+  { q:"Customer delivery address pe nahin mila. Aap kya karein ge?", opts:["Order chhod ke chale jao","3 baar call karo, branch ko inform karo, wait karo","Order khud rakho","Return karo"], ans:1, diff:"medium", pos:["Delivery Rider"] },
+  // MANAGER-SPECIFIC
+  { q:"Staff member 3 baar late aaya. Aap kya karein ge?", opts:["Ignore karo","Warning de kar document karein, phir disciplinary action","Seedha fire karein","Dusron ko batao"], ans:1, diff:"hard", pos:["Shift Supervisor","Kitchen Manager","Branch Manager"] },
+  { q:"Peak hour mein 2 staff members absent. Priority kya hai?", opts:["Sab kaam khud karo","Roles reassign karein, queue manage karein, management ko inform karein","Band karo","Customers ko bhej do"], ans:1, diff:"hard", pos:["Shift Supervisor","Kitchen Manager","Branch Manager"] },
+  { q:"Monthly food cost 35% se upar ja raha hai. Pehla step?", opts:["Staff salary cut karein","Waste audit, portion sizes check, supplier prices review karein","Prices raise karein","Menu items hataao"], ans:1, diff:"hard", pos:["Kitchen Manager","Branch Manager"] },
 ];
-const sitQuestions = [
-  { q: "Rush hour hai. Queue mein 12 customers hain. Ek customer counter pe aakar bolte hain ke unhe bohot jaldi hai aur please pehle serve karo. Aap kya karein ge?", opts: ["Haan, jaldi se unhe serve karo", "Politely explain karo ke queue system fair hai", "Manager ko bulate ho", "Queue mein peeche bhej do"], ans: 1 },
-  { q: "Aap kitchen mein hain. Colleague ne haath dhoye baghair raw chicken handle kar ke seedha bread cut karne lagi hain. Aap kya karein ge?", opts: ["Chup raho", "Foran politely rok ke unhe haath dhone ko kaho", "Baad mein manager ko batao", "Khud hi bread change karo"], ans: 1 },
-  { q: "Ek customer bohot zor se shikayat kar raha hai ke uska order 40 minute delay hua. Aap kya karein ge?", opts: ["Seedha argument karo", "Quietly apologize karo, manager ko batao, complimentary item offer karo", "Ignore karo", "Security ko bulate ho"], ans: 1 },
-  { q: "Shift khatam hone se 10 minute pehle aapka colleague sick ho jaata hai. Manager ne aapko ek ghanta aur rukne ko kaha. Aap kya karein ge?", opts: ["Haan bolte hain", "Seedha nahin bolte aur nikal jaate ho", "Argue karo", "Doctor ka bahana lagate ho"], ans: 0 },
-  { q: "Cashier hain. Customer ne payment ki. Receipt mein pata chalta hai ek item miss hua. Customer ja chuka hai. Aap kya karein ge?", opts: ["Kuch nahin", "Manager ko report karo aur customer ko contact karo", "Paise pocket mein rakho", "Ignore karo"], ans: 1 },
-  { q: "Kitchen mein kaam kar rahe hain. Ek item ki stock khatam hone wali hai aur customer ne wohi order diya hai. Aap kya karein ge?", opts: ["Order le lo aur phir baad mein batao", "Pehle customer ko honestly bataao aur substitute suggest karo", "Order refuse karo", "Kisi dusre ki plate se leke serve karo"], ans: 1 },
-  { q: "Manager ne aapko ek kaam diya hai jo aapke samajh mein nahin aaya. Aap kya karein ge?", opts: ["Apni marzi se karo", "Clarity le lo — poochna weakness nahin, aqal hai", "Kuch bhi kar do", "Kaam hi mat karo"], ans: 1 },
-  { q: "Closing time hai. Ek customer aakar bolta hai ke sirf ek order chahiye. Manager bolta hai officially band hai. Best response?", opts: ["Loudly bolo BAND HAI", "Politely bolao kitchen band ho gaya, kal zaroor aaiye", "Argue karo", "Chup raho"], ans: 1 },
-  { q: "Aap notice karte hain ke ek colleague paise register mein nahin dal raha, seedha pocket mein rakh raha hai. Aap kya karein ge?", opts: ["Chup raho", "Manager ya owner ko report karo", "Colleague se seedha poocho", "Aap bhi wohi karo"], ans: 1 },
-  { q: "Customer ne spicy food order ki par non-spicy manga tha. Receipt check karte hain customer ki hi galti hai. Aap kya karein ge?", opts: ["Customer ko blame karo", "Apologize karo aur replace karo (manager permission se)", "Ignore karo", "Argue karo"], ans: 1 },
-  { q: "Bohot rush hai. Aap akele counter pe hain, kitchen mein bhi understaffed hai. Aapka next step?", opts: ["Panic karo", "Calmly customers ko update karo aur supervisor ko alert karo", "Counter chhod do", "Sab orders cancel karo"], ans: 1 },
-  { q: "Ek regular customer hamesha extra sauces maangta hai bina pay kiye. Aaj manager nearby hai. Aap kya karein ge?", opts: ["Chup kar ke de do", "Politely extra sauces ka charge batao — policy consistently apply karo", "Customer ko embarrass karo", "Manager ki taraf ishaara karo"], ans: 1 },
-  { q: "Sirf 2 mahine se kaam kar rahe hain. Senior colleague galat technique use kar raha hai. Aap kya karein ge?", opts: ["Chup raho", "Respectfully aur privately mention karo", "Loudly sab ke saamne correct karo", "Manager ko complaint karo"], ans: 1 },
-  { q: "Last order hai. Delivery rider bohot late hai. Customer ka phone aa raha hai. Rider ka phone nahin lag raha. Aap kya karein ge?", opts: ["Customer ko ignore karo", "Customer ko honestly update karo aur manager se rider dhundho", "Customer ko jhoot bolo", "Order cancel kar do"], ans: 1 },
-  { q: "Apni galti se customer ka order mix-up karte hain jisse allergy reaction ka risk hai. Aap kya karein ge?", opts: ["Ummeed karo ke kuch nahin hoga", "Foran customer ko rok ke situation bataao aur supervisor ko inform karo", "Silently replace karo", "Kuch nahin karo"], ans: 1 },
+
+const sitBank = [
+  { q:"Rush hour, 12 customers queue mein. Ek aake bolta hai 'mujhe bohot jaldi hai, pehle serve karo.' Aap kya karein ge?", opts:["Haan pehle serve karo","Politely bolao ke queue fair hai, baari par zaroor serve karein ge","Manager ko bulate ho","Ignore karo"], ans:1 },
+  { q:"Colleague ne haath dhoye baghair raw chicken handle karke seedha bread cut karne lagi. Aap kya karein ge?", opts:["Chup raho","Foran politely rok ke haath dhone ko kaho — food safety emergency hai","Baad mein batao","Bread khud change karo"], ans:1 },
+  { q:"Customer 40 minute delay par bohot zor se shikayat kar raha hai, dusre customers dekh rahe hain. Aap kya karein ge?", opts:["Argument karo","Quietly apologize karo, manager ko batao, complimentary item offer karo","Ignore karo","Security bulate ho"], ans:1 },
+  { q:"Shift khatam se 10 min pehle colleague sick ho gaya, replacement nahin. Manager ne 1 ghanta aur rukne ko kaha. Aap kya karein ge?", opts:["Haan bolte hain — team ki zaroorat hai","Chup rehte aur nikal jaate ho","Argue karo","Doctor ka bahana lagate ho"], ans:0 },
+  { q:"Customer ne payment ki aur gaya. Receipt mein ek item miss hua. Aap kya karein ge?", opts:["Kuch nahin — gaya tha","Manager ko report karo, customer ka number ho toh contact karo","Paise apne paas rakho","Ignore karo"], ans:1 },
+  { q:"Kitchen mein ek item stock khatam hone wali hai aur customer ne wohi order diya. Aap kya karein ge?", opts:["Order lo aur baad mein batao","Pehle customer ko honestly bataao aur substitute suggest karo","Order refuse karo","Dusre ki plate se lo"], ans:1 },
+  { q:"Manager ne kaam diya jo samajh nahin aaya. Aap kya karein ge?", opts:["Apni marzi se karo","Clarity maango — poochna weakness nahin, aqal hai","Kuch bhi karo","Kaam hi mat karo"], ans:1 },
+  { q:"Closing time. Ek customer aaya, sirf ek order chahiye. Kitchen officially band hai. Best response?", opts:["Zor se 'BAND HAI' bolo","Politely bolao kitchen band ho gaya, kal zaroor aaiye","Argue karo","Chup raho"], ans:1 },
+  { q:"Colleague paise register mein nahin dal raha, seedha pocket mein rakh raha hai. Aap kya karein ge?", opts:["Chup raho","Manager ya owner ko immediately report karo","Colleague se poocho","Aap bhi wohi karo"], ans:1 },
+  { q:"Customer ne spicy food order ki, bolta hai non-spicy manga tha. Receipt mein customer ki hi galti hai. Aap kya karein ge?", opts:["Customer ko blame karo","Apologize karo aur replace karo (manager permission se)","Ignore karo","Argue karo"], ans:1 },
+  { q:"Bohot rush hai, aap akele counter pe hain, kitchen understaffed hai. Aapka next step?", opts:["Panic karo","Calmly customers ko update karo, prioritize karo, supervisor ko alert karo","Counter chhod do","Sab orders cancel karo"], ans:1 },
+  { q:"Regular customer hamesha extra sauces maangta hai bina pay kiye. Aaj manager nearby hai. Aap kya karein ge?", opts:["De do chup karke","Politely extra sauces ka charge batao — policy consistently apply karo","Embarrass karo","Manager ki taraf ishaara karo"], ans:1 },
+  { q:"Sirf 2 mahine se kaam kar rahe hain. Senior colleague galat technique use kar raha hai. Aap kya karein ge?", opts:["Chup raho","Respectfully aur privately mention karo","Loudly sab ke saamne correct karo","Manager ko complaint karo"], ans:1 },
+  { q:"Delivery rider late hai, customer ka phone aa raha hai, rider phone nahin utha raha. Aap kya karein ge?", opts:["Ignore karo","Customer ko honestly update karo, manager se rider dhundho, apologize karo","Jhoot bolo","Cancel karo"], ans:1 },
+  { q:"Apni galti se customer ka order mix-up kiya, allergy reaction ka risk hai. Aap kya karein ge?", opts:["Ummeed karo kuch nahin hoga","Foran customer ko rok ke situation bataao aur supervisor ko inform karo","Silently replace karo","Ignore karo"], ans:1 },
+  { q:"Health inspector achanak aayi. Kitchen thodi untidy hai. Aap kya karein ge?", opts:["Ghabi jaate ho","Calmly greet karo, immediately clean karna shuru karo, manager ko inform karo","Rokne ki koshish karo","Bahana banao"], ans:1 },
+  { q:"Cash register mein Rs 500 zyada hain end of shift. Aap kya karein ge?", opts:["Ghar le jao — bonus hai","Immediately manager ko report karo aur document karein","Kal ke liye chhod do","Ignore karo"], ans:1 },
+  { q:"Online order app mein confirm hua par kitchen mein nahin gaya. Customer collect karne aa gaya. Aap kya karein ge?", opts:["Argue karo ke order nahin aaya","Apologize karo, manually process karo, manager ko inform karo","Wapis bhej do","Free bana do bina bataye"], ans:1 },
+  { q:"Rush hour mein aapne galat order pack kiya. Customer ghar pahunch ke complain ki. Aap kya karein ge?", opts:["Phone cut karo","Maafi maango, replacement ya refund offer karo — manager se approval lo","Galat prove karo","Ignore karo"], ans:1 },
+  { q:"New trainee baar baar same galti karta hai. Aap supervisor hain. Aap kya karein ge?", opts:["Zor se daanto","Patient ho kar step-by-step explain karo, progress document karo","Ignore karo","Fire karo"], ans:1 },
 ];
+
 const perQuestions = [
-  { q: "Kaam ke dauran pressure aur rush handle karne ka aapka tarika kya hai?", opts: ["Mujhe pressure pasand hai, main better perform karta hoon", "Main try karta hoon par sometimes overwhelm hota hoon", "Main quiet rehta hoon aur kaam pe focus karta hoon", "Main generally calm rehta hoon aur ek cheez ek waqt mein karta hoon"] },
-  { q: "Agar koi colleague aapka kaam nahin kar raha toh aap kya karein ge?", opts: ["Main khud sab kar leta hoon", "Main politely bat karta hoon unse", "Main manager ko batata hoon", "Main ignore kar deta hoon"] },
-  { q: "Fast food ki job mein sab se important cheez kya hai?", opts: ["Tezi (Speed)", "Quality aur cleanliness", "Customer satisfaction", "Sab tino — ek cheez bhi miss nahin honi chahiye"] },
-  { q: "Aap raat ki shift mein zyada comfortable hain ya din ki?", opts: ["Din ki — fresh hota hoon", "Raat ki — quiet hoti hai", "Koi bhi — flexible hoon", "Weekends prefer karta hoon"] },
-  { q: "Agar aapka manager aapko kuch galat karne ko kahe, toh aap kya karein ge?", opts: ["Haan bol deta hoon", "Politely apni concern express karta hoon", "Seedha refuse kar deta hoon", "Pehle samjhta hoon phir decide karta hoon"] },
-  { q: "Team mein aapka role generally kya hota hai?", opts: ["Leader", "Executor — mujhe kaam batao, main karta hoon", "Problem solver", "Support — main dusron ki help karta hoon"] },
-  { q: "Agar aapko koi naya skill seekhna ho jo aapki naukri ke liye zarori hai, toh aap kya karein ge?", opts: ["Wait karo ke koi sikhaye", "Khud online dekh ke seekhta hoon", "Colleague se poochta hoon", "Practice se seekhta hoon"] },
-  { q: "Customer ne aapko personally insult kiya. Aapka immediate reaction?", opts: ["Waapis bolta hoon", "Deep breath, professional rehta hoon, manager ko batata hoon baad mein", "Upset ho jaata hoon", "Situation ignore karta hoon aur kaam karta rehta hoon"] },
-  { q: "Aap Oven X mein 1 saal baad khud ko kahan dekhte hain?", opts: ["Wohi position pe", "Promotion mein — supervisor ya manager banna chahta hoon", "More skills seekhna chahta hoon", "Business khud start karna chahta hoon eventually"] },
-  { q: "Khana aur cleanliness ke baare mein aapka attitude kya hai?", opts: ["Decent hai kaafi hai", "Strict hoon — cleanliness non-negotiable hai", "Depends on how busy we are", "Customer ko dikh nahin raha toh theek hai"] },
+  { q:"Kaam ke dauran problem aa jaye toh aap kya karein ge?", opts:["Akele solve karne ki koshish karo","Supervisor ko immediately batao","Ignore karo","Dusron pe blame karo"] },
+  { q:"Aap team mein kaise kaam karte hain?", opts:["Akela kaam prefer karta/karti hoon","Team ke saath milke kaam karna pasand hai","Depends on mood","Dusron ka kaam bhi khud karta/karti hoon"] },
+  { q:"Agar koi customer aap se rude ho toh?", opts:["Wapis rude ho jaata/jaati hoon","Calm rehta/rehti hoon aur professionally handle karta/karti hoon","Manager ke paas bhej deta/deti hoon","Chup ho jaata/jaati hoon"] },
+  { q:"Aap pressure mein kaise perform karte hain?", opts:["Ghabra jaata/jaati hoon","Pressure mein acha/achi perform karta/karti hoon","Slow ho jaata/jaati hoon","Kaam chhod deta/deti hoon"] },
+  { q:"Naye kaam seekhne ke baare mein aapka kya khayal hai?", opts:["Bilkul pasand nahin","Hamesha naya seekhne ke liye tayyar hoon","Sirf zaroorat par seekhta/seekhti hoon","Time waste lagta hai"] },
+  { q:"Agar aap se galti ho jaye toh aap kya karein ge?", opts:["Chhupaane ki koshish karo","Foran acknowledge karo aur theek karne ki koshish karo","Kisi aur par blame karo","Ignore karo"] },
+  { q:"Punctuality ke baare mein aapka kya attitude hai?", opts:["Thodi der se aana normal hai","Hamesha time par ya pehle aata/aati hoon","Depends on situation","Koi importance nahin"] },
+  { q:"Aap apne kaam ki quality ko kaise dekhte hain?", opts:["Bas theek thak ho jaye kafi hai","Hamesha best karne ki koshish karta/karti hoon","Dusron jitna hi karta/karti hoon","Manager dekhta hai toh acha karta/karti hoon"] },
+  { q:"Agar manager aapko feedback de toh aap kya karein ge?", opts:["Defensive ho jaata/jaati hoon","Sunke improve karne ki koshish karta/karti hoon","Ignore karta/karti hoon","Upset ho jaata/jaati hoon"] },
+  { q:"Long term mein aap khud ko kahan dekhte hain?", opts:["Koi plan nahin","Grow karna chahta/chahti hoon is field mein","Sirf paise chahiye","Jaldi dusri job dhundhunga/dhundhugi"] },
 ];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildAptQuestions(position) {
+  const pos = (position||'').toLowerCase();
+  // Position-specific questions
+  const posSpecific = aptBank.filter(q => 
+    q.pos && q.pos.some(p => pos.includes(p.toLowerCase().split('/')[0].trim()))
+  );
+  // Core questions (no pos restriction)
+  const core = aptBank.filter(q => !q.pos);
+  // Balanced: ensure at least 3 hard, 7 medium, 5 easy + position-specific
+  const hard   = shuffle(core.filter(q=>q.diff==='hard')).slice(0,4);
+  const medium = shuffle(core.filter(q=>q.diff==='medium')).slice(0,8);
+  const easy   = shuffle(core.filter(q=>q.diff==='easy')).slice(0,5);
+  const pos3   = shuffle(posSpecific).slice(0,3);
+  // Combine and deduplicate
+  const combined = [...easy,...medium,...hard,...pos3];
+  const seen = new Set();
+  return combined.filter(q=>{ if(seen.has(q.q)) return false; seen.add(q.q); return true; }).slice(0,20);
+}
+
+function buildSitQuestions() {
+  return shuffle(sitBank).slice(0,15);
+}
 
 // ═══════════════════════════════════════════
 //  TEST STATE
 // ═══════════════════════════════════════════
-let aptIdx=0, aptAnswers=[], aptTimerVal=25*60, aptTimerInt=null;
-let sitIdx=0, sitAnswers=[], sitTimerVal=20*60, sitTimerInt=null;
+let aptIdx=0, aptAnswers=[], aptTimerVal=15*60, aptTimerInt=null;
+let sitIdx=0, sitAnswers=[], sitTimerVal=18*60, sitTimerInt=null;
 let perIdx=0, perAnswers=[];
 let selectedOpt=null;
+let builtAptQuestions = [];
+let builtSitQuestions = [];
 
 // ═══════════════════════════════════════════
 //  PIPELINE
@@ -1124,28 +1199,35 @@ function submitApplicationForm() {
 //  APTITUDE TEST
 // ═══════════════════════════════════════════
 function startAptitudeTest() {
+  localStorage.removeItem('ovx_application_id');
+  localStorage.removeItem('ovx_applicant_data');
+  applicationId = null;
+  testActive = true;
   aptIdx=0; aptAnswers=[]; selectedOpt=null;
   goToStage('stage-1');
+  builtAptQuestions = buildAptQuestions(applicantData.position || '');
   renderAptQuestion();
   startTimer('apt', aptTimerVal, ()=>{ showToast('Time is up!'); evaluateAptitude(); });
 }
 function renderAptQuestion() {
-  const q=aptQuestions[aptIdx]; selectedOpt=null;
-  document.getElementById('apt-q-counter').textContent=`Question ${aptIdx+1} of ${aptQuestions.length}`;
-  document.getElementById('apt-progress').style.width=((aptIdx+1)/aptQuestions.length*100)+'%';
-  document.getElementById('apt-next-btn').textContent=aptIdx===aptQuestions.length-1?'Submit Test →':'Next Question →';
+  const q=builtAptQuestions[aptIdx]; selectedOpt=null;
+  document.getElementById('apt-q-counter').textContent=`Question ${aptIdx+1} of ${builtAptQuestions.length}`;
+  document.getElementById('apt-progress').style.width=((aptIdx+1)/builtAptQuestions.length*100)+'%';
+  document.getElementById('apt-next-btn').textContent=aptIdx===builtAptQuestions.length-1?'Submit Test →':'Next Question →';
   document.getElementById('apt-question-area').innerHTML=`<div class="q-card"><div class="q-card-header"><span class="q-num">Q${aptIdx+1}</span><div class="q-text">${q.q}</div></div><div class="q-card-body"><div class="q-options">${q.opts.map((opt,i)=>`<div class="q-opt" id="apt-opt-${i}" onclick="selectAptOpt(${i})"><span class="opt-key">${String.fromCharCode(65+i)}</span>${opt}</div>`).join('')}</div></div></div>`;
 }
 function selectAptOpt(i) { document.querySelectorAll('[id^="apt-opt-"]').forEach(el=>el.classList.remove('selected')); document.getElementById('apt-opt-'+i).classList.add('selected'); selectedOpt=i; }
 function aptNext() {
+  if (!guardStageTransition()) return;
   if (selectedOpt===null) { showToast('Please select an answer first.'); return; }
   aptAnswers[aptIdx]=selectedOpt; aptIdx++;
-  if (aptIdx>=aptQuestions.length) { clearInterval(aptTimerInt); evaluateAptitude(); return; }
+  if (aptIdx>=builtAptQuestions.length) { clearInterval(aptTimerInt); evaluateAptitude(); return; }
   renderAptQuestion();
 }
 function evaluateAptitude() {
-  let correct=0; aptAnswers.forEach((a,i)=>{ if(a===aptQuestions[i].ans) correct++; });
-  aptScore=Math.round(correct/aptQuestions.length*100);
+  testActive = false;
+  let correct=0; aptAnswers.forEach((a,i)=>{ if(a===builtAptQuestions[i].ans) correct++; });
+  aptScore=Math.round(correct/builtAptQuestions.length*100);
   const pass=aptScore>=60;
   updateApplicationStatus('aptitude_score', aptScore);
   setPipelineStage(pass?2:1); showAptResult(correct,aptScore,pass);
@@ -1156,8 +1238,8 @@ function showAptResult(correct,pct,pass) {
   document.getElementById('apt-result-icon').textContent=pass?'✅':'❌';
   document.getElementById('apt-result-title').textContent=pass?'Aptitude Test Cleared!':'Not Enough This Time';
   document.getElementById('apt-result-title').className='result-title '+(pass?'pass-text':'fail-text');
-  document.getElementById('apt-result-sub').textContent=pass?`You got ${correct} out of ${aptQuestions.length} correct. Well done!`:`You scored ${correct} out of ${aptQuestions.length}. Minimum score is 60%. You can reapply in 30 days.`;
-  document.getElementById('apt-score-badge').textContent=`${pct}% — ${correct}/${aptQuestions.length} correct`;
+  document.getElementById('apt-result-sub').textContent=pass?`You got ${correct} out of ${builtAptQuestions.length} correct. Well done!`:`You scored ${correct} out of ${builtAptQuestions.length}. Minimum score is 60%. You can reapply in 30 days.`;
+  document.getElementById('apt-score-badge').textContent=`${pct}% — ${correct}/${builtAptQuestions.length} correct`;
   document.getElementById('apt-score-badge').className='score-badge '+(pass?'pass-bg':'fail-bg');
   document.getElementById('apt-result-action').innerHTML=pass?`<button class="submit-btn" onclick="startSituationalTest()">Continue to Situational Test →</button>`:`<div class="info-box"><span class="info-box-icon">📅</span><span>Thank you for applying. Reapply after 30 days.</span></div>`;
   goToStage('stage-1-result');
@@ -1167,28 +1249,33 @@ function showAptResult(correct,pct,pass) {
 //  SITUATIONAL TEST
 // ═══════════════════════════════════════════
 function startSituationalTest() {
+  testActive = true;
   sitIdx=0; sitAnswers=[]; selectedOpt=null;
-  goToStage('stage-2'); setPipelineStage(2);
+  goToStage('stage-2');
+  builtSitQuestions = buildSitQuestions();
+  setPipelineStage(2);
   renderSitQuestion();
   startTimer('sit', sitTimerVal, ()=>{ showToast('Time is up!'); evaluateSituational(); });
 }
 function renderSitQuestion() {
-  const q=sitQuestions[sitIdx]; selectedOpt=null;
-  document.getElementById('sit-q-counter').textContent=`Scenario ${sitIdx+1} of ${sitQuestions.length}`;
-  document.getElementById('sit-progress').style.width=((sitIdx+1)/sitQuestions.length*100)+'%';
-  document.getElementById('sit-next-btn').textContent=sitIdx===sitQuestions.length-1?'Submit & See Results →':'Next Scenario →';
+  const q=builtSitQuestions[sitIdx]; selectedOpt=null;
+  document.getElementById('sit-q-counter').textContent=`Scenario ${sitIdx+1} of ${builtSitQuestions.length}`;
+  document.getElementById('sit-progress').style.width=((sitIdx+1)/builtSitQuestions.length*100)+'%';
+  document.getElementById('sit-next-btn').textContent=sitIdx===builtSitQuestions.length-1?'Submit & See Results →':'Next Scenario →';
   document.getElementById('sit-question-area').innerHTML=`<div class="q-card"><div class="q-card-header" style="background:linear-gradient(135deg,#1a1a1a,#2d1a00);"><span class="q-num" style="background:var(--amber);color:#1a1a1a;">S${sitIdx+1}</span><div class="q-text">${q.q}</div></div><div class="q-card-body"><div class="q-options">${q.opts.map((opt,i)=>`<div class="q-opt" id="sit-opt-${i}" onclick="selectSitOpt(${i})"><span class="opt-key">${String.fromCharCode(65+i)}</span>${opt}</div>`).join('')}</div></div></div>`;
 }
 function selectSitOpt(i) { document.querySelectorAll('[id^="sit-opt-"]').forEach(el=>el.classList.remove('selected')); document.getElementById('sit-opt-'+i).classList.add('selected'); selectedOpt=i; }
 function sitNext() {
+  if (!guardStageTransition()) return;
   if (selectedOpt===null) { showToast('Please select an answer first.'); return; }
   sitAnswers[sitIdx]=selectedOpt; sitIdx++;
-  if (sitIdx>=sitQuestions.length) { clearInterval(sitTimerInt); evaluateSituational(); return; }
+  if (sitIdx>=builtSitQuestions.length) { clearInterval(sitTimerInt); evaluateSituational(); return; }
   renderSitQuestion();
 }
 function evaluateSituational() {
-  let correct=0; sitAnswers.forEach((a,i)=>{ if(a===sitQuestions[i].ans) correct++; });
-  sitScore=Math.round(correct/sitQuestions.length*100);
+  testActive = false;
+  let correct=0; sitAnswers.forEach((a,i)=>{ if(a===builtSitQuestions[i].ans) correct++; });
+  sitScore=Math.round(correct/builtSitQuestions.length*100);
   const pass=sitScore>=65;
   updateApplicationStatus('situational_score', sitScore);
   setPipelineStage(pass?3:2);
@@ -1197,8 +1284,8 @@ function evaluateSituational() {
   document.getElementById('sit-result-icon').textContent=pass?'🌟':'❌';
   document.getElementById('sit-result-title').textContent=pass?'Great Situational Judgment!':'Below Passing Score';
   document.getElementById('sit-result-title').className='result-title '+(pass?'pass-text':'fail-text');
-  document.getElementById('sit-result-sub').textContent=pass?`You got ${correct} of ${sitQuestions.length} scenarios right. One last step!`:`You scored ${correct} of ${sitQuestions.length}. Minimum is 65%. Reapply in 30 days.`;
-  document.getElementById('sit-score-badge').textContent=`${sitScore}% — ${correct}/${sitQuestions.length} scenarios`;
+  document.getElementById('sit-result-sub').textContent=pass?`You got ${correct} of ${builtSitQuestions.length} scenarios right. One last step!`:`You scored ${correct} of ${builtSitQuestions.length}. Minimum is 65%. Reapply in 30 days.`;
+  document.getElementById('sit-score-badge').textContent=`${sitScore}% — ${correct}/${builtSitQuestions.length} scenarios`;
   document.getElementById('sit-score-badge').className='score-badge '+(pass?'pass-bg':'fail-bg');
   document.getElementById('sit-result-action').innerHTML=pass?`<button class="submit-btn amber" onclick="startPersonalityCheck()">Continue to Personality Check →</button>`:`<div class="info-box"><span class="info-box-icon">📅</span><span>Thank you for applying. Reapply in 30 days.</span></div>`;
   goToStage('stage-2-result');
@@ -1220,6 +1307,7 @@ function renderPerQuestion() {
 }
 function selectPerOpt(i) { document.querySelectorAll('[id^="per-opt-"]').forEach(el=>el.classList.remove('selected')); document.getElementById('per-opt-'+i).classList.add('selected'); selectedOpt=i; }
 function perNext() {
+  if (!guardStageTransition()) return;
   if (selectedOpt===null) { showToast('Please select an answer first.'); return; }
   perAnswers[perIdx]=selectedOpt; perIdx++;
   if (perIdx>=perQuestions.length) { finishFunnel(); return; }
@@ -1277,29 +1365,11 @@ async function sendWhatsApp(pdfBase64, perSummary) {
   } catch(e) { console.error('sendWhatsApp error:',e); }
 }
 
-// ═══════════════════════════════════════════
-//  TIMER
-// ═══════════════════════════════════════════
-function startTimer(prefix, seconds, onEnd) {
-  let remaining=seconds;
-  const timerEl=document.getElementById(prefix+'-timer');
-  const interval=setInterval(()=>{
-    remaining--;
-    const m=Math.floor(remaining/60), s=remaining%60;
-    timerEl.textContent=`⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if (remaining<=120) timerEl.className='timer-box warning';
-    if (remaining<=60)  timerEl.className='timer-box danger';
-    if (remaining<=0)   { clearInterval(interval); onEnd(); }
-  },1000);
-  if (prefix==='apt') aptTimerInt=interval;
-  if (prefix==='sit') sitTimerInt=interval;
-}
 
 // ═══════════════════════════════════════════
 //  SUPABASE UPDATE
 // ═══════════════════════════════════════════
 async function updateApplicationStatus(field, value) {
-  if (!applicationId) applicationId=localStorage.getItem('ovx_application_id');
   if (!sb || !applicationId) return;
   try { await sb.from('job_applications').update({[field]:value}).eq('id',applicationId); } catch(e){}
 }
@@ -1320,6 +1390,150 @@ document.getElementById('dob').max=maxDob.toISOString().split('T')[0];
 //  BOOT
 // ═══════════════════════════════════════════
 initRoute();
+
+// ── ANTI-CHEAT ──────────────────────────────
+
+// Unified timer reference so we can always clear cleanly
+const activeTimers = { apt: null, sit: null };
+
+function startTimer(prefix, seconds, onEnd) {
+  let remaining = seconds;
+  const timerEl = document.getElementById(prefix + '-timer');
+
+  // Clear any existing timer for this prefix before starting
+  if (activeTimers[prefix]) {
+    clearInterval(activeTimers[prefix]);
+    activeTimers[prefix] = null;
+  }
+
+  activeTimers[prefix] = setInterval(() => {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timerEl.textContent = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (remaining <= 120) timerEl.className = 'timer-box warning';
+    if (remaining <= 60)  timerEl.className = 'timer-box danger';
+    if (remaining <= 0)   { clearAllTimers(); onEnd(); }
+  }, 1000);
+
+  // Keep legacy references in sync for anything that uses them directly
+  if (prefix === 'apt') aptTimerInt = activeTimers[prefix];
+  if (prefix === 'sit') sitTimerInt = activeTimers[prefix];
+}
+
+function clearAllTimers() {
+  Object.keys(activeTimers).forEach(key => {
+    if (activeTimers[key]) {
+      clearInterval(activeTimers[key]);
+      activeTimers[key] = null;
+    }
+  });
+  aptTimerInt = null;
+  sitTimerInt = null;
+}
+
+function lockTestPermanently() {
+  disqualified = true;
+  testActive   = false;
+
+  // Stop all timers cleanly
+  clearAllTimers();
+
+  // Disable all interactive test elements
+  document.querySelectorAll('.q-opt').forEach(el => {
+    el.style.pointerEvents = 'none';
+    el.style.opacity = '0.4';
+  });
+  ['apt-next-btn', 'sit-next-btn', 'per-next-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled      = true;
+      el.style.opacity = '0.4';
+      el.style.cursor  = 'not-allowed';
+    }
+  });
+
+  // Update overlay using stable IDs
+  const overlay       = document.getElementById('cheat-overlay');
+  const icon          = document.getElementById('cheat-icon');
+  const title         = document.getElementById('cheat-title');
+  const message       = document.getElementById('cheat-message');
+  const resumeBtn     = document.getElementById('cheat-resume-btn');
+  const counter       = document.getElementById('cheat-warning-counter');
+  const disqMsg       = document.getElementById('cheat-disqualified-msg');
+
+  icon.textContent            = '🚫';
+  title.textContent           = 'Application Disqualified';
+  title.style.color           = '#f87171';
+  message.style.display       = 'none';
+  resumeBtn.style.display     = 'none';
+  counter.style.display       = 'none';
+  disqMsg.style.display       = 'block';
+  overlay.style.display       = 'flex';
+
+  // Persist to database
+  updateApplicationStatus('status', 'rejected');
+  updateApplicationStatus('disqualified_reason', 'Tab switch x3 during test');
+  if (sb && applicationId) {
+    sb.from('job_applications')
+      .update({ cheat_attempts: cheatCount })
+      .eq('id', applicationId)
+      .catch(() => {});
+  }
+}
+
+function resumeTest() {
+  // Permanently blocked — keep overlay visible, do nothing
+  if (disqualified) {
+    document.getElementById('cheat-overlay').style.display = 'flex';
+    return;
+  }
+  document.getElementById('cheat-overlay').style.display = 'none';
+}
+
+function guardStageTransition() {
+  if (disqualified) {
+    document.getElementById('cheat-overlay').style.display = 'flex';
+    return false;
+  }
+  return true;
+}
+
+document.addEventListener('visibilitychange', () => {
+  // Keep overlay locked for disqualified users regardless of tab switches
+  if (disqualified) {
+    document.getElementById('cheat-overlay').style.display = 'flex';
+    return;
+  }
+  if (!testActive)      return;
+  if (!document.hidden) return;
+
+  cheatCount++;
+  document.getElementById('cheat-count').textContent = cheatCount;
+  document.getElementById('cheat-overlay').style.display = 'flex';
+
+  if (sb && applicationId) {
+    sb.from('job_applications')
+      .update({ cheat_attempts: cheatCount })
+      .eq('id', applicationId)
+      .catch(() => {});
+  }
+
+  if (cheatCount >= 3) {
+    lockTestPermanently();
+  }
+});
+
+document.addEventListener('contextmenu', e => {
+  if (testActive || disqualified) e.preventDefault();
+});
+
+document.addEventListener('keydown', e => {
+  if (!testActive && !disqualified) return;
+  if ((e.ctrlKey || e.metaKey) && ['c','v','u','a','s','p'].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.key === 'F12') e.preventDefault();
+});
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
