@@ -323,6 +323,16 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
       <div class="card">
         <div class="card-header"><div class="card-icon">👤</div><div><div class="card-title">Personal Information</div><div class="card-sub">Basic details about you</div></div></div>
         <div class="card-body">
+          <div class="field" style="margin-bottom:20px;">
+  <label>Profile Photo <span style="font-size:10px;color:#9ca3af;font-weight:400;text-transform:none;">(optional but recommended)</span></label>
+  <div id="photo-upload-area" onclick="document.getElementById('photo-input').click()" style="border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(232,35,26,0.03)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='#fafafa'">
+    <div id="photo-preview-wrap" style="display:none;margin-bottom:10px;"><img id="photo-preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--red);" src=""></div>
+    <div id="photo-placeholder" style="font-size:32px;margin-bottom:6px;">📷</div>
+    <div style="font-size:13px;font-weight:600;color:var(--muted);" id="photo-label">Click to upload your photo</div>
+    <div style="font-size:11px;color:#9ca3af;margin-top:4px;">JPG or PNG · Max 2MB · Clear face photo preferred</div>
+  </div>
+  <input type="file" id="photo-input" accept="image/jpeg,image/png" style="display:none" onchange="handlePhotoUpload(this)">
+</div>
           <div class="field-grid two">
             <div class="field" id="f-fullname"><label>Full Name <span class="req">*</span></label><input type="text" id="fullname" placeholder="e.g. Muhammad Ali Khan" autocomplete="name"><span class="err-msg">Please enter your full name</span></div>
             <div class="field" id="f-fathername"><label>Father's Name <span class="req">*</span></label><input type="text" id="fathername" placeholder="e.g. Muhammad Akram Khan"><span class="err-msg">Required</span></div>
@@ -724,6 +734,8 @@ function openDrawer(id) {
     : '<div style="color:#555;font-size:13px;">Not completed yet.</div>';
 
   document.getElementById('drawer-body').innerHTML = `
+    <!-- Photo + Identity -->
+    ${a.photo_url ? `<div style="text-align:center;margin-bottom:20px;"><img src="${esc(a.photo_url)}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--amber);" onerror="this.style.display='none'"></div>` : ''}
     <!-- Scores -->
     <div class="drawer-section">
       <div class="drawer-section-title">Test Scores</div>
@@ -830,115 +842,194 @@ async function saveStatus() {
 // ═══════════════════════════════════════════
 //  PDF GENERATION (HR version)
 // ═══════════════════════════════════════════
-function generateHRPDF(a, aptS, sitS) {
+async function generateHRPDF(a, aptS, sitS) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, M = 18, CW = W - M * 2;
+  const W = 210, M = 16, CW = W - M * 2;
   let y = 0;
 
+  // ── HEADER BAND ──
   doc.setFillColor(232, 35, 26);
-  doc.rect(0, 0, W, 28, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-  doc.text('OVEN X', M, 12);
+  doc.rect(0, 0, W, 36, 'F');
+  doc.setFillColor(245, 166, 35);
+  doc.rect(0, 36, W, 4, 'F');
+
+  // Logo
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+  doc.text('OVEN X', M, 15);
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.text('APPLICANT REPORT — HR CONFIDENTIAL', M, 22);
+  doc.setFontSize(7.5);
+  doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, W - M, 22, { align: 'right' });
+
+  // ── APPLICANT IDENTITY BLOCK ──
+  y = 50;
+  // Photo circle placeholder or actual photo
+  const photoX = M, photoY = y, photoSize = 28;
+  const photoSrc = a?.photo_url || applicantPhotoBase64 || null;
+  if (photoSrc) {
+    try {
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          const b64 = canvas.toDataURL('image/jpeg');
+          doc.saveGraphicsState();
+          doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'S');
+          doc.addImage(b64, 'JPEG', photoX, photoY, photoSize, photoSize);
+          doc.restoreGraphicsState();
+          resolve();
+        };
+        img.onerror = () => resolve(); // fall through to grey circle
+        img.src = photoSrc;
+      });
+    } catch(e) {
+      // fallback grey circle
+      doc.setFillColor(230, 230, 230);
+      doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
+      doc.setTextColor(150,150,150); doc.setFontSize(8);
+      doc.text('No Photo', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+    }
+  } else {
+    doc.setFillColor(230, 230, 230);
+    doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
+    doc.setTextColor(150,150,150); doc.setFontSize(8);
+    doc.text('No Photo', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+  }
+
+  // Name and key info beside photo
+  const infoX = photoX + photoSize + 8;
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(17); doc.setFont('helvetica', 'bold');
+  doc.text(String(a.full_name || '—'), infoX, y + 8);
   doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-  doc.text('APPLICANT REPORT — HR CONFIDENTIAL', M, 19);
-  doc.setFontSize(8);
-  doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, W - M, 19, { align: 'right' });
-  doc.setFillColor(245,166,35);
-  doc.rect(0,28,W,3,'F');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Father: ${a.father_name || '—'}`, infoX, y + 15);
+  doc.text(`CNIC: ${a.cnic || '—'}  ·  DOB: ${a.dob || '—'}  ·  ${a.gender || '—'}`, infoX, y + 21);
+  doc.text(`📞 ${a.phone || '—'}  ·  ✉ ${a.email || 'N/A'}`, infoX, y + 27);
 
-  y = 40;
-  function sec(title) {
-    doc.setFillColor(26,26,26); doc.rect(M,y,CW,7,'F');
-    doc.setTextColor(245,166,35); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text(title.toUpperCase(), M+3, y+5); y += 11;
-    doc.setTextColor(30,30,30);
-  }
-  function row2(l1,v1,l2,v2) {
-    const half = M + CW/2 + 4;
-    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(100,100,100);
-    doc.text(l1, M, y); doc.text(l2, half, y);
-    doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-    doc.text(String(v1||'—'), M, y+4.5); doc.text(String(v2||'—'), half, y+4.5);
-    y += 10;
-  }
-  function row1(l,v) {
-    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(100,100,100);
-    doc.text(l, M, y); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-    doc.text(String(v||'—'), M, y+4.5); y += 10;
-  }
+  // Status pill beside name (top right)
+  const statusMap   = { applied:'IN PROGRESS', interview_shortlisted:'SHORTLISTED', hired:'HIRED', rejected:'REJECTED', on_hold:'ON HOLD' };
+  const statusColors = { applied:[99,102,241], interview_shortlisted:[22,163,74], hired:[200,130,10], rejected:[200,30,20], on_hold:[107,114,128] };
+  const sc = statusColors[a.status || 'applied'] || [99,102,241];
+  doc.setFillColor(sc[0], sc[1], sc[2]);
+  const statusLabel = statusMap[a.status || 'applied'] || 'IN PROGRESS';
+  doc.roundedRect(W - M - 38, y, 38, 9, 2, 2, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text(statusLabel, W - M - 19, y + 6, { align: 'center' });
 
-  sec('Personal Information');
-  row2('Full Name', a.full_name, "Father's Name", a.father_name);
-  row2('CNIC', a.cnic, 'Date of Birth', a.dob);
-  row2('Gender', a.gender, 'Marital Status', a.marital_status);
-  y += 2;
-  sec('Contact & Location');
-  row2('WhatsApp', a.phone, 'Email', a.email||'N/A');
-  row2('City', a.city, 'Branch Preference', a.preferred_branch||'Any');
-  row1('Address', a.address);
-  y += 2;
-  sec('Education & Experience');
-  row2('Education', a.education, 'Experience', a.experience);
-  row2('Previous Employer', a.prev_employer||'N/A', 'Previous Role', a.prev_role||'N/A');
-  y += 2;
-  sec('Position & Availability');
-  row2('Position Applied', a.position, 'Preferred Shift', a.shift_pref);
-  row2('Can Join Within', a.joining, 'Salary Expectation', a.salary_exp||'Negotiable');
-  row1('Skills', a.skills||'N/A');
-  row1('Languages', a.languages||'N/A');
-  y += 2;
-  sec('Motivation');
-  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
-  const mlines = doc.splitTextToSize(a.motivation||'—', CW);
-  doc.text(mlines, M, y); y += mlines.length * 4.5 + 6;
+  y += photoSize + 10;
 
-  sec('Test Scores');
-  const bw = (CW-8)/2;
+  // ── SCORE BOXES ──
   const aScore = a.aptitude_score != null ? a.aptitude_score : aptS;
   const sScore = a.situational_score != null ? a.situational_score : sitS;
-  doc.setFillColor(aScore>=60?22:232, aScore>=60?163:35, aScore>=60?74:26);
-  doc.roundedRect(M,y,bw,20,3,3,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text(`${aScore!=null?aScore:'N/A'}${aScore!=null?'%':''}`, M+bw/2, y+12, {align:'center'});
-  doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text('APTITUDE SCORE', M+bw/2, y+17, {align:'center'});
-  const x2 = M+bw+8;
-  doc.setFillColor(sScore>=65?22:232, sScore>=65?163:35, sScore>=65?74:26);
-  doc.roundedRect(x2,y,bw,20,3,3,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text(`${sScore!=null?sScore:'N/A'}${sScore!=null?'%':''}`, x2+bw/2, y+12, {align:'center'});
-  doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text('SITUATIONAL SCORE', x2+bw/2, y+17, {align:'center'});
-  y += 26;
+  const bw = (CW - 8) / 2;
 
-  const statusMap = { applied:'IN PROGRESS', interview_shortlisted:'INTERVIEW SHORTLISTED', hired:'HIRED', rejected:'REJECTED', on_hold:'ON HOLD' };
-  const statusColors = { applied:[99,102,241], interview_shortlisted:[22,163,74], hired:[245,166,35], rejected:[232,35,26], on_hold:[107,114,128] };
-  const sc = statusColors[a.status||'applied']||[99,102,241];
-  doc.setFillColor(sc[0],sc[1],sc[2]);
-  doc.roundedRect(M,y,CW,12,3,3,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text(`STATUS: ${statusMap[a.status||'applied']||'IN PROGRESS'}`, W/2, y+8, {align:'center'});
-  y += 18;
+  // Aptitude box
+  doc.setFillColor(aScore >= 60 ? 22 : 200, aScore >= 60 ? 163 : 30, aScore >= 60 ? 74 : 20);
+  doc.roundedRect(M, y, bw, 22, 3, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(20); doc.setFont('helvetica','bold');
+  doc.text(aScore != null ? `${aScore}%` : 'N/A', M + bw/2, y + 13, { align:'center' });
+  doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text(`APTITUDE  ·  PASS ≥60%  ·  ${aScore >= 60 ? '✓ PASSED' : '✕ FAILED'}`, M + bw/2, y + 19, { align:'center' });
 
-  if (a.personality_summary) {
-    sec('Personality Answers');
-    const plines = doc.splitTextToSize(a.personality_summary.replace(/ \| /g,'\n'), CW);
-    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
-    doc.text(plines, M, y); y += plines.length * 4 + 4;
+  // Situational box
+  doc.setFillColor(sScore >= 65 ? 22 : 200, sScore >= 65 ? 163 : 30, sScore >= 65 ? 74 : 20);
+  doc.roundedRect(M + bw + 8, y, bw, 22, 3, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(20); doc.setFont('helvetica','bold');
+  doc.text(sScore != null ? `${sScore}%` : 'N/A', M + bw + 8 + bw/2, y + 13, { align:'center' });
+  doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text(`SITUATIONAL  ·  PASS ≥65%  ·  ${sScore >= 65 ? '✓ PASSED' : '✕ FAILED'}`, M + bw + 8 + bw/2, y + 19, { align:'center' });
+
+  y += 30;
+
+  // ── SECTION HELPER FUNCTIONS ──
+  function sec(title) {
+    doc.setFillColor(26, 26, 26);
+    doc.roundedRect(M, y, CW, 7, 1, 1, 'F');
+    doc.setTextColor(245, 166, 35);
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(title.toUpperCase(), M + 4, y + 5);
+    y += 11;
+    doc.setTextColor(30, 30, 30);
   }
 
-  doc.setTextColor(150,150,150); doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text('Oven X Hiring System — HR Internal Use Only', W/2, y+6, {align:'center'});
+  function row2(l1, v1, l2, v2) {
+    const half = M + CW/2 + 4;
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
+    doc.text(String(l1), M, y);
+    doc.text(String(l2), half, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.setFontSize(8.5);
+    doc.text(String(v1||'—'), M, y + 5);
+    doc.text(String(v2||'—'), half, y + 5);
+    y += 12;
+  }
+
+  function row1(l, v) {
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
+    doc.text(String(l), M, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.setFontSize(8.5);
+    doc.text(String(v||'—'), M, y + 5);
+    y += 12;
+  }
+
+  // ── SECTIONS ──
+  sec('Location & Address');
+  row2('City', a.city, 'Branch Preference', a.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht' : a.preferred_branch === 'BWP' ? 'Bahawalpur — SS Tower' : '—');
+  row1('Current Address', a.address);
+
+  sec('Education & Experience');
+  row2('Highest Education', a.education, 'Work Experience', a.experience);
+  row2('Previous Employer', a.prev_employer || 'N/A', 'Previous Role', a.prev_role || 'N/A');
+
+  sec('Position & Availability');
+  row2('Position Applied', a.position, 'Preferred Shift', a.shift_pref);
+  row2('Can Join Within', a.joining, 'Salary Expectation', a.salary_exp || 'Negotiable');
+  row2('Skills', a.skills || 'N/A', 'Languages', a.languages || 'N/A');
+
+  sec('Motivation');
+  doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+  const mlines = doc.splitTextToSize(String(a.motivation || '—'), CW);
+  doc.text(mlines, M, y);
+  y += mlines.length * 5 + 6;
+
+  if (a.personality_summary) {
+    sec('Personality Profile');
+    const entries = a.personality_summary.split(' | ');
+    entries.forEach((line, i) => {
+      const parts = line.split(': ');
+      const ans = parts.slice(1).join(': ') || line;
+      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
+      doc.text(`Q${i+1}`, M, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8.5);
+      const alines = doc.splitTextToSize(ans, CW - 10);
+      doc.text(alines, M + 8, y);
+      y += alines.length * 5 + 3;
+    });
+    y += 4;
+  }
+
+  // ── FOOTER ──
+  doc.setFillColor(245, 166, 35);
+  doc.rect(0, 285, W, 12, 'F');
+  doc.setTextColor(26, 26, 26); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text('OVEN X HIRING SYSTEM  ·  HR INTERNAL USE ONLY  ·  CONFIDENTIAL', W/2, 292, { align:'center' });
 
   return doc;
 }
 
-function downloadPDFFor(id) {
+async function downloadPDFFor(id) {
   const a = allApplicants.find(x => x.id === id);
   if (!a) return;
-  const doc = generateHRPDF(a, a.aptitude_score, a.situational_score);
+  showToast('Generating PDF...');
+  const doc = await generateHRPDF(a, a.aptitude_score, a.situational_score);
   doc.save(`OvenX_${(a.full_name||'applicant').replace(/\s+/g,'_')}_${a.cnic||id}.pdf`);
   showToast('PDF downloaded!', 'success');
 }
@@ -946,14 +1037,15 @@ function downloadPDFFor(id) {
 // ═══════════════════════════════════════════
 //  PUBLIC APP — STATE
 // ═══════════════════════════════════════════
-let currentStage   = 0;
-let applicantData  = {};
-let applicationId  = null;
-let aptScore       = 0;
-let sitScore       = 0;
-let testActive     = false;
-let cheatCount     = 0;
-let disqualified   = false;
+let currentStage          = 0;
+let applicantData         = {};
+let applicationId         = null;
+let aptScore              = 0;
+let sitScore              = 0;
+let testActive            = false;
+let cheatCount            = 0;
+let disqualified          = false;
+let applicantPhotoBase64  = null;
 
 // ═══════════════════════════════════════════
 //  QUESTIONS
@@ -1048,10 +1140,18 @@ function shuffle(arr) {
 }
 
 function buildAptQuestions(position) {
-  const pos = (position||'').toLowerCase();
-  // Position-specific questions
-  const posSpecific = aptBank.filter(q => 
-    q.pos && q.pos.some(p => pos.includes(p.toLowerCase().split('/')[0].trim()))
+  const pos = (position || '').toLowerCase().trim();
+  const posSpecific = aptBank.filter(q =>
+    q.pos && q.pos.some(p => {
+      const pNorm = p.toLowerCase().trim();
+      // Exact match first
+      if (pos === pNorm) return true;
+      // Both directions partial — position contains tag OR tag contains position
+      // But require at least 6 chars to avoid false short matches like "manager"
+      const shorter = pos.length < pNorm.length ? pos : pNorm;
+      if (shorter.length >= 6 && (pos.includes(pNorm) || pNorm.includes(pos))) return true;
+      return false;
+    })
   );
   // Core questions (no pos restriction)
   const core = aptBank.filter(q => !q.pos);
@@ -1073,8 +1173,10 @@ function buildSitQuestions() {
 // ═══════════════════════════════════════════
 //  TEST STATE
 // ═══════════════════════════════════════════
-let aptIdx=0, aptAnswers=[], aptTimerVal=15*60, aptTimerInt=null;
-let sitIdx=0, sitAnswers=[], sitTimerVal=18*60, sitTimerInt=null;
+const APT_TIMER_SECONDS = 15 * 60;
+const SIT_TIMER_SECONDS = 18 * 60;
+let aptIdx=0, aptAnswers=[], aptTimerInt=null;
+let sitIdx=0, sitAnswers=[], sitTimerInt=null;
 let perIdx=0, perAnswers=[];
 let selectedOpt=null;
 let builtAptQuestions = [];
@@ -1179,19 +1281,55 @@ function submitApplicationForm() {
   btn.disabled=true; spinner.style.display='block'; btnText.textContent='Saving...';
 
   const save = sb
-    ? sb.from('job_applications').insert([applicantData]).select().then(({data,error})=>{
+    ? sb.from('job_applications').insert([applicantData]).select().then(async ({data,error})=>{
         if (!error && data && data[0]) {
           applicationId = data[0].id;
+
+          // Upload photo to storage if provided
+          if (applicantPhotoBase64) {
+            try {
+              const ext      = applicantPhotoBase64.includes('image/png') ? 'png' : 'jpg';
+              const fileName = `${applicationId}.${ext}`;
+
+              if (applicantData._tempPhotoName) {
+                // Temp file already uploaded — move it to the permanent name
+                await sb.storage.from('applicant-photos').move(
+                  applicantData._tempPhotoName, fileName
+                );
+              } else {
+                // Fallback: upload now if pre-upload didn't happen
+                const res  = await fetch(applicantPhotoBase64);
+                const blob = await res.blob();
+                await sb.storage.from('applicant-photos')
+                  .upload(fileName, blob, { contentType: blob.type, upsert: true });
+              }
+
+              const { data: urlData } = sb.storage
+                .from('applicant-photos')
+                .getPublicUrl(fileName);
+
+              await sb.from('job_applications')
+                .update({ photo_url: urlData.publicUrl })
+                .eq('id', applicationId);
+
+              applicantData.photo_url = urlData.publicUrl;
+              delete applicantData._tempPhotoName;
+            } catch(e) { console.error('Photo upload failed:', e); }
+          }
+
           localStorage.setItem('ovx_application_id', applicationId);
           localStorage.setItem('ovx_applicant_data', JSON.stringify(applicantData));
         }
       }).catch(()=>{})
     : Promise.resolve();
 
-  save.finally(()=>{
+  save.then(()=>{
     btn.disabled=false; spinner.style.display='none'; btnText.textContent='Submit Application & Start Test →';
     showToast('Application saved! Starting aptitude test...','success');
     setPipelineStage(1); startAptitudeTest();
+  }).catch(()=>{
+    btn.disabled=false; spinner.style.display='none'; btnText.textContent='Submit Application & Start Test →';
+    showToast('Something went wrong. Please try again.');
   });
 }
 
@@ -1201,13 +1339,12 @@ function submitApplicationForm() {
 function startAptitudeTest() {
   localStorage.removeItem('ovx_application_id');
   localStorage.removeItem('ovx_applicant_data');
-  applicationId = null;
   testActive = true;
   aptIdx=0; aptAnswers=[]; selectedOpt=null;
   goToStage('stage-1');
   builtAptQuestions = buildAptQuestions(applicantData.position || '');
   renderAptQuestion();
-  startTimer('apt', aptTimerVal, ()=>{ showToast('Time is up!'); evaluateAptitude(); });
+  startTimer('apt', APT_TIMER_SECONDS, ()=>{ showToast('Time is up!'); evaluateAptitude(); });
 }
 function renderAptQuestion() {
   const q=builtAptQuestions[aptIdx]; selectedOpt=null;
@@ -1255,7 +1392,7 @@ function startSituationalTest() {
   builtSitQuestions = buildSitQuestions();
   setPipelineStage(2);
   renderSitQuestion();
-  startTimer('sit', sitTimerVal, ()=>{ showToast('Time is up!'); evaluateSituational(); });
+  startTimer('sit', SIT_TIMER_SECONDS, ()=>{ showToast('Time is up!'); evaluateSituational(); });
 }
 function renderSitQuestion() {
   const q=builtSitQuestions[sitIdx]; selectedOpt=null;
@@ -1335,7 +1472,7 @@ async function finishFunnel() {
   showToast('🎉 Congratulations! You have been shortlisted!','success');
   goToStage('stage-4');
   try {
-    const pdfBase64 = generateApplicantPDF();
+    const pdfBase64 = await generateApplicantPDF();
     await sendWhatsApp(pdfBase64, perSummary);
     localStorage.removeItem('ovx_application_id');
     localStorage.removeItem('ovx_applicant_data');
@@ -1345,9 +1482,9 @@ async function finishFunnel() {
 // ═══════════════════════════════════════════
 //  PDF FOR APPLICANT (same as before)
 // ═══════════════════════════════════════════
-function generateApplicantPDF() {
+async function generateApplicantPDF() {
   const a = applicantData;
-  const doc = generateHRPDF(a, aptScore, sitScore);
+  const doc = await generateHRPDF(a, aptScore, sitScore);
   return doc.output('datauristring').split(',')[1];
 }
 
@@ -1372,6 +1509,54 @@ async function sendWhatsApp(pdfBase64, perSummary) {
 async function updateApplicationStatus(field, value) {
   if (!sb || !applicationId) return;
   try { await sb.from('job_applications').update({[field]:value}).eq('id',applicationId); } catch(e){}
+}
+
+// ═══════════════════════════════════════════
+//  PHOTO UPLOAD
+// ═══════════════════════════════════════════
+
+async function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('Photo must be under 2MB.'); input.value=''; return; }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    applicantPhotoBase64 = e.target.result;
+    document.getElementById('photo-preview').src = applicantPhotoBase64;
+    document.getElementById('photo-preview-wrap').style.display = 'block';
+    document.getElementById('photo-placeholder').style.display = 'none';
+    document.getElementById('photo-label').textContent = 'Uploading photo...';
+
+    // Pre-upload to storage immediately using a temp filename
+    if (sb) {
+      try {
+        const ext      = file.type === 'image/png' ? 'png' : 'jpg';
+        const tempName = `temp_${Date.now()}.${ext}`;
+        const { data: upData, error: upErr } = await sb.storage
+          .from('applicant-photos')
+          .upload(tempName, file, { contentType: file.type, upsert: true });
+
+        if (!upErr) {
+          const { data: urlData } = sb.storage
+            .from('applicant-photos')
+            .getPublicUrl(tempName);
+          // Store the temp URL so it's available if form submits quickly
+          applicantData.photo_url = urlData.publicUrl;
+          // Also store temp filename so submitApplicationForm can rename it
+          applicantData._tempPhotoName = tempName;
+          document.getElementById('photo-label').textContent = 'Photo uploaded ✓ — click to change';
+        } else {
+          document.getElementById('photo-label').textContent = 'Photo saved locally — will upload on submit';
+        }
+      } catch(e) {
+        document.getElementById('photo-label').textContent = 'Photo saved locally — will upload on submit';
+      }
+    } else {
+      document.getElementById('photo-label').textContent = 'Photo uploaded ✓ — click to change';
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ═══════════════════════════════════════════
