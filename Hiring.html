@@ -324,7 +324,7 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
         <div class="card-header"><div class="card-icon">👤</div><div><div class="card-title">Personal Information</div><div class="card-sub">Basic details about you</div></div></div>
         <div class="card-body">
           <div class="field" style="margin-bottom:20px;">
-  <label>Profile Photo <span style="font-size:10px;color:#9ca3af;font-weight:400;text-transform:none;">(optional but recommended)</span></label>
+  <label>Profile Photo <span class="req">*</span></label>
   <div id="photo-upload-area" onclick="document.getElementById('photo-input').click()" style="border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(232,35,26,0.03)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='#fafafa'">
     <div id="photo-preview-wrap" style="display:none;margin-bottom:10px;"><img id="photo-preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--red);" src=""></div>
     <div id="photo-placeholder" style="font-size:32px;margin-bottom:6px;">📷</div>
@@ -845,29 +845,100 @@ async function saveStatus() {
 async function generateHRPDF(a, aptS, sitS) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, M = 16, CW = W - M * 2;
+  const W = 210, M = 14, CW = W - M * 2;
   let y = 0;
 
-  // ── HEADER BAND ──
+  // ── HELPERS ─────────────────────────────────────────────
+  function checkPageBreak(needed = 20) {
+    if (y + needed > 278) {
+      doc.addPage();
+      y = 14;
+      drawPageFooter();
+    }
+  }
+
+  function drawPageFooter() {
+    doc.setFillColor(26, 26, 26);
+    doc.rect(0, 287, W, 10, 'F');
+    doc.setFillColor(245, 166, 35);
+    doc.rect(0, 285, W, 2, 'F');
+    doc.setTextColor(180, 180, 180);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('OVEN X HIRING SYSTEM  ·  HR INTERNAL USE ONLY  ·  CONFIDENTIAL', W / 2, 292, { align: 'center' });
+    doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, W - M, 292, { align: 'right' });
+  }
+
+  function sectionHeader(title, icon = '') {
+    checkPageBreak(14);
+    doc.setFillColor(26, 26, 26);
+    doc.roundedRect(M, y, CW, 8, 1.5, 1.5, 'F');
+    doc.setTextColor(245, 166, 35);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text((icon ? icon + '  ' : '') + title.toUpperCase(), M + 5, y + 5.5);
+    y += 12;
+  }
+
+  function labelVal(label, value, x, width) {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(140, 140, 140);
+    doc.text(String(label).toUpperCase(), x, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(8.5);
+    const lines = doc.splitTextToSize(String(value || '—'), width - 2);
+    doc.text(lines, x, y + 4.5);
+    return lines.length * 4.5 + 4.5;
+  }
+
+  function twoCol(l1, v1, l2, v2) {
+    checkPageBreak(14);
+    const half = CW / 2 - 3;
+    const h1 = labelVal(l1, v1, M, half);
+    const h2 = labelVal(l2, v2, M + CW / 2 + 3, half);
+    y += Math.max(h1, h2) + 5;
+  }
+
+  function oneCol(label, value) {
+    checkPageBreak(14);
+    const h = labelVal(label, value, M, CW);
+    y += h + 5;
+  }
+
+  function divider(color = [230, 230, 230]) {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.3);
+    doc.line(M, y, M + CW, y);
+    y += 4;
+  }
+
+  // ── PAGE 1: HEADER BAND ─────────────────────────────────
   doc.setFillColor(232, 35, 26);
-  doc.rect(0, 0, W, 36, 'F');
+  doc.rect(0, 0, W, 32, 'F');
   doc.setFillColor(245, 166, 35);
-  doc.rect(0, 36, W, 4, 'F');
+  doc.rect(0, 32, W, 3, 'F');
 
-  // Logo
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-  doc.text('OVEN X', M, 15);
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text('APPLICANT REPORT — HR CONFIDENTIAL', M, 22);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('OVEN X', M, 13);
   doc.setFontSize(7.5);
-  doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, W - M, 22, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(255, 220, 180);
+  doc.text('APPLICANT SCREENING REPORT  ·  HR CONFIDENTIAL', M, 20);
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(7);
+  doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, W - M, 20, { align: 'right' });
 
-  // ── APPLICANT IDENTITY BLOCK ──
-  y = 50;
-  // Photo circle placeholder or actual photo
-  const photoX = M, photoY = y, photoSize = 28;
+  // ── APPLICANT CARD ──────────────────────────────────────
+  y = 42;
+
+  // Photo
+  const photoSize = 30;
   const photoSrc = a?.photo_url || applicantPhotoBase64 || null;
+  let photoLoaded = false;
   if (photoSrc) {
     try {
       await new Promise((resolve) => {
@@ -875,152 +946,337 @@ async function generateHRPDF(a, aptS, sitS) {
         img.crossOrigin = 'anonymous';
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
+          canvas.width = img.width; canvas.height = img.height;
           canvas.getContext('2d').drawImage(img, 0, 0);
           const b64 = canvas.toDataURL('image/jpeg');
-          doc.saveGraphicsState();
-          doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'S');
-          doc.addImage(b64, 'JPEG', photoX, photoY, photoSize, photoSize);
-          doc.restoreGraphicsState();
+          // White circle bg
+          doc.setFillColor(255, 255, 255);
+          doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2 + 1, 'F');
+          doc.addImage(b64, 'JPEG', M, y, photoSize, photoSize);
+          // Red ring
+          doc.setDrawColor(232, 35, 26);
+          doc.setLineWidth(1.2);
+          doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2 + 0.5, 'S');
+          photoLoaded = true;
           resolve();
         };
-        img.onerror = () => resolve(); // fall through to grey circle
+        img.onerror = () => resolve();
         img.src = photoSrc;
       });
-    } catch(e) {
-      // fallback grey circle
-      doc.setFillColor(230, 230, 230);
-      doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
-      doc.setTextColor(150,150,150); doc.setFontSize(8);
-      doc.text('No Photo', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
-    }
-  } else {
-    doc.setFillColor(230, 230, 230);
-    doc.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
-    doc.setTextColor(150,150,150); doc.setFontSize(8);
-    doc.text('No Photo', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+    } catch (e) {}
+  }
+  if (!photoLoaded) {
+    doc.setFillColor(240, 240, 240);
+    doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2, 'S');
+    doc.setTextColor(180, 180, 180);
+    doc.setFontSize(7);
+    doc.text('NO PHOTO', M + photoSize / 2, y + photoSize / 2 + 2, { align: 'center' });
   }
 
-  // Name and key info beside photo
-  const infoX = photoX + photoSize + 8;
-  doc.setTextColor(20, 20, 20);
-  doc.setFontSize(17); doc.setFont('helvetica', 'bold');
-  doc.text(String(a.full_name || '—'), infoX, y + 8);
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Father: ${a.father_name || '—'}`, infoX, y + 15);
-  doc.text(`CNIC: ${a.cnic || '—'}  ·  DOB: ${a.dob || '—'}  ·  ${a.gender || '—'}`, infoX, y + 21);
-  doc.text(`📞 ${a.phone || '—'}  ·  ✉ ${a.email || 'N/A'}`, infoX, y + 27);
+  // Name block
+  const nx = M + photoSize + 7;
+  doc.setTextColor(15, 15, 15);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(a.full_name || '—'), nx, y + 9);
 
-  // Status pill beside name (top right)
-  const statusMap   = { applied:'IN PROGRESS', interview_shortlisted:'SHORTLISTED', hired:'HIRED', rejected:'REJECTED', on_hold:'ON HOLD' };
-  const statusColors = { applied:[99,102,241], interview_shortlisted:[22,163,74], hired:[200,130,10], rejected:[200,30,20], on_hold:[107,114,128] };
-  const sc = statusColors[a.status || 'applied'] || [99,102,241];
-  doc.setFillColor(sc[0], sc[1], sc[2]);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Father: ${a.father_name || '—'}`, nx, y + 16);
+  doc.text(`CNIC: ${a.cnic || '—'}   ·   DOB: ${a.dob || '—'}   ·   ${a.gender || '—'}   ·   ${a.marital_status || ''}`, nx, y + 22);
+  doc.text(`Phone: ${a.phone || '—'}   ·   Email: ${a.email || 'N/A'}`, nx, y + 28);
+
+  // Status pill
+  const statusMap = { applied: 'IN PROGRESS', interview_shortlisted: 'SHORTLISTED', hired: 'HIRED', rejected: 'REJECTED', on_hold: 'ON HOLD' };
+  const statusColors = { applied: [99, 102, 241], interview_shortlisted: [22, 163, 74], hired: [180, 120, 10], rejected: [200, 30, 20], on_hold: [107, 114, 128] };
+  const sc = statusColors[a.status || 'applied'] || [99, 102, 241];
   const statusLabel = statusMap[a.status || 'applied'] || 'IN PROGRESS';
-  doc.roundedRect(W - M - 38, y, 38, 9, 2, 2, 'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-  doc.text(statusLabel, W - M - 19, y + 6, { align: 'center' });
+  doc.setFillColor(...sc);
+  doc.roundedRect(W - M - 36, y, 36, 9, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text(statusLabel, W - M - 18, y + 6, { align: 'center' });
 
   y += photoSize + 10;
+  divider([232, 35, 26]);
 
-  // ── SCORE BOXES ──
+  // ── SCORE BOXES ─────────────────────────────────────────
   const aScore = a.aptitude_score != null ? a.aptitude_score : aptS;
   const sScore = a.situational_score != null ? a.situational_score : sitS;
-  const bw = (CW - 8) / 2;
+  const bw = (CW - 6) / 2;
 
   // Aptitude box
-  doc.setFillColor(aScore >= 60 ? 22 : 200, aScore >= 60 ? 163 : 30, aScore >= 60 ? 74 : 20);
-  doc.roundedRect(M, y, bw, 22, 3, 3, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(20); doc.setFont('helvetica','bold');
-  doc.text(aScore != null ? `${aScore}%` : 'N/A', M + bw/2, y + 13, { align:'center' });
-  doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text(`APTITUDE  ·  PASS ≥60%  ·  ${aScore >= 60 ? '✓ PASSED' : '✕ FAILED'}`, M + bw/2, y + 19, { align:'center' });
+  const aPass = aScore != null && aScore >= 60;
+  const aColor = aScore == null ? [160,160,160] : aPass ? [22,163,74] : [200,30,20];
+  doc.setFillColor(...aColor);
+  doc.roundedRect(M, y, bw, 24, 3, 3, 'F');
+  // Score
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text(aScore != null ? `${aScore}%` : 'N/A', M + bw / 2, y + 13, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('APTITUDE TEST  ·  PASS ≥60%', M + bw / 2, y + 18.5, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(aScore == null ? 'NOT ATTEMPTED' : aPass ? '✓  PASSED' : '✕  FAILED', M + bw / 2, y + 22.5, { align: 'center' });
 
   // Situational box
-  doc.setFillColor(sScore >= 65 ? 22 : 200, sScore >= 65 ? 163 : 30, sScore >= 65 ? 74 : 20);
-  doc.roundedRect(M + bw + 8, y, bw, 22, 3, 3, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(20); doc.setFont('helvetica','bold');
-  doc.text(sScore != null ? `${sScore}%` : 'N/A', M + bw + 8 + bw/2, y + 13, { align:'center' });
-  doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text(`SITUATIONAL  ·  PASS ≥65%  ·  ${sScore >= 65 ? '✓ PASSED' : '✕ FAILED'}`, M + bw + 8 + bw/2, y + 19, { align:'center' });
+  const sPass = sScore != null && sScore >= 65;
+  const sColor = sScore == null ? [160,160,160] : sPass ? [22,163,74] : [200,30,20];
+  doc.setFillColor(...sColor);
+  doc.roundedRect(M + bw + 6, y, bw, 24, 3, 3, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text(sScore != null ? `${sScore}%` : 'N/A', M + bw + 6 + bw / 2, y + 13, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('SITUATIONAL TEST  ·  PASS ≥65%', M + bw + 6 + bw / 2, y + 18.5, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(sScore == null ? 'NOT ATTEMPTED' : sPass ? '✓  PASSED' : '✕  FAILED', M + bw + 6 + bw / 2, y + 22.5, { align: 'center' });
 
   y += 30;
 
-  // ── SECTION HELPER FUNCTIONS ──
-  function sec(title) {
-    doc.setFillColor(26, 26, 26);
-    doc.roundedRect(M, y, CW, 7, 1, 1, 'F');
-    doc.setTextColor(245, 166, 35);
-    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    doc.text(title.toUpperCase(), M + 4, y + 5);
-    y += 11;
-    doc.setTextColor(30, 30, 30);
-  }
+  // ── PERSONAL INFO ────────────────────────────────────────
+  sectionHeader('Personal Information', '👤');
+  twoCol('Full Name', a.full_name, "Father's Name", a.father_name);
+  twoCol('CNIC', a.cnic, 'Date of Birth', a.dob);
+  twoCol('Gender', a.gender, 'Marital Status', a.marital_status || '—');
 
-  function row2(l1, v1, l2, v2) {
-    const half = M + CW/2 + 4;
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
-    doc.text(String(l1), M, y);
-    doc.text(String(l2), half, y);
-    doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.setFontSize(8.5);
-    doc.text(String(v1||'—'), M, y + 5);
-    doc.text(String(v2||'—'), half, y + 5);
-    y += 12;
-  }
+  // ── CONTACT & LOCATION ───────────────────────────────────
+  sectionHeader('Contact & Location', '📍');
+  twoCol('WhatsApp', a.phone, 'Email', a.email || 'N/A');
+  twoCol('City', a.city, 'Branch Preference', a.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht Colony' : a.preferred_branch === 'BWP' ? 'Bahawalpur — SS Tower' : '—');
+  oneCol('Current Address', a.address);
 
-  function row1(l, v) {
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
-    doc.text(String(l), M, y);
-    doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.setFontSize(8.5);
-    doc.text(String(v||'—'), M, y + 5);
-    y += 12;
-  }
+  // ── EDUCATION & EXPERIENCE ───────────────────────────────
+  sectionHeader('Education & Experience', '🎓');
+  twoCol('Highest Education', a.education, 'Work Experience', a.experience);
+  twoCol('Previous Employer', a.prev_employer || 'N/A', 'Previous Role', a.prev_role || 'N/A');
 
-  // ── SECTIONS ──
-  sec('Location & Address');
-  row2('City', a.city, 'Branch Preference', a.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht' : a.preferred_branch === 'BWP' ? 'Bahawalpur — SS Tower' : '—');
-  row1('Current Address', a.address);
+  // ── POSITION & AVAILABILITY ──────────────────────────────
+  sectionHeader('Position & Availability', '💼');
+  twoCol('Position Applied', a.position, 'Preferred Shift', a.shift_pref);
+  twoCol('Can Join Within', a.joining, 'Salary Expectation', a.salary_exp || 'Negotiable');
+  twoCol('Skills', a.skills || 'N/A', 'Languages', a.languages || 'N/A');
 
-  sec('Education & Experience');
-  row2('Highest Education', a.education, 'Work Experience', a.experience);
-  row2('Previous Employer', a.prev_employer || 'N/A', 'Previous Role', a.prev_role || 'N/A');
-
-  sec('Position & Availability');
-  row2('Position Applied', a.position, 'Preferred Shift', a.shift_pref);
-  row2('Can Join Within', a.joining, 'Salary Expectation', a.salary_exp || 'Negotiable');
-  row2('Skills', a.skills || 'N/A', 'Languages', a.languages || 'N/A');
-
-  sec('Motivation');
-  doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+  // ── MOTIVATION ───────────────────────────────────────────
+  sectionHeader('Motivation', '💬');
+  checkPageBreak(20);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(30, 30, 30);
   const mlines = doc.splitTextToSize(String(a.motivation || '—'), CW);
+  checkPageBreak(mlines.length * 4.5 + 6);
   doc.text(mlines, M, y);
-  y += mlines.length * 5 + 6;
+  y += mlines.length * 4.5 + 8;
 
+  if (a.extra_notes) {
+    oneCol('Additional Notes', a.extra_notes);
+  }
+
+  // ── APTITUDE TEST DETAIL ─────────────────────────────────
+  if (a.aptitude_answers || aptAnswers.length > 0) {
+    const answers = a.aptitude_answers ? JSON.parse(a.aptitude_answers) : aptAnswers;
+    const questions = builtAptQuestions.length > 0 ? builtAptQuestions : [];
+
+    if (questions.length > 0 && answers.length > 0) {
+      sectionHeader('Aptitude Test — Question by Question', '📝');
+
+      questions.forEach((q, i) => {
+        const userAns = answers[i];
+        const correct = userAns === q.ans;
+        checkPageBreak(22);
+
+        // Question row bg
+        doc.setFillColor(correct ? 240 : 255, correct ? 253 : 242, correct ? 244 : 242);
+        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'F');
+        doc.setDrawColor(correct ? 200 : 240, correct ? 230 : 180, correct ? 200 : 180);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'S');
+
+        // Q number badge
+        doc.setFillColor(correct ? 22 : 200, correct ? 163 : 30, correct ? 74 : 20);
+        doc.roundedRect(M + 2, y + 3, 10, 6, 1, 1, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Q${i + 1}`, M + 7, y + 7.2, { align: 'center' });
+
+        // Question text
+        doc.setTextColor(20, 20, 20);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        const qlines = doc.splitTextToSize(q.q, CW - 60);
+        doc.text(qlines, M + 15, y + 7);
+
+        // Correct answer
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(22, 100, 50);
+        doc.text(`✓ Correct: ${q.opts[q.ans]}`, M + 15, y + 13.5);
+
+        // User answer (if wrong)
+        if (userAns !== undefined && !correct) {
+          doc.setTextColor(180, 30, 20);
+          doc.text(`✕ Answered: ${q.opts[userAns]}`, M + 80, y + 13.5);
+        } else if (correct) {
+          doc.setTextColor(22, 120, 60);
+          doc.text('Answered correctly', M + 80, y + 13.5);
+        }
+
+        // Diff badge
+        const diffColor = q.diff === 'hard' ? [200,30,20] : q.diff === 'medium' ? [180,120,10] : [60,120,60];
+        doc.setFillColor(...diffColor);
+        doc.roundedRect(W - M - 16, y + 3, 14, 5, 1, 1, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(5.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text((q.diff || '').toUpperCase(), W - M - 9, y + 6.7, { align: 'center' });
+
+        y += 21;
+      });
+    }
+  }
+
+  // ── SITUATIONAL TEST DETAIL ──────────────────────────────
+  if (a.situational_answers || sitAnswers.length > 0) {
+    const sanswers = a.situational_answers ? JSON.parse(a.situational_answers) : sitAnswers;
+    const squestions = builtSitQuestions.length > 0 ? builtSitQuestions : [];
+
+    if (squestions.length > 0 && sanswers.length > 0) {
+      sectionHeader('Situational Test — Scenario by Scenario', '🎭');
+
+      squestions.forEach((q, i) => {
+        const userAns = sanswers[i];
+        const correct = userAns === q.ans;
+        checkPageBreak(22);
+
+        doc.setFillColor(correct ? 240 : 255, correct ? 253 : 242, correct ? 244 : 242);
+        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'F');
+        doc.setDrawColor(correct ? 200 : 240, correct ? 230 : 180, correct ? 200 : 180);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'S');
+
+        doc.setFillColor(correct ? 22 : 200, correct ? 163 : 30, correct ? 74 : 20);
+        doc.roundedRect(M + 2, y + 3, 10, 6, 1, 1, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`S${i + 1}`, M + 7, y + 7.2, { align: 'center' });
+
+        doc.setTextColor(20, 20, 20);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        const qlines = doc.splitTextToSize(q.q, CW - 50);
+        doc.text(qlines, M + 15, y + 7);
+
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(22, 100, 50);
+        doc.text(`✓ Best Answer: ${q.opts[q.ans]}`, M + 15, y + 13.5);
+
+        if (userAns !== undefined && !correct) {
+          doc.setTextColor(180, 30, 20);
+          doc.text(`✕ Chose: ${q.opts[userAns]}`, M + 90, y + 13.5);
+        } else if (correct) {
+          doc.setTextColor(22, 120, 60);
+          doc.text('Chose correctly', M + 90, y + 13.5);
+        }
+
+        y += 21;
+      });
+    }
+  }
+
+  // ── PERSONALITY PROFILE ──────────────────────────────────
   if (a.personality_summary) {
-    sec('Personality Profile');
+    sectionHeader('Personality Profile', '🧠');
     const entries = a.personality_summary.split(' | ');
+    const pQuestions = [
+      'How do you handle problems at work?',
+      'How do you work in a team?',
+      'How do you handle a rude customer?',
+      'How do you perform under pressure?',
+      'How do you feel about learning new things?',
+      'What do you do when you make a mistake?',
+      'What is your attitude toward punctuality?',
+      'How do you view your work quality?',
+      'How do you respond to manager feedback?',
+      'Where do you see yourself long-term?'
+    ];
+
     entries.forEach((line, i) => {
+      checkPageBreak(18);
       const parts = line.split(': ');
       const ans = parts.slice(1).join(': ') || line;
-      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(130,130,130);
-      doc.text(`Q${i+1}`, M, y);
-      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8.5);
-      const alines = doc.splitTextToSize(ans, CW - 10);
-      doc.text(alines, M + 8, y);
-      y += alines.length * 5 + 3;
+      const qText = pQuestions[i] || `Question ${i + 1}`;
+
+      doc.setFillColor(248, 248, 252);
+      doc.roundedRect(M, y, CW, 14, 1.5, 1.5, 'F');
+      doc.setDrawColor(220, 220, 235);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(M, y, CW, 14, 1.5, 1.5, 'S');
+
+      // Number
+      doc.setFillColor(99, 102, 241);
+      doc.roundedRect(M + 2, y + 3, 8, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`P${i + 1}`, M + 6, y + 7, { align: 'center' });
+
+      // Question
+      doc.setTextColor(100, 100, 120);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(qText, M + 13, y + 6);
+
+      // Answer
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      const alines = doc.splitTextToSize(ans, CW - 16);
+      doc.text(alines, M + 13, y + 11);
+
+      y += 17;
     });
-    y += 4;
   }
 
-  // ── FOOTER ──
-  doc.setFillColor(245, 166, 35);
-  doc.rect(0, 285, W, 12, 'F');
-  doc.setTextColor(26, 26, 26); doc.setFontSize(7); doc.setFont('helvetica','bold');
-  doc.text('OVEN X HIRING SYSTEM  ·  HR INTERNAL USE ONLY  ·  CONFIDENTIAL', W/2, 292, { align:'center' });
+  // ── SUMMARY VERDICT ──────────────────────────────────────
+  checkPageBreak(40);
+  sectionHeader('Overall Screening Summary', '📊');
+
+  const overallPass = aPass && sPass;
+  doc.setFillColor(overallPass ? 22 : 200, overallPass ? 163 : 30, overallPass ? 74 : 20);
+  doc.roundedRect(M, y, CW, 20, 3, 3, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(
+    overallPass ? '✓  CANDIDATE SHORTLISTED FOR INTERVIEW' : aScore == null ? '⚠  TEST NOT COMPLETED' : '✕  DID NOT MEET PASSING CRITERIA',
+    W / 2, y + 9, { align: 'center' }
+  );
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(
+    overallPass
+      ? `Aptitude: ${aScore}%  (Pass ≥60%)     Situational: ${sScore}%  (Pass ≥65%)     Status: ${statusLabel}`
+      : aScore == null
+        ? 'Applicant submitted form but did not complete the online tests.'
+        : `Aptitude: ${aScore != null ? aScore + '%' : 'N/A'}  (Pass ≥60%)     Situational: ${sScore != null ? sScore + '%' : 'N/A'}  (Pass ≥65%)`,
+    W / 2, y + 16, { align: 'center' }
+  );
+  y += 26;
+
+  // Footer on last page
+  drawPageFooter();
 
   return doc;
 }
@@ -1223,6 +1479,16 @@ function validateField(id, check) {
 
 function submitApplicationForm() {
   let valid = true;
+  if (!applicantPhotoBase64) {
+    document.getElementById('photo-upload-area').style.borderColor = 'var(--red)';
+    document.getElementById('photo-upload-area').style.background = '#fff5f5';
+    showToast('Please upload your profile photo.');
+    document.getElementById('photo-upload-area').scrollIntoView({behavior:'smooth', block:'center'});
+    valid = false;
+  } else {
+    document.getElementById('photo-upload-area').style.borderColor = '';
+    document.getElementById('photo-upload-area').style.background = '';
+  }
   valid = validateField('fullname',   document.getElementById('fullname').value.trim().length >= 3) && valid;
   valid = validateField('fathername', document.getElementById('fathername').value.trim().length >= 3) && valid;
   valid = validateField('cnic',       /^\d{5}-\d{7}-\d$/.test(document.getElementById('cnic').value.trim())) && valid;
@@ -1719,6 +1985,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'F12') e.preventDefault();
 });
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
