@@ -370,14 +370,19 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
         <div class="card-header"><div class="card-icon">💼</div><div><div class="card-title">Position & Availability</div><div class="card-sub">What role are you applying for?</div></div></div>
         <div class="card-body">
           <div class="field-grid two">
-            <div class="field" id="f-position"><label>Applying For <span class="req">*</span></label><select id="position"><option value="">Select position</option><option>Cashier / Counter Staff</option><option>Kitchen Staff / Cook</option><option>Delivery Rider</option><option>Floor / Service Staff</option><option>Shift Supervisor</option><option>Kitchen Manager</option><option>Branch Manager</option><option>Any Available Position</option></select><span class="err-msg">Select a position</span></div>
+            <div class="field" id="f-position"><label>Applying For <span class="req">*</span></label><select id="position" onchange="updateSkills()"><option value="">Select position</option><option>Cashier / Counter Staff</option><option>Kitchen Staff / Cook</option><option>Delivery Rider</option><option>Floor / Service Staff</option><option>Shift Supervisor</option><option>Kitchen Manager</option><option>Branch Manager</option><option>Any Available Position</option></select><span class="err-msg">Select a position</span></div>
             <div class="field" id="f-shift"><label>Preferred Shift <span class="req">*</span></label><div class="radio-group"><label class="radio-pill"><input type="radio" name="shift" value="Morning (9am–4pm)"> Morning</label><label class="radio-pill"><input type="radio" name="shift" value="Evening (4pm–12am)"> Evening</label><label class="radio-pill"><input type="radio" name="shift" value="Night (12am–8am)"> Night</label><label class="radio-pill"><input type="radio" name="shift" value="Any shift"> Any shift</label></div><span class="err-msg" id="shift-err">Select preferred shift</span></div>
             <div class="field" id="f-joining"><label>Can join within <span class="req">*</span></label><select id="joining"><option value="">Select</option><option>Immediately</option><option>1 week</option><option>2 weeks</option><option>1 month</option></select><span class="err-msg">Required</span></div>
             <div class="field"><label>Salary Expectation (Rs / month)</label><select id="salary"><option value="">Negotiable</option><option>25,000 – 35,000</option><option>35,000 – 50,000</option><option>50,000 – 75,000</option><option>75,000+</option></select></div>
           </div>
           <div class="divider"></div>
           <div class="field-grid">
-            <div class="field"><label>Skills & Strengths</label><div class="check-group"><label class="check-pill"><input type="checkbox" name="skills" value="Customer service"> Customer Service</label><label class="check-pill"><input type="checkbox" name="skills" value="Cash handling"> Cash Handling</label><label class="check-pill"><input type="checkbox" name="skills" value="Food preparation"> Food Prep</label><label class="check-pill"><input type="checkbox" name="skills" value="Delivery & navigation"> Delivery & Navigation</label><label class="check-pill"><input type="checkbox" name="skills" value="Team leadership"> Team Leadership</label><label class="check-pill"><input type="checkbox" name="skills" value="Urdu reading/writing"> Urdu Literacy</label><label class="check-pill"><input type="checkbox" name="skills" value="Basic English"> Basic English</label><label class="check-pill"><input type="checkbox" name="skills" value="Computer/POS"> Computer / POS</label></div></div>
+            <div class="field">
+  <label>Skills & Strengths <span style="color:var(--muted);font-size:10px;font-weight:500;text-transform:none;letter-spacing:0;">(based on your selected position)</span></label>
+  <div class="check-group" id="skills-group">
+    <div style="font-size:13px;color:var(--muted);font-style:italic;">Select a position above to see relevant skills</div>
+  </div>
+</div>
             <div class="field"><label>Languages</label><div class="check-group"><label class="check-pill"><input type="checkbox" name="lang" value="Urdu"> Urdu</label><label class="check-pill"><input type="checkbox" name="lang" value="Punjabi"> Punjabi</label><label class="check-pill"><input type="checkbox" name="lang" value="Saraiki"> Saraiki</label><label class="check-pill"><input type="checkbox" name="lang" value="English"> English</label></div></div>
             <div class="field"><label>Why do you want to join Oven X? <span class="req">*</span></label><textarea id="motivation" placeholder="Write a few sentences about why you want this job." rows="3"></textarea><span class="err-msg">Please write at least 20 characters</span></div>
 <div class="field"><label>Anything else?</label><textarea id="extra" placeholder="Any other relevant information" rows="2"></textarea></div>
@@ -845,119 +850,189 @@ async function saveStatus() {
 async function generateHRPDF(a, aptS, sitS) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, M = 14, CW = W - M * 2;
-  let y = 0;
+  const W = 210, H = 297;
+  const SIDEBAR_W = 68;
+  const MAIN_X = SIDEBAR_W + 10;
+  const MAIN_W = W - MAIN_X - 12;
+  let leftY = 0;
+  let rightY = 0;
 
-  // ── HELPERS ─────────────────────────────────────────────
-  function checkPageBreak(needed = 20) {
-    if (y + needed > 278) {
-      doc.addPage();
-      y = 14;
-      drawPageFooter();
+  const RED    = [220, 38, 38];
+  const DARK   = [15, 15, 25];
+  const AMBER  = [245, 166, 35];
+  const GRAY1  = [245, 245, 248];
+  const GRAY2  = [200, 200, 210];
+  const GRAY3  = [120, 120, 135];
+  const WHITE  = [255, 255, 255];
+  const BLACK  = [20, 20, 30];
+
+  // ── UTILS ──────────────────────────────────────────────
+  function rgb(c) { doc.setTextColor(c[0], c[1], c[2]); }
+  function fill(c) { doc.setFillColor(c[0], c[1], c[2]); }
+  function stroke(c) { doc.setDrawColor(c[0], c[1], c[2]); }
+
+  function bold(size) { doc.setFont('helvetica', 'bold'); doc.setFontSize(size); }
+  function normal(size) { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); }
+  function italic(size) { doc.setFont('helvetica', 'italic'); doc.setFontSize(size); }
+
+  // Left column text
+  function leftText(text, size, color, x, y, opts) {
+    doc.setFont('helvetica', opts && opts.bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    rgb(color);
+    const lines = doc.splitTextToSize(String(text || ''), opts && opts.maxW ? opts.maxW : SIDEBAR_W - 10);
+    doc.text(lines, x || 7, y);
+    return lines.length;
+  }
+
+  // Right column text
+  function rightText(text, size, color, x, y, maxW, isBold) {
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    rgb(color);
+    const lines = doc.splitTextToSize(String(text || '—'), maxW || MAIN_W);
+    doc.text(lines, x || MAIN_X, y);
+    return lines.length;
+  }
+
+  function checkLeft(needed) {
+    if (leftY + needed > 282) {
+      // Can't add pages for sidebar — just cap it
+      leftY = 282;
     }
   }
 
-  function drawPageFooter() {
-    doc.setFillColor(26, 26, 26);
-    doc.rect(0, 287, W, 10, 'F');
-    doc.setFillColor(245, 166, 35);
-    doc.rect(0, 285, W, 2, 'F');
-    doc.setTextColor(180, 180, 180);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text('OVEN X HIRING SYSTEM  ·  HR INTERNAL USE ONLY  ·  CONFIDENTIAL', W / 2, 292, { align: 'center' });
-    doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, W - M, 292, { align: 'right' });
+  function checkRight(needed) {
+    if (rightY + needed > 282) {
+      doc.addPage();
+      // Redraw sidebar background on new page
+      fill(DARK);
+      doc.rect(0, 0, SIDEBAR_W, H, 'F');
+      fill(RED);
+      doc.rect(0, 0, SIDEBAR_W, 3, 'F');
+      rightY = 14;
+      leftY = 14;
+    }
   }
 
-  function sectionHeader(title, icon = '') {
-    checkPageBreak(14);
-    doc.setFillColor(26, 26, 26);
-    doc.roundedRect(M, y, CW, 8, 1.5, 1.5, 'F');
-    doc.setTextColor(245, 166, 35);
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text((icon ? icon + '  ' : '') + title.toUpperCase(), M + 5, y + 5.5);
-    y += 12;
+  // Left section label
+  function leftSection(title) {
+    checkLeft(14);
+    leftY += 6;
+    fill(RED);
+    doc.rect(7, leftY, SIDEBAR_W - 14, 0.6, 'F');
+    leftY += 3;
+    bold(7);
+    rgb(AMBER);
+    doc.text(title.toUpperCase(), 7, leftY);
+    leftY += 6;
   }
 
-  function labelVal(label, value, x, width) {
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(140, 140, 140);
-    doc.text(String(label).toUpperCase(), x, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(8.5);
-    const lines = doc.splitTextToSize(String(value || '—'), width - 2);
-    doc.text(lines, x, y + 4.5);
-    return lines.length * 4.5 + 4.5;
-  }
-
-  function twoCol(l1, v1, l2, v2) {
-    checkPageBreak(14);
-    const half = CW / 2 - 3;
-    const h1 = labelVal(l1, v1, M, half);
-    const h2 = labelVal(l2, v2, M + CW / 2 + 3, half);
-    y += Math.max(h1, h2) + 5;
-  }
-
-  function oneCol(label, value) {
-    checkPageBreak(14);
-    const h = labelVal(label, value, M, CW);
-    y += h + 5;
-  }
-
-  function divider(color = [230, 230, 230]) {
-    doc.setDrawColor(...color);
+  // Right section label
+  function rightSection(title) {
+    checkRight(16);
+    rightY += 4;
+    // Accent bar
+    fill(RED);
+    doc.rect(MAIN_X, rightY, 2.5, 7, 'F');
+    bold(9);
+    rgb(DARK);
+    doc.text(title.toUpperCase(), MAIN_X + 5, rightY + 5.5);
+    // Underline
+    stroke(GRAY2);
     doc.setLineWidth(0.3);
-    doc.line(M, y, M + CW, y);
-    y += 4;
+    doc.line(MAIN_X + 5, rightY + 7.5, MAIN_X + MAIN_W, rightY + 7.5);
+    rightY += 12;
   }
 
-  // ── PAGE 1: HEADER BAND ─────────────────────────────────
-  doc.setFillColor(232, 35, 26);
-  doc.rect(0, 0, W, 32, 'F');
-  doc.setFillColor(245, 166, 35);
-  doc.rect(0, 32, W, 3, 'F');
+  // Right two-col row
+  function rightRow(label, value) {
+    checkRight(13);
+    bold(6.5);
+    rgb(GRAY3);
+    doc.text(String(label).toUpperCase(), MAIN_X, rightY);
+    normal(8.5);
+    rgb(BLACK);
+    const lines = doc.splitTextToSize(String(value || '—'), MAIN_W);
+    doc.text(lines.slice(0, 3), MAIN_X, rightY + 4.5);
+    rightY += lines.slice(0, 3).length * 4.2 + 7;
+  }
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('OVEN X', M, 13);
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(255, 220, 180);
-  doc.text('APPLICANT SCREENING REPORT  ·  HR CONFIDENTIAL', M, 20);
-  doc.setTextColor(200, 200, 200);
-  doc.setFontSize(7);
-  doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, W - M, 20, { align: 'right' });
+  function rightTwoCol(l1, v1, l2, v2) {
+    checkRight(13);
+    const hw = MAIN_W / 2 - 3;
+    const x2 = MAIN_X + MAIN_W / 2 + 3;
 
-  // ── APPLICANT CARD ──────────────────────────────────────
-  y = 42;
+    bold(6.5); rgb(GRAY3);
+    doc.text(String(l1).toUpperCase(), MAIN_X, rightY);
+    if (l2) doc.text(String(l2).toUpperCase(), x2, rightY);
 
-  // Photo
-  const photoSize = 30;
-  const photoSrc = a?.photo_url || applicantPhotoBase64 || null;
-  let photoLoaded = false;
+    normal(8.5); rgb(BLACK);
+    const l1lines = doc.splitTextToSize(String(v1 || '—'), hw);
+    const l2lines = l2 ? doc.splitTextToSize(String(v2 || '—'), hw) : [];
+    doc.text(l1lines.slice(0, 2), MAIN_X, rightY + 4.5);
+    if (l2) doc.text(l2lines.slice(0, 2), x2, rightY + 4.5);
+    rightY += Math.max(l1lines.slice(0,2).length, l2lines.slice(0,2).length) * 4.2 + 9;
+  }
+
+  // Skill tag pill in sidebar
+  function skillTag(text) {
+    const tw = doc.getStringUnitWidth(text) * 7 / doc.internal.scaleFactor;
+    const pH = 5, pPad = 3;
+    fill([40, 40, 60]);
+    doc.roundedRect(7, leftY - 4, Math.min(tw + pPad * 2, SIDEBAR_W - 14), pH, 1, 1, 'F');
+    normal(6.5); rgb([200, 200, 220]);
+    doc.text(text, 7 + pPad, leftY);
+    return Math.min(tw + pPad * 2, SIDEBAR_W - 14);
+  }
+
+  // ════════════════════════════════════════════════════════
+  //  BACKGROUND LAYOUT
+  // ════════════════════════════════════════════════════════
+  // Dark sidebar
+  fill(DARK);
+  doc.rect(0, 0, SIDEBAR_W, H, 'F');
+  // Red top stripe full width
+  fill(RED);
+  doc.rect(0, 0, W, 3, 'F');
+  // Main area white
+  fill(WHITE);
+  doc.rect(SIDEBAR_W, 0, W - SIDEBAR_W, H, 'F');
+  // Subtle right area top band
+  fill([250, 250, 253]);
+  doc.rect(SIDEBAR_W, 3, W - SIDEBAR_W, 52, 'F');
+
+  // ════════════════════════════════════════════════════════
+  //  PHOTO — top of sidebar
+  // ════════════════════════════════════════════════════════
+  leftY = 10;
+  const photoSrc = (a && a.photo_url) ? a.photo_url : (typeof applicantPhotoBase64 !== 'undefined' ? applicantPhotoBase64 : null);
+  const PS = 44; // photo size
+  const PX = (SIDEBAR_W - PS) / 2;
+
+  let photoOk = false;
   if (photoSrc) {
     try {
       await new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width; canvas.height = img.height;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          const b64 = canvas.toDataURL('image/jpeg');
-          // White circle bg
-          doc.setFillColor(255, 255, 255);
-          doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2 + 1, 'F');
-          doc.addImage(b64, 'JPEG', M, y, photoSize, photoSize);
-          // Red ring
-          doc.setDrawColor(232, 35, 26);
-          doc.setLineWidth(1.2);
-          doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2 + 0.5, 'S');
-          photoLoaded = true;
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300; canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            const side = Math.min(img.width, img.height);
+            ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 300, 300);
+            const b64 = canvas.toDataURL('image/jpeg', 0.9);
+            // White circle border
+            fill(WHITE);
+            doc.circle(PX + PS / 2, leftY + PS / 2, PS / 2 + 1.5, 'F');
+            doc.addImage(b64, 'JPEG', PX, leftY, PS, PS);
+            // Red ring
+            stroke(RED); doc.setLineWidth(1.5);
+            doc.circle(PX + PS / 2, leftY + PS / 2, PS / 2 + 1.5, 'S');
+            photoOk = true;
+          } catch (e) {}
           resolve();
         };
         img.onerror = () => resolve();
@@ -965,240 +1040,256 @@ async function generateHRPDF(a, aptS, sitS) {
       });
     } catch (e) {}
   }
-  if (!photoLoaded) {
-    doc.setFillColor(240, 240, 240);
-    doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2, 'F');
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.circle(M + photoSize / 2, y + photoSize / 2, photoSize / 2, 'S');
-    doc.setTextColor(180, 180, 180);
-    doc.setFontSize(7);
-    doc.text('NO PHOTO', M + photoSize / 2, y + photoSize / 2 + 2, { align: 'center' });
+
+  if (!photoOk) {
+    fill([35, 35, 55]);
+    doc.circle(PX + PS / 2, leftY + PS / 2, PS / 2, 'F');
+    stroke(GRAY3); doc.setLineWidth(0.5);
+    doc.circle(PX + PS / 2, leftY + PS / 2, PS / 2, 'S');
+    normal(7); rgb(GRAY3);
+    doc.text('NO PHOTO', SIDEBAR_W / 2, leftY + PS / 2 + 2.5, { align: 'center' });
   }
 
-  // Name block
-  const nx = M + photoSize + 7;
-  doc.setTextColor(15, 15, 15);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text(String(a.full_name || '—'), nx, y + 9);
+  leftY += PS + 8;
 
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text(`Father: ${a.father_name || '—'}`, nx, y + 16);
-  doc.text(`CNIC: ${a.cnic || '—'}   ·   DOB: ${a.dob || '—'}   ·   ${a.gender || '—'}   ·   ${a.marital_status || ''}`, nx, y + 22);
-  doc.text(`Phone: ${a.phone || '—'}   ·   Email: ${a.email || 'N/A'}`, nx, y + 28);
+  // Name in sidebar under photo
+  bold(11); rgb(WHITE);
+  const nameLines = doc.splitTextToSize(String(a.full_name || '—'), SIDEBAR_W - 10);
+  doc.text(nameLines, SIDEBAR_W / 2, leftY, { align: 'center' });
+  leftY += nameLines.length * 5.5 + 2;
 
-  // Status pill
-  const statusMap = { applied: 'IN PROGRESS', interview_shortlisted: 'SHORTLISTED', hired: 'HIRED', rejected: 'REJECTED', on_hold: 'ON HOLD' };
-  const statusColors = { applied: [99, 102, 241], interview_shortlisted: [22, 163, 74], hired: [180, 120, 10], rejected: [200, 30, 20], on_hold: [107, 114, 128] };
-  const sc = statusColors[a.status || 'applied'] || [99, 102, 241];
-  const statusLabel = statusMap[a.status || 'applied'] || 'IN PROGRESS';
-  doc.setFillColor(...sc);
-  doc.roundedRect(W - M - 36, y, 36, 9, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text(statusLabel, W - M - 18, y + 6, { align: 'center' });
+  // Position tag
+  fill(RED);
+  const posText = String(a.position || 'Applicant');
+  const posW = Math.min(doc.getStringUnitWidth(posText) * 7.5 / doc.internal.scaleFactor + 10, SIDEBAR_W - 10);
+  doc.roundedRect((SIDEBAR_W - posW) / 2, leftY, posW, 7, 1.5, 1.5, 'F');
+  bold(6); rgb(WHITE);
+  doc.text(posText, SIDEBAR_W / 2, leftY + 5, { align: 'center' });
+  leftY += 12;
 
-  y += photoSize + 10;
-  divider([232, 35, 26]);
+  // Status badge
+  const statusColors2 = { applied: [80,80,200], interview_shortlisted: [22,163,74], hired: [180,130,10], rejected: [200,30,20], on_hold: [100,100,115] };
+  const statusLabels2 = { applied: 'IN PROGRESS', interview_shortlisted: 'SHORTLISTED', hired: 'HIRED', rejected: 'REJECTED', on_hold: 'ON HOLD' };
+  const sc = statusColors2[a.status || 'applied'] || [80,80,200];
+  const sl = statusLabels2[a.status || 'applied'] || 'IN PROGRESS';
+  fill(sc);
+  doc.roundedRect(7, leftY, SIDEBAR_W - 14, 7, 1.5, 1.5, 'F');
+  bold(6.5); rgb(WHITE);
+  doc.text(sl, SIDEBAR_W / 2, leftY + 5, { align: 'center' });
+  leftY += 12;
 
-  // ── SCORE BOXES ─────────────────────────────────────────
-  const aScore = a.aptitude_score != null ? a.aptitude_score : aptS;
-  const sScore = a.situational_score != null ? a.situational_score : sitS;
-  const bw = (CW - 6) / 2;
+  // ── SIDEBAR — CONTACT ────────────────────────────────────
+  leftSection('Contact');
+  const contacts = [
+    { icon: 'PHONE', val: a.phone || '—' },
+    { icon: 'EMAIL', val: a.email || 'N/A' },
+    { icon: 'CITY',  val: a.city  || '—' },
+    { icon: 'BRANCH', val: a.preferred_branch === 'MULTAN' ? 'Multan' : a.preferred_branch === 'BWP' ? 'Bahawalpur' : '—' },
+  ];
+  contacts.forEach(c => {
+    checkLeft(12);
+    bold(5.5); rgb(AMBER);
+    doc.text(c.icon, 7, leftY);
+    normal(7); rgb([200, 200, 215]);
+    const vl = doc.splitTextToSize(c.val, SIDEBAR_W - 22);
+    doc.text(vl, 7 + doc.getStringUnitWidth(c.icon) * 5.5 / doc.internal.scaleFactor + 2, leftY);
+    leftY += vl.length * 4 + 4;
+  });
 
-  // Aptitude box
-  const aPass = aScore != null && aScore >= 60;
-  const aColor = aScore == null ? [160,160,160] : aPass ? [22,163,74] : [200,30,20];
-  doc.setFillColor(...aColor);
-  doc.roundedRect(M, y, bw, 24, 3, 3, 'F');
-  // Score
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text(aScore != null ? `${aScore}%` : 'N/A', M + bw / 2, y + 13, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('APTITUDE TEST  ·  PASS ≥60%', M + bw / 2, y + 18.5, { align: 'center' });
-  doc.setFont('helvetica', 'bold');
-  doc.text(aScore == null ? 'NOT ATTEMPTED' : aPass ? '✓  PASSED' : '✕  FAILED', M + bw / 2, y + 22.5, { align: 'center' });
+  // ── SIDEBAR — PERSONAL ───────────────────────────────────
+  leftSection('Personal');
+  const personals = [
+    { label: 'CNIC', val: a.cnic || '—' },
+    { label: 'DOB', val: a.dob || '—' },
+    { label: 'GENDER', val: a.gender || '—' },
+    { label: 'MARITAL', val: a.marital_status || '—' },
+  ];
+  personals.forEach(p => {
+    checkLeft(11);
+    bold(5.5); rgb(AMBER);
+    doc.text(p.label, 7, leftY);
+    leftY += 3.5;
+    normal(7); rgb([200, 200, 215]);
+    const vl = doc.splitTextToSize(p.val, SIDEBAR_W - 14);
+    doc.text(vl, 7, leftY);
+    leftY += vl.length * 3.8 + 3;
+  });
 
-  // Situational box
-  const sPass = sScore != null && sScore >= 65;
-  const sColor = sScore == null ? [160,160,160] : sPass ? [22,163,74] : [200,30,20];
-  doc.setFillColor(...sColor);
-  doc.roundedRect(M + bw + 6, y, bw, 24, 3, 3, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text(sScore != null ? `${sScore}%` : 'N/A', M + bw + 6 + bw / 2, y + 13, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('SITUATIONAL TEST  ·  PASS ≥65%', M + bw + 6 + bw / 2, y + 18.5, { align: 'center' });
-  doc.setFont('helvetica', 'bold');
-  doc.text(sScore == null ? 'NOT ATTEMPTED' : sPass ? '✓  PASSED' : '✕  FAILED', M + bw + 6 + bw / 2, y + 22.5, { align: 'center' });
+  // ── SIDEBAR — EDUCATION ──────────────────────────────────
+  leftSection('Education');
+  checkLeft(10);
+  normal(7.5); rgb(WHITE);
+  const eduLines = doc.splitTextToSize(String(a.education || '—'), SIDEBAR_W - 14);
+  doc.text(eduLines, 7, leftY);
+  leftY += eduLines.length * 4 + 3;
+  normal(6.5); rgb(GRAY3);
+  doc.text(String(a.experience || '—'), 7, leftY);
+  leftY += 8;
 
-  y += 30;
-
-  // ── PERSONAL INFO ────────────────────────────────────────
-  sectionHeader('Personal Information', '👤');
-  twoCol('Full Name', a.full_name, "Father's Name", a.father_name);
-  twoCol('CNIC', a.cnic, 'Date of Birth', a.dob);
-  twoCol('Gender', a.gender, 'Marital Status', a.marital_status || '—');
-
-  // ── CONTACT & LOCATION ───────────────────────────────────
-  sectionHeader('Contact & Location', '📍');
-  twoCol('WhatsApp', a.phone, 'Email', a.email || 'N/A');
-  twoCol('City', a.city, 'Branch Preference', a.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht Colony' : a.preferred_branch === 'BWP' ? 'Bahawalpur — SS Tower' : '—');
-  oneCol('Current Address', a.address);
-
-  // ── EDUCATION & EXPERIENCE ───────────────────────────────
-  sectionHeader('Education & Experience', '🎓');
-  twoCol('Highest Education', a.education, 'Work Experience', a.experience);
-  twoCol('Previous Employer', a.prev_employer || 'N/A', 'Previous Role', a.prev_role || 'N/A');
-
-  // ── POSITION & AVAILABILITY ──────────────────────────────
-  sectionHeader('Position & Availability', '💼');
-  twoCol('Position Applied', a.position, 'Preferred Shift', a.shift_pref);
-  twoCol('Can Join Within', a.joining, 'Salary Expectation', a.salary_exp || 'Negotiable');
-  twoCol('Skills', a.skills || 'N/A', 'Languages', a.languages || 'N/A');
-
-  // ── MOTIVATION ───────────────────────────────────────────
-  sectionHeader('Motivation', '💬');
-  checkPageBreak(20);
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(30, 30, 30);
-  const mlines = doc.splitTextToSize(String(a.motivation || '—'), CW);
-  checkPageBreak(mlines.length * 4.5 + 6);
-  doc.text(mlines, M, y);
-  y += mlines.length * 4.5 + 8;
-
-  if (a.extra_notes) {
-    oneCol('Additional Notes', a.extra_notes);
+  if (a.prev_employer) {
+    checkLeft(10);
+    bold(6.5); rgb(AMBER);
+    doc.text('PREV. EMPLOYER', 7, leftY);
+    leftY += 4;
+    normal(7); rgb([200, 200, 215]);
+    doc.text(String(a.prev_employer), 7, leftY);
+    leftY += 4;
+    normal(6.5); rgb(GRAY3);
+    doc.text(String(a.prev_role || ''), 7, leftY);
+    leftY += 7;
   }
 
-  // ── APTITUDE TEST DETAIL ─────────────────────────────────
-  if (a.aptitude_answers || aptAnswers.length > 0) {
-    const answers = a.aptitude_answers ? JSON.parse(a.aptitude_answers) : aptAnswers;
-    const questions = builtAptQuestions.length > 0 ? builtAptQuestions : [];
+  // ── SIDEBAR — SKILLS ─────────────────────────────────────
+  leftSection('Skills');
+  if (a.skills) {
+    a.skills.split(',').forEach(sk => {
+      const s = sk.trim();
+      if (!s) return;
+      checkLeft(8);
+      const tw = doc.getStringUnitWidth(s) * 6.5 / doc.internal.scaleFactor + 8;
+      fill([38, 38, 60]);
+      doc.roundedRect(7, leftY - 4.5, Math.min(tw, SIDEBAR_W - 14), 6.5, 1, 1, 'F');
+      normal(6.5); rgb([200, 200, 225]);
+      doc.text(s, 10, leftY);
+      leftY += 8;
+    });
+  }
+  leftY += 2;
 
-    if (questions.length > 0 && answers.length > 0) {
-      sectionHeader('Aptitude Test — Question by Question', '📝');
-
-      questions.forEach((q, i) => {
-        const userAns = answers[i];
-        const correct = userAns === q.ans;
-        checkPageBreak(22);
-
-        // Question row bg
-        doc.setFillColor(correct ? 240 : 255, correct ? 253 : 242, correct ? 244 : 242);
-        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'F');
-        doc.setDrawColor(correct ? 200 : 240, correct ? 230 : 180, correct ? 200 : 180);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'S');
-
-        // Q number badge
-        doc.setFillColor(correct ? 22 : 200, correct ? 163 : 30, correct ? 74 : 20);
-        doc.roundedRect(M + 2, y + 3, 10, 6, 1, 1, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(6.5);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Q${i + 1}`, M + 7, y + 7.2, { align: 'center' });
-
-        // Question text
-        doc.setTextColor(20, 20, 20);
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        const qlines = doc.splitTextToSize(q.q, CW - 60);
-        doc.text(qlines, M + 15, y + 7);
-
-        // Correct answer
-        doc.setFontSize(6.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(22, 100, 50);
-        doc.text(`✓ Correct: ${q.opts[q.ans]}`, M + 15, y + 13.5);
-
-        // User answer (if wrong)
-        if (userAns !== undefined && !correct) {
-          doc.setTextColor(180, 30, 20);
-          doc.text(`✕ Answered: ${q.opts[userAns]}`, M + 80, y + 13.5);
-        } else if (correct) {
-          doc.setTextColor(22, 120, 60);
-          doc.text('Answered correctly', M + 80, y + 13.5);
-        }
-
-        // Diff badge
-        const diffColor = q.diff === 'hard' ? [200,30,20] : q.diff === 'medium' ? [180,120,10] : [60,120,60];
-        doc.setFillColor(...diffColor);
-        doc.roundedRect(W - M - 16, y + 3, 14, 5, 1, 1, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(5.5);
-        doc.setFont('helvetica', 'bold');
-        doc.text((q.diff || '').toUpperCase(), W - M - 9, y + 6.7, { align: 'center' });
-
-        y += 21;
-      });
-    }
+  // ── SIDEBAR — LANGUAGES ──────────────────────────────────
+  leftSection('Languages');
+  if (a.languages) {
+    a.languages.split(',').forEach(lg => {
+      const l = lg.trim();
+      if (!l) return;
+      checkLeft(8);
+      normal(7.5); rgb(WHITE);
+      doc.text('- ' + l, 7, leftY);
+      leftY += 5;
+    });
   }
 
-  // ── SITUATIONAL TEST DETAIL ──────────────────────────────
-  if (a.situational_answers || sitAnswers.length > 0) {
-    const sanswers = a.situational_answers ? JSON.parse(a.situational_answers) : sitAnswers;
-    const squestions = builtSitQuestions.length > 0 ? builtSitQuestions : [];
+  // ── SIDEBAR — TEST SCORES ────────────────────────────────
+  leftSection('Test Scores');
+  const aScore = (a.aptitude_score != null) ? a.aptitude_score : aptS;
+  const sScore = (a.situational_score != null) ? a.situational_score : sitS;
+  const aPass  = aScore != null && aScore >= 60;
+  const sPass  = sScore != null && sScore >= 65;
 
-    if (squestions.length > 0 && sanswers.length > 0) {
-      sectionHeader('Situational Test — Scenario by Scenario', '🎭');
-
-      squestions.forEach((q, i) => {
-        const userAns = sanswers[i];
-        const correct = userAns === q.ans;
-        checkPageBreak(22);
-
-        doc.setFillColor(correct ? 240 : 255, correct ? 253 : 242, correct ? 244 : 242);
-        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'F');
-        doc.setDrawColor(correct ? 200 : 240, correct ? 230 : 180, correct ? 200 : 180);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(M, y, CW, 18, 1.5, 1.5, 'S');
-
-        doc.setFillColor(correct ? 22 : 200, correct ? 163 : 30, correct ? 74 : 20);
-        doc.roundedRect(M + 2, y + 3, 10, 6, 1, 1, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(6.5);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`S${i + 1}`, M + 7, y + 7.2, { align: 'center' });
-
-        doc.setTextColor(20, 20, 20);
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        const qlines = doc.splitTextToSize(q.q, CW - 50);
-        doc.text(qlines, M + 15, y + 7);
-
-        doc.setFontSize(6.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(22, 100, 50);
-        doc.text(`✓ Best Answer: ${q.opts[q.ans]}`, M + 15, y + 13.5);
-
-        if (userAns !== undefined && !correct) {
-          doc.setTextColor(180, 30, 20);
-          doc.text(`✕ Chose: ${q.opts[userAns]}`, M + 90, y + 13.5);
-        } else if (correct) {
-          doc.setTextColor(22, 120, 60);
-          doc.text('Chose correctly', M + 90, y + 13.5);
-        }
-
-        y += 21;
-      });
-    }
+  function sidebarScore(label, score, pass, hasData) {
+    checkLeft(18);
+    // Track bar background
+    fill([35, 35, 55]);
+    doc.roundedRect(7, leftY - 1, SIDEBAR_W - 14, 12, 2, 2, 'F');
+    // Fill bar
+    const barW = SIDEBAR_W - 22;
+    fill(!hasData ? [80,80,100] : pass ? [22,163,74] : [200,30,20]);
+    const fillW = hasData ? Math.max(barW * score / 100, 2) : 0;
+    doc.roundedRect(8, leftY + 4, fillW, 4, 1, 1, 'F');
+    // Label
+    bold(6.5); rgb(WHITE);
+    doc.text(label, 9, leftY + 3);
+    // Score
+    bold(8); rgb(hasData ? (pass ? [100,220,140] : [255,120,120]) : GRAY3);
+    doc.text(hasData ? score + '%' : 'N/A', SIDEBAR_W - 8, leftY + 3, { align: 'right' });
+    // Pass/Fail
+    normal(5.5); rgb(hasData ? (pass ? [100,200,120] : [255,100,100]) : GRAY3);
+    doc.text(hasData ? (pass ? 'PASS' : 'FAIL') : '—', SIDEBAR_W - 8, leftY + 10, { align: 'right' });
+    leftY += 16;
   }
+
+  sidebarScore('Aptitude  (>=60%)',    aScore, aPass, aScore != null);
+  sidebarScore('Situational  (>=65%)', sScore, sPass, sScore != null);
+
+  // Cheat log
+  if (a.cheat_attempts > 0) {
+    checkLeft(10);
+    leftSection('Integrity');
+    fill(a.cheat_attempts >= 3 ? [80,10,10] : [60,45,10]);
+    doc.roundedRect(7, leftY - 3, SIDEBAR_W - 14, 9, 1.5, 1.5, 'F');
+    bold(6.5); rgb(a.cheat_attempts >= 3 ? [255,100,100] : AMBER);
+    doc.text('Tab Violations: ' + a.cheat_attempts + (a.cheat_attempts >= 3 ? ' (DISQ.)' : ''), SIDEBAR_W / 2, leftY + 2.5, { align: 'center' });
+    leftY += 12;
+  }
+
+  // ════════════════════════════════════════════════════════
+  //  RIGHT COLUMN — MAIN CONTENT
+  // ════════════════════════════════════════════════════════
+  rightY = 10;
+
+  // ── HEADER NAME BLOCK ────────────────────────────────────
+  bold(20); rgb(DARK);
+  const rNameLines = doc.splitTextToSize(String(a.full_name || '—'), MAIN_W);
+  doc.text(rNameLines, MAIN_X, rightY + 8);
+  rightY += rNameLines.length * 8 + 2;
+
+  bold(9); rgb(RED);
+  doc.text(String(a.position || 'Applicant'), MAIN_X, rightY);
+  rightY += 5;
+
+  normal(7.5); rgb(GRAY3);
+  doc.text(
+    'Father: ' + String(a.father_name || '—') +
+    '   |   Applied: ' + (a.applied_at ? new Date(a.applied_at).toLocaleDateString('en-PK') : '—'),
+    MAIN_X, rightY
+  );
+  rightY += 4;
+
+  // Red underline
+  fill(RED); doc.rect(MAIN_X, rightY, MAIN_W, 1.2, 'F');
+  rightY += 8;
+
+  // ── MOTIVATION / ABOUT ───────────────────────────────────
+  rightSection('About / Motivation');
+  checkRight(14);
+  normal(8.5); rgb([50, 50, 65]);
+  const motivLines = doc.splitTextToSize(String(a.motivation || '—'), MAIN_W);
+  doc.text(motivLines.slice(0, 8), MAIN_X, rightY);
+  rightY += motivLines.slice(0, 8).length * 4.5 + 5;
+
+  if (a.extra_notes && a.extra_notes.trim()) {
+    italic(7.5); rgb(GRAY3);
+    const enLines = doc.splitTextToSize(String(a.extra_notes), MAIN_W);
+    checkRight(enLines.length * 4 + 4);
+    doc.text(enLines.slice(0, 4), MAIN_X, rightY);
+    rightY += enLines.slice(0, 4).length * 4 + 5;
+  }
+
+  // ── WORK AVAILABILITY ────────────────────────────────────
+  rightSection('Availability & Expectations');
+  rightTwoCol('Preferred Shift', a.shift_pref, 'Can Join Within', a.joining);
+  rightTwoCol('Salary Expectation', a.salary_exp || 'Negotiable', 'Preferred Branch',
+    a.preferred_branch === 'MULTAN' ? 'Multan — Gulgasht Colony' :
+    a.preferred_branch === 'BWP'    ? 'Bahawalpur — SS Tower' : 'Any Branch');
+  rightTwoCol('City', a.city, 'Address', a.address);
+
+  // ── SCREENING RESULTS ────────────────────────────────────
+  rightSection('Screening Results');
+  checkRight(30);
+
+  // Overall verdict banner
+  const overallPass = aPass && sPass;
+  const vColor = overallPass ? [22,163,74] : aScore == null ? [130,130,145] : [200,30,20];
+  fill(vColor);
+  doc.roundedRect(MAIN_X, rightY, MAIN_W, 14, 2, 2, 'F');
+  bold(10); rgb(WHITE);
+  const vText = overallPass
+    ? 'CANDIDATE SHORTLISTED FOR INTERVIEW'
+    : aScore == null ? 'TESTS NOT COMPLETED'
+    : 'DID NOT MEET PASSING CRITERIA';
+  doc.text(vText, MAIN_X + MAIN_W / 2, rightY + 6, { align: 'center' });
+  normal(7); rgb([220,255,220]);
+  const vDetail = overallPass
+    ? 'Aptitude: ' + aScore + '%  (Pass >= 60%)    Situational: ' + sScore + '%  (Pass >= 65%)'
+    : aScore != null
+    ? 'Aptitude: ' + (aScore != null ? aScore + '%' : 'N/A') + '    Situational: ' + (sScore != null ? sScore + '%' : 'N/A')
+    : 'Applicant has not completed the screening tests.';
+  doc.text(vDetail, MAIN_X + MAIN_W / 2, rightY + 11, { align: 'center' });
+  rightY += 20;
 
   // ── PERSONALITY PROFILE ──────────────────────────────────
   if (a.personality_summary) {
-    sectionHeader('Personality Profile', '🧠');
-    const entries = a.personality_summary.split(' | ');
+    rightSection('Personality Profile');
     const pQuestions = [
       'How do you handle problems at work?',
       'How do you work in a team?',
@@ -1211,72 +1302,66 @@ async function generateHRPDF(a, aptS, sitS) {
       'How do you respond to manager feedback?',
       'Where do you see yourself long-term?'
     ];
-
+    const entries = a.personality_summary.split(' | ');
     entries.forEach((line, i) => {
-      checkPageBreak(18);
-      const parts = line.split(': ');
-      const ans = parts.slice(1).join(': ') || line;
-      const qText = pQuestions[i] || `Question ${i + 1}`;
+      checkRight(15);
+      const ci  = line.indexOf(': ');
+      const ans = ci > -1 ? line.slice(ci + 2) : line;
+      const qText = pQuestions[i] || ('Question ' + (i + 1));
 
-      doc.setFillColor(248, 248, 252);
-      doc.roundedRect(M, y, CW, 14, 1.5, 1.5, 'F');
-      doc.setDrawColor(220, 220, 235);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(M, y, CW, 14, 1.5, 1.5, 'S');
+      // Alternating background
+      if (i % 2 === 0) {
+        fill(GRAY1);
+        doc.rect(MAIN_X, rightY - 1, MAIN_W, 13, 'F');
+      }
 
-      // Number
-      doc.setFillColor(99, 102, 241);
-      doc.roundedRect(M + 2, y + 3, 8, 6, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`P${i + 1}`, M + 6, y + 7, { align: 'center' });
+      // Number circle
+      fill(DARK);
+      doc.circle(MAIN_X + 4, rightY + 3.5, 3.5, 'F');
+      bold(6); rgb(WHITE);
+      doc.text(String(i + 1), MAIN_X + 4, rightY + 5.2, { align: 'center' });
 
       // Question
-      doc.setTextColor(100, 100, 120);
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(qText, M + 13, y + 6);
+      normal(6.5); rgb(GRAY3);
+      doc.text(qText, MAIN_X + 10, rightY + 2.5);
 
       // Answer
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      const alines = doc.splitTextToSize(ans, CW - 16);
-      doc.text(alines, M + 13, y + 11);
-
-      y += 17;
+      bold(8); rgb(DARK);
+      const alines = doc.splitTextToSize(ans, MAIN_W - 12);
+      doc.text(alines, MAIN_X + 10, rightY + 7.5);
+      rightY += Math.max(alines.length * 4, 4) + 10;
     });
   }
 
-  // ── SUMMARY VERDICT ──────────────────────────────────────
-  checkPageBreak(40);
-  sectionHeader('Overall Screening Summary', '📊');
-
-  const overallPass = aPass && sPass;
-  doc.setFillColor(overallPass ? 22 : 200, overallPass ? 163 : 30, overallPass ? 74 : 20);
-  doc.roundedRect(M, y, CW, 20, 3, 3, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(
-    overallPass ? '✓  CANDIDATE SHORTLISTED FOR INTERVIEW' : aScore == null ? '⚠  TEST NOT COMPLETED' : '✕  DID NOT MEET PASSING CRITERIA',
-    W / 2, y + 9, { align: 'center' }
-  );
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    overallPass
-      ? `Aptitude: ${aScore}%  (Pass ≥60%)     Situational: ${sScore}%  (Pass ≥65%)     Status: ${statusLabel}`
-      : aScore == null
-        ? 'Applicant submitted form but did not complete the online tests.'
-        : `Aptitude: ${aScore != null ? aScore + '%' : 'N/A'}  (Pass ≥60%)     Situational: ${sScore != null ? sScore + '%' : 'N/A'}  (Pass ≥65%)`,
-    W / 2, y + 16, { align: 'center' }
-  );
-  y += 26;
-
-  // Footer on last page
-  drawPageFooter();
+  // ── FOOTER on every page ─────────────────────────────────
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    // Sidebar continues on all pages
+    if (pg > 1) {
+      fill(DARK);
+      doc.rect(0, 0, SIDEBAR_W, H, 'F');
+      fill(RED);
+      doc.rect(0, 0, SIDEBAR_W, 3, 'F');
+      // Repeat name + position on sidebar subsequent pages
+      bold(8); rgb(WHITE);
+      doc.text(String(a.full_name || ''), SIDEBAR_W / 2, 12, { align: 'center' });
+      normal(6.5); rgb(GRAY3);
+      doc.text('continued', SIDEBAR_W / 2, 18, { align: 'center' });
+    }
+    // Footer bar
+    fill(DARK);
+    doc.rect(SIDEBAR_W, H - 10, W - SIDEBAR_W, 10, 'F');
+    fill(AMBER);
+    doc.rect(SIDEBAR_W, H - 10, W - SIDEBAR_W, 1.2, 'F');
+    normal(6); rgb([160, 160, 175]);
+    doc.text('OVEN X HIRING SYSTEM  |  HR CONFIDENTIAL  |  NOT FOR DISTRIBUTION', SIDEBAR_W + (W - SIDEBAR_W) / 2, H - 5, { align: 'center' });
+    bold(6); rgb(AMBER);
+    doc.text('Page ' + pg + ' of ' + totalPages, W - 13, H - 5, { align: 'right' });
+    // Applicant ID bottom left of footer
+    normal(5.5); rgb([100,100,115]);
+    doc.text('ID: ' + String(a.id || a.cnic || '—'), SIDEBAR_W + 5, H - 5);
+  }
 
   return doc;
 }
@@ -1350,28 +1435,159 @@ const aptBank = [
   { q:"Monthly food cost 35% se upar ja raha hai. Pehla step?", opts:["Staff salary cut karein","Waste audit, portion sizes check, supplier prices review karein","Prices raise karein","Menu items hataao"], ans:1, diff:"hard", pos:["Kitchen Manager","Branch Manager"] },
 ];
 
-const sitBank = [
-  { q:"Rush hour, 12 customers queue mein. Ek aake bolta hai 'mujhe bohot jaldi hai, pehle serve karo.' Aap kya karein ge?", opts:["Haan pehle serve karo","Politely bolao ke queue fair hai, baari par zaroor serve karein ge","Manager ko bulate ho","Ignore karo"], ans:1 },
-  { q:"Colleague ne haath dhoye baghair raw chicken handle karke seedha bread cut karne lagi. Aap kya karein ge?", opts:["Chup raho","Foran politely rok ke haath dhone ko kaho — food safety emergency hai","Baad mein batao","Bread khud change karo"], ans:1 },
-  { q:"Customer 40 minute delay par bohot zor se shikayat kar raha hai, dusre customers dekh rahe hain. Aap kya karein ge?", opts:["Argument karo","Quietly apologize karo, manager ko batao, complimentary item offer karo","Ignore karo","Security bulate ho"], ans:1 },
-  { q:"Shift khatam se 10 min pehle colleague sick ho gaya, replacement nahin. Manager ne 1 ghanta aur rukne ko kaha. Aap kya karein ge?", opts:["Haan bolte hain — team ki zaroorat hai","Chup rehte aur nikal jaate ho","Argue karo","Doctor ka bahana lagate ho"], ans:0 },
-  { q:"Customer ne payment ki aur gaya. Receipt mein ek item miss hua. Aap kya karein ge?", opts:["Kuch nahin — gaya tha","Manager ko report karo, customer ka number ho toh contact karo","Paise apne paas rakho","Ignore karo"], ans:1 },
-  { q:"Kitchen mein ek item stock khatam hone wali hai aur customer ne wohi order diya. Aap kya karein ge?", opts:["Order lo aur baad mein batao","Pehle customer ko honestly bataao aur substitute suggest karo","Order refuse karo","Dusre ki plate se lo"], ans:1 },
-  { q:"Manager ne kaam diya jo samajh nahin aaya. Aap kya karein ge?", opts:["Apni marzi se karo","Clarity maango — poochna weakness nahin, aqal hai","Kuch bhi karo","Kaam hi mat karo"], ans:1 },
-  { q:"Closing time. Ek customer aaya, sirf ek order chahiye. Kitchen officially band hai. Best response?", opts:["Zor se 'BAND HAI' bolo","Politely bolao kitchen band ho gaya, kal zaroor aaiye","Argue karo","Chup raho"], ans:1 },
-  { q:"Colleague paise register mein nahin dal raha, seedha pocket mein rakh raha hai. Aap kya karein ge?", opts:["Chup raho","Manager ya owner ko immediately report karo","Colleague se poocho","Aap bhi wohi karo"], ans:1 },
-  { q:"Customer ne spicy food order ki, bolta hai non-spicy manga tha. Receipt mein customer ki hi galti hai. Aap kya karein ge?", opts:["Customer ko blame karo","Apologize karo aur replace karo (manager permission se)","Ignore karo","Argue karo"], ans:1 },
-  { q:"Bohot rush hai, aap akele counter pe hain, kitchen understaffed hai. Aapka next step?", opts:["Panic karo","Calmly customers ko update karo, prioritize karo, supervisor ko alert karo","Counter chhod do","Sab orders cancel karo"], ans:1 },
-  { q:"Regular customer hamesha extra sauces maangta hai bina pay kiye. Aaj manager nearby hai. Aap kya karein ge?", opts:["De do chup karke","Politely extra sauces ka charge batao — policy consistently apply karo","Embarrass karo","Manager ki taraf ishaara karo"], ans:1 },
-  { q:"Sirf 2 mahine se kaam kar rahe hain. Senior colleague galat technique use kar raha hai. Aap kya karein ge?", opts:["Chup raho","Respectfully aur privately mention karo","Loudly sab ke saamne correct karo","Manager ko complaint karo"], ans:1 },
-  { q:"Delivery rider late hai, customer ka phone aa raha hai, rider phone nahin utha raha. Aap kya karein ge?", opts:["Ignore karo","Customer ko honestly update karo, manager se rider dhundho, apologize karo","Jhoot bolo","Cancel karo"], ans:1 },
-  { q:"Apni galti se customer ka order mix-up kiya, allergy reaction ka risk hai. Aap kya karein ge?", opts:["Ummeed karo kuch nahin hoga","Foran customer ko rok ke situation bataao aur supervisor ko inform karo","Silently replace karo","Ignore karo"], ans:1 },
-  { q:"Health inspector achanak aayi. Kitchen thodi untidy hai. Aap kya karein ge?", opts:["Ghabi jaate ho","Calmly greet karo, immediately clean karna shuru karo, manager ko inform karo","Rokne ki koshish karo","Bahana banao"], ans:1 },
-  { q:"Cash register mein Rs 500 zyada hain end of shift. Aap kya karein ge?", opts:["Ghar le jao — bonus hai","Immediately manager ko report karo aur document karein","Kal ke liye chhod do","Ignore karo"], ans:1 },
-  { q:"Online order app mein confirm hua par kitchen mein nahin gaya. Customer collect karne aa gaya. Aap kya karein ge?", opts:["Argue karo ke order nahin aaya","Apologize karo, manually process karo, manager ko inform karo","Wapis bhej do","Free bana do bina bataye"], ans:1 },
-  { q:"Rush hour mein aapne galat order pack kiya. Customer ghar pahunch ke complain ki. Aap kya karein ge?", opts:["Phone cut karo","Maafi maango, replacement ya refund offer karo — manager se approval lo","Galat prove karo","Ignore karo"], ans:1 },
-  { q:"New trainee baar baar same galti karta hai. Aap supervisor hain. Aap kya karein ge?", opts:["Zor se daanto","Patient ho kar step-by-step explain karo, progress document karo","Ignore karo","Fire karo"], ans:1 },
-];
+const sitBank = {
+  // ── CASHIER ──────────────────────────────────────────────
+  'Cashier / Counter Staff': [
+    { q:"Rush hour, 12 customers queue mein. Ek aake bolta hai 'pehle serve karo, mujhe jaldi hai.' Aap kya karein ge?", opts:["Haan pehle serve karo","Politely bolao ke queue fair hai, baari par zaroor serve karein ge","Manager ko bulate ho","Ignore karo"], ans:1 },
+    { q:"Customer ne Rs 1,000 diye Rs 750 bill pe. Aap ne galti se Rs 500 change diya. Customer chala gaya. Aap kya karein ge?", opts:["Chhod do, kya fark parta hai","Immediately manager ko report karo aur discrepancy log karo","Apni jeb se Rs 250 nikalo","Kal dekh lena"], ans:1 },
+    { q:"POS system hang ho gaya rush hour mein. Queue badh rahi hai. Aap kya karein ge?", opts:["Customers ko bura bolo","Calmly customers ko inform karo, manual notepad pe orders lo, manager ko alert karo","Dukaan band karo","Ek ek customer ko wapis bhejo"], ans:1 },
+    { q:"Customer ne credit card se pay kiya, machine ne decline kiya. Customer ke paas cash nahin. Aap kya karein ge?", opts:["Order cancel karo aur agla customer serve karo","Politely retry karo, dusra payment method suggest karo, manager ko inform karo","Order free mein de do","Customer se argue karo"], ans:1 },
+    { q:"End of day till count mein Rs 500 zyada hain. Aap kya karein ge?", opts:["Ghar le jao — bonus hai","Immediately manager ko report karo aur document karein","Kal ke liye chhod do","Ignore karo"], ans:1 },
+    { q:"Ek customer bolta hai usne zyada paise diye the aur change galat mila. Aap ke paas proof nahin. Aap kya karein ge?", opts:["Customer ko jhootha bolo","Apologize karo, manager ko involve karo, CCTV check karne ko kaho","Paise wapis de do bina check kiye","Ignore karo"], ans:1 },
+    { q:"Colleague paise register mein nahin dal raha, seedha pocket mein rakh raha hai. Aap kya karein ge?", opts:["Chup raho","Manager ya owner ko immediately report karo","Colleague se seedha poocho","Aap bhi wohi karo"], ans:1 },
+    { q:"Customer ne spicy order ki, ab bolta hai non-spicy manga tha. Receipt check karo toh customer ki galti hai. Aap kya karein ge?", opts:["Customer ko blame karo receipt dikhake","Apologize karo aur manager permission se replace karo","Ignore karo","Argue karo"], ans:1 },
+    { q:"Aap akele counter pe hain aur 3 orders simultaneously aayi hain. Aap kya karein ge?", opts:["Panic karo","Ek ek karke handle karo, kitchen ko alert karo, customers ko wait time batao","Counter chhod do","Sab orders cancel karo"], ans:1 },
+    { q:"Regular customer ne claim kiya ke usse loyalty discount milti hai jo aapko nahin pata. Aap kya karein ge?", opts:["De do chup karke","Manager se confirm karo pehle, phir policy ke mutabiq act karo","Seedha refuse karo","Customer pe shout karo"], ans:1 },
+    { q:"Customer ne galat item receive kiya aur bohot upset hai. Aap kya karein ge?", opts:["Ignore karo","Foran apologize karo, sahi item replace karo, manager ko inform karo","Customer ko blame karo","Security bulate ho"], ans:1 },
+    { q:"Closing time hai aur ek customer aakar bolta hai sirf ek order chahiye. Aap kya karein ge?", opts:["Zor se bolo BAND HAI","Politely bolao ke kitchen band ho gaya, kal zaroor aaiye","Argue karo","Chup raho"], ans:1 },
+    { q:"Aapne galti se ek item double charge kar diya. Customer ne notice kiya. Aap kya karein ge?", opts:["Deny karo","Foran apologize karo, refund process karo, manager ko inform karo","Ignore karo","Customer ko blame karo"], ans:1 },
+    { q:"New promotion launch hua hai. Customer pooch raha hai details. Aap ko fully pata nahin. Aap kya karein ge?", opts:["Jo mann mein aaye bol do","Honestly bolo ke confirm karta hoon, manager ya poster se check karo","Kuch bhi bol do","Ignore karo"], ans:1 },
+    { q:"Bohot rush mein aapne order wrong bag mein pack kiya. Customers exchange ho gaye. Aap kya karein ge?", opts:["Chhod do ab kya hoga","Immediately dono customers ko contact karne ki koshish karo, manager ko inform karo","Ignore karo","Customers ko blame karo"], ans:1 },
+  ],
+
+  // ── KITCHEN ──────────────────────────────────────────────
+  'Kitchen Staff / Cook': [
+    { q:"Colleague ne haath dhoye baghair raw chicken handle karke seedha bread cut karne lagi. Aap kya karein ge?", opts:["Chup raho","Foran politely rok ke haath dhone ko kaho — food safety emergency hai","Baad mein manager ko batao","Khud bread change karo chup kar ke"], ans:1 },
+    { q:"Ek ingredient ki stock khatam hone wali hai aur customer ne wohi order diya hai. Aap kya karein ge?", opts:["Order lo aur baad mein batao","Counter ko immediately inform karo taake customer ko pehle bataya jaye","Order refuse karo","Dusre ki plate se ingredient lo"], ans:1 },
+    { q:"Health inspector achanak aa gayi. Kitchen mein thodi gandhagi hai. Aap kya karein ge?", opts:["Ghabi jaate ho","Calmly greet karo, immediately clean karna shuru karo, manager ko inform karo","Rokne ki koshish karo","Bahana banao"], ans:1 },
+    { q:"Ek dish banate waqt aapko realize hua ke ingredient expired hai. Aap kya karein ge?", opts:["Phir bhi use karo","Foran throw karo, supervisor ko inform karo, stock check karo","Thoda use karo kuch nahin hoga","Chupa do"], ans:1 },
+    { q:"Rush hour mein aap 3 orders simultaneously handle kar rahe hain. Kya approach hogi?", opts:["Panic karo","FIFO follow karo, complex orders pehle start karo taake timing sahi rahe","Sirf ek order banao baki ignore karo","Counter se help maango"], ans:1 },
+    { q:"Aapne galti se customer ki allergy item dish mein daal di. Order already counter pe ja rahi hai. Aap kya karein ge?", opts:["Ummeed karo ke customer notice na kare","Foran counter ko rok lo, dish wapis lo, fresh banao, supervisor ko inform karo","Chhod do","Customer ko inform karne ki zimmedari counter ki hai"], ans:1 },
+    { q:"Fryer mein aag lag gayi. Aap kya karein ge?", opts:["Paani dalo","Fire extinguisher use karo, kitchen evacuation karo, manager ko immediately alert karo","Ignore karo thodi dair mein theek ho jaye gi","Continue cooking"], ans:1 },
+    { q:"Aapke saath kaam karne wala colleague continuously galat portion sizes use kar raha hai. Aap kya karein ge?", opts:["Chup raho","Politely privately batao, agar na mane toh supervisor ko inform karo","Loudly embarrass karo","Aap bhi wohi karo"], ans:1 },
+    { q:"Shift khatam hone se pehle supervisor ne kaha kitchen deep clean karni hai. Aap karo kya ge?", opts:["Refuse karo shift khatam hai","Haan karo — kitchen hygiene non-negotiable hai","Sirf upar upar se saaf karo","Kal karte hain bol do"], ans:1 },
+    { q:"Ek customer ne special dietary request ki (no oil). Ticket pe clearly likha hai. Aap kya karein ge?", opts:["Ignore karo","Carefully follow karo, double check karo before sending, ticket pe confirm karo","Normal banao koi nahin dekhta","Counter se confirm karo"], ans:0 },
+    { q:"Refrigerator ka temperature normal se zyada high dikh raha hai. Aap kya karein ge?", opts:["Ignore karo","Immediately supervisor ko report karo aur perishable items check karo","Thoda baad dekhna","Adjust karo khud"], ans:1 },
+    { q:"Closing time pe kitchen clean karte waqt aapko rotten ingredient mila storeroom mein. Aap kya karein ge?", opts:["Wapis rakh do","Dispose karo properly, supervisor ko report karo, stock log update karo","Chupa do","Kal manager ko batana"], ans:1 },
+    { q:"New recipe add hui hai menu mein. Aap ne abhi properly train nahin kiya. Order aa gaya. Aap kya karein ge?", opts:["Apni marzi se banao","Supervisor ko immediately inform karo ke training chahiye, help maango","Refuse karo order banana","Guess work pe banao"], ans:1 },
+    { q:"Aap notice karte hain ke ek colleague phone use kar raha hai food handling ke dauraan. Aap kya karein ge?", opts:["Chup raho","Politely remind karo ke phone use food safety violation hai","Supervisor ko immediately report karo","Aap bhi phone nikalo"], ans:1 },
+    { q:"Customer ne bola food mein kuch foreign object tha (hair/plastic). Aap kitchen mein hain. Manager ne aapko poochha. Aap kya karein ge?", opts:["Inkaar karo meri zimmedari nahin","Honestly investigate karo, cooperate karo, procedure follow karo","Blame dusre pe karo","Ignore karo"], ans:1 },
+  ],
+
+  // ── DELIVERY RIDER ───────────────────────────────────────
+  'Delivery Rider': [
+    { q:"GPS ne galat route dikhaya aur aap stuck ho gaye. Customer ka call aa raha hai. Aap kya karein ge?", opts:["GPS follow karte raho chahe der ho jaye","Customer ko honestly update karo, alternative route dhundho, branch ko inform karo","Order wapis le jao","Cancel karo"], ans:1 },
+    { q:"Customer delivery address pe nahin mila. 3 calls kiye koi jawab nahin. Aap kya karein ge?", opts:["Order chhod ke chale jao","Branch ko immediately inform karo, 5-10 min wait karo, written note chhod o","Order khud rakho","Wapis le jao bina bataye"], ans:1 },
+    { q:"Delivery ke dauraan accident ho gaya, aap theek hain lekin order spill ho gaya. Aap kya karein ge?", opts:["Customer ko deliver karo waise hi","Branch ko immediately call karo, situation report karo, fresh order arrange karo","Ignore karo","Order chhod do sadak pe"], ans:1 },
+    { q:"Customer ne COD payment ke liye exact change nahin diya. Rs 50 zyada de raha hai. Aap kya karein ge?", opts:["Extra rakho — tip samjho","Sahi change waapis do ya branch se confirm karo","Ignore karo","Argue karo customer se"], ans:1 },
+    { q:"Raat ki delivery mein bike ka tyre puncture ho gaya. Customer wait kar raha hai. Aap kya karein ge?", opts:["Order abandon karo","Branch ko immediately call karo, customer ko inform karo, nearest help dhundho","Customer ko ignore karo","Order kisi pedestrian ko de do"], ans:1 },
+    { q:"Customer ne delivery receive karne se inkaar kar diya, bola order cancel kiya tha. Aap kya karein ge?", opts:["Argue karo","Branch ko immediately call karo, situation explain karo, instructions follow karo","Order rakh do aur chale jao","Customer se fight karo"], ans:1 },
+    { q:"Bohot tez barish ho rahi hai. Delivery incomplete rehne ka risk hai. Aap kya karein ge?", opts:["Delivery cancel karo","Branch ko inform karo, customer ko update karo, safely continue karo ya shelter lo","Speed badhao weather ignore karo","Ghar wapis jao"], ans:1 },
+    { q:"Aap notice karte hain ke bag mein galat order hai already pickup ke baad. Aap kya karein ge?", opts:["Deliver karo jo bhi hai","Immediately branch ko call karo, wapis jao sahi order lo, customer ko update karo","Customer ko blame karo","Ignore karo"], ans:1 },
+    { q:"Delivery area mein aapko suspicious activity dikh rahi hai. Aap kya karein ge?", opts:["Ignore karo aur deliver karo","Branch manager ko inform karo aur situation assess karo, safety first","Delivery chhod do wahan hi","Customer ko call karo area mein aane ko"], ans:1 },
+    { q:"Customer ne delivery receive ki lekin bola item missing hai. Sealed bag tha. Aap kya karein ge?", opts:["Customer ko jhootha kaho","Calmly listen karo, branch ko call karo, proper process follow karo","Argue karo bag sealed tha","Ignore karo"], ans:1 },
+    { q:"Aap ek saath 2 deliveries handle kar rahe hain. Ek urgent hai. Aap kya karein ge?", opts:["Dono ignore karo","Pehle closer/urgent deliver karo, dusre customer ko ETA update karo","Dono ek saath attempt karo illogically","Branch se guidance lo"], ans:3 },
+    { q:"Helmet na pehne hue traffic police ne roka. Aap kya karein ge?", opts:["Bhag jao","Politely cooperate karo, fine accept karo, future mein helmet pehno","Argue karo","Branch ko blame karo"], ans:1 },
+    { q:"Customer ka address incomplete hai. Delivery pe jaate time realize hua. Aap kya karein ge?", opts:["Guess karo aur kisi bhi ghar pe chhod do","Customer ko call karo pehle complete address lo, phir jao","Branch ko inform karo order cancel karein","Return karo bina deliver kiye"], ans:1 },
+    { q:"Delivery ke baad customer ne review mein complain ki ke order late tha aur aap rude the. Aap kya karein ge?", opts:["Review ignore karo","Branch manager ko inform karo, honestly explain karo kya hua, seerha attitude maintain karo","Social media pe jawab do","Customer ko message karo argue karo"], ans:1 },
+    { q:"Aap notice karte hain ke dusra rider apna mileage fake kar raha hai expenses ke liye. Aap kya karein ge?", opts:["Aap bhi wohi karo","Manager ko report karo — yeh company fraud hai","Ignore karo","Rider ko seedha confront karo publicly"], ans:1 },
+  ],
+
+  // ── FLOOR / SERVICE ──────────────────────────────────────
+  'Floor / Service Staff': [
+    { q:"Ek table pe customers bohot der se wait kar rahe hain aur order nahin aaya. Aap kya karein ge?", opts:["Ignore karo","Apologize karo, kitchen se status check karo, customers ko update karo","Blame kitchen pe dalo","Customers ko wapis bhejo"], ans:1 },
+    { q:"Customer ne floor pe paani gira diya. Dusre customers walk kar rahe hain. Aap kya karein ge?", opts:["Baad mein saaf karo","Immediately wet floor sign lagao, saaf karo, safety first","Ignore karo","Customer ko saaf karne kaho"], ans:1 },
+    { q:"Ek table ke customers bohot zor zor se baat kar rahe hain, dusre disturb ho rahe hain. Aap kya karein ge?", opts:["Ignore karo","Politely aur respectfully request karo thoda quieter rehne ki","Shout karo unhe","Manager ko bhejo directly"], ans:1 },
+    { q:"Customer ne order mein change manga after placing. Kitchen already start kar chuka hai. Aap kya karein ge?", opts:["Ignore karo","Kitchen ko immediately inform karo, agar possible ho toh change karo, customer ko honestly batao","Customer ko bura bolo","Change kar do bina kitchen ko bataye"], ans:1 },
+    { q:"Ek customer ne complain ki ke unki table saaf nahin thi. Aap kya karein ge?", opts:["Deny karo","Apologize karo, immediately saaf karo, ensure better service aage","Ignore karo","Dusre staff ko blame karo"], ans:1 },
+    { q:"Closing time se 15 min pehle ek group of 6 aa gaya. Aap kya karein ge?", opts:["Refuse karo band ho raha hai","Politely seat karo, inform karo ke kitchen jaldi band hogi, efficiently serve karo","Ignore karo","Manager ko bhejo"], ans:1 },
+    { q:"Customer ne bill mein galti point ki. Aap ne check kiya toh customer sahi hai. Aap kya karein ge?", opts:["Deny karo","Apologize karo, correct bill lao, manager ko inform karo","Ignore karo","Customer ko blame karo"], ans:1 },
+    { q:"Ek customer wheelchair mein hai. Unhe seating mein help chahiye. Aap kya karein ge?", opts:["Ignore karo","Warmly assist karo, accessible table arrange karo, extra care do","Dusre staff ko bhejo","Kaho khud kar lo"], ans:1 },
+    { q:"Aapne notice kiya ke ek colleague customer ke saath rude tha. Aap kya karein ge?", opts:["Ignore karo","Situation dekhte raho, baad mein supervisor ko inform karo","Colleague ke saamne immediately confront karo","Customer ko apologize karo khud"], ans:3 },
+    { q:"Rush hour mein 3 tables simultaneously service chahte hain. Aap akele hain. Aap kya karein ge?", opts:["Panic karo","Sab ko acknowledge karo, priority set karo, supervisor se help maango","Ek table ignore karo","Sab tables chhod do"], ans:1 },
+    { q:"Customer ne ek dish wapis bheji ke yeh unki expectation jaisi nahin thi. Aap kya karein ge?", opts:["Argue karo dish sahi thi","Apologize karo, kitchen ko inform karo, replacement ya alternative suggest karo","Ignore karo","Customer ko menu dikhao phir se"], ans:1 },
+    { q:"Table pe customers ka wait 30 min ho gaya. Kitchen mein delay hai. Aap kya karein ge?", opts:["Ignore karo kitchen ki zimmedari hai","Customers ko update karo, apologize karo, manager ko involve karo, complimentary item offer karo","Customers ko kaho kitchen slow hai","Table se door raho"], ans:1 },
+    { q:"Aap notice karte hain ke ek table pe underage customers alcohol maang rahe hain. Aap kya karein ge?", opts:["De do koi nahin dekhta","Firmly lekin politely refuse karo, manager ko immediately inform karo","Ignore karo","Dusre staff pe chhod do"], ans:1 },
+    { q:"Customer ne tip dene se inkaar kiya aur rude tha. Aap kya karein ge?", opts:["Argue karo","Professional rehna — tip optional hai, service standard maintain karo","Revenge lao next visit mein","Complain karo manager ko immediately"], ans:1 },
+    { q:"Bohot busy night mein ek customer ka birthday hai. Unke saath koi arrangement nahin tha. Aap kya karein ge?", opts:["Ignore karo","Simple gesture karo — birthday wish karo, agar possible ho toh manager se check karo kuch special ho sake","Kaho pehle bolna chahiye tha","Dusre customers pe focus karo"], ans:1 },
+  ],
+
+  // ── SUPERVISOR ───────────────────────────────────────────
+  'Shift Supervisor': [
+    { q:"Peak hour mein 2 staff members ne suddenly call out kiya. Aap kya karein ge?", opts:["Panic karo","Roles reassign karo, manager ko inform karo, quality vs speed balance karo","Dukaan band karo","Customers ko bhej do"], ans:1 },
+    { q:"Ek staff member consistently late aa raha hai. Aap kya karein ge?", opts:["Ignore karo","Private conversation karo, document karo, verbal warning do, HR process follow karo","Publicly embarrass karo","Seedha fire karo"], ans:1 },
+    { q:"Cash register mein closing pe Rs 1,000 discrepancy hai. Aap kya karein ge?", opts:["Apni jeb se fill karo","Thorough investigation karo, all staff se poochho, manager ko report karo, CCTV review karo","Ignore karo","Junior cashier ko blame karo"], ans:1 },
+    { q:"Ek staff member aur customer ke darmiyan argument ho raha hai. Aap kya karein ge?", opts:["Ignore karo","Immediately intervene karo, staff ko side le jao, customer ko handle karo professionally","Staff ki side lo publicly","Customer ko nikaalo"], ans:1 },
+    { q:"Health inspection aayi unexpectedly. Kitchen unprepared hai. Aap kya karein ge?", opts:["Panic karo","Calmly inspector ko receive karo, simultaneously team ko quietly prepare karo, cooperate fully","Inspector ko rokne ki koshish karo","Blame kitchen staff pe dalo"], ans:1 },
+    { q:"Ek staff member complaints kar raha hai ke dusra staff unfair behavior kar raha hai unke saath. Aap kya karein ge?", opts:["Ignore karo","Privately dono se suno, fair investigation karo, appropriate action lo","Publicly judgment do","Ek ki side lo"], ans:1 },
+    { q:"Manager shift ke dauraan available nahin hai. Emergency situation aagayi. Aap kya karein ge?", opts:["Kuch mat karo","Apni best judgment use karo, manager ko inform karo ASAP, situation document karo","Dukaan band karo","Junior staff pe responsibility daal do"], ans:1 },
+    { q:"New staff member bohot slow hai aur team frustrated ho rahi hai. Aap kya karein ge?", opts:["New staff ko ignore karo","Training boost karo, buddy system use karo, team ko patient rehne ko encourage karo","New staff ko fire karo","Team ki frustration validate karo publicly"], ans:1 },
+    { q:"Customer ne bada complaint kiya aur compensation maang raha hai. Aap kya karein ge?", opts:["Refuse karo","Complaint seriously lo, reasonable compensation offer karo policy ke mutabiq, manager ko inform karo","Argue karo","Free meal de do bina process kiye"], ans:1 },
+    { q:"End of shift report mein sales target miss ho gaya. Aap manager ko kaise report karein ge?", opts:["Report mat karo","Honestly report karo with reasons aur improvement plan suggest karo","Blame staff pe dalo","Numbers manipulate karo"], ans:1 },
+    { q:"Ek staff member ne shift ke dauraan phone pe personal call pe zyada time spend kiya. Aap kya karein ge?", opts:["Ignore karo","Privately remind karo policy ke baare mein, document karo","Publicly embarrass karo","Immediately suspend karo"], ans:1 },
+    { q:"Kitchen aur counter ke beech miscommunication se orders mix up ho rahe hain. Aap kya karein ge?", opts:["Dono ko blame karo","System improve karo — clear communication protocol set karo, briefing karo","Ignore karo","Sirf kitchen ko blame karo"], ans:1 },
+    { q:"Ek VIP customer aayi hai bina reservation ke. Dukaan full hai. Aap kya karein ge?", opts:["Refuse karo politely","Warmly greet karo, wait time honestly batao, best available solution dhundho, manager ko inform karo","Dusre customers ko nikaalo","Ignore karo"], ans:1 },
+    { q:"Aap notice karte hain ke ek staff member alcohol ki smell aa rahi hai shift pe. Aap kya karein ge?", opts:["Ignore karo","Immediately privately address karo, duty se remove karo, manager ko report karo","Publicly announce karo","Warning de ke shift continue karne do"], ans:1 },
+    { q:"Staff member ne request ki ke personal emergency ke liye jaldi jaana chahte hain mid-shift. Aap kya karein ge?", opts:["Seedha refuse karo","Situation assess karo, coverage arrange karne ki koshish karo, compassion rakhao","Bina coverage ke jaane do","Manager pe responsibility daal do"], ans:1 },
+  ],
+
+  // ── KITCHEN MANAGER ──────────────────────────────────────
+  'Kitchen Manager': [
+    { q:"Monthly food cost suddenly 38% ho gaya (target 30%). Pehla step?", opts:["Staff ki salary cut karo","Waste audit karo, portion sizes check karo, supplier prices review karo, recipes analyze karo","Menu se items hataao","Prices raise karo"], ans:1 },
+    { q:"Head chef ne resign kar diya 2 din ki notice pe. Aap kya karein ge?", opts:["Panic karo","Immediate coverage arrange karo, responsibilities redistribute karo, hiring process shuru karo, management ko inform karo","Dukaan band karo","Remaining staff ko zyada hours force karo"], ans:1 },
+    { q:"Food safety audit mein critical violation mili. Aap kya karein ge?", opts:["Audit results hide karo","Immediate corrective action lo, staff ko retrain karo, management ko report karo, follow-up audit schedule karo","Auditor ko blame karo","Violation ignore karo"], ans:1 },
+    { q:"New menu item launch hone wali hai. Team properly trained nahin hai. Launch date 3 din baad hai. Aap kya karein ge?", opts:["Postpone request karo bina planning ke","Emergency training sessions schedule karo, recipe cards banao, management se launch date discuss karo agar unfeasible ho","Untrained team pe launch karo","Menu item remove karo"], ans:1 },
+    { q:"Supplier ne last minute delivery cancel kar di. Aaj ka menu affect hoga. Aap kya karein ge?", opts:["Menu cancel karo","Backup supplier contact karo, affected items temporarily remove karo, management ko inform karo, customers ko politely batao","Customers ko blame karo","Staff ko blame karo"], ans:1 },
+    { q:"Ek kitchen staff member ne food safety protocol repeatedly violate kiya. Aap kya karein ge?", opts:["Ignore karo","Formal disciplinary process follow karo — warning, documentation, HR involve karo, improvement plan banao","Immediately fire karo bina process ke","Publicly humiliate karo"], ans:1 },
+    { q:"Peak season aa raha hai. Current staff insufficient lagti hai. Aap kya karein ge?", opts:["Same staff pe kaam chalao","Workload assess karo, hiring request submit karo, existing staff overtime plan banao, management se budget discuss karo","Untrained staff hire karo quickly","Quality sacrifice karo speed ke liye"], ans:1 },
+    { q:"Two kitchen staff members ke darmiyan serious conflict ho raha hai jo productivity affect kar raha hai. Aap kya karein ge?", opts:["Ignore karo","Dono se alag alag privately baat karo, mediation karo, agar na sudhre toh HR involve karo","Ek ko fire karo","Public mein resolve karo"], ans:1 },
+    { q:"Customer ne serious food allergy reaction ki complaint ki after eating at your restaurant. Aap kya karein ge?", opts:["Deny karo restaurant ki zimmedari nahin","Immediately apologize karo, incident report karo, management aur legal ko inform karo, kitchen audit karo, medical help ensure karo","Social media pe jawab do","Staff pe blame dalo publicly"], ans:1 },
+    { q:"New equipment install hua hai kitchen mein. Staff trained nahin hai. Aap kya karein ge?", opts:["Staff khud seekh legi","Proper training arrange karo, SOPs banao, supervised practice karo pehle", "Equipment use hi mat karo","Junior staff pe training ki zimmedari daal do"], ans:1 },
+    { q:"Quality control check mein aapne notice kiya ke food presentation standard se below ja rahi hai. Aap kya karein ge?", opts:["Ignore karo customers nahin notice karein ge","Standards remind karo team ko, refresher training do, plating examples show karo, monitoring badhaao","Kitchen manager ko blame karo","Menu change karo"], ans:1 },
+    { q:"Ek staff member consistently kam perform kar raha hai lekin attendance theek hai. Aap kya karein ge?", opts:["Ignore karo","Root cause identify karo, performance improvement plan banao, regular feedback do, support provide karo","Immediately fire karo","Dusre staff pe extra burden dalo"], ans:1 },
+    { q:"Health department ne unannounced inspection ki aur kuch issues point kiye. Aap kya karein ge?", opts:["Issues hide karo","All issues document karo, immediate corrective actions lo, follow-up inspection ke liye prepare karo, management ko report karo","Inspector ko argue karo","Staff ko blame karo publicly"], ans:1 },
+    { q:"Budget cut announce hua hai. Aapko kitchen costs 15% reduce karni hain. Aap kya karein ge?", opts:["Staff fire karo immediately","Waste reduction, menu optimization, bulk purchasing, energy efficiency aur supplier renegotiation explore karo","Quality sacrifice karo","Management ki decision ko ignore karo"], ans:1 },
+    { q:"Aapki team mein diversity issues aa rahe hain — kuch staff comfortable nahin. Aap kya karein ge?", opts:["Ignore karo","Open conversation facilitate karo, inclusive environment create karo, HR involve karo agar needed","Complaining staff ko transfer karo","Issue publicly announce karo"], ans:1 },
+  ],
+
+  // ── BRANCH MANAGER ───────────────────────────────────────
+  'Branch Manager': [
+    { q:"Monthly sales target miss ho gaya. Aap board ko kaise present karein ge?", opts:["Numbers manipulate karo","Honest analysis present karo — reasons, lessons, concrete action plan with timeline","Blame staff pe dalo","Targets ko unfair bolo"], ans:1 },
+    { q:"Online review mein branch ki reputation girne lagi hai. Aap kya karein ge?", opts:["Reviews ignore karo","Root causes identify karo, operational improvements karo, negative reviews pe professionally respond karo, team training karo","Fake positive reviews likhao","Competitors ko blame karo"], ans:1 },
+    { q:"Key employee ne competitor offer ki wajah se resign kar diya. Aap kya karein ge?", opts:["Ja jaane do","Exit interview karo, retention strategies assess karo, role quickly fill karo, team morale manage karo","Immediately counter-offer blindly karo","Team ko demoralize mat karo — positively communicate karo"], ans:3 },
+    { q:"Ek staff member ne HR ke paas discrimination complaint file ki. Aap kya karein ge?", opts:["Ignore karo","Seriously lo, proper investigation ensure karo, HR involve karo, confidentiality maintain karo","Complaint karne wale ko transfer karo","Publicly discuss karo"], ans:1 },
+    { q:"Branch ka P&L negative ja raha hai. Short term mein kya karo ge?", opts:["Sab staff fire karo","Cost audit karo, quick wins identify karo (waste, energy, scheduling), revenue drivers focus karo, HQ ko inform karo","Branch band karo","Staff ki salaries cut karo"], ans:1 },
+    { q:"Local competitor ne same price pe better deal launch ki. Aap kya karein ge?", opts:["Panic karo","Market analysis karo, differentiation points strengthen karo, customer loyalty programs focus karo, HQ se guidance lo","Prices blindly cut karo","Competitor ko copycat karo exactly"], ans:1 },
+    { q:"Major equipment breakdown hua hai dinner rush se pehle. Aap kya karein ge?", opts:["Panic karo aur close karo","Immediate repair attempt karo, contingency plan activate karo, customers ko transparently communicate karo, losses document karo","Customers ko bina bataye serve karte raho","Staff ko blame karo"], ans:1 },
+    { q:"Ek investor branch visit karne aa raha hai kal. Aap kya karein ge?", opts:["Kuch special mat karo","Branch best condition mein ensure karo, team brief karo, data prepare karo, normal operations smoothly chalao — authentic show karo","Sab kuch fake karo","Investors visit cancel karwao"], ans:1 },
+    { q:"Staff mein rumor chal raha hai ke branch close ho sakti hai. Morale gir raha hai. Aap kya karein ge?", opts:["Ignore karo","Transparent communication karo jo aap share kar sakte ho, positive environment maintain karo, concerns address karo","Rumor spread karne wale ko punish karo","Confirm karo bina information ke"], ans:1 },
+    { q:"Aapki branch ka food quality inconsistent ho rahi hai across shifts. Aap kya karein ge?", opts:["Ignore karo","Standardized recipes aur SOPs enforce karo, quality checks schedule karo, all shift managers ko align karo","Sirf ek shift pe focus karo","Chef ko blame karo"], ans:1 },
+    { q:"Local community ne branch ke baare mein noise complaint ki hai. Aap kya karein ge?", opts:["Ignore karo","Community se respectfully engage karo, legitimate concerns address karo, solutions implement karo, relationship build karo","Complain karne walo ko ignore karo","Legal team pe immediately rely karo"], ans:1 },
+    { q:"Branch mein theft ki incident report aayi staff se related. Aap kya karein ge?", opts:["Secretly investigate karo akele","Proper investigation protocol follow karo, HR aur legal involve karo, evidence preserve karo, confidentiality maintain karo","Accused ko immediately fire karo bina investigation ke","Ignore karo"], ans:1 },
+    { q:"New HQ policy aayi hai jisse aapki branch ke operations significantly affect honge. Team resistant hai. Aap kya karein ge?", opts:["Policy implement mat karo","Policy clearly communicate karo, concerns HQ tak raise karo proper channels se, team ko transition mein support karo","Team ki resistance publicly support karo","Policy selectively implement karo"], ans:1 },
+    { q:"Aapki branch ka turnover rate industry average se 2x zyada hai. Aap kya karein ge?", opts:["Ignore karo","Exit interviews analyze karo, workplace culture assess karo, compensation review karo, retention programs implement karo","Blame HR pe dalo","Quickly hire karte raho bina fixing ke"], ans:1 },
+    { q:"Ek loyal long-term customer ne bohot serious complaint ki directly aap se. Aap kya karein ge?", opts:["Defensively respond karo","Personally engage karo, complaint genuinely listen karo, appropriate resolution provide karo, relationship nurture karo","Junior staff pe bhej do","Complaint dismiss karo"], ans:1 },
+  ],
+
+  // ── ANY POSITION (general fallback) ──────────────────────
+  'Any Available Position': [
+    { q:"Rush hour, 12 customers queue mein. Ek aake bolta hai 'pehle serve karo.' Aap kya karein ge?", opts:["Haan pehle serve karo","Politely bolao ke queue fair hai, baari par zaroor serve karein ge","Manager ko bulate ho","Ignore karo"], ans:1 },
+    { q:"Colleague ne haath dhoye baghair raw chicken handle karke seedha bread cut karne lagi. Aap kya karein ge?", opts:["Chup raho","Foran politely rok ke haath dhone ko kaho — food safety emergency hai","Baad mein batao","Bread khud change karo"], ans:1 },
+    { q:"Customer 40 minute delay par zor se shikayat kar raha hai. Aap kya karein ge?", opts:["Argument karo","Quietly apologize karo, manager ko batao, complimentary item offer karo","Ignore karo","Security bulate ho"], ans:1 },
+    { q:"Shift khatam se 10 min pehle colleague sick ho gaya, replacement nahin. Manager ne 1 ghanta aur rukne ko kaha.", opts:["Haan bolte hain","Chup rehte aur nikal jaate ho","Argue karo","Doctor ka bahana lagate ho"], ans:0 },
+    { q:"Cash register mein Rs 500 zyada hain end of shift. Aap kya karein ge?", opts:["Ghar le jao","Immediately manager ko report karo aur document karein","Kal ke liye chhod do","Ignore karo"], ans:1 },
+    { q:"Manager ne kaam diya jo samajh nahin aaya. Aap kya karein ge?", opts:["Apni marzi se karo","Clarity maango — poochna weakness nahin","Kuch bhi karo","Kaam hi mat karo"], ans:1 },
+    { q:"Colleague paise register mein nahin dal raha, pocket mein rakh raha hai. Aap kya karein ge?", opts:["Chup raho","Manager ya owner ko immediately report karo","Colleague se poocho","Aap bhi wohi karo"], ans:1 },
+    { q:"Closing time. Ek customer aaya, sirf ek order chahiye. Kitchen band hai. Best response?", opts:["Zor se BAND HAI bolo","Politely bolao kitchen band ho gaya, kal zaroor aaiye","Argue karo","Chup raho"], ans:1 },
+    { q:"Bohot rush hai, aap akele counter pe hain, kitchen understaffed. Aapka next step?", opts:["Panic karo","Calmly customers ko update karo, prioritize karo, supervisor ko alert karo","Counter chhod do","Sab orders cancel karo"], ans:1 },
+    { q:"Apni galti se customer ka order mix-up kiya, allergy reaction ka risk hai. Aap kya karein ge?", opts:["Ummeed karo kuch nahin hoga","Foran customer ko rok ke situation bataao aur supervisor ko inform karo","Silently replace karo","Ignore karo"], ans:1 },
+    { q:"Health inspector achanak aayi. Kitchen thodi untidy hai. Aap kya karein ge?", opts:["Ghabi jaate ho","Calmly greet karo, immediately clean karna shuru karo, manager ko inform karo","Rokne ki koshish karo","Bahana banao"], ans:1 },
+    { q:"Online order confirm hua par kitchen mein nahin gaya. Customer collect karne aa gaya. Aap kya karein ge?", opts:["Argue karo ke order nahin aaya","Apologize karo, manually process karo, manager ko inform karo","Wapis bhej do","Free bana do"], ans:1 },
+    { q:"New trainee baar baar same galti karta hai. Aap supervisor hain. Aap kya karein ge?", opts:["Zor se daanto","Patient ho kar step-by-step explain karo, progress document karo","Ignore karo","Fire karo"], ans:1 },
+    { q:"Customer ne spicy order ki, bolta hai non-spicy manga tha. Receipt mein customer ki galti hai. Aap kya karein ge?", opts:["Customer ko blame karo","Apologize karo aur replace karo (manager permission se)","Ignore karo","Argue karo"], ans:1 },
+    { q:"Rush hour mein galat order pack kiya. Customer ghar pahunch ke complain ki. Aap kya karein ge?", opts:["Phone cut karo","Maafi maango, replacement ya refund offer karo — manager se approval lo","Galat prove karo","Ignore karo"], ans:1 },
+  ],
+  };
 
 const perQuestions = [
   { q:"Kaam ke dauran problem aa jaye toh aap kya karein ge?", opts:["Akele solve karne ki koshish karo","Supervisor ko immediately batao","Ignore karo","Dusron pe blame karo"] },
@@ -1422,8 +1638,10 @@ function buildAptQuestions(position) {
   return combined.filter(q=>{ if(seen.has(q.q)) return false; seen.add(q.q); return true; }).slice(0,20);
 }
 
-function buildSitQuestions() {
-  return shuffle(sitBank).slice(0,15);
+function buildSitQuestions(position) {
+  const pos = position || applicantData.position || 'Any Available Position';
+  const bank = sitBank[pos] || sitBank['Any Available Position'];
+  return shuffle(bank).slice(0, 15);
 }
 
 // ═══════════════════════════════════════════
@@ -1655,7 +1873,7 @@ function startSituationalTest() {
   testActive = true;
   sitIdx=0; sitAnswers=[]; selectedOpt=null;
   goToStage('stage-2');
-  builtSitQuestions = buildSitQuestions();
+  builtSitQuestions = buildSitQuestions(applicantData.position);
   setPipelineStage(2);
   renderSitQuestion();
   startTimer('sit', SIT_TIMER_SECONDS, ()=>{ showToast('Time is up!'); evaluateSituational(); });
@@ -1984,8 +2202,123 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && ['c','v','u','a','s','p'].includes(e.key.toLowerCase())) e.preventDefault();
   if (e.key === 'F12') e.preventDefault();
 });
+// ── POSITION-BASED SKILLS ────────────────────────────────
+const positionSkills = {
+  'Cashier / Counter Staff': [
+    'Cash Handling',
+    'POS / Register Operation',
+    'Customer Service',
+    'Basic Math & Change Calculation',
+    'Order Taking & Billing',
+    'Urdu Communication',
+    'English Communication',
+    'Queue Management',
+    'Complaint Handling',
+    'Upselling & Promotions',
+  ],
+  'Kitchen Staff / Cook': [
+    'Food Preparation',
+    'Cooking & Grilling',
+    'Food Safety & Hygiene (HACCP)',
+    'Recipe Following',
+    'Portion Control',
+    'Kitchen Equipment Operation',
+    'Speed & Efficiency Under Pressure',
+    'Stock & Ingredient Management',
+    'Cleaning & Sanitization',
+    'Team Coordination',
+  ],
+  'Delivery Rider': [
+    'Motorcycle / Bike Riding',
+    'GPS & Navigation',
+    'Route Optimization',
+    'Cash Handling (COD)',
+    'Customer Communication',
+    'Time Management',
+    'Package Handling',
+    'Traffic Rules Knowledge',
+    'Phone Order Coordination',
+    'Problem Solving (Delivery Issues)',
+  ],
+  'Floor / Service Staff': [
+    'Table Service & Etiquette',
+    'Customer Service',
+    'Order Taking',
+    'Complaint Handling',
+    'Cleanliness & Presentation',
+    'Team Coordination',
+    'Urdu Communication',
+    'English Communication',
+    'Upselling',
+    'Fast-Paced Environment Adaptability',
+  ],
+  'Shift Supervisor': [
+    'Team Leadership',
+    'Staff Scheduling',
+    'Opening & Closing Procedures',
+    'Cash Drawer Management',
+    'Customer Complaint Resolution',
+    'Quality Control',
+    'Inventory Monitoring',
+    'POS System Management',
+    'Training Junior Staff',
+    'Shift Reporting',
+  ],
+  'Kitchen Manager': [
+    'Kitchen Operations Management',
+    'Menu Planning & Costing',
+    'Food Safety Compliance',
+    'Staff Supervision',
+    'Inventory & Stock Control',
+    'Supplier Coordination',
+    'Recipe Standardization',
+    'Waste Reduction',
+    'Health & Safety Regulations',
+    'Kitchen Equipment Maintenance',
+  ],
+  'Branch Manager': [
+    'Branch Operations Management',
+    'P&L / Financial Reporting',
+    'Staff Hiring & Training',
+    'Customer Experience Management',
+    'Sales Target Achievement',
+    'Vendor & Supplier Management',
+    'Inventory Control',
+    'Health & Safety Compliance',
+    'Conflict Resolution',
+    'Team Building & Motivation',
+  ],
+  'Any Available Position': [
+    'Customer Service',
+    'Cash Handling',
+    'Food Preparation',
+    'Delivery & Navigation',
+    'Team Leadership',
+    'Urdu Literacy',
+    'Basic English',
+    'Computer / POS',
+    'Cleaning & Hygiene',
+    'Time Management',
+  ],
+};
+
+function updateSkills() {
+  const pos = document.getElementById('position').value;
+  const group = document.getElementById('skills-group');
+
+  if (!pos || !positionSkills[pos]) {
+    group.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic;">Select a position above to see relevant skills</div>';
+    return;
+  }
+
+  const skills = positionSkills[pos];
+  group.innerHTML = skills.map(skill =>
+    `<label class="check-pill">
+      <input type="checkbox" name="skills" value="${skill}"> ${skill}
+    </label>`
+  ).join('');
+}
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
