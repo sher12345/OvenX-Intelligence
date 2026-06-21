@@ -274,6 +274,24 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
 
 @media(max-width:700px) { .hr-stats { grid-template-columns: 1fr 1fr; } .hr-filters { flex-direction: column; } .hr-search, .hr-filter-select { width: 100%; } }
 @media(max-width:500px) { .hr-stats { grid-template-columns: 1fr 1fr; } .hr-body { padding: 16px; } }
+
+.hr-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #555;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+.hr-tab:hover { color: #ccc; background: #2a2a32; }
+.hr-tab.active { background: var(--amber); color: #1a1a1a; }
+
 </style>
 </head>
 <body>
@@ -504,6 +522,16 @@ table.hr-table tbody td { padding: 13px 16px; font-size: 13px; color: #ccc; }
         <div class="hr-stat"><div class="hr-stat-val" id="stat-applied" style="color:#818cf8;">—</div><div class="hr-stat-label">In Progress</div></div>
         <div class="hr-stat"><div class="hr-stat-val red" id="stat-rejected">—</div><div class="hr-stat-label">Rejected / On Hold</div></div>
       </div>
+
+      <!-- TAB BAR -->
+<div style="display:flex;gap:8px;margin-bottom:16px;background:#1a1a1f;border:1px solid #2a2a32;border-radius:12px;padding:6px;">
+  <button class="hr-tab active" id="tab-all" onclick="switchTab('all')">All Applicants</button>
+  <button class="hr-tab" id="tab-shortlisted" onclick="switchTab('shortlisted')">⭐ Shortlisted</button>
+  <button class="hr-tab" id="tab-hired" onclick="switchTab('hired')">★ Hired</button>
+  <button class="hr-tab" id="tab-rejected" onclick="switchTab('rejected')">✕ Rejected / On Hold</button>
+  <button class="hr-tab" id="tab-inprogress" onclick="switchTab('inprogress')">⏳ In Progress</button>
+</div>
+
       <!-- Filters -->
       <div class="hr-filters">
         <input class="hr-search" id="hr-search" placeholder="🔍  Search by name, CNIC, or phone..." oninput="renderTable()">
@@ -686,7 +714,10 @@ function statusBadge(status) {
 }
 
 function renderTable() {
-  const rows = getFiltered();
+  // Sync tab with filter dropdown if changed manually
+const statusVal = document.getElementById('filter-status').value;
+if (statusVal === '' && activeTab !== 'all') { activeTab = 'all'; document.querySelectorAll('.hr-tab').forEach(el=>el.classList.remove('active')); document.getElementById('tab-all').classList.add('active'); }
+const rows = getFiltered();
   document.getElementById('hr-count-badge').textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}`;
   if (!rows.length) {
     document.getElementById('hr-table-body').innerHTML = `<div class="hr-empty"><div class="hr-empty-icon">📭</div><div class="hr-empty-text">No applicants match your filters.</div></div>`;
@@ -2317,6 +2348,24 @@ function updateSkills() {
       <input type="checkbox" name="skills" value="${skill}"> ${skill}
     </label>`
   ).join('');
+}
+
+// ── TAB SWITCHING ────────────────────────────────────────
+let activeTab = 'all';
+
+function switchTab(tab) {
+  activeTab = tab;
+  // Update tab button styles
+  document.querySelectorAll('.hr-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  // Update status filter to match tab
+  const statusEl = document.getElementById('filter-status');
+  if (tab === 'all')         statusEl.value = '';
+  if (tab === 'shortlisted') statusEl.value = 'interview_shortlisted';
+  if (tab === 'hired')       statusEl.value = 'hired';
+  if (tab === 'rejected')    statusEl.value = 'rejected';
+  if (tab === 'inprogress')  statusEl.value = 'applied';
+  renderTable();
 }
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
