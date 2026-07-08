@@ -1284,26 +1284,69 @@ function startClock() {
 }
 
 // Poll Supabase every 15s for new web/QR orders placed on tables
+let _rtTableRefreshTimer = null;
+function _debouncedTableRefresh() {
+  clearTimeout(_rtTableRefreshTimer);
+  _rtTableRefreshTimer = setTimeout(async () => {
+    await _loadActiveTables();
+    renderTableMap();
+  }, 400);
+}
+
+let _rtTxRefreshTimer = null;
+function _debouncedTxRefresh() {
+  clearTimeout(_rtTxRefreshTimer);
+  _rtTxRefreshTimer = setTimeout(async () => {
+    await loadTodaySales(); // re-pulls completedOrders, cash total, opening balance, active tables
+    if (document.getElementById('view-cash').classList.contains('active')) renderCashView();
+    if (document.getElementById('view-closing').classList.contains('active')) renderClosingReport();
+    renderTableMap();
+  }, 500);
+}
+
 function startLiveReload() {
   if (liveReloadInterval) clearInterval(liveReloadInterval);
 
-  // Real-time subscription
   if (sb) {
+    // Web/QR orders + status changes
     sb.channel('kitchen-orders-changes')
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'kitchen_orders',
+        event: '*', schema: 'public', table: 'kitchen_orders',
         filter: `branch=eq.${activeBranch}`
       }, (payload) => {
-        console.log('Realtime:', payload.eventType);
+        console.log('Realtime kitchen_orders:', payload.eventType);
         setTimeout(pollWebOrders, 500);
+      })
+      .subscribe();
+
+    // Table opened/edited/moved/cleared on ANY device → sync to all
+    sb.channel('active-tables-changes')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'active_tables',
+        filter: `branch=eq.${activeBranch}`
+      }, (payload) => {
+        console.log('Realtime active_tables:', payload.eventType);
+        _debouncedTableRefresh();
+      })
+      .subscribe();
+
+    // Any sale/void/cash-in/cash-out on ANY device → sync cash & closing views
+    sb.channel('shift-tx-changes')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'shift_transactions',
+        filter: `branch=eq.${activeBranch}`
+      }, (payload) => {
+        console.log('Realtime shift_transactions:', payload.eventType);
+        _debouncedTxRefresh();
       })
       .subscribe();
   }
 
-  // Fallback poll every 60s
-  liveReloadInterval = setInterval(pollWebOrders, 120000);
+  // Fallback poll every 60s in case a realtime channel drops
+  liveReloadInterval = setInterval(() => {
+    pollWebOrders();
+    _debouncedTableRefresh();
+  }, 60000);
   pollWebOrders();
 }
 // ══════════════════════════════════
@@ -5704,5 +5747,6 @@ function aShowMonthDetail(mKey) {
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
