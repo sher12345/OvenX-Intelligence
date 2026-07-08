@@ -721,7 +721,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
     <button class="oa-btn oa-pay" style="font-size:13px;padding:13px;display:block;" id="collect-btn" onclick="openPayModal()">✅ Collect & Clear</button>
   </div>
   <div id="takeaway-paid-btn-wrap" style="display:none;margin-top:6px;">
-    <button class="oa-btn" style="width:100%;padding:13px;font-size:14px;background:var(--green);color:white;box-shadow:0 3px 0 var(--dark-green);" onclick="markTakeawayPaid()">💵 Collect Payment & Print Slip</button>
+    <button class="oa-btn" style="width:100%;padding:13px;font-size:14px;background:var(--green);color:white;box-shadow:0 3px 0 var(--dark-green);" onclick="openPayModal()">💵 Collect Payment & Print Slip</button>
   </div>
 </div>
 </div>
@@ -3123,6 +3123,84 @@ async function markTakeawayPaid() {
   renderTableMap();
   showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
 }
+async function finalizeTakeawayPayment(payM, grand) {
+  const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
+  const { disc } = getOrderTotal(currentOrder.items, currentOrder.type, false, 0, discAmt, discType, 0);
+  const tokenNo = String(billCounter).padStart(3,'0');
+  const sale = {
+    billNo: tokenNo,
+    table: currentOrder.table, type: currentOrder.type,
+    items: [...currentOrder.items],
+    total: grand, method: payM,
+    time: new Date(), staff: currentStaff, branch: activeBranch,
+    customerName: currentOrder.customerName || '',
+    customerPhone: currentOrder.customerPhone || '',
+    deliveryAddress: '', deliveryCharge: 0,
+    sc: 0, disc, scPct: 0, discType, discAmount: discAmt,
+    cashReceived: payM === 'cash' ? (parseFloat(document.getElementById('cash-received').value)||0) : 0,
+    splitCash: payM === 'split' ? (parseFloat(document.getElementById('split-cash').value)||0) : 0,
+    splitCard: payM === 'split' ? (parseFloat(document.getElementById('split-card').value)||0) : 0
+  };
+
+  currentOrder.paid = true;
+  currentOrder.payMethod = payM;
+  currentOrder.tokenNo = tokenNo;
+  if (tableOrders[currentOrder.table]) {
+    tableOrders[currentOrder.table].paid = true;
+    tableOrders[currentOrder.table].payMethod = payM;
+    tableOrders[currentOrder.table].tokenNo = tokenNo;
+    _saveActiveTable(currentOrder.table, tableOrders[currentOrder.table]);
+  }
+
+  completedOrders.push(sale);
+  if (sb) {
+    try {
+      await sb.from('shift_transactions').insert([{
+        branch: activeBranch, date: todayKey(),
+        bill_no: sale.billNo, type: sale.type,
+        table_loc: sale.table || '',
+        items: sale.items,
+        items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
+        subtotal: grand, sc: 0, sc_pct: 0,
+        discount: sale.disc || 0, delivery_charge: 0,
+        total: sale.total, method: sale.method,
+        cash_received: sale.cashReceived || 0, split_cash: sale.splitCash || 0, split_card: sale.splitCard || 0,
+        staff: currentStaff,
+        customer_name: sale.customerName || '',
+        customer_phone: sale.customerPhone || '',
+        delivery_address: '',
+        kitchen_order_id: currentOrder.id || null
+      }]);
+    } catch(e) { console.error('Takeaway save error:', e); }
+  }
+
+  _paidIdsCacheTime = 0;
+  if (currentOrder.id) paidOrderIds.add(currentOrder.id);
+  const cashPart = payM === 'cash' ? grand : (payM === 'split' ? sale.splitCash : 0);
+  cashInHand += cashPart;
+  salesTotal += grand;
+  billCounter++;
+
+  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+  document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
+  saveTodaySales();
+  printTakeawaySlip(sale);
+
+  const _twTable = currentOrder.table;
+  if (_twTable) {
+    delete tableOrders[_twTable];
+    if (sb) {
+      sb.from('active_tables').delete()
+        .eq('branch', activeBranch).eq('table_name', _twTable)
+        .catch(e => console.error('TW active_tables delete:', e));
+    }
+  }
+  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+  switchView('tables');
+  renderTableMap();
+  showToast('Token #' + tokenNo + ' — Rs ' + grand + ' collected 💰', 'success');
+}
+
 function openPayModal() {
   if (!currentOrder.items.length) { showToast('No items in order', 'error'); return; }
   if (currentOrder.id && paidOrderIds.has(currentOrder.id)) {
