@@ -1321,14 +1321,19 @@ function startLiveReload() {
 
     // Table opened/edited/moved/cleared on ANY device → sync to all
     sb.channel('active-tables-changes')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'active_tables',
-        filter: `branch=eq.${activeBranch}`
-      }, (payload) => {
-        console.log('Realtime active_tables:', payload.eventType);
-        _debouncedTableRefresh();
-      })
-      .subscribe();
+  .on('postgres_changes', {
+    event: '*', schema: 'public', table: 'active_tables',
+    filter: `branch=eq.${activeBranch}`
+  }, (payload) => {
+    console.log('Realtime active_tables:', payload.eventType);
+    if (payload.eventType === 'DELETE' && payload.old && payload.old.table_name) {
+      delete tableOrders[payload.old.table_name];
+      renderTableMap();
+    } else {
+      _debouncedTableRefresh();
+    }
+  })
+  .subscribe();
 
     // Any sale/void/cash-in/cash-out on ANY device → sync cash & closing views
     sb.channel('shift-tx-changes')
@@ -5825,6 +5830,7 @@ function aShowMonthDetail(mKey) {
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
