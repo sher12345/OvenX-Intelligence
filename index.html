@@ -2528,6 +2528,16 @@ riderPhones: {
     async function selectBranch(id, silent) {
         const b = BRANCH_CONFIG[id];
         if (!b) return;
+
+        // ── CLOSED HOURS CHECK ──
+        if (!getBranchOpenStatus()) {
+            document.getElementById('branch-detect-box').style.display = 'none';
+            document.getElementById('branch-cards-wrap').style.display = 'flex';
+            document.getElementById('branch-manual-btn').style.display = 'block';
+            alert('😴 We\'re closed right now.\n\nOvenX ' + b.name + ' reopens at 10:00 AM.\n\nThanks for your patience!');
+            return;
+        }
+
         activeBranch = b;
         localStorage.setItem('ovenx_branch', id);
         // Update OVENX_COORDS to active branch (used by delivery calc)
