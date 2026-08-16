@@ -1432,7 +1432,7 @@ body {
             <div class="branch-card-addr">Shop #12, Gulgasht Colony, Multan</div>
             <div class="branch-card-meta">
                 <span class="branch-card-dist" id="bdist-MULTAN"></span>
-                <span class="branch-card-status">● Open Now</span>
+                <span class="branch-card-status" id="bstatus-MULTAN">● Open Now</span>
             </div>
         </div>
 <div class="branch-card" id="bcard-BWP">
@@ -1441,7 +1441,7 @@ body {
             <div class="branch-card-addr">Shop 8-9, SS Tower, 31-32 Noor Mahal Rd, Sadiq Colony</div>
             <div class="branch-card-meta">
                 <span class="branch-card-dist" id="bdist-BWP"></span>
-                <span class="branch-card-status">● Open Now</span>
+                <span class="branch-card-status" id="bstatus-BWP">● Open Now</span>
             </div>
         </div>
     </div>
@@ -2448,8 +2448,31 @@ riderPhones: {
     function haversineKm(lat1,lng1,lat2,lng2){const R=6371,t=x=>x*Math.PI/180;const a=Math.sin(t(lat2-lat1)/2)**2+Math.cos(t(lat1))*Math.cos(t(lat2))*Math.sin(t(lng2-lng1)/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
     function fmtDist(km){return km<1?Math.round(km*1000)+' m away':km.toFixed(1)+' km away';}
 
+    // ── Branch open/closed status (PKT = UTC+5, no daylight saving) ──
+    function getBranchOpenStatus() {
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const pkt = new Date(utcMs + (5 * 60 * 60000));
+        const hour = pkt.getHours();
+        const CLOSE_HOUR = 2;   // closes at 2 AM PKT
+        const OPEN_HOUR = 10;   // reopens at 10 AM PKT
+        const isClosed = hour >= CLOSE_HOUR && hour < OPEN_HOUR;
+        return !isClosed;
+    }
+    function updateBranchStatusBadges() {
+        const isOpen = getBranchOpenStatus();
+        ['MULTAN','BWP'].forEach(id => {
+            const el = document.getElementById('bstatus-' + id);
+            if (el) {
+                el.textContent = isOpen ? '● Open Now' : '● Closed';
+                el.style.color = isOpen ? '#66bb6a' : '#e05c5c';
+            }
+        });
+    }
+
 
     function showBranchCards(nearestId) {
+        updateBranchStatusBadges();
         document.getElementById('branch-detect-box').style.display = 'none';
         document.getElementById('branch-cards-wrap').style.display = 'flex';
         document.getElementById('branch-manual-btn').style.display = 'block';
