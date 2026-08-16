@@ -2689,7 +2689,7 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     };
     menuData["Pan/Premium"] = [...menuData["Pan Pizza 🍕"], ...menuData["Premium Pizza 🌟"]];
     menuData["Rolls 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
-    i.name.includes('Roll')
+    i.name.includes('Roll') && i.name !== 'Behari Roll'
 );
 menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i => 
     i.name.includes('Wrap') || i.name === 'Crunch Wrap' || i.name === 'Donar Kabab'
