@@ -2635,6 +2635,41 @@ loadCustomItemsIntoMenu();
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
+    // ── AUTO-CLEAR STALE ORDERS AT CLOSING (2 AM PKT) ──
+    // Deletes any kitchen_orders left over from before today's 2AM close,
+    // so nothing carries over and blinks red the next day. Runs once per day.
+    async function autoClearStaleOrders() {
+        if (!sb) return;
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const pkt = new Date(utcMs + (5 * 60 * 60000));
+
+        // Today's 2 AM PKT cutoff, in real UTC time
+        const cutoffPkt = new Date(pkt.getFullYear(), pkt.getMonth(), pkt.getDate(), 2, 0, 0, 0);
+        const cutoffUtcMs = cutoffPkt.getTime() - (5 * 60 * 60000) - (now.getTimezoneOffset() * 60000);
+        const cutoffDate = new Date(cutoffUtcMs);
+
+        // Only run once we're actually past today's 2AM cutoff
+        if (pkt.getTime() < cutoffPkt.getTime()) return;
+
+        const todayKey = pkt.toISOString().slice(0, 10); // YYYY-MM-DD in PKT terms
+        if (localStorage.getItem('ovenx_autoclear_date') === todayKey) return; // already ran today
+
+        try {
+            const { error } = await sb
+                .from('kitchen_orders')
+                .delete()
+                .lt('created_at', cutoffDate.toISOString());
+            if (!error) {
+                localStorage.setItem('ovenx_autoclear_date', todayKey);
+                console.log('OvenX: cleared stale orders from before', cutoffDate.toISOString());
+            } else {
+                console.error('OvenX autoclear error:', error);
+            }
+        } catch(e) { console.error('OvenX autoclear exception:', e); }
+    }
+    autoClearStaleOrders();
+
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL';    let currentCalcData = null;
         const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
@@ -4008,15 +4043,45 @@ function removeItem(idx) {
         `; 
     }
 
-    function openDeliveryCalc() {
-        document.getElementById('delivery-calc-overlay').style.display = 'flex';
-        setScrollLock(true);
-        document.getElementById('calc-permission-state').style.display = 'block';
-        document.getElementById('calc-loading-state').style.display = 'none';
-        document.getElementById('calc-result-state').style.display = 'none';
-        document.getElementById('calc-error-state').style.display = 'none';
-        currentCalcData = null;
+    async function openDeliveryCalc() {
+    document.getElementById('delivery-calc-overlay').style.display = 'flex';
+    setScrollLock(true);
+    currentCalcData = null;
+
+    // Reset the error-state HTML back to default in case it was overwritten last time
+    resetCalcErrorState();
+
+    if (navigator.permissions) {
+        try {
+            const status = await navigator.permissions.query({ name: 'geolocation' });
+            if (status.state === 'denied') {
+                document.getElementById('calc-permission-state').style.display = 'none';
+                document.getElementById('calc-loading-state').style.display = 'none';
+                document.getElementById('calc-result-state').style.display = 'none';
+                showPermissionDeniedHelp();
+                return;
+            }
+        } catch(e) { /* permissions API not supported, fall through normally */ }
     }
+
+    document.getElementById('calc-permission-state').style.display = 'block';
+    document.getElementById('calc-loading-state').style.display = 'none';
+    document.getElementById('calc-result-state').style.display = 'none';
+    document.getElementById('calc-error-state').style.display = 'none';
+}
+
+function resetCalcErrorState() {
+    document.getElementById('calc-error-state').innerHTML = `
+        <div style="width:60px; height:60px; background:#ffebee; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle><line x1="15" x2="9" y1="9" y2="15"></line><line x1="9" x2="15" y1="9" y2="15"></line>
+            </svg>
+        </div>
+        <h3 style="color:#c62828; margin-bottom:10px;">Location Error</h3>
+        <p id="calc-error-msg" style="color:#666; font-size:14px; margin-bottom:20px;">Unable to get your location.</p>
+        <button onclick="requestCalcLocation()" class="btn-3d" style="background:var(--red); color:white; padding:12px 25px; border-radius:12px; font-weight:900;">TRY AGAIN</button>
+    `;
+}
 
     function closeDeliveryCalc() {
         document.getElementById('delivery-calc-overlay').style.display = 'none';
@@ -4113,27 +4178,47 @@ function removeItem(idx) {
     }
 
     function handleCalcError(error) {
+    if (error.code === error.PERMISSION_DENIED) {
+        showPermissionDeniedHelp();
+    } else {
         let msg = "Unable to retrieve your location.";
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                msg = "Location access denied. Please enable location permissions.";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                msg = "Location information unavailable.";
-                break;
-            case error.TIMEOUT:
-                msg = "Location request timed out.";
-                break;
-        }
+        if (error.code === error.POSITION_UNAVAILABLE) msg = "Location information unavailable.";
+        if (error.code === error.TIMEOUT) msg = "Location request timed out.";
         showCalcError(msg);
     }
+}
 
-    function showCalcError(msg) {
-        document.getElementById('calc-loading-state').style.display = 'none';
-        document.getElementById('calc-error-state').style.display = 'block';
-        document.getElementById('calc-error-msg').innerText = msg;
-    }
+function showCalcError(msg) {
+    document.getElementById('calc-loading-state').style.display = 'none';
+    document.getElementById('calc-error-state').style.display = 'block';
+    document.getElementById('calc-error-msg').innerText = msg;
+}
 
+function showPermissionDeniedHelp() {
+    document.getElementById('calc-loading-state').style.display = 'none';
+    document.getElementById('calc-error-state').style.display = 'block';
+    document.getElementById('calc-error-state').innerHTML = `
+        <div style="width:60px; height:60px; background:#ffebee; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle><line x1="15" x2="9" y1="9" y2="15"></line><line x1="9" x2="15" y1="9" y2="15"></line>
+            </svg>
+        </div>
+        <h3 style="color:#c62828; margin-bottom:8px;">Location is Blocked</h3>
+        <p style="color:#666; font-size:14px; margin-bottom:20px;">
+            You previously denied location access. Your browser won't ask again automatically — you'll need to turn it on manually. It only takes a few seconds:
+        </p>
+        <div style="text-align:left; background:#fff9f5; border:2px dashed var(--orange); border-radius:15px; padding:16px 18px; margin-bottom:20px; font-size:13px; line-height:1.9; color:#333;">
+            <b>1.</b> Tap the <b>🔒 lock icon</b> (or ⓘ) next to the web address at the top<br>
+            <b>2.</b> Tap <b>Permissions</b> (or "Site settings")<br>
+            <b>3.</b> Find <b>Location</b> and set it to <b>Allow</b><br>
+            <b>4.</b> Come back here and tap "Try Again" below
+        </div>
+        <button onclick="requestCalcLocation()" class="btn-3d" style="background:var(--red); color:white; padding:12px 25px; border-radius:12px; font-weight:900; width:100%; margin-bottom:10px;">TRY AGAIN</button>
+        <button onclick="closeDeliveryCalc()" style="border:none; background:none; color:#999; font-weight:700; width:100%;">Cancel</button>
+    `;
+}
+
+    
     function applyDeliveryFee(fee, calcData) {
         delCharge = fee;
         closeDeliveryCalc();
