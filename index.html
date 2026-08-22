@@ -3847,6 +3847,39 @@ function validateAndSubmitOrder() {
         if (sb) { 
             const { data } = await sb.from('kitchen_orders').insert([orderObj]).select(); 
             if (data && data[0]) orderId = data[0].id; 
+
+            // Sync to permanent Customer CRM (kitchen_orders gets wiped nightly, this doesn't)
+            if (orderObj.phone) {
+              try {
+                const custPhone = orderObj.phone.replace(/[\s\-\(\)]/g, '');
+                const { data: existingRows } = await sb.from('customers').select('*').eq('phone', custPhone);
+                const existing = existingRows && existingRows[0];
+
+                const newAddr = orderObj.location;
+                let addresses = (existing && existing.addresses) || [];
+                const idx = addresses.findIndex(a => a.address === newAddr);
+                if (idx > -1) {
+                  addresses[idx].count = (addresses[idx].count || 1) + 1;
+                  addresses[idx].last_used = new Date().toISOString();
+                  addresses.unshift(addresses.splice(idx, 1)[0]);
+                } else if (newAddr) {
+                  addresses.unshift({ address: newAddr, count: 1, last_used: new Date().toISOString() });
+                }
+                addresses = addresses.slice(0, 5);
+
+                await sb.from('customers').upsert([{
+                  phone: custPhone,
+                  name: orderObj.customer_name || (existing && existing.name) || '',
+                  addresses,
+                  total_orders: ((existing && existing.total_orders) || 0) + 1,
+                  last_order_at: new Date().toISOString(),
+                  last_branch: orderObj.branch,
+                  updated_at: new Date().toISOString()
+                }], { onConflict: 'phone' });
+              } catch (e) {
+                console.error('CRM sync failed:', e);
+              }
+            }
         } 
     } catch(e) { }
 
