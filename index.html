@@ -3851,7 +3851,9 @@ function validateAndSubmitOrder() {
             // Sync to permanent Customer CRM (kitchen_orders gets wiped nightly, this doesn't)
             if (orderObj.phone) {
               try {
-                const custPhone = orderObj.phone.replace(/[\s\-\(\)]/g, '');
+                let custPhone = orderObj.phone.replace(/[\s\-\(\)]/g, '');
+if (custPhone.startsWith('0')) custPhone = '92' + custPhone.slice(1);
+if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
                 const { data: existingRows } = await sb.from('customers').select('*').eq('phone', custPhone);
                 const existing = existingRows && existingRows[0];
 
