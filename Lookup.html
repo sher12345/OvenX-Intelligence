@@ -114,6 +114,8 @@ function timeAgo(iso){
 async function lookup(rawPhone){
   const phone = normalizePhone(rawPhone);
   const { data, error } = await sb.from('customers').select('*').eq('phone', phone);
+  if (error) console.error('Supabase error:', error);
+  console.log('Queried phone:', phone, '| Rows found:', data);
   const customer = data && data[0];
 
   resultCard.classList.add('show');
