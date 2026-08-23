@@ -3860,13 +3860,22 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
                 const newAddr = orderObj.location;
                 let addresses = (existing && existing.addresses) || [];
                 const idx = addresses.findIndex(a => a.address === newAddr);
+
+                const addrEntry = {
+                  address: newAddr,
+                  delivery_fee: orderObj.delivery_fee || 0,
+                  lat: orderObj.latitude || null,
+                  lng: orderObj.longitude || null,
+                  last_used: new Date().toISOString()
+                };
+
                 if (idx > -1) {
-                  addresses[idx].count = (addresses[idx].count || 1) + 1;
-                  addresses[idx].last_used = new Date().toISOString();
-                  addresses.unshift(addresses.splice(idx, 1)[0]);
-                } else if (newAddr) {
-                  addresses.unshift({ address: newAddr, count: 1, last_used: new Date().toISOString() });
+                  addrEntry.count = (addresses[idx].count || 1) + 1;
+                  addresses.splice(idx, 1);
+                } else {
+                  addrEntry.count = 1;
                 }
+                addresses.unshift(addrEntry);
                 addresses = addresses.slice(0, 5);
 
                 await sb.from('customers').upsert([{
