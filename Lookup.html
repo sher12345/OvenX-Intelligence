@@ -47,6 +47,15 @@
     border:none;background:var(--orange);color:#fff;padding:8px 12px;border-radius:10px;
     font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
   }
+  .addr-btns{display:flex;flex-direction:column;gap:6px;}
+  .map-btn{
+    border:none;background:#2e7d32;color:#fff;padding:8px 12px;border-radius:10px;
+    font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;text-align:center;
+  }
+  .fee-badge{
+    display:inline-block;background:#fff3e0;color:#e67e22;font-size:11px;font-weight:700;
+    padding:2px 8px;border-radius:8px;margin-top:4px;
+  }
   .empty{text-align:center;padding:40px 20px;color:var(--muted);}
   .empty .big{font-size:40px;margin-bottom:10px;}
   .new-cust{
@@ -114,8 +123,6 @@ function timeAgo(iso){
 async function lookup(rawPhone){
   const phone = normalizePhone(rawPhone);
   const { data, error } = await sb.from('customers').select('*').eq('phone', phone);
-  if (error) console.error('Supabase error:', error);
-  console.log('Queried phone:', phone, '| Rows found:', data);
   const customer = data && data[0];
 
   resultCard.classList.add('show');
@@ -130,15 +137,22 @@ async function lookup(rawPhone){
     return;
   }
 
-  const addrHtml = (customer.addresses || []).map(a => `
+  const addrHtml = (customer.addresses || []).map(a => {
+    const mapsUrl = (a.lat && a.lng) ? `https://www.google.com/maps?q=${a.lat},${a.lng}` : null;
+    return `
     <div class="addr">
       <div>
         <div class="addr-text">📍 ${a.address}</div>
-        <div class="addr-meta">Used ${a.count}x · last ${timeAgo(a.last_used)}</div>
+        <div class="addr-meta">Used ${a.count || 1}x · last ${timeAgo(a.last_used)}</div>
+        ${a.delivery_fee != null ? `<div class="fee-badge">🚚 Rs ${a.delivery_fee} delivery</div>` : ''}
       </div>
-      <button class="copy-btn" onclick="copyAddr(this)" data-addr="${a.address.replace(/"/g,'&quot;')}">Copy</button>
+      <div class="addr-btns">
+        <button class="copy-btn" onclick="copyAddr(this)" data-addr="${a.address.replace(/"/g,'&quot;')}">Copy</button>
+        ${mapsUrl ? `<a class="map-btn" href="${mapsUrl}" target="_blank">🗺️ Map</a>` : ''}
+      </div>
     </div>
-  `).join('') || '<div class="addr-meta">No saved addresses yet.</div>';
+  `;
+  }).join('') || '<div class="addr-meta">No saved addresses yet.</div>';
 
   resultCard.innerHTML = `
     <div class="cust-name">👤 ${customer.name || 'Name not on file'}</div>
