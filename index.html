@@ -3838,6 +3838,7 @@ function validateAndSubmitOrder() {
             orderObj.location = 'Takeaway';
         }
     } else if (orderType === 'Delivery') {
+        orderObj.customer_name = window.deliveryCustomerName || '';
         orderObj.phone = deliveryPhone;
     }
 
@@ -3916,7 +3917,8 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${custPhone}`;
         if (carPlate) customerInfo += `\n🚗 *Car Plate:* ${carPlate}`;
     } else if (orderType === 'Delivery') {
-        customerInfo = `\n\n📞 *Phone:* ${deliveryPhone}`;
+        const custName = window.deliveryCustomerName || '';
+        customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${deliveryPhone}`;
     }
 
     // Handle loyalty stamps — must run BEFORE building waMsg
@@ -3999,6 +4001,7 @@ function removeItem(idx) {
         window.carPlateNumber = null;
         window.takeawayCustomerName = null;
         window.takeawayCustomerPhone = null;
+        window.deliveryCustomerName = null;
     } else renderFinalSummary(delCharge); 
 }    
     function startCheckout() {
@@ -4012,6 +4015,7 @@ function removeItem(idx) {
         window.carPlateNumber = null;
         window.takeawayCustomerName = null;
         window.takeawayCustomerPhone = null;
+        window.deliveryCustomerName = null;
         renderServiceTypeStep();
     }
 }
@@ -4026,6 +4030,7 @@ function removeItem(idx) {
     window.carPlateNumber = null;
     window.takeawayCustomerName = null;
     window.takeawayCustomerPhone = null;
+    window.deliveryCustomerName = null;
 }
     
     function renderServiceTypeStep() { 
@@ -4295,7 +4300,11 @@ function showPermissionDeniedHelp() {
             Delivery Fee: <span style="color:var(--red); font-weight:900;">Rs ${delCharge}</span>
         </div>
         <textarea id="manualAddr" placeholder="Enter your full address..." class="big-input" style="height:100px;"></textarea>
-        
+
+        <!-- NAME FIELD -->
+        <input type="text" id="deliveryCustomerName" placeholder="👤 Enter your name"
+               class="big-input" style="margin-top:12px;" maxlength="40">
+
         <!-- NEW PHONE NUMBER FIELD -->
         <input type="tel" id="deliveryPhone" placeholder="📞 Enter your phone number (e.g. 0300-1234567)" 
                class="big-input" style="margin-top:12px;" maxlength="15">
@@ -4306,12 +4315,15 @@ function showPermissionDeniedHelp() {
 
     function saveAddr() { 
     let a = document.getElementById('manualAddr').value; 
+    let name = document.getElementById('deliveryCustomerName').value; // ADD THIS LINE
     let phone = document.getElementById('deliveryPhone').value; // ADD THIS LINE
     
     if(!a) return alert("Please enter address!"); 
+    if(!name) return alert("Please enter your name!"); // ADD VALIDATION
     if(!phone) return alert("Please enter phone number!"); // ADD VALIDATION
     
     userAddress = a; 
+    window.deliveryCustomerName = name; // Store in global variable
     deliveryPhone = phone; // Store in global variable (add this variable at top)
     
     renderFinalSummary(delCharge); 
