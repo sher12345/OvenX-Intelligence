@@ -1135,15 +1135,6 @@ body {
 </head>
 <body>
 
-<!-- ═══ MAINTENANCE MODE SCREEN ═══ -->
-<div id="maintenance-screen" style="display:none; position:fixed; inset:0; z-index:99999; background:linear-gradient(160deg,#1a0000 0%,#2d0a0a 50%,#1a0000 100%); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; font-family:'Outfit',sans-serif; color:white;">
-    <div style="font-size:60px; margin-bottom:20px;">🛠️🍕</div>
-    <p style="font-size:44px; font-weight:900; letter-spacing:-2px; margin-bottom:10px;">OVEN <span style="color:#e67e22;">X</span></p>
-    <h1 style="font-size:26px; font-weight:900; margin-bottom:14px;">We'll be right back!</h1>
-    <p style="font-size:15px; color:rgba(255,255,255,0.6); max-width:400px; line-height:1.6;">Our online ordering system is temporarily down for maintenance. Please check back shortly, or call us directly to place your order.</p>
-    <p style="font-size:14px; color:#e67e22; font-weight:700; margin-top:16px;">📞 0300-145-0301 (Multan) &nbsp;|&nbsp; 0300-345-0301 (Bahawalpur)</p>
-</div>
-
 <div id="secret-pwa-button" onclick="handleSecretClick()"></div>
 
 <!-- Hidden print container -->
@@ -1207,7 +1198,7 @@ body {
         </div>
         <div style="position:absolute; animation: rotate-msg-3 12s ease-in-out infinite; display:flex; align-items:center; gap:8px;">
             <span style="color:white; font-size:13px; font-weight:800; letter-spacing:0.5px;">
-                Deals & Combos excluded — Discount on food only, not delivery charges
+                📋 As per PRA regulation, 16% tax applies on Cash orders, 8% on Card payments
             </span>
         </div>
     </div>
@@ -2406,14 +2397,6 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-(function(){
-  // ═══ MAINTENANCE MODE — set to true to take site offline ═══
-  const MAINTENANCE_MODE = true;
-  if (MAINTENANCE_MODE) {
-      document.getElementById('maintenance-screen').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      return;
-  }
   // ══════════════════════════════════════════
     // BRANCH CONFIGURATION
     // ══════════════════════════════════════════
@@ -2687,12 +2670,16 @@ loadCustomItemsIntoMenu();
     }
     autoClearStaleOrders();
 
-let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL';    let currentCalcData = null;
+let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
         const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 16;
+const TAX_RATE_CASH = 0.16;
+const TAX_RATE_CARD = 0.08;
+function getTaxRate() { return paymentMethod === 'Card' ? TAX_RATE_CARD : TAX_RATE_CASH; }
+function setPaymentMethod(method) { playClick('pop'); paymentMethod = method; renderFinalSummary(delCharge); }
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -2700,18 +2687,18 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     } catch(e) { }
 
     const menuData = {
-        "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 599}, {name: "Pizza Fries", price: 720}, {name: "Dragon Shots", price: 399}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
-        "Sandwich 🥪": [{name: "Health Harvest", price: 599}, {name: "Khameera Sandwich", price: 699}, {name: "Club Sandwich", price: 599}],
-        "Fried Burger 🍔": [{name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 649}, {name: "Crispy Jalapeno", price: 549}, {name: "Stuff Jalapeno", price: 649}],
-        "Grilled Burger ♨️": [{name: "CM Grilled", price: 499}, {name: "Smokey Grilled", price: 550}, {name: "Peri Peri Grilled", price: 749}, {name: "Drizzler X", price: 749}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fiesta", price: 749}],
+        "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 699}, {name: "Pizza Fries", price: 799}, {name: "Dragon Shots", price: 449}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
+        "Sandwich 🥪": [{name: "Health Harvest", price: 720}, {name: "Khameera Sandwich", price: 799}, {name: "Club Sandwich", price: 720}],
+        "Fried Burger 🍔": [{name: "Chicken Patty Burger", price: 299}, {name: "Zinger Burger", price: 420}, {name: "Mighty Burger", price: 699}, {name: "Chipotle Burger", price: 699}, {name: "Crispy Jalapeno", price: 549}, {name: "Stuff Jalapeno", price: 699}],
+        "Grilled Burger ♨️": [{name: "CM Grilled", price: 599}, {name: "Smokey Grilled", price: 699}, {name: "Peri Peri Grilled", price: 699}, {name: "Drizzler X", price: 799}, {name: "Jalapeno Blaze", price: 749}, {name: "Mexi Fiesta", price: 749}],
         "Pan Pizza 🍕": [{name: "Chicken Tikka", price: {S:499, M:999, L:1549}}, {name: "Chicken Fajita", price: {S:499, M:999, L:1549}}, {name: "Chicken Supreme", price: {S:499, M:999, L:1549}}, {name: "Cheese Lover", price: {S:499, M:999, L:1549}}, {name: "Veg Lover", price: {S:499, M:999, L:1549}}, {name: "Sicilian Pizza", price: {S:499, M:999, L:1549}}],
         "Premium Pizza 🌟": [{name: "BBQ Pizza", price: {M:1199, L:1699}}, {name: "Creamy Dreamy", price: {M:1199, L:1699}}, {name: "OvenX Special Premium", price: {M:1199, L:1699}}, {name: "Bonfire Pizza", price: {M:1199, L:1699}}],
         "Deep Dish Pizza 🍲": [{name: "Mild Butter", price: {M:1749, L:2449}}, {name: "OvenX Special Deep Dish", price: {M:1749, L:2449}}],
-        "Extreme Pizza 🌶️": [{name: "Extreme Peri Peri", price: {M:1499, L:2049}}, {name: "Extreme Flaming Kabab", price: {M:1499, L:2049}}, {name: "Crispy Extreme", price: {M:1499, L:2049}}],
+        "Extreme Pizza 🌶️": [{name: "Extreme Peri Peri", price: {M:1549, L:2100}}, {name: "Extreme Flaming Kabab", price: {M:1549, L:2100}}, {name: "Crispy Extreme", price: {M:1549, L:2100}}],
         "Craft My Own Pizza 🎨": [{name: "Kabab Crust", price: {Med: 1399, Large: 1799}}, {name: "Crown Crust", price: {Med: 1399, Large: 1799}}, {name: "Cheese Crust", price: {Med: 1399, Large: 1799}}, {name: "Crusti Thin", price: 1699}],
-        "Platters 🍱": [{name: "Khameera Sandwich Platter", price: 699}, {name: "Calzone Platter", price: 899}, {name: "Behari Platter", price: 949}],
-        "Pasta 🍝": [{name: "Alfredo Pasta", price: 749}, {name: "OvenX Flaming Pasta", price: 650}, {name: "Fire Kissed Pasta", price: 699}, {name: "X-Special Pasta", price: 749}],
-        "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 599}, {name: "Donar Kabab", price: 749}, {name: "Crunch Wrap", price: 449}, {name: "Zingeratha Roll", price: 449}, {name: "Paratha Roll", price: 449}, {name: "Malai Roll", price: 449}, {name: "Behari Roll", price: 749}, {name: "Peri Peri Wrap", price: 749}],
+        "Platters 🍱": [{name: "Khameera Sandwich Platter", price: 799}, {name: "Calzone Platter", price: 990}, {name: "Behari Platter", price: 1090}],
+        "Pasta 🍝": [{name: "Alfredo Pasta", price: 849}, {name: "OvenX Flaming Pasta", price: 699}, {name: "Fire Kissed Pasta", price: 749}, {name: "X-Special Pasta", price: 849}],
+        "Wraps & Rolls 🌯": [{name: "Chipotle Wrap", price: 699}, {name: "BBQ Wrap", price: 699}, {name: "Donar Kabab", price: 799}, {name: "Crunch Wrap", price: 549}, {name: "Zingeratha Roll", price: 499}, {name: "Paratha Roll", price: 499}, {name: "Malai Roll", price: 499}, {name: "Behari Roll", price: 799}, {name: "Peri Peri Wrap", price: 749}],
         "Steaks 🥩": [
     {name: "Mexican Steak", price: 1549, bwpOnly: true},
     {name: "Moroccan Steak", price: 1549, bwpOnly: true},
@@ -2725,7 +2712,6 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     {name: "Coke Buddy", price: 130},
     {name: "Sprite Buddy", price: 130},
     {name: "Coke 1 Liter", price: 190},
-    {name: "Next Cola 1 Liter", price: 170},
     {name: "Coke 1.5L", price: 230},
     {name: "Sprite 1.5L", price: 230},
     {name: "Water Small", price: 99},
@@ -2748,74 +2734,67 @@ menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i =>
 );
 
     const dealsData = [
-        { name: "Midnight Deal 1", desc: "2x Med Extreme Pizzas + 1.5L Drink", price: 2699, badge: "HOT DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/1899hanoiFinal_1025.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Pizza 1", cat: "Extreme Pizza 🌶️"}, {label: "Pizza 2", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Midnight Deal 2", desc: "1x Large wings + 2x Large Pan Pizzas + 1.5L Drink", price: 3249, badge: "SAVER", image: "https://www.citysouthpizzakitchenerwaterloo.ca/cdn/shop/files/pizza-with-3-toppings-chicken-wings-and-3-cokes.png?v=1759010649&width=533", flavorsNeeded: [{label: "Pizza 1", cat: "Pan Pizza 🍕"}, {label: "Pizza 2", cat: "Pan Pizza 🍕"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 3", desc: "1x Large wings + 2x Large Premium Pizzas + 1.5L Drink", price: 3649, badge: "PREMIUM", image: "https://assets3.thrillist.com/v1/image/2826030/792x528/scale;webp=auto;jpeg_quality=60;progressive.jpg", flavorsNeeded: [{label: "Pizza 1", cat: "Premium Pizza 🌟"}, {label: "Pizza 2", cat: "Premium Pizza 🌟"}], fixedItems: ["1x Large Hot Wings", "1.5L Soft Drink"] },
-        { name: "Midnight Deal 4", desc: "1x Med Extreme Pizza + 1x Large Extreme Pizza + 1.5L Drink", price: 3149, badge: "MIX DEAL", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Medium Pizza", cat: "Extreme Pizza 🌶️"}, {label: "Large Pizza", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1.5L Soft Drink"] },
-        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2299, badge: "FAMILY", image: "https://prairiepizzas.ca/wp-content/uploads/2020/07/family-combo-2.jpg", flavorsNeeded: [{label: "Category 1", cat: "Pan Pizza 🍕", forceCat: "Pan"}, {label: "Category 2", cat: "Premium Pizza 🌟", forceCat: "Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
-        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1449, badge: "BEST SELLER", image: "https://media.sodagift.com/img/image/1877697001877199.jpg", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
-        { name: "Burger Deal 1", desc: "2 Zingers + 1 Reg Fries + 2 Drinks", price: 999, badge: "DELIVERY", image: "https://www.shutterstock.com/image-photo/crispy-chicken-burger-served-french-600nw-2647455697.jpg", fixedItems: ["2x Zinger Burgers", "1x Regular Fries", "2x Drinks"] },
-        { name: "Burger Deal 2", desc: "1 Zinger + 1 Reg Fries + 1 345ml Drink + 2 Wings", price: 990, badge: "DELIVERY", image: "https://d1w7312wesee68.cloudfront.net/papYm9QPXbu985kLHmECoETz9chauwF12d0PGs2MVKY/resize:fit:720:720/plain/s3://toasttab/restaurants/restaurant-255618000000000000/menu/items/7/item-5740050945299277_1766103306.jpg", fixedItems: ["1x Zinger Burger", "1x Regular Fries", "1x 345ml Buddy Drink", "2x Pcs Wings"] },
-        { name: "Burger Deal 3", desc: "4 Classic Zingers + 2 Reg Fries + 1L Drink + 6 Wings", price: 1990, badge: "DELIVERY", image: "https://www.corriecooks.com/wp-content/uploads/2025/05/Zinger-Burger-500x500.jpg", fixedItems: ["4x Classic Zinger Burgers", "2x Regular Fries", "1x 1 Liter Drink", "6x Pcs Wings"] },
-        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", image: "https://media.sodagift.com/img/image/678369644447129.jpg", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
-        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1499, badge: "DELIVERY", image: "https://www.tastingtable.com/img/gallery/how-pizza-and-chicken-wings-became-a-classic-combo/intro-1740444362.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
-        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1599, badge: "DELIVERY", image: "https://static.tossdown.com/images/a8418568-6a3e-433b-acb3-7effa408d5d0.webp", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
-        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 1999, badge: "DELIVERY", image: "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/40247IMG_0030pie.jpeg?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
+        { name: "Family Feast", desc: "2 Med Pizzas + 2 Zingers + 1L Drink + 6 Wings", price: 2499, badge: "FAMILY", image: "https://i.ibb.co/3y2Q29J6/family.png", flavorsNeeded: [{label: "Category 1", cat: "Pan Pizza 🍕", forceCat: "Pan"}, {label: "Category 2", cat: "Premium Pizza 🌟", forceCat: "Premium"}], fixedItems: ["2x Zinger Burgers", "1L Drink", "6x Wings"] },
+        { name: "Extreme Buddy", desc: "1 Medium Extreme Pizza + Free 1L Drink", price: 1649, badge: "BEST SELLER", image: "https://i.ibb.co/JjRhc727/Gemini-Generated-Image-66v5a566v5a566v5.png", flavorsNeeded: [{label: "Pizza Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] },
+        { name: "01 PIZZA DEAL", desc: "1 Large Pizza (Pan) + 1L Drink", price: 1299, badge: "DELIVERY", image: "https://i.ibb.co/0VCYD27q/Gemini-Generated-Image-ivdo7civdo7civdo.png", flavorsNeeded: [{label: "Pizza", cat: "Pan Pizza 🍕"}], fixedItems: ["1L Drink"] },
+        { name: "02 PIZZA DEAL", desc: "1 Large Pizza (Premium) + 1L Drink", price: 1599, badge: "DELIVERY", image: "https://i.ibb.co/kssSML9j/Whats-App-Image-2026-05-04-at-5-58-32-PM.jpg", flavorsNeeded: [{label: "Pizza", cat: "Premium Pizza 🌟"}], fixedItems: ["1L Drink"] },
+        { name: "03 PIZZA DEAL", desc: "1 Large Crown Pizza + 1L Drink", price: 1699, badge: "DELIVERY", image: "https://i.ibb.co/kgNzKVW5/03.png", flavorsNeeded: [{label: "Crown Flavor", cat: "Craft My Own Pizza 🎨"}], fixedItems: ["1L Drink"] },
+        { name: "04 PIZZA DEAL", desc: "1 Large Extreme Pizza + 1L Drink", price: 2149, badge: "DELIVERY", image: "https://i.ibb.co/hFp6Bnpx/Gemini-Generated-Image-wxourqwxourqwxou.png", flavorsNeeded: [{label: "Extreme Flavor", cat: "Extreme Pizza 🌶️"}], fixedItems: ["1L Drink"] }
     ];
 
         
     const imgMap = {
-        "plain fries": "https://www.recipetineats.com/tachyon/2022/09/Crispy-Fries_8.jpg?resize=500%2C375",
-        "loaded fries": "https://www.carolynscooking.com/wp-content/uploads/2024/01/Loaded-Bacon-Cheese-Fries-3.jpg",
-        "pizza fries": "https://lh3.googleusercontent.com/-ntf8I5R_xC4/Vffe9Jy-I6I/AAAAAAAFKz8/NxqHy-TAfbo/s800-Ic42/pizza-dough-fries-75a.jpg",
-        "dragon shots": "https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/chicken-lollipop.jpg",
-        "oven baked wings": "https://tastesbetterfromscratch.com/wp-content/uploads/2014/09/Baked-Chicken-Wings-3.jpg",
-        "peri-peri wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
-        "hot wings": "https://www.thespicehouse.com/cdn/shop/articles/Insane_Hot_Wings_720x.jpg?v=1588270427",
-        "honey chili wings": "https://www.chilitochoc.com/wp-content/uploads/2025/01/hot-honey-chicken-wings-with-sauce-and-chili-flakes.jpg",
-        "cheese sticks": "https://www.spendwithpennies.com/wp-content/uploads/2013/10/Cheese-Sticks-SpendWithPennies-2-22.jpg",
-        "meat sticks": "https://www.teaforturmeric.com/wp-content/uploads/2018/10/Seekh-Kebab-4.jpg",
-        "nuggets": "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipe%20Ramp%20Up%2F2022-02-Baked-Chicken-Wings%2FIMG_6923_f6aa7e_landscape",
-        "health harvest": "https://www.themediterraneandish.com/wp-content/uploads/2024/03/TMD-Vegetable-Sandwich-Leads-02-Horizontal.jpg",
-        "khameera": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
-        "club sandwich": "https://media.sailusfood.com/wp-content/uploads/2008/05/mutton_kheema_sandwich.jpg",
-        "chicken patty": "https://www.themediterraneandish.com/wp-content/uploads/2024/05/Chicken-Burger-16.jpg",
-        "zinger": "https://fantabulosity.com/wp-content/uploads/2021/10/Crispy-Chicken-Burger-34.jpg",
-        "mighty": "https://halaladdict.com/wp-content/uploads/2023/05/Mighty-Zinger-Burger.png",
-        "chipotle": "https://lisagcooks.com/wp-content/uploads/2016/07/Spicy-Chipotle-Burger-1.jpg",
-        "crispy jalapeno": "https://bjsrestaurants.scene7.com/is/image/bjsrestaurants/loaded-burgers-crispyjalapenoburger-5366r-bjs",
-        "stuff jalapeno": "https://www.babaganosh.org/wp-content/uploads/2022/12/jalapeno-popper-burgers-44.jpg",
-        "cm grilled": "https://www.kimscravings.com/wp-content/uploads/2022/06/Chicken-Burgers-5.jpg",
-        "smokey grilled": "https://www.grocery.coop/wp-content/uploads/2015/12/Smoky_Grilled_Burgers_0.jpg",
-        "peri peri grilled": "https://www.recipetineats.com/uploads/2015/11/Nandos-Peri-Peri-Chicken-Burger_9.jpg",
-        "drizzler": "https://www.campchef.com/dw/image/v2/BDBJ_PRD/on/demandware.static/-/Sites-CampChef-Library/default/dw5b9d74ec/Recipe-Heros/Smoked-Burger.png",
-        "jalapeno blaze": "https://amazingribs.com/wp-content/uploads/2023/02/jalapeno-bacon-cheeseburger.jpg",
-        "mexi fiesta": "https://images.contentstack.io/v3/assets/blt9039451385f46c16/blt0d4471c6a90418b1/64a64affee0ad3ed47beaadd/VegieDelightsMay-June2023-2-2_(1).jpg",
-        "chicken tikka": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
-        "chicken fajita": "https://boboli.com/sites/default/files/2022-06/chicken_fajita_LR_0.jpg",
-        "chicken supreme": "https://thegingeredwhisk.com/wp-content/uploads/2020/10/Chicken-Supreme-Pizza-17.jpg",
-        "cheese lover": "https://nmgprod.s3.amazonaws.com/media/files/16/e9/16e9f32596537b9563af50d1d0a2dbad/cover_image.jpg.960x540_q85_crop_upscale.jpg",
+        "plain fries": "https://i.ibb.co/Mk5fBwgd/Gemini-Generated-Image-3rdof03rdof03rdo.png",
+        "loaded fries": "https://i.ibb.co/Z6Vqfrxt/load.png",
+        "pizza fries": "https://i.ibb.co/G4Hs088y/fr.png",
+        "dragon shots": "https://i.ibb.co/Z6mx3MYS/dragonshot.png",
+        "oven baked wings": "https://i.ibb.co/FkgJ3MFc/baked.png",
+        "peri-peri wings": "https://i.ibb.co/VZkLQPd/peri-wings.png",
+        "hot wings": "https://i0.wp.com/coopcancook.com/wp-content/uploads/2021/03/Photo-Dec-28-9-12-33-AM.jpg?resize=1140%2C1710&ssl=1",
+        "honey chili wings": "https://i.ibb.co/yBkcWY7T/Gemini-Generated-Image-gwrzgkgwrzgkgwrz.png",
+        "cheese sticks": "https://i.ibb.co/TxmTb8Gt/pomelli-image-8.png",
+        "meat sticks": "https://i.ibb.co/TxmTb8Gt/pomelli-image-8.png",
+        "nuggets": "https://i.ibb.co/WWwn4ffS/nug.png",
+        "health harvest": "https://i.ibb.co/sp6BhcT4/Gemini-Generated-Image-n5vsvon5vsvon5vs.png",
+        "khameera": "https://i.ibb.co/bgvZLKK1/kham.png",
+        "club sandwich": "https://i.ibb.co/TxnQdVxJ/Gemini-Generated-Image-wl19ykwl19ykwl19.png",
+        "chicken patty": "https://i.ibb.co/67c1Fp0J/Gemini-Generated-Image-g3wz0ig3wz0ig3wz.png",
+        "zinger": "https://i.ibb.co/wFdsF5cf/Gemini-Generated-Image-szt049szt049szt0.png",
+        "mighty": "https://i.ibb.co/vCkX8krj/Gemini-Generated-Image-uv488nuv488nuv48.png",
+        "chipotle": "https://i.ibb.co/NgQSC3fB/chipotle.png",
+        "crispy jalapeno": "https://i.ibb.co/KzKkKLHj/jalapeno.png",
+        "stuff jalapeno": "https://i.ibb.co/XfGmn6yD/Gemini-Generated-Image-4j0i8w4j0i8w4j0i.png",
+        "cm grilled": "https://i.ibb.co/MyLkx5wH/cm.png",
+        "smokey grilled": "https://i.ibb.co/svPHT04j/smokey.png",
+        "peri peri grilled": "https://i.ibb.co/chdcsfN9/grilled-peri.png",
+        "drizzler": "https://i.ibb.co/3yQN1Fs2/drizzler-x.png",
+        "jalapeno blaze": "https://i.ibb.co/B2v7X9LF/Gemini-Generated-Image-t2r04ft2r04ft2r0.png",
+        "mexi fiesta": "https://i.ibb.co/TMgpYFRc/Gemini-Generated-Image-rbhy46rbhy46rbhy.png",
+        "chicken tikka": "https://i.ibb.co/XffGxKk1/tikka.png",
+        "chicken fajita": "https://i.ibb.co/7dhMNTfQ/fajita.png",
+        "chicken supreme": "https://i.ibb.co/dRqGt8C/pomelli-photoshoot-image-9-16-0722.png",
+        "cheese lover": "https://i.ibb.co/5ZvV1GN/Gemini-Generated-Image-a1cvl6a1cvl6a1cv.png",
         "veg lover": "https://www.orchidsandsweettea.com/wp-content/uploads/2019/05/Veggie-Pizza-2-of-5-e1691215701129.jpg",
-        "sicilian": "https://www.chewoutloud.com/wp-content/uploads/2013/02/deep-dish-pizza-3.jpg",
+        "sicilian": "https://i.ibb.co/mg0wn36/pomelli-image-11.png",
         "bbq": "https://bluebowlrecipes.com/wp-content/uploads/2019/05/barbecue-chicken-pizza-0917.jpg",
-        "creamy dreamy": "https://i.shgcdn.com/c4d973d8-3799-4122-a601-0d51c1d73bd1/-/format/auto/-/preview/3000x3000/-/quality/lighter/",
-        "ovenx special": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-        "bonfire": "https://kristineskitchenblog.com/wp-content/uploads/2025/05/bbq-chicken-pizza-09-2.jpg",
-        "mild butter": "https://colavitarecipes.com/wp-content/uploads/2020/06/chicago-11-F-1200x1800.jpg",
-        "extreme peri": "https://www.thecandidcooks.com/wp-content/uploads/2022/08/spicy-sausage-pepper-pizza-feature.jpg",
-        "flaming kabab": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
-        "crispy extreme": "https://images.getbento.com/accounts/f26197ccf036932f404d45389d32707a/media/images/37992IMG_0038pie.JPG?w=1200&fit=crop&auto=compress,format&cs=origin&crop=focalpoint&fp-x=0.5&fp-y=0.5",
-        "kabab crust": "https://www.greedygourmet.com/wp-content/uploads/2024/12/chicken-tikka-pizza-feature.jpg",
+        "creamy dreamy": "https://i.ibb.co/MkFxTfyh/pomelli-image-1.png",
+        "ovenx special": "https://i.ibb.co/WvgK9sqN/spec.png",
+        "bonfire": "https://i.ibb.co/FkGF5qZT/bone.png",
+        "mild butter": "https://i.ibb.co/PGf8pT90/Gemini-Generated-Image-pwbjv2pwbjv2pwbj.png",
+        "extreme peri": "https://i.ibb.co/Z6S6jNGy/peri.png",
+        "flaming kabab": "https://i.ibb.co/8nZswbYJ/flam.png",
+        "crispy extreme": "https://i.ibb.co/ksFYycjX/Gemini-Generated-Image-l0flopl0flopl0fl.png",
+        "kabab crust": "https://i.ibb.co/MkWJChfZ/pomelli-image-12.png",
         "crown crust": "https://d3ed0bx5qudxt4.cloudfront.net/912136134",
-        "cheese crust": "https://sallysbakingaddiction.com/wp-content/uploads/2017/03/stuffed-crust-pizza-3.jpg",
-        "crusti thin": "https://www.washingtonpost.com/wp-apps/imrs.php?src=https://arc-anglerfish-washpost-prod-washpost.s3.amazonaws.com/public/KFHFXR3G3YSLKJETDTO24K5SCM.jpg&w=1800&h=1800",
-        "khameera platter": "https://cdnimg.webstaurantstore.com/images/products/large/661056/2284466.jpg",
-        "calzone": "https://res.cloudinary.com/hksqkdlah/image/upload/c_fill,dpr_2.0,f_auto,fl_lossy.progressive.strip_profile,g_faces:auto,q_auto:low/SFS_chicago_deep_dish_pizza-16_cehf9d",
-        "behari": "https://www.seriouseats.com/thmb/6zN8jRJEFn1rU3It2_rSU2pxZpE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__20160801-seekh-kebab-recipe-41-1fdc2ebd109b4bbd8d4c00455b505379.jpg",
+        "cheese crust": "https://i.ibb.co/MkWJChfZ/pomelli-image-12.png",
+        "crusti thin": "https://i.ibb.co/WN2KYDsQ/Gemini-Generated-Image-pym52qpym52qpym5.png",
+        "khameera platter": "https://i.ibb.co/bgvZLKK1/kham.png",
+        "calzone": "https://i.ibb.co/0VmqVpYc/pomelli-image-10.png",
+        "behari": "https://i.ibb.co/RTZShj4k/behari-pla.png",
         "alfredo": "https://www.gimmesomeoven.com/wp-content/uploads/2020/04/Alfredo-Sauce-9.jpg",
-        "flaming pasta": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
-        "fire kissed": "https://www.thecountrycook.net/wp-content/uploads/2023/02/thumbnail-Penne-Pasta-with-Tomato-Sauce-scaled.jpg",
-        "x-special": "https://cookingwithcassandra.com/wp-content/uploads/2022/10/Copy-of-Copy-of-DSC03750-2-scaled.jpg",
+        "flaming pasta": "https://i.ibb.co/Cjj0yPp/pomelli-image-4.png",
+        "fire kissed": "https://i.ibb.co/XrKKNvfW/piz.png",
+        "x-special": "https://i.ibb.co/gbzdCLbW/x-sp.png",
         "chipotle wrap": "https://www.dontgobaconmyheart.co.uk/wp-content/uploads/2019/06/bbq-chicken-wrap.jpg",
         "bbq wrap": "https://www.everyday-delicious.com/wp-content/uploads/2022/04/bbq-chicken-wrap-everyday-delicious-1.jpg",
         "doner": "https://silkroadrecipes.com/wp-content/uploads/2024/06/Turkish-Doner-Kebabs-Beef-or-Lamb-square.jpg",
@@ -2832,7 +2811,7 @@ menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i =>
         "sprite 1.5l": "https://m.media-amazon.com/images/I/51HQiqPnFWL._AC_UF894,1000_QL80_.jpg",
         "water small": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
         "water large": "https://www.purelifewater.com/sites/g/files/zmtnxh126/files/image%204.png",
-        "behari roll": "https://www.flourandspiceblog.com/wp-content/uploads/2021/05/IMG_2742.jpg",
+        "behari roll": "https://i.ibb.co/PsY8qrvF/behari.png",
 "cordon blue": "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=500",
 "tarragon": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500",
 "moroccan": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=500",
@@ -3812,7 +3791,10 @@ function validateAndSubmitOrder() {
         deliveryDiscount = Math.round(eligibleTotal * 0.10);
     }
     
-    const grand = foodTotal + sc + delCharge - deliveryDiscount;
+    const taxable = foodTotal + sc - deliveryDiscount;
+    const taxRate = getTaxRate();
+    const tax = Math.round(taxable * taxRate);
+    const grand = taxable + tax + delCharge;
     
     const itemsText = cart.map(i => {
         let detail = i.qty + "x " + i.name;
@@ -3840,6 +3822,8 @@ function validateAndSubmitOrder() {
         delivery_fee: delCharge,
         discount: deliveryDiscount,
         discount_claimed: window._discountClaimed === true,
+        tax: tax,
+        payment_method: paymentMethod,
         branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
         latitude: orderType === 'Delivery' ? (currentCalcData?.userLat || null) : null,
         longitude: orderType === 'Delivery' ? (currentCalcData?.userLng || null) : null
@@ -3977,6 +3961,7 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         `\n\nSubtotal: Rs ${foodTotal}` +
         `${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}` +
         `${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}` +
+        `\nPRA Tax (${Math.round(taxRate*100)}% - ${paymentMethod}): Rs ${tax}` +
         `${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}` +
         `\n*Grand Total: Rs ${grand}*` +
         `${bonus}`
@@ -4369,26 +4354,27 @@ function showPermissionDeniedHelp() {
     chkStep = 3; 
     delCharge = parseFloat(fee) || 0; 
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
 
-// 10% Delivery Discount — Food only (Excludes Deals + Drinks)
-let disc = 0;
-if (orderType === 'Delivery') {
-    const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+    let disc = 0;
+    if (orderType === 'Delivery') {
+        const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+        const eligible = cart
+            .filter(i => {
+                const n = i.name.toLowerCase();
+                if (dealsData.some(d => n.includes(d.name.toLowerCase()))) return false;
+                if (drinkKeywords.some(kw => n.includes(kw))) return false;
+                return true;
+            })
+            .reduce((s, i) => s + (i.price * i.qty), 0);
+        disc = Math.round(eligible * 0.10);
+    }
 
-    const eligible = cart
-        .filter(i => {
-            const n = i.name.toLowerCase();
-            if (dealsData.some(d => n.includes(d.name.toLowerCase()))) return false;
-            if (drinkKeywords.some(kw => n.includes(kw))) return false;
-            return true;
-        })
-        .reduce((s, i) => s + (i.price * i.qty), 0);
+    const taxable = foodTotal + sc - disc;
+    const taxRate = getTaxRate();
+    const tax = Math.round(taxable * taxRate);
+    const grand = taxable + tax + delCharge;
 
-    disc = Math.round(eligible * 0.10);
-}
-    const grand = foodTotal + delCharge + sc - disc;
-    
     const summaryHTML = cart.map((i, idx) => `
         <div class="summary-item">
             <div class="summary-info">
@@ -4398,7 +4384,7 @@ if (orderType === 'Delivery') {
             <div class="remove-item-btn btn-3d" onclick="removeItem(${idx})">🗑️</div>
         </div>
     `).join('');
-    
+
     let summaryBubbleContent = `<b>ORDER SUMMARY</b>`; 
     if (orderType === 'Dine-In' && tableNum) {
         summaryBubbleContent += `<br><small style="color:var(--red);">🪑 Table: ${tableNum}</small>`;
@@ -4416,7 +4402,7 @@ if (orderType === 'Delivery') {
             summaryBubbleContent += `<br><small style="color:var(--orange);">🥡 Pick-Up Order</small>`;
         }
     }
-    
+
     let customerInfoHtml = '';
     if (orderType === 'Takeaway') {
         if (window.carPlateNumber) {
@@ -4438,16 +4424,27 @@ if (orderType === 'Delivery') {
             `;
         }
     }
-    
+
     document.getElementById('checkout-content').innerHTML = `
         <div class="chat-bubble">${summaryBubbleContent}</div>
         ${summaryHTML}
         ${customerInfoHtml}
+
+        <div class="chat-bubble">
+            <b>💳 How are you paying?</b>
+            <p style="font-size:12px;color:#888;margin:6px 0 10px;">Govt. tax rate depends on payment method (PRA regulation).</p>
+            <div style="display:flex; gap:10px;">
+                <button class="next-btn btn-3d" style="margin-bottom:0; background:${paymentMethod==='Cash' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Cash' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Cash' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Cash')">💵 CASH<br><small style="font-weight:600;">16% Tax</small></button>
+                <button class="next-btn btn-3d" style="margin-bottom:0; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">8% Tax</small></button>
+            </div>
+        </div>
+
         <div class="chat-bubble">
             Subtotal: Rs ${foodTotal}
             ${sc > 0 ? '<br>S.C (7%): Rs '+sc : ''}
-            ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
             ${disc > 0 ? `<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount (Food only): -Rs ${disc}</span>` : ''}
+            <br>PRA Tax (${Math.round(taxRate*100)}% — ${paymentMethod}): Rs ${tax}
+            ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
             <br><hr>Total: <b>Rs ${grand}</b>
         </div>
         <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP 📱</button>
@@ -4777,8 +4774,8 @@ if (o.subtotal) {
         ${hasDiscount ? discountBadge : ''}
         ${o.type === 'Delivery' ? sourceBadge : ''}
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Del: Rs ${o.delivery_fee || 0}</div>
-            <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.delivery_fee || 0))}</div>
+            <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Tax (${o.payment_method || 'Cash'}): Rs ${o.tax || 0} | Del: Rs ${o.delivery_fee || 0}</div>
+            <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.tax || 0) + (o.delivery_fee || 0))}</div>
         </div>
     </div>`;
 }
@@ -4845,7 +4842,9 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     const subtotal = o.subtotal || 0;
     const delFee = o.delivery_fee || 0;
     const discount = o.discount || 0;
-    const grandTotal = subtotal + delFee;
+    const tax = o.tax || 0;
+    const payMethod = o.payment_method || 'Cash';
+    const grandTotal = subtotal + tax + delFee;
 
     if (type === 'front') {
         printArea.innerHTML = `
@@ -4888,6 +4887,10 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     <div style="display:flex;justify-content:space-between;font-weight:bold;">
                         <span>10% Delivery Discount:</span><span>-Rs ${discount}</span>
                     </div>` : ''}
+                    
+                    <div style="display:flex;justify-content:space-between;">
+                        <span>PRA Tax (${payMethod}):</span><span>Rs ${tax}</span>
+                    </div>
                     ${delFee > 0 ? `
                     <div style="display:flex;justify-content:space-between;">
                         <span>Delivery Fee:</span><span>Rs ${delFee}</span>
@@ -4922,6 +4925,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
                     <b>Shop: Rs ${subtotal}</b><br>
                     ${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
+                    <span>Tax (${payMethod}): Rs ${tax}</span><br>
                     ${delFee > 0 ? `<span>Del: Rs ${delFee}</span><br>` : ''}
                     <b style="font-size:20px;">Total: Rs ${grandTotal}</b>
                 </div>
@@ -6946,7 +6950,6 @@ setTimeout(() => {
         }
     });
 }, 1000);
-})();
 </script>
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
