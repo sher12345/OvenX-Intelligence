@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2677,14 +2678,19 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 16;
 const TAX_RATE_CASH = 0.16;
-const TAX_RATE_CARD = 0.08;
-function getTaxRate() { return paymentMethod === 'Card' ? TAX_RATE_CARD : TAX_RATE_CASH; }
+const TAX_RATE_CARD = 0.05;
+const TAX_RATE_ONLINE = 0.08;
+function getTaxRate() { 
+    if (paymentMethod === 'Card') return TAX_RATE_CARD;
+    if (paymentMethod === 'Online') return TAX_RATE_ONLINE;
+    return TAX_RATE_CASH; 
+}
 function setPaymentMethod(method) { playClick('pop'); paymentMethod = method; renderFinalSummary(delCharge); }
 
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
-    } catch(e) { }
+try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.has('table')) { isQRScan = true; tableNum = urlParams.get('table').toUpperCase(); document.getElementById('gateway-table-id').innerText = tableNum; document.getElementById('gateway-table-note').style.display = 'block'; document.getElementById('header-table-indicator').innerText = "(TABLE " + tableNum + ")"; }
+} catch(e) { }
 
     const menuData = {
         "Starter 🍟": [{name: "Plain Fries", price: {Reg: 230, Large: 300}}, {name: "Loaded Fries", price: 699}, {name: "Pizza Fries", price: 799}, {name: "Dragon Shots", price: 449}, {name: "Oven Baked Wings", price: {Reg: 399, Large: 780}}, {name: "Peri-Peri Wings", price: {M: 399, L: 780}}, {name: "Hot Wings", price: {M: 399, L: 780}}, {name: "Honey Chili Wings", price: {M: 449, L: 880}}, {name: "Cheese Sticks", price: 449}, {name: "Meat Sticks", price: 449}, {name: "Nuggets", price: {M: 350, L: 650}}],
@@ -4430,12 +4436,15 @@ function showPermissionDeniedHelp() {
         ${summaryHTML}
         ${customerInfoHtml}
 
-        <div class="chat-bubble">
+       <div class="chat-bubble">
             <b>💳 How are you paying?</b>
             <p style="font-size:12px;color:#888;margin:6px 0 10px;">Govt. tax rate depends on payment method (PRA regulation).</p>
-            <div style="display:flex; gap:10px;">
-                <button class="next-btn btn-3d" style="margin-bottom:0; background:${paymentMethod==='Cash' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Cash' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Cash' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Cash')">💵 CASH<br><small style="font-weight:600;">16% Tax</small></button>
-                <button class="next-btn btn-3d" style="margin-bottom:0; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">8% Tax</small></button>
+            <div style="display:flex; gap:8px; flex-wrap: wrap;">
+                <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Cash' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Cash' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Cash' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Cash')">💵 CASH<br><small style="font-weight:600;">16% Tax</small></button>
+                
+                <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">5% Tax</small></button>
+                
+                <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Online' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Online' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Online' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Online')">🌐 ONLINE<br><small style="font-weight:600;">8% Tax</small></button>
             </div>
         </div>
 
