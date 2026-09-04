@@ -2680,6 +2680,8 @@ const TAX_RATE_CASH = 0.16;
 const TAX_RATE_CARD = 0.05;
 const TAX_RATE_ONLINE = 0.08;
 function getTaxRate() { 
+    const branchId = (activeBranch || BRANCH_CONFIG.MULTAN).id;
+    if (branchId === 'BWP') return 0; // PRA tax disabled for Bahawalpur
     if (paymentMethod === 'Card') return TAX_RATE_CARD;
     if (paymentMethod === 'Online') return TAX_RATE_ONLINE;
     return TAX_RATE_CASH; 
@@ -3966,7 +3968,7 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         `\n\nSubtotal: Rs ${foodTotal}` +
         `${sc > 0 ? '\nS.C (7%): Rs ' + sc : ''}` +
         `${deliveryDiscount > 0 ? '\n🎉 10% Delivery Discount: -Rs ' + deliveryDiscount : ''}` +
-        `\nPRA Tax (${Math.round(taxRate*100)}% - ${paymentMethod}): Rs ${tax}` +
+        `${tax > 0 ? '\nPRA Tax (' + Math.round(taxRate*100) + '% - ' + paymentMethod + '): Rs ' + tax : ''}` +
         `${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}` +
         `\n*Grand Total: Rs ${grand}*` +
         `${bonus}`
@@ -4435,6 +4437,7 @@ function showPermissionDeniedHelp() {
         ${summaryHTML}
         ${customerInfoHtml}
 
+       ${(activeBranch||BRANCH_CONFIG.MULTAN).id !== 'BWP' ? `
        <div class="chat-bubble">
             <b>💳 How are you paying?</b>
             <p style="font-size:12px;color:#888;margin:6px 0 10px;">Govt. tax rate depends on payment method (PRA regulation).</p>
@@ -4451,12 +4454,13 @@ function showPermissionDeniedHelp() {
                 <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Online' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Online' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Online' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Online')">🌐 ONLINE<br><small style="font-weight:600;">8% Tax</small></button>
             </div>
         </div>
+       ` : ''}
 
         <div class="chat-bubble">
             Subtotal: Rs ${foodTotal}
             ${sc > 0 ? '<br>S.C (7%): Rs '+sc : ''}
             ${disc > 0 ? `<br><span style="color:#16a34a;font-weight:900;">🎉 10% Delivery Discount (Food only): -Rs ${disc}</span>` : ''}
-            <br>PRA Tax (${Math.round(taxRate*100)}% — ${paymentMethod}): Rs ${tax}
+            ${tax > 0 ? '<br>PRA Tax ('+Math.round(taxRate*100)+'% — '+paymentMethod+'): Rs '+tax : ''}
             ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
             <br><hr>Total: <b>Rs ${grand}</b>
         </div>
@@ -4787,7 +4791,7 @@ if (o.subtotal) {
         ${hasDiscount ? discountBadge : ''}
         ${o.type === 'Delivery' ? sourceBadge : ''}
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <div style="font-size:14px;">Shop: Rs ${o.subtotal} | Tax (${o.payment_method || 'Cash'}): Rs ${o.tax || 0} | Del: Rs ${o.delivery_fee || 0}</div>
+            <div style="font-size:14px;">Shop: Rs ${o.subtotal}${o.tax > 0 ? ' | Tax ('+(o.payment_method||'Cash')+'): Rs '+o.tax : ''} | Del: Rs ${o.delivery_fee || 0}</div>
             <div style="color:var(--red); font-size:18px; font-weight:900;">Total: Rs ${(o.subtotal + (o.tax || 0) + (o.delivery_fee || 0))}</div>
         </div>
     </div>`;
@@ -4901,9 +4905,9 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                         <span>10% Delivery Discount:</span><span>-Rs ${discount}</span>
                     </div>` : ''}
                     
-                    <div style="display:flex;justify-content:space-between;">
+                    ${tax > 0 ? `<div style="display:flex;justify-content:space-between;">
                         <span>PRA Tax (${payMethod}):</span><span>Rs ${tax}</span>
-                    </div>
+                    </div>` : ''}
                     ${delFee > 0 ? `
                     <div style="display:flex;justify-content:space-between;">
                         <span>Delivery Fee:</span><span>Rs ${delFee}</span>
@@ -4938,7 +4942,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
                     <b>Shop: Rs ${subtotal}</b><br>
                     ${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
-                    <span>Tax (${payMethod}): Rs ${tax}</span><br>
+                    ${tax > 0 ? `<span>Tax (${payMethod}): Rs ${tax}</span><br>` : ''}
                     ${delFee > 0 ? `<span>Del: Rs ${delFee}</span><br>` : ''}
                     <b style="font-size:20px;">Total: Rs ${grandTotal}</b>
                 </div>
