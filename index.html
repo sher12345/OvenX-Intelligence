@@ -1135,6 +1135,15 @@ body {
 </head>
 <body>
 
+<!-- ═══ MAINTENANCE MODE SCREEN ═══ -->
+<div id="maintenance-screen" style="display:none; position:fixed; inset:0; z-index:99999; background:linear-gradient(160deg,#1a0000 0%,#2d0a0a 50%,#1a0000 100%); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; font-family:'Outfit',sans-serif; color:white;">
+    <div style="font-size:60px; margin-bottom:20px;">🛠️🍕</div>
+    <p style="font-size:44px; font-weight:900; letter-spacing:-2px; margin-bottom:10px;">OVEN <span style="color:#e67e22;">X</span></p>
+    <h1 style="font-size:26px; font-weight:900; margin-bottom:14px;">We'll be right back!</h1>
+    <p style="font-size:15px; color:rgba(255,255,255,0.6); max-width:400px; line-height:1.6;">Our online ordering system is temporarily down for maintenance. Please check back shortly, or call us directly to place your order.</p>
+    <p style="font-size:14px; color:#e67e22; font-weight:700; margin-top:16px;">📞 0300-145-0301 (Multan) &nbsp;|&nbsp; 0300-345-0301 (Bahawalpur)</p>
+</div>
+
 <div id="secret-pwa-button" onclick="handleSecretClick()"></div>
 
 <!-- Hidden print container -->
@@ -2397,6 +2406,14 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+(function(){
+  // ═══ MAINTENANCE MODE — set to true to take site offline ═══
+  const MAINTENANCE_MODE = true;
+  if (MAINTENANCE_MODE) {
+      document.getElementById('maintenance-screen').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      return;
+  }
   // ══════════════════════════════════════════
     // BRANCH CONFIGURATION
     // ══════════════════════════════════════════
@@ -6929,6 +6946,7 @@ setTimeout(() => {
         }
     });
 }, 1000);
+})();
 </script>
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
