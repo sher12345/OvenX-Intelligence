@@ -2677,7 +2677,7 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 16;
 const TAX_RATE_CASH = 0.16;
-const TAX_RATE_CARD = 0.05;
+const TAX_RATE_CARD = 0.08;
 const TAX_RATE_ONLINE = 0.08;
 function getTaxRate() { 
     const branchId = (activeBranch || BRANCH_CONFIG.MULTAN).id;
@@ -4447,7 +4447,7 @@ function showPermissionDeniedHelp() {
                 
                 <!-- Only show Card if NOT a Delivery order -->
                 ${orderType !== 'Delivery' ? `
-                    <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">5% Tax</small></button>
+                    <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">8% Tax</small></button>
                 ` : ''}
                 
                 <!-- Always show Online -->
