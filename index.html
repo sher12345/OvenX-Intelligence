@@ -2689,36 +2689,79 @@ loadCustomItemsIntoMenu();
     // Deletes any kitchen_orders left over from before today's 2AM close,
     // so nothing carries over and blinks red the next day. Runs once per day.
     async function autoClearStaleOrders() {
-        if (!sb) return;
-        const now = new Date();
-        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const pkt = new Date(utcMs + (5 * 60 * 60000));
+    if (!sb) return;
+    const now = new Date();
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const pkt = new Date(utcMs + (5 * 60 * 60000));
 
-        // Today's 2 AM PKT cutoff, in real UTC time
-        const cutoffPkt = new Date(pkt.getFullYear(), pkt.getMonth(), pkt.getDate(), 2, 0, 0, 0);
-        const cutoffUtcMs = cutoffPkt.getTime() - (5 * 60 * 60000) - (now.getTimezoneOffset() * 60000);
-        const cutoffDate = new Date(cutoffUtcMs);
+    // Today's 2 AM PKT cutoff, in real UTC time
+    const cutoffPkt = new Date(pkt.getFullYear(), pkt.getMonth(), pkt.getDate(), 2, 0, 0, 0);
+    const cutoffUtcMs = cutoffPkt.getTime() - (5 * 60 * 60000) - (now.getTimezoneOffset() * 60000);
+    const cutoffDate = new Date(cutoffUtcMs);
 
-        // Only run once we're actually past today's 2AM cutoff
-        if (pkt.getTime() < cutoffPkt.getTime()) return;
+    // Only run once we're actually past today's 2AM cutoff
+    if (pkt.getTime() < cutoffPkt.getTime()) return;
 
-        const todayKey = pkt.toISOString().slice(0, 10); // YYYY-MM-DD in PKT terms
-        if (localStorage.getItem('ovenx_autoclear_date') === todayKey) return; // already ran today
+    const todayKey = pkt.toISOString().slice(0, 10); // YYYY-MM-DD in PKT terms
+    if (localStorage.getItem('ovenx_autoclear_date') === todayKey) return; // already ran today
 
-        try {
-            const { error } = await sb
-                .from('kitchen_orders')
-                .delete()
-                .lt('created_at', cutoffDate.toISOString());
-            if (!error) {
-                localStorage.setItem('ovenx_autoclear_date', todayKey);
-                console.log('OvenX: cleared stale orders from before', cutoffDate.toISOString());
-            } else {
-                console.error('OvenX autoclear error:', error);
+    try {
+        // 1. Fetch stale orders first
+        const { data: staleOrders, error: fetchError } = await sb
+            .from('kitchen_orders')
+            .select('*')
+            .lt('created_at', cutoffDate.toISOString());
+
+        if (fetchError) throw fetchError;
+
+        if (staleOrders && staleOrders.length > 0) {
+            // 2. Copy them into the permanent archive table
+            const archiveRows = staleOrders.map(o => ({
+                id: o.id,
+                type: o.type,
+                location: o.location,
+                items: o.items,
+                status: o.status,
+                subtotal: o.subtotal,
+                delivery_fee: o.delivery_fee,
+                discount: o.discount,
+                discount_claimed: o.discount_claimed,
+                tax: o.tax,
+                payment_method: o.payment_method,
+                branch: o.branch,
+                latitude: o.latitude,
+                longitude: o.longitude,
+                customer_name: o.customer_name,
+                phone: o.phone,
+                rider: o.rider,
+                created_at: o.created_at
+            }));
+
+            const { error: archiveError } = await sb
+                .from('kitchen_orders_archive')
+                .upsert(archiveRows, { onConflict: 'id' });
+
+            if (archiveError) {
+                console.error('OvenX archive error:', archiveError);
+                return; // don't delete if archiving failed — don't want to lose data
             }
-        } catch(e) { console.error('OvenX autoclear exception:', e); }
-    }
-    autoClearStaleOrders();
+        }
+
+        // 3. Now safe to delete from the live kitchen panel table
+        const { error: deleteError } = await sb
+            .from('kitchen_orders')
+            .delete()
+            .lt('created_at', cutoffDate.toISOString());
+
+        if (!deleteError) {
+            localStorage.setItem('ovenx_autoclear_date', todayKey);
+            console.log('OvenX: archived + cleared', (staleOrders||[]).length, 'orders from before', cutoffDate.toISOString());
+        } else {
+            console.error('OvenX autoclear delete error:', deleteError);
+        }
+    } catch(e) { console.error('OvenX autoclear exception:', e); }
+}
+autoClearStaleOrders();
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
         const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
@@ -6672,14 +6715,21 @@ function setAuditBranchFilter(f) {
 
 async function loadAuditReportData() {
     if (!sb) { auditReportOrders = []; renderAuditReport(); return; }
+
     // Voided orders (adminVoidOrder) are hard-deleted from kitchen_orders,
     // so anything still in this table is automatically "not voided".
     // We also skip PENDING (not yet accepted by kitchen).
-    const { data, error } = await sb.from('kitchen_orders')
-        .select('*')
-        .neq('status', 'PENDING')
-        .order('created_at', { ascending: false });
-    auditReportOrders = (!error && data) ? data : [];
+    const [liveRes, archiveRes] = await Promise.all([
+        sb.from('kitchen_orders').select('*').neq('status', 'PENDING'),
+        sb.from('kitchen_orders_archive').select('*')
+    ]);
+
+    const liveOrders = (!liveRes.error && liveRes.data) ? liveRes.data.map(o => ({ ...o, _source: 'live' })) : [];
+    const archivedOrders = (!archiveRes.error && archiveRes.data) ? archiveRes.data.map(o => ({ ...o, _source: 'archive' })) : [];
+
+    auditReportOrders = [...liveOrders, ...archivedOrders]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
     renderAuditReport();
 }
 
@@ -6854,8 +6904,10 @@ function renderAuditReport() {
 async function deleteAuditOrder(id) {
     if (!confirm("Delete this order permanently?\n\nThis removes it from Supabase and it cannot be recovered.")) return;
     playClick('thud');
+    const order = auditReportOrders.find(o => o.id === id);
+    const table = (order && order._source === 'archive') ? 'kitchen_orders_archive' : 'kitchen_orders';
     if (sb) {
-        const { error } = await sb.from('kitchen_orders').delete().eq('id', id);
+        const { error } = await sb.from(table).delete().eq('id', id);
         if (error) { alert("Error deleting order. Try again."); return; }
     }
     auditReportOrders = auditReportOrders.filter(o => o.id !== id);
