@@ -1481,6 +1481,9 @@ body {
     <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
         ⚙️ ADMIN PANEL
     </button>
+    <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #16a34a 0%, #0d7a3a 100%); color: white; box-shadow: 0 6px 0px #0a5c2c;" onclick="openAuditReportLogin()">
+        📊 AUDIT REPORT
+    </button>
 </div>
     </div>
 </div>
@@ -1995,6 +1998,53 @@ body {
     </div>
 </div>
 
+<!-- AUDIT REPORT OVERLAY -->
+<div id="audit-report-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:9600;backdrop-filter:blur(10px);">
+    <div class="kitchen-modal" style="max-width:1000px;">
+        <div class="kitchen-header">
+            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                <h2 style="margin:0; color:#16a34a; font-weight:900;">📊 TAX AUDIT REPORT</h2>
+                <div class="kbranch-tabs">
+                    <button class="kbranch-tab active-all" id="audit-kb-ALL" onclick="setAuditBranchFilter('ALL')">ALL BRANCHES</button>
+                    <button class="kbranch-tab" id="audit-kb-MULTAN" onclick="setAuditBranchFilter('MULTAN')">🍕 MULTAN</button>
+                    <button class="kbranch-tab" id="audit-kb-BWP" onclick="setAuditBranchFilter('BWP')">🥩 BWP</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadAuditCSV()">DOWNLOAD CSV 📥</button>
+                <button class="header-back-btn btn-3d" onclick="closeAuditReport()">EXIT</button>
+            </div>
+        </div>
+        <div style="padding:20px; overflow-y:auto; flex:1; background:#f9f9f9;">
+            <p style="font-size:12px; color:#888; margin:0 0 15px;">ℹ️ Fully voided orders are excluded automatically (they're removed from the system). Only confirmed orders (not Pending) are counted.</p>
+
+<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px; align-items:center;">
+    <input type="text" id="audit-search" class="adm-search" placeholder="🔍 Search location, name, phone..." oninput="applyAuditFilters()" style="flex:2; min-width:220px;">
+    <select id="audit-type-filter" class="adm-select" onchange="applyAuditFilters()">
+        <option value="all">All Types</option>
+        <option value="Dine-In">Dine-In</option>
+        <option value="Takeaway">Takeaway</option>
+        <option value="Delivery">Delivery</option>
+    </select>
+    <select id="audit-payment-filter" class="adm-select" onchange="applyAuditFilters()">
+        <option value="all">All Payments</option>
+        <option value="Cash">Cash</option>
+        <option value="Card">Card</option>
+        <option value="Online">Online</option>
+    </select>
+    <input type="datetime-local" id="audit-date-from" class="adm-search" style="max-width:190px;" onchange="applyAuditFilters()">
+<span style="color:#999; font-size:12px;">to</span>
+<input type="datetime-local" id="audit-date-to" class="adm-search" style="max-width:190px;" onchange="applyAuditFilters()">
+<button class="adm-batch-btn org" id="audit-dup-toggle" onclick="toggleDuplicateFilter()">🔁 Show Duplicates Only</button>
+<span id="audit-dup-count" style="font-size:11px; color:#e67e22; font-weight:800;"></span>
+<button class="adm-batch-btn red" onclick="resetAuditFilters()">✕ Clear Filters</button>
+</div>
+
+<div id="audit-report-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin-bottom:20px;"></div>
+            <div id="audit-report-table-wrap" style="overflow-x:auto; background:white; border-radius:15px; padding:5px;"></div>
+        </div>
+    </div>
+</div>
 
 <!-- ADMIN PANEL OVERLAY -->
 <div id="admin-panel-overlay">
@@ -2677,7 +2727,7 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
     const PRICE_PER_KM = 16;
 const TAX_RATE_CASH = 0.16;
-const TAX_RATE_CARD = 0.08;
+const TAX_RATE_CARD = 0.05;
 const TAX_RATE_ONLINE = 0.08;
 function getTaxRate() { 
     const branchId = (activeBranch || BRANCH_CONFIG.MULTAN).id;
@@ -4447,7 +4497,7 @@ function showPermissionDeniedHelp() {
                 
                 <!-- Only show Card if NOT a Delivery order -->
                 ${orderType !== 'Delivery' ? `
-                    <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">8% Tax</small></button>
+                    <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Card' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Card' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Card' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Card')">💳 CARD<br><small style="font-weight:600;">5% Tax</small></button>
                 ` : ''}
                 
                 <!-- Always show Online -->
@@ -6548,7 +6598,296 @@ function getItemPrice(item) {
   if (r.prices._flat) return r.prices._flat;
   return item.price;
 }
-        
+// ══════════════════════════════════════════
+// TAX AUDIT REPORT
+// ══════════════════════════════════════════
+let auditReportOrders = [];
+let auditBranchFilter = 'ALL';
+let auditFilters = { search:'', type:'all', payment:'all', dateFrom:'', dateTo:'', dupOnly:false };
+
+function toggleDuplicateFilter() {
+    auditFilters.dupOnly = !auditFilters.dupOnly;
+    const btn = document.getElementById('audit-dup-toggle');
+    btn.style.background = auditFilters.dupOnly ? '#e67e22' : '';
+    btn.style.color = auditFilters.dupOnly ? 'white' : '';
+    btn.innerText = auditFilters.dupOnly ? '🔁 Showing Duplicates ✕' : '🔁 Show Duplicates Only';
+    renderAuditReport();
+}
+
+function applyAuditFilters() {
+    auditFilters.search   = document.getElementById('audit-search').value.toLowerCase();
+    auditFilters.type     = document.getElementById('audit-type-filter').value;
+    auditFilters.payment  = document.getElementById('audit-payment-filter').value;
+    auditFilters.dateFrom = document.getElementById('audit-date-from').value;
+    auditFilters.dateTo   = document.getElementById('audit-date-to').value;
+    renderAuditReport();
+}
+
+function resetAuditFilters() {
+    document.getElementById('audit-search').value = '';
+    document.getElementById('audit-type-filter').value = 'all';
+    document.getElementById('audit-payment-filter').value = 'all';
+    document.getElementById('audit-date-from').value = '';
+    document.getElementById('audit-date-to').value = '';
+    auditFilters = { search:'', type:'all', payment:'all', dateFrom:'', dateTo:'', dupOnly:false };
+    const btn = document.getElementById('audit-dup-toggle');
+    btn.style.background = ''; btn.style.color = '';
+    btn.innerText = '🔁 Show Duplicates Only';
+    document.getElementById('audit-dup-count').innerText = '';
+    renderAuditReport();
+}
+
+function openAuditReportLogin() {
+    playClick('pop');
+    const pass = prompt("🔒 Enter Audit Code:");
+    if (pass === "7530" || pass === "audit123") {
+        openAuditReport();
+    } else if (pass !== null) {
+        alert("Wrong Code!");
+    }
+}
+
+async function openAuditReport() {
+    playClick('thud');
+    document.getElementById('audit-report-overlay').style.display = 'flex';
+    setScrollLock(true);
+    document.getElementById('audit-report-table-wrap').innerHTML = '<p style="text-align:center;padding:30px;color:#999;">Loading...</p>';
+    await loadAuditReportData();
+}
+
+function closeAuditReport() {
+    document.getElementById('audit-report-overlay').style.display = 'none';
+    setScrollLock(false);
+}
+
+function setAuditBranchFilter(f) {
+    playClick('pop');
+    auditBranchFilter = f;
+    document.querySelectorAll('#audit-report-overlay .kbranch-tab').forEach(t => t.className = 'kbranch-tab');
+    if (f === 'ALL') document.getElementById('audit-kb-ALL').classList.add('active-all');
+    else if (f === 'MULTAN') document.getElementById('audit-kb-MULTAN').classList.add('active-multan');
+    else if (f === 'BWP') document.getElementById('audit-kb-BWP').classList.add('active-bwp');
+    renderAuditReport();
+}
+
+async function loadAuditReportData() {
+    if (!sb) { auditReportOrders = []; renderAuditReport(); return; }
+    // Voided orders (adminVoidOrder) are hard-deleted from kitchen_orders,
+    // so anything still in this table is automatically "not voided".
+    // We also skip PENDING (not yet accepted by kitchen).
+    const { data, error } = await sb.from('kitchen_orders')
+        .select('*')
+        .neq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+    auditReportOrders = (!error && data) ? data : [];
+    renderAuditReport();
+}
+
+function normalizeLoc(loc) {
+    return (loc || '').trim().toLowerCase();
+}
+
+function normalizeLoc(loc) {
+    return (loc || '').trim().toLowerCase();
+}
+function normalizePhone(p) {
+    return (p || '').replace(/[\s\-\(\)]/g, '').toLowerCase();
+}
+
+// Returns a Map: order.id -> reason string (if flagged as duplicate), for the given list
+function detectDuplicates(list) {
+    const flags = new Map();
+    const TEN_MIN = 10 * 60 * 1000;
+
+    // ── DELIVERY: same address = duplicate ──
+    const deliveryGroups = {};
+    list.filter(o => o.type === 'Delivery').forEach(o => {
+        const key = normalizeLoc(o.location);
+        if (!key) return;
+        (deliveryGroups[key] = deliveryGroups[key] || []).push(o);
+    });
+    Object.values(deliveryGroups).forEach(group => {
+        if (group.length > 1) group.forEach(o => flags.set(o.id, `📍 Same address (${group.length}x)`));
+    });
+
+    // ── TAKEAWAY: same name+phone = duplicate ──
+    const takeawayGroups = {};
+    list.filter(o => o.type === 'Takeaway').forEach(o => {
+        const key = normalizePhone(o.phone) || (o.customer_name||'').trim().toLowerCase();
+        if (!key) return; // no name/phone captured (e.g. Car Dine w/o proper fields) — skip
+        (takeawayGroups[key] = takeawayGroups[key] || []).push(o);
+    });
+    Object.values(takeawayGroups).forEach(group => {
+        if (group.length > 1) group.forEach(o => flags.set(o.id, `👤 Same customer (${group.length}x)`));
+    });
+
+    // ── DINE-IN: same table within 10 min = duplicate/repeat ──
+    const tableGroups = {};
+    list.filter(o => o.type === 'Dine-In').forEach(o => {
+        const key = normalizeLoc(o.location);
+        if (!key) return;
+        (tableGroups[key] = tableGroups[key] || []).push(o);
+    });
+    Object.values(tableGroups).forEach(group => {
+        const sorted = [...group].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        for (let i = 0; i < sorted.length; i++) {
+            for (let j = i+1; j < sorted.length; j++) {
+                const diff = Math.abs(new Date(sorted[j].created_at) - new Date(sorted[i].created_at));
+                if (diff > TEN_MIN) break; // sorted, so no later pair will be closer
+                const samePrice = (sorted[i].subtotal||0) === (sorted[j].subtotal||0);
+                const reason = samePrice
+                    ? `🪑 Same table, same price, within 10min`
+                    : `🪑 Same table, repeat order within 10min`;
+                flags.set(sorted[i].id, reason);
+                flags.set(sorted[j].id, reason);
+            }
+        }
+    });
+
+    return flags;
+}
+
+function getAuditFiltered() {
+    let list = auditBranchFilter === 'ALL'
+        ? auditReportOrders
+        : auditReportOrders.filter(o => (o.branch || 'MULTAN') === auditBranchFilter);
+
+    if (auditFilters.search) {
+        const s = auditFilters.search;
+        list = list.filter(o =>
+            (o.location||'').toLowerCase().includes(s) ||
+            (o.customer_name||'').toLowerCase().includes(s) ||
+            (o.phone||'').toLowerCase().includes(s)
+        );
+    }
+    if (auditFilters.type !== 'all') {
+        list = list.filter(o => o.type === auditFilters.type);
+    }
+    if (auditFilters.payment !== 'all') {
+        list = list.filter(o => (o.payment_method || 'Cash') === auditFilters.payment);
+    }
+    if (auditFilters.dateFrom) {
+        const from = new Date(auditFilters.dateFrom);
+        list = list.filter(o => new Date(o.created_at) >= from);
+    }
+    if (auditFilters.dateTo) {
+        const to = new Date(auditFilters.dateTo);
+        list = list.filter(o => new Date(o.created_at) <= to);
+    }
+
+    // Detect duplicates within the currently filtered set
+    const dupFlags = detectDuplicates(list);
+    window._auditDupFlags = dupFlags; // used by renderAuditReport for badges
+
+    const badge = document.getElementById('audit-dup-count');
+    if (badge) badge.innerText = dupFlags.size > 0 ? `${dupFlags.size} flagged order(s)` : '';
+
+    if (auditFilters.dupOnly) {
+        list = list.filter(o => dupFlags.has(o.id));
+    }
+
+    return list;
+}
+
+function renderAuditReport() {
+    const filtered = getAuditFiltered();
+
+    const totalTax = filtered.reduce((s, o) => s + (o.tax || 0), 0);
+    const totalSubtotal = filtered.reduce((s, o) => s + (o.subtotal || 0), 0);
+    const totalDelivery = filtered.reduce((s, o) => s + (o.delivery_fee || 0), 0);
+    const totalDiscount = filtered.reduce((s, o) => s + (o.discount || 0), 0);
+    const grandTotal = totalSubtotal + totalTax + totalDelivery;
+
+    const cashTax = filtered.filter(o => (o.payment_method || 'Cash') === 'Cash').reduce((s,o) => s + (o.tax||0), 0);
+    const cardTax = filtered.filter(o => o.payment_method === 'Card').reduce((s,o) => s + (o.tax||0), 0);
+    const onlineTax = filtered.filter(o => o.payment_method === 'Online').reduce((s,o) => s + (o.tax||0), 0);
+
+    document.getElementById('audit-report-stats').innerHTML = `
+        <div class="adm-stat red"><div class="adm-stat-val">Rs ${totalTax}</div><div class="adm-stat-lbl">Total Tax Collected</div></div>
+        <div class="adm-stat orange"><div class="adm-stat-val">${filtered.length}</div><div class="adm-stat-lbl">Total Orders</div></div>
+        <div class="adm-stat green"><div class="adm-stat-val">Rs ${totalSubtotal}</div><div class="adm-stat-lbl">Total Shop Sales</div></div>
+        <div class="adm-stat gold"><div class="adm-stat-val">Rs ${grandTotal}</div><div class="adm-stat-lbl">Grand Total Collected</div></div>
+        <div class="adm-stat red"><div class="adm-stat-val">Rs ${cashTax}</div><div class="adm-stat-lbl">Cash Tax (16%)</div></div>
+        <div class="adm-stat orange"><div class="adm-stat-val">Rs ${cardTax}</div><div class="adm-stat-lbl">Card Tax (5%)</div></div>
+        <div class="adm-stat green"><div class="adm-stat-val">Rs ${onlineTax}</div><div class="adm-stat-lbl">Online Tax (8%)</div></div>
+        <div class="adm-stat gold"><div class="adm-stat-val">Rs ${totalDiscount}</div><div class="adm-stat-lbl">Discounts Given</div></div>
+    `;
+
+        const dupFlags = window._auditDupFlags || new Map();
+
+    const rows = filtered.map(o => {
+        const dt = new Date(o.created_at).toLocaleString('en-PK', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const total = (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0);
+        const dupReason = dupFlags.get(o.id);
+        return `<tr id="audit-row-${o.id}" style="${dupReason ? 'background:#fff7ed;' : ''}">
+            <td style="padding:8px;font-size:12px;">${dt}</td>
+            <td style="padding:8px;font-size:12px;">${o.branch || 'MULTAN'}</td>
+            <td style="padding:8px;font-size:12px;">${o.type}</td>
+            <td style="padding:8px;font-size:12px;">${o.location}${o.customer_name ? '<br><span style="color:#999;font-size:11px;">'+o.customer_name+'</span>' : ''}${o.phone ? '<br><span style="color:#999;font-size:11px;">'+o.phone+'</span>' : ''}</td>
+            <td style="padding:8px;font-size:12px;">${o.payment_method || 'Cash'}</td>
+            <td style="padding:8px;font-size:12px;">Rs ${o.subtotal || 0}</td>
+            <td style="padding:8px;font-size:12px;font-weight:900;color:#c0392b;">Rs ${o.tax || 0}</td>
+            <td style="padding:8px;font-size:12px;">Rs ${o.delivery_fee || 0}</td>
+            <td style="padding:8px;font-size:12px;font-weight:900;">Rs ${total}</td>
+            <td style="padding:8px;font-size:11px;">${dupReason ? `<span style="background:#fed7aa;color:#9a3412;padding:3px 8px;border-radius:8px;font-weight:800;white-space:nowrap;">${dupReason}</span>` : ''}</td>
+            <td style="padding:8px;font-size:12px;">
+                <button onclick="deleteAuditOrder('${o.id}')" style="background:#fff5f5;color:#c0392b;border:1.5px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">🗑️ DELETE</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('audit-report-table-wrap').innerHTML = `
+        <table style="width:100%; border-collapse:collapse;">
+            <thead><tr style="background:#f0f0f0; text-align:left;">
+                <th style="padding:8px;font-size:11px;">Date</th><th style="padding:8px;font-size:11px;">Branch</th>
+                <th style="padding:8px;font-size:11px;">Type</th><th style="padding:8px;font-size:11px;">Location</th>
+                <th style="padding:8px;font-size:11px;">Payment</th><th style="padding:8px;font-size:11px;">Subtotal</th>
+                <th style="padding:8px;font-size:11px;">Tax</th><th style="padding:8px;font-size:11px;">Delivery</th>
+                <th style="padding:8px;font-size:11px;">Total</th><th style="padding:8px;font-size:11px;">Flag</th>
+                <th style="padding:8px;font-size:11px;">Action</th>
+            </tr></thead>
+            <tbody>${rows || '<tr><td colspan="11" style="text-align:center;padding:20px;color:#999;">No orders found</td></tr>'}</tbody>
+        </table>
+    `;
+}
+
+async function deleteAuditOrder(id) {
+    if (!confirm("Delete this order permanently?\n\nThis removes it from Supabase and it cannot be recovered.")) return;
+    playClick('thud');
+    if (sb) {
+        const { error } = await sb.from('kitchen_orders').delete().eq('id', id);
+        if (error) { alert("Error deleting order. Try again."); return; }
+    }
+    auditReportOrders = auditReportOrders.filter(o => o.id !== id);
+    renderAuditReport();
+    admShowToast('🗑️', 'Order deleted', 'success');
+}
+
+function downloadAuditCSV() {
+    const filtered = getAuditFiltered();
+    if (filtered.length === 0) { alert("No data to export!"); return; }
+
+    let csv = "Date,Branch,Type,Location,Payment Method,Subtotal,Tax,Delivery Fee,Discount,Grand Total,Status\n";
+    filtered.forEach(o => {
+        const dt = new Date(o.created_at).toLocaleString('en-PK');
+        const total = (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0);
+        const loc = (o.location || '').replace(/"/g, "'");
+        csv += `"${dt}","${o.branch||'MULTAN'}","${o.type}","${loc}","${o.payment_method||'Cash'}",${o.subtotal||0},${o.tax||0},${o.delivery_fee||0},${o.discount||0},${total},${o.status}\n`;
+    });
+
+    const totalTax = filtered.reduce((s,o)=>s+(o.tax||0),0);
+    csv += `\n,,,,,,TOTAL TAX COLLECTED:,${totalTax},,,\n`;
+
+    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csv);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `OvenX_Tax_Audit_${auditBranchFilter}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    playClick('thud');
+}
+
 applyAdminOverrides();
 setupRealtimeNotifications();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
@@ -6615,6 +6954,7 @@ initLandingPage();
             { id: 'loyalty-setup-overlay', close: () => { document.getElementById('loyalty-setup-overlay').style.display = 'none'; setScrollLock(false); } },
             { id: 'admin-login-overlay', close: closeAdminLogin },
             { id: 'kitchen-panel-overlay', close: closeKitchenPanel },
+            { id: 'audit-report-overlay', close: closeAuditReport },
             { id: 'flavor-overlay', close: closeModals },
             { id: 'size-overlay', close: closeModals },
             { id: 'modal-overlay', close: closeModals },
