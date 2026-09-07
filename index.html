@@ -2045,10 +2045,6 @@ body {
                 </button>
             </div>
         </div>
-        <div style="padding:15px; border-top:1px solid #eee; display:flex; gap:10px;">
-            <button class="next-btn btn-3d" style="background:#444; flex:1;" onclick="clearReadyOrders()">CLEAR READY (DINE-IN)</button>
-            <button id="clear-del-btn" class="next-btn btn-3d" style="background:var(--red); display:none; flex:1;" onclick="clearDeliveriesWithPassword()">CLEAR ALL DELIVERIES</button>
-        </div>
     </div>
 </div>
 
@@ -4684,14 +4680,14 @@ async function clearDeliveriesWithPassword() {
     
     document.getElementById('rider-audit-sidebar').style.display = 'none';
     document.getElementById('delivery-history-sidebar').style.display = 'none';
-    document.getElementById('clear-del-btn').style.display = 'none';
+    
     
     if(f === 'ALL') { 
         document.getElementById('k-tab-all').classList.add('active'); 
     } else if (f === 'DELIVERY') { 
         document.getElementById('k-tab-del').classList.add('active'); 
         document.getElementById('rider-audit-sidebar').style.display = 'flex'; 
-        document.getElementById('clear-del-btn').style.display = 'block'; 
+         
     } else if (f === 'CALC_HISTORY') {
         document.getElementById('k-tab-calc').classList.add('active');
         document.getElementById('delivery-history-sidebar').style.display = 'flex';
