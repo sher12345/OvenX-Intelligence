@@ -2818,6 +2818,7 @@ loadCustomItemsIntoMenu();
 autoClearStaleOrders();
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
+let orderSubmitting = false;
     let manCart = [], manPaymentMethod = "Cash", _manPickerFlat = [];
     let manPendingItem = null, manFlavorChoices = [], manFlavorStep = 0, manCustQty = 1;
         const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
@@ -3896,13 +3897,16 @@ function clearTracking() {
 
     function addUpsellToCart(name, price) { playClick('thud'); cart.push({ name: name, price: price, qty: 1, note: "Smart Add-on" }); updateCartBar(); }
 
-function validateAndSubmitOrder() {
+function validateAndSubmitOrder(btnEl) {
+    if (orderSubmitting) return; // block double-clicks / rapid taps
     if (orderType === 'Takeaway') {
         if (window.carPlateNumber) {
+            lockSubmitButton(btnEl);
             finalSubmitOrder();
             return;
         }
         if (window.takeawayCustomerName && window.takeawayCustomerPhone) {
+            lockSubmitButton(btnEl);
             finalSubmitOrder();
             return;
         }
@@ -3913,7 +3917,21 @@ function validateAndSubmitOrder() {
         if (nameEl) window.takeawayCustomerName = nameEl.value.trim();
         if (phoneEl) window.takeawayCustomerPhone = phoneEl.value.trim();
     }
+    lockSubmitButton(btnEl);
     finalSubmitOrder();
+}
+
+function lockSubmitButton(btnEl) {
+    orderSubmitting = true;
+    if (!btnEl) btnEl = document.getElementById('submit-order-btn');
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.style.background = '#aaa';
+        btnEl.style.boxShadow = 'none';
+        btnEl.style.cursor = 'not-allowed';
+        btnEl.style.opacity = '0.85';
+        btnEl.innerHTML = '⏳ Opening WhatsApp...';
+    }
 }
         async function finalSubmitOrder() {
     playClick('thud'); 
@@ -4507,6 +4525,7 @@ function showPermissionDeniedHelp() {
 
     function renderFinalSummary(fee) {
     chkStep = 3; 
+    orderSubmitting = false;
     delCharge = parseFloat(fee) || 0; 
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
@@ -4610,7 +4629,7 @@ function showPermissionDeniedHelp() {
             ${delCharge > 0 ? '<br>Delivery: Rs '+delCharge : ''}
             <br><hr>Total: <b>Rs ${grand}</b>
         </div>
-        <button onclick="validateAndSubmitOrder()" class="confirm-btn btn-3d">ORDER VIA WHATSAPP 📱</button>
+        <button id="submit-order-btn" onclick="validateAndSubmitOrder(this)" class="confirm-btn btn-3d">ORDER VIA WHATSAPP 📱</button>
     `;
 }
 
