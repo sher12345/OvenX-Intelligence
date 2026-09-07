@@ -453,6 +453,7 @@ body {
         .btn-recall      { background: #0d6efd; }
         .btn-table       { background: #fd7e14; }
         .btn-void-order  { background: #dc3545; }
+        .btn-discount    { background: #16a34a; }
         .btn-print-front { background: #198754; box-shadow: 0 3px 0 #115c3a; }
         .btn-print-kitchen { background: #6f42c1; box-shadow: 0 3px 0 #4e2e88; }
         .btn-send-cc {
@@ -1518,9 +1519,9 @@ body {
 
 <!-- MANUAL ORDER MODAL -->
 <div id="manual-order-overlay">
-    <div class="modal">
-        <h2 style="color:var(--red); font-weight:900;">Manual Order 📝</h2>
-        <div style="background:#f0f0f0; padding:8px 15px; border-radius:10px; margin-bottom:10px; font-size:12px; font-weight:900; color:#555;">
+    <div class="modal" style="max-width:640px; text-align:left;">
+        <h2 style="color:var(--red); font-weight:900; text-align:center;">Manual Order 📝</h2>
+        <div style="background:#f0f0f0; padding:8px 15px; border-radius:10px; margin-bottom:10px; font-size:12px; font-weight:900; color:#555; text-align:center;">
             Branch: <span id="man-branch-tag" style="color:var(--red);">MULTAN</span>
         </div>
         <select id="man-type" class="big-input">
@@ -1529,13 +1530,66 @@ body {
             <option value="Delivery">Delivery</option>
         </select>
         <input type="text" id="man-loc" placeholder="Table # or Address" class="big-input">
-        <textarea id="man-items" placeholder="Items List (e.g. 1x Pizza, 2x Zinger)" class="big-input" style="height:100px;"></textarea>
-        <div style="display:flex; gap:10px;">
-           <input type="number" id="man-sub" placeholder="Subtotal" class="big-input">
-           <input type="number" id="man-fee" placeholder="Del. Fee" class="big-input">
+        <input type="text" id="man-cust-name" placeholder="👤 Customer Name (optional)" class="big-input">
+        <input type="text" id="man-cust-phone" placeholder="📞 Phone (optional)" class="big-input">
+
+        <div style="margin-top:15px; border:2px solid #f0ece8; border-radius:20px; padding:15px; background:#faf8f6;">
+            <input type="text" id="man-item-search" placeholder="🔍 Search menu items..." class="big-input" style="margin-top:0;" oninput="renderManItemPicker(this.value)">
+            <div id="man-item-picker" style="max-height:220px; overflow-y:auto; margin-top:10px;"></div>
         </div>
+
+        <div style="margin-top:15px;">
+            <div style="font-weight:900; color:#888; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Order Items</div>
+            <div id="man-cart-list"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:15px;">
+           <input type="number" id="man-discount-pct" placeholder="Discount %" class="big-input" style="margin-top:0;" oninput="renderManSummary()">
+           <input type="number" id="man-fee" placeholder="Del. Fee" class="big-input" style="margin-top:0;" oninput="renderManSummary()">
+        </div>
+
+        <div style="margin-top:15px;">
+            <div style="font-weight:900; color:#888; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Payment Method (PRA Tax)</div>
+            <div style="display:flex; gap:8px;" id="man-payment-buttons"></div>
+        </div>
+
+        <div id="man-summary-box" style="background:#fff9e6; padding:15px; border-radius:18px; margin-top:15px; border:1px solid #ffe082; font-size:14px; line-height:1.8;"></div>
+
         <button class="confirm-btn btn-3d" style="background:var(--red);" onclick="saveManualOrder()">SAVE TO KITCHEN</button>
-        <button onclick="document.getElementById('manual-order-overlay').style.display='none'; setScrollLock(false);" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold;">CANCEL</button>
+        <button onclick="closeManualOrderModal()" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold; width:100%;">CANCEL</button>
+    </div>
+</div>
+
+<!-- MANUAL ORDER ITEM CUSTOMIZE OVERLAY -->
+<div id="man-customize-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index:10000; backdrop-filter:blur(8px);">
+    <div class="modal" style="max-width:420px; text-align:left;">
+        <h3 id="man-cust-title" style="color:var(--red); font-weight:900; margin-top:0; text-align:center;"></h3>
+        <p style="font-weight:bold; color:#777; text-align:center;">Quantity</p>
+        <div class="qty-btns" id="man-cust-qty-btns"></div>
+        <div style="margin-top:10px;">
+            <label style="display:flex; align-items:center; gap:10px; background:#f9f9f9; padding:10px 15px; border-radius:14px; margin-bottom:8px; cursor:pointer; font-weight:700; font-size:13px;">
+                <input type="checkbox" id="man-cust-cheese" style="width:18px;height:18px;"> 🧀 Extra Cheese <span style="margin-left:auto; color:var(--orange); font-weight:900;">+Rs 100</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:10px; background:#f9f9f9; padding:10px 15px; border-radius:14px; margin-bottom:8px; cursor:pointer; font-weight:700; font-size:13px;">
+                <input type="checkbox" id="man-cust-toppings" style="width:18px;height:18px;"> 🌶️ Extra Toppings <span style="margin-left:auto; color:var(--orange); font-weight:900;">+Rs 100</span>
+            </label>
+        </div>
+        <p style="font-weight:bold; color:#777; margin-top:15px; margin-bottom:5px;">Dip Sauce Add-on</p>
+        <select id="man-cust-dip" class="big-input" style="margin-top:0;">
+            <option value="">No Dip Sauce</option>
+            <option value="BBQ">BBQ (+Rs 70)</option>
+            <option value="Peri Peri">Peri Peri (+Rs 70)</option>
+            <option value="Bonfire">Bonfire (+Rs 70)</option>
+            <option value="Special">Special (+Rs 70)</option>
+            <option value="Chipotle">Chipotle (+Rs 70)</option>
+            <option value="Creamy Dreamy">Creamy Dreamy (+Rs 70)</option>
+            <option value="Chili Mayo">Chili Mayo (+Rs 70)</option>
+        </select>
+        <textarea id="man-cust-note" placeholder="Any special notes? (e.g. less spicy, no onions)" class="big-input"></textarea>
+        <div style="margin-top:20px; display:flex; gap:12px;">
+            <button onclick="closeManCustomizeOverlay()" class="btn-3d" style="flex:1; padding:15px; border-radius:20px; background:#eee;">CANCEL</button>
+            <button onclick="manConfirmCustomize()" class="btn-3d" style="flex:1.5; padding:15px; border-radius:20px; background:var(--orange); color:white; font-weight:900; box-shadow:0 5px 0px var(--dark-orange);">ADD TO ORDER</button>
+        </div>
     </div>
 </div>
 
@@ -2764,6 +2818,8 @@ loadCustomItemsIntoMenu();
 autoClearStaleOrders();
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
+    let manCart = [], manPaymentMethod = "Cash", _manPickerFlat = [];
+    let manPendingItem = null, manFlavorChoices = [], manFlavorStep = 0, manCustQty = 1;
         const RIDERS = ["Ashar", "Abdurehman", "Abu Bakar", "Atif", "Ahsan"];
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
@@ -2773,8 +2829,6 @@ const TAX_RATE_CASH = 0.16;
 const TAX_RATE_CARD = 0.08;
 const TAX_RATE_ONLINE = 0.08;
 function getTaxRate() { 
-    const branchId = (activeBranch || BRANCH_CONFIG.MULTAN).id;
-    if (branchId === 'BWP') return 0; // PRA tax disabled for Bahawalpur
     if (paymentMethod === 'Card') return TAX_RATE_CARD;
     if (paymentMethod === 'Online') return TAX_RATE_ONLINE;
     return TAX_RATE_CASH; 
@@ -3877,17 +3931,17 @@ function validateAndSubmitOrder() {
         "fresh lime", "blue lagoon", "mint", "drink", "next cola"
     ];
 
-    let deliveryDiscount = 0;
+    const eligibleTotal = cart
+        .filter(item => {
+            const n = item.name.toLowerCase();
+            if (isDealItem(n)) return false;
+            if (drinkKeywords.some(kw => n.includes(kw))) return false;
+            return true;
+        })
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
 
+    let deliveryDiscount = 0;
     if (orderType === 'Delivery') {
-        const eligibleTotal = cart
-            .filter(item => {
-                const n = item.name.toLowerCase();
-                if (isDealItem(n)) return false;
-                if (drinkKeywords.some(kw => n.includes(kw))) return false;
-                return true;
-            })
-            .reduce((sum, item) => sum + (item.price * item.qty), 0);
         deliveryDiscount = Math.round(eligibleTotal * 0.10);
     }
     
@@ -3921,6 +3975,7 @@ function validateAndSubmitOrder() {
         subtotal: foodTotal + sc - deliveryDiscount,
         delivery_fee: delCharge,
         discount: deliveryDiscount,
+        eligible_subtotal: eligibleTotal,
         discount_claimed: window._discountClaimed === true,
         tax: tax,
         payment_method: paymentMethod,
@@ -4530,7 +4585,6 @@ function showPermissionDeniedHelp() {
         ${summaryHTML}
         ${customerInfoHtml}
 
-       ${(activeBranch||BRANCH_CONFIG.MULTAN).id !== 'BWP' ? `
        <div class="chat-bubble">
             <b>💳 How are you paying?</b>
             <p style="font-size:12px;color:#888;margin:6px 0 10px;">Govt. tax rate depends on payment method (PRA regulation).</p>
@@ -4547,7 +4601,6 @@ function showPermissionDeniedHelp() {
                 <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Online' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Online' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Online' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Online')">🌐 ONLINE<br><small style="font-weight:600;">8% Tax</small></button>
             </div>
         </div>
-       ` : ''}
 
         <div class="chat-bubble">
             Subtotal: Rs ${foodTotal}
@@ -4719,36 +4772,361 @@ async function loadDeliveryHistory() {
         document.body.removeChild(link);
     }
 
-    function openManualOrderModal() { document.getElementById('manual-order-overlay').style.display = 'flex'; setScrollLock(true); }
-    
+    function openManualOrderModal() {
+        manCart = [];
+        manPaymentMethod = "Cash";
+        document.getElementById('man-loc').value = "";
+        document.getElementById('man-cust-name').value = "";
+        document.getElementById('man-cust-phone').value = "";
+        document.getElementById('man-discount-pct').value = "";
+        document.getElementById('man-fee').value = "";
+        document.getElementById('man-item-search').value = "";
+        document.getElementById('man-branch-tag').innerText = (activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase();
+        renderManItemPicker('');
+        renderManCart();
+        renderManPaymentButtons();
+        renderManSummary();
+        document.getElementById('manual-order-overlay').style.display = 'flex';
+        setScrollLock(true);
+    }
+
+    function closeManualOrderModal() {
+        document.getElementById('manual-order-overlay').style.display = 'none';
+        setScrollLock(false);
+    }
+
+    function renderManItemPicker(filterText) {
+        const container = document.getElementById('man-item-picker');
+        const search = (filterText || '').toLowerCase();
+        const isBWP = (activeBranch || BRANCH_CONFIG.MULTAN).id === 'BWP';
+        _manPickerFlat = [];
+        let html = '';
+
+        for (let cat in menuData) {
+            if (cat === "Pan/Premium" || cat === "Rolls 🌯" || cat === "Wraps 🌯") continue;
+            const items = menuData[cat].filter(item => {
+                if (item.bwpOnly && !isBWP) return false;
+                if (!isItemAvailable(item.name)) return false;
+                return item.name.toLowerCase().includes(search) || cat.toLowerCase().includes(search);
+            });
+            if (!items.length) continue;
+            html += `<div style="font-weight:900; font-size:11px; color:var(--orange); text-transform:uppercase; letter-spacing:1px; margin:10px 0 5px;">${cat}</div>`;
+            items.forEach(item => {
+                const price = getItemPrice(item);
+                if (typeof price === 'object') {
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:8px 12px; border-radius:12px; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                        <span style="font-weight:700; font-size:13px; flex:1; min-width:120px;">${item.name}</span>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            ${Object.entries(price).map(([sz,p]) => {
+                                const idx = _manPickerFlat.length;
+                                _manPickerFlat.push({ name: item.name + " (" + sz + ")", price: p });
+                                return `<button onclick="manAddItem(${idx})" style="background:var(--orange); color:white; border:none; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">${sz} Rs${p}</button>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+                } else {
+                    const idx = _manPickerFlat.length;
+                    _manPickerFlat.push({ name: item.name, price: price });
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:8px 12px; border-radius:12px; margin-bottom:6px;">
+                        <span style="font-weight:700; font-size:13px;">${item.name}</span>
+                        <button onclick="manAddItem(${idx})" style="background:var(--orange); color:white; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">+ Rs${price}</button>
+                    </div>`;
+                }
+            });
+        }
+
+        const br = activeBranch || BRANCH_CONFIG.MULTAN;
+        const deals = dealsData.filter(d => {
+            if (d.bwpOnly && !isBWP) return false;
+            if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
+            if (!isItemAvailable(d.name)) return false;
+            return d.name.toLowerCase().includes(search);
+        });
+        if (deals.length) {
+            html += `<div style="font-weight:900; font-size:11px; color:var(--red); text-transform:uppercase; letter-spacing:1px; margin:10px 0 5px;">🔥 Deals</div>`;
+            deals.forEach(deal => {
+                const dp = _overrideMap[deal.name]?.prices?._flat || deal.price;
+                const idx = _manPickerFlat.length;
+                _manPickerFlat.push({ name: deal.name, price: dp, dealRef: deal });
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:8px 12px; border-radius:12px; margin-bottom:6px;">
+                    <div>
+                        <span style="font-weight:700; font-size:13px;">${deal.name}</span>
+                        ${deal.flavorsNeeded ? '<div style="font-size:10px; color:#999;">Flavor selection required</div>' : ''}
+                    </div>
+                    <button onclick="manAddItem(${idx})" style="background:var(--red); color:white; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">+ Rs${dp}</button>
+                </div>`;
+            });
+        }
+
+        container.innerHTML = html || '<p style="text-align:center; color:#999; padding:15px;">No items match.</p>';
+    }
+
+    function manAddItem(idx) {
+        const it = _manPickerFlat[idx];
+        if (!it) return;
+        playClick('pop');
+        manPendingItem = { name: it.name, basePrice: it.price, dealRef: it.dealRef || null };
+        manFlavorChoices = [];
+        manFlavorStep = 0;
+        if (it.dealRef && it.dealRef.flavorsNeeded) {
+            manStartFlavorSelection();
+        } else {
+            openManCustomizeOverlay();
+        }
+    }
+
+    function manStartFlavorSelection() {
+        const deal = manPendingItem.dealRef;
+        const step = deal.flavorsNeeded[manFlavorStep];
+        document.getElementById('flavor-overlay').style.zIndex = '10010';
+        document.getElementById('flavor-title').innerText = "Pick " + step.label;
+        const grid = document.getElementById('flavor-grid');
+        grid.innerHTML = '';
+
+        const isFamilyFeast = deal.name === "Family Feast";
+        if (isFamilyFeast) {
+            const forceCat = step.forceCat;
+            const items = forceCat === "Pan" ? menuData["Pan Pizza 🍕"] : menuData["Premium Pizza 🌟"];
+            const sectionColor = forceCat === "Pan" ? "#f37021" : "#d4af37";
+            const sectionLabel = forceCat === "Pan" ? "🍕 PAN PIZZA" : "🌟 PREMIUM PIZZA";
+            const header = document.createElement('div');
+            header.style.cssText = `grid-column: 1 / -1; background: linear-gradient(135deg, ${sectionColor}, ${sectionColor}cc); color: white; padding: 12px; border-radius: 15px; font-weight: 900; text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;`;
+            header.innerText = sectionLabel;
+            grid.appendChild(header);
+            items.forEach(f => grid.appendChild(manCreateFlavorButton(f, forceCat)));
+        } else {
+            const flavors = menuData[step.cat] || [];
+            flavors.forEach(f => grid.appendChild(manCreateFlavorButton(f, null)));
+        }
+
+        document.getElementById('flavor-overlay').style.display = 'flex';
+        setScrollLock(true);
+    }
+
+    function manCreateFlavorButton(f, categoryLabel) {
+        const b = document.createElement('div');
+        b.style.cssText = `background:#f5f5f5; border:3px solid #eee; border-radius:16px; padding:10px; text-align:center; cursor:pointer; transition:0.2s; display:flex; flex-direction:column; align-items:center; gap:8px; position:relative;`;
+        let imgUrl = imgMap["pizza"];
+        const n = f.name.toLowerCase();
+        for (let key in imgMap) { if (n.includes(key.toLowerCase())) { imgUrl = imgMap[key]; break; } }
+        if (window._adminImgOverrides && window._adminImgOverrides[f.name]) imgUrl = window._adminImgOverrides[f.name];
+        let badge = "";
+        if (categoryLabel) {
+            const badgeColor = categoryLabel === "Pan" ? "#f37021" : categoryLabel === "Premium" ? "#d4af37" : "#e67e22";
+            badge = `<div style="position:absolute; top:6px; right:6px; background:${badgeColor}; color:white; padding:2px 7px; border-radius:8px; font-size:9px; font-weight:900; text-transform:uppercase;">${categoryLabel}</div>`;
+        }
+        b.innerHTML = `${badge}<img src="${imgUrl}" style="width:90px;height:90px;object-fit:cover;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,0.15);" onerror="this.style.display='none'"><div style="font-weight:800;font-size:13px;color:#1a1a1a;text-align:center;line-height:1.3;">${f.name}</div>`;
+        b.onmouseover = () => b.style.borderColor = 'var(--orange)';
+        b.onmouseout = () => b.style.borderColor = '#eee';
+        b.onclick = function() {
+            playClick('pop');
+            const deal = manPendingItem.dealRef;
+            const categoryPrefix = categoryLabel ? `[${categoryLabel}] ` : "";
+            manFlavorChoices.push(`${deal.flavorsNeeded[manFlavorStep].label}: ${categoryPrefix}${f.name}`);
+            manFlavorStep++;
+            if (manFlavorStep < deal.flavorsNeeded.length) {
+                manStartFlavorSelection();
+            } else {
+                document.getElementById('flavor-overlay').style.display = 'none';
+                openManCustomizeOverlay();
+            }
+        };
+        return b;
+    }
+
+    function openManCustomizeOverlay() {
+        manCustQty = 1;
+        document.getElementById('man-cust-title').innerText = manPendingItem.name;
+        document.getElementById('man-cust-cheese').checked = false;
+        document.getElementById('man-cust-toppings').checked = false;
+        document.getElementById('man-cust-dip').value = "";
+        document.getElementById('man-cust-note').value = "";
+        renderManCustQtyBtns();
+        document.getElementById('man-customize-overlay').style.display = 'flex';
+        setScrollLock(true);
+    }
+
+    function renderManCustQtyBtns() {
+        const wrap = document.getElementById('man-cust-qty-btns');
+        wrap.innerHTML = [1,2,3,4,5].map(q => `<button class="qty-btn btn-3d ${manCustQty===q?'active':''}" onclick="manSetCustQty(${q})">${q===5?'5+':q}</button>`).join('');
+    }
+    function manSetCustQty(q) { playClick('pop'); manCustQty = q; renderManCustQtyBtns(); }
+
+    function closeManCustomizeOverlay() {
+        document.getElementById('man-customize-overlay').style.display = 'none';
+        setScrollLock(false);
+        manPendingItem = null;
+    }
+
+    function manConfirmCustomize() {
+        if (!manPendingItem) return;
+        playClick('thud');
+        let addonPrice = 0;
+        let noteParts = [];
+
+        const deal = manPendingItem.dealRef;
+        if (deal) {
+            if (manFlavorChoices.length) noteParts.push(manFlavorChoices.join(", "));
+            if (deal.fixedItems) noteParts.push("Includes: " + deal.fixedItems.join(", "));
+        }
+
+        if (document.getElementById('man-cust-cheese').checked) { addonPrice += 100; noteParts.push("Extra Cheese"); }
+        if (document.getElementById('man-cust-toppings').checked) { addonPrice += 100; noteParts.push("Extra Toppings"); }
+
+        const customNote = document.getElementById('man-cust-note').value.trim();
+        if (customNote) noteParts.push("Note: " + customNote);
+
+        const finalPrice = manPendingItem.basePrice + addonPrice;
+        const finalNote = noteParts.join(" | ");
+
+        const existing = manCart.find(c => c.name === manPendingItem.name && c.price === finalPrice && c.note === finalNote);
+        if (existing) existing.qty += manCustQty;
+        else manCart.push({ name: manPendingItem.name, price: finalPrice, qty: manCustQty, note: finalNote });
+
+        const dip = document.getElementById('man-cust-dip').value;
+        if (dip) {
+            const dipName = "Dip: " + dip;
+            const existingDip = manCart.find(c => c.name === dipName && c.price === 70 && c.note === "Add-on");
+            if (existingDip) existingDip.qty += manCustQty;
+            else manCart.push({ name: dipName, price: 70, qty: manCustQty, note: "Add-on" });
+        }
+
+        closeManCustomizeOverlay();
+        renderManCart();
+        renderManSummary();
+    }
+
+    function renderManCart() {
+        const list = document.getElementById('man-cart-list');
+        if (!manCart.length) { list.innerHTML = '<p style="text-align:center; color:#999; padding:10px; font-size:13px;">No items added yet — pick from the menu above.</p>'; return; }
+        list.innerHTML = manCart.map((c, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 14px; border-radius:14px; margin-bottom:8px; border:1px solid #eee;">
+                <div style="flex:1;">
+                    <span style="font-weight:800; font-size:13px;">${c.name}</span>
+                    <div style="font-size:11px; color:#888;">Rs ${c.price} each${c.note ? '<br><span style="color:#e67e22;">'+c.note+'</span>' : ''}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button onclick="manChangeQty(${i}, -1)" style="width:26px; height:26px; border-radius:50%; border:1.5px solid #eee; background:white; font-weight:900; cursor:pointer;">-</button>
+                    <span style="font-weight:900; min-width:16px; text-align:center;">${c.qty}</span>
+                    <button onclick="manChangeQty(${i}, 1)" style="width:26px; height:26px; border-radius:50%; border:1.5px solid #eee; background:white; font-weight:900; cursor:pointer;">+</button>
+                    <button onclick="manRemoveItem(${i})" style="background:#ff4444; color:white; width:26px; height:26px; border-radius:8px; border:none; font-weight:900; cursor:pointer; margin-left:5px;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function manChangeQty(i, delta) {
+        if (!manCart[i]) return;
+        manCart[i].qty += delta;
+        if (manCart[i].qty <= 0) manCart.splice(i, 1);
+        playClick('pop');
+        renderManCart();
+        renderManSummary();
+    }
+
+    function manRemoveItem(i) {
+        manCart.splice(i, 1);
+        playClick('pop');
+        renderManCart();
+        renderManSummary();
+    }
+
+    function renderManPaymentButtons() {
+        const container = document.getElementById('man-payment-buttons');
+        const methods = [
+            { key: 'Cash', label: '💵 CASH', rate: TAX_RATE_CASH },
+            { key: 'Card', label: '💳 CARD', rate: TAX_RATE_CARD },
+            { key: 'Online', label: '🌐 ONLINE', rate: TAX_RATE_ONLINE }
+        ];
+        container.innerHTML = methods.map(m => `
+            <button class="btn-3d" style="flex:1; padding:12px; border-radius:12px; border:none; font-weight:900; font-size:12px; background:${manPaymentMethod===m.key ? 'var(--red)' : '#eee'}; color:${manPaymentMethod===m.key ? 'white' : '#666'}; box-shadow:0 4px 0px ${manPaymentMethod===m.key ? 'var(--dark-red)' : '#ccc'};" onclick="manSetPaymentMethod('${m.key}')">${m.label}<br><small>${Math.round(m.rate*100)}% Tax</small></button>
+        `).join('');
+    }
+
+    function manSetPaymentMethod(method) {
+        manPaymentMethod = method;
+        playClick('pop');
+        renderManPaymentButtons();
+        renderManSummary();
+    }
+
+    function manCalcTotals() {
+    const subtotalRaw = manCart.reduce((s, c) => s + (c.price * c.qty), 0);
+    const pct = parseFloat(document.getElementById('man-discount-pct')?.value || 0) || 0;
+
+    // Exclude Deals + Drinks from discount-eligible amount, same rule as website checkout
+    const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+    const isDealItem = (name) => dealsData.some(d => name.toLowerCase().includes(d.name.toLowerCase()));
+    const eligibleSubtotal = manCart
+        .filter(c => {
+            const n = c.name.toLowerCase();
+            if (isDealItem(n)) return false;
+            if (drinkKeywords.some(kw => n.includes(kw))) return false;
+            return true;
+        })
+        .reduce((s, c) => s + (c.price * c.qty), 0);
+
+    const discount = Math.round(eligibleSubtotal * (pct / 100));
+    const subtotal = subtotalRaw - discount;
+        let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
+        const tax = Math.round(subtotal * taxRate);
+        const fee = parseInt(document.getElementById('man-fee')?.value || 0) || 0;
+        const grand = subtotal + tax + fee;
+        return { subtotalRaw, discount, subtotal, tax, fee, grand, taxRate, eligibleSubtotal };
+    }
+
+    function renderManSummary() {
+        const box = document.getElementById('man-summary-box');
+        if (!box) return;
+        const t = manCalcTotals();
+        box.innerHTML = `
+            Items Subtotal: Rs ${t.subtotalRaw}
+            ${t.discount > 0 ? `<br><span style="color:#16a34a; font-weight:900;">Discount (${document.getElementById('man-discount-pct').value}%): -Rs ${t.discount}</span>` : ''}
+            ${t.tax > 0 ? `<br>PRA Tax (${Math.round(t.taxRate*100)}% — ${manPaymentMethod}): Rs ${t.tax}` : ''}
+            ${t.fee > 0 ? `<br>Delivery Fee: Rs ${t.fee}` : ''}
+            <br><hr style="margin:8px 0; opacity:0.3;">
+            <b style="font-size:18px;">Grand Total: Rs ${t.grand}</b>
+        `;
+    }
+
     async function saveManualOrder() {
         const type = document.getElementById('man-type').value;
-        const loc = document.getElementById('man-loc').value;
-        const items = document.getElementById('man-items').value;
-        const sub = parseInt(document.getElementById('man-sub').value || 0);
-        const fee = parseInt(document.getElementById('man-fee').value || 0);
-        if(!loc || !items) return alert("Please fill Table/Address and Items list!");
-        let obj = { type: type, location: loc, items: items, status: 'WAITING', subtotal: sub, delivery_fee: fee, branch: (activeBranch || BRANCH_CONFIG.MULTAN).id };
+        const loc = document.getElementById('man-loc').value.trim();
+        const custName = document.getElementById('man-cust-name').value.trim();
+        const custPhone = document.getElementById('man-cust-phone').value.trim();
+        if (!loc) return alert("Please fill Table/Address!");
+        if (!manCart.length) return alert("Please add at least one item!");
 
-// If manual order is Takeaway and phone is provided in location (format: "Name - 0300xxxxxxx")
-if (type === 'Takeaway' && loc.includes('-')) {
-    const parts = loc.split('-');
-    if (parts.length >= 2) {
-        obj.customer_name = parts[0].trim();
-        obj.phone = parts[1].trim();
-    }
-}
-        if(sb) {
+        const t = manCalcTotals();
+        const itemsText = manCart.map(c => {
+            let line = `${c.qty}x ${c.name}`;
+            if (c.note) line += ` [${c.note}]`;
+            return line;
+        }).join("\n");
+
+        let obj = {
+            type: type,
+            location: loc,
+            items: itemsText,
+            status: 'WAITING',
+            subtotal: t.subtotal,
+            delivery_fee: t.fee,
+            discount: t.discount,
+            eligible_subtotal: t.eligibleSubtotal,
+            tax: t.tax,
+            payment_method: manPaymentMethod,
+            discount_claimed: t.discount > 0,
+            branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
+        };
+        if (custName) obj.customer_name = custName;
+        if (custPhone) obj.phone = custPhone;
+
+        if (sb) {
             playClick('thud');
             const { error } = await sb.from('kitchen_orders').insert([obj]);
-            if(!error) {
-                document.getElementById('manual-order-overlay').style.display = 'none';
-                setScrollLock(false);
+            if (!error) {
+                closeManualOrderModal();
                 renderKitchenOrders();
-                document.getElementById('man-loc').value = "";
-                document.getElementById('man-items').value = "";
-                document.getElementById('man-sub').value = "";
-                document.getElementById('man-fee').value = "";
             } else alert("Error saving manual order.");
         }
     }
@@ -4876,7 +5254,8 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
                 let priceHtml = ""; 
 if (o.subtotal) {
     const hasDiscount = o.discount && o.discount > 0;
-    const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ 10% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
+    const discPct = hasDiscount ? Math.round((o.discount / (o.subtotal + o.discount)) * 100) : 0;
+    const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ ${discPct}% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
     const sourceBadge = o.discount_claimed 
         ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
         : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
@@ -4921,6 +5300,7 @@ ${priceHtml}
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
                     <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
                     <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
+                    <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
@@ -4955,6 +5335,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
     const tax = o.tax || 0;
     const payMethod = o.payment_method || 'Cash';
     const grandTotal = subtotal + tax + delFee;
+    const discPct = discount > 0 ? Math.round((discount / (subtotal + discount)) * 100) : 0;
 
     if (type === 'front') {
         printArea.innerHTML = `
@@ -4995,7 +5376,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     </div>
                     ${discount > 0 ? `
                     <div style="display:flex;justify-content:space-between;font-weight:bold;">
-                        <span>10% Delivery Discount:</span><span>-Rs ${discount}</span>
+                        <span>${discPct}% Discount:</span><span>-Rs ${discount}</span>
                     </div>` : ''}
                     
                     ${tax > 0 ? `<div style="display:flex;justify-content:space-between;">
@@ -5014,7 +5395,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                     CASH RECEIVED: Rs ${grandTotal}<br>
                     CASH REFUND  : Rs 0
                 </div>
-                ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">🎉 10% website discount applied — saved Rs ${discount}</div>` : ''}
+                ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">🎉 ${discPct}% discount applied — saved Rs ${discount}</div>` : ''}
                 <div style="margin-top:16px;font-size:12px;">
                     <b>Thank You For Visiting Us!</b><br>
                     theovenx.com
@@ -5076,6 +5457,45 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 }
 
     async function adminVoidOrder(id) { if(!confirm("Delete order?")) return; playClick('thud'); await sb.from('kitchen_orders').delete().eq('id', id); renderKitchenOrders(); }
+    async function applyCustomDiscount(id) {
+        if (!sb) return;
+        const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
+        if (error || !o) { alert("Error loading order."); return; }
+
+        const pct = prompt("Enter discount percentage to apply (e.g. 10 for 10%):", "0");
+        if (pct === null) return;
+        const pctNum = parseFloat(pct);
+        if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) { alert("Please enter a valid percentage between 0 and 100."); return; }
+
+        // Always calculate off the true base subtotal — add back any discount already applied
+        const baseSubtotal = (o.subtotal || 0) + (o.discount || 0);
+
+        // Only discount the eligible portion (excludes Deals & Drinks). Orders placed
+        // before this field existed fall back to the old full-subtotal behaviour.
+        const eligibleBase = (o.eligible_subtotal !== null && o.eligible_subtotal !== undefined && o.eligible_subtotal > 0)
+            ? o.eligible_subtotal
+            : baseSubtotal;
+
+        const newDiscount = Math.round(eligibleBase * (pctNum / 100));
+        const newSubtotal = baseSubtotal - newDiscount;
+
+        let taxRate = 0;
+        if (o.payment_method === 'Card') taxRate = TAX_RATE_CARD;
+        else if (o.payment_method === 'Online') taxRate = TAX_RATE_ONLINE;
+        else taxRate = TAX_RATE_CASH;
+        const newTax = Math.round(newSubtotal * taxRate);
+
+        playClick('thud');
+        const { error: updErr } = await sb.from('kitchen_orders').update({
+            subtotal: newSubtotal,
+            discount: newDiscount,
+            tax: newTax,
+            discount_claimed: true
+        }).eq('id', id);
+
+        if (updErr) { alert("Error applying discount."); return; }
+        renderKitchenOrders();
+    }
     async function adminChangeTable(id, currentLoc) { const nl = prompt("New Table/Address:", currentLoc); if(nl) { playClick('pop'); await sb.from('kitchen_orders').update({ location: nl }).eq('id', id); renderKitchenOrders(); } }
     async function adminRecallItem(id, items, sub) { const ni = prompt("Add item:"); const pr = prompt("Price:"); if(ni) { playClick('thud'); const updatedItems = items + "\n" + ni + " [RECALL]"; const updatedSub = parseInt(sub || 0) + parseInt(pr || 0); await sb.from('kitchen_orders').update({ items: updatedItems, subtotal: updatedSub }).eq('id', id); renderKitchenOrders(); } }
     async function adminVoidItem(id, items, sub) { 
