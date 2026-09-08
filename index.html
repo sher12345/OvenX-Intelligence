@@ -3969,9 +3969,14 @@ function unlockOrderButton() {
         deliveryDiscount = Math.round(eligibleTotal * 0.10);
     }
     
+    const drinkTotal = cart
+        .filter(item => drinkKeywords.some(kw => item.name.toLowerCase().includes(kw)))
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
+
     const taxable = foodTotal + sc - deliveryDiscount;
+    const taxableForTax = Math.max(0, taxable - drinkTotal);
     const taxRate = getTaxRate();
-    const tax = Math.round(taxable * taxRate);
+    const tax = Math.round(taxableForTax * taxRate);
     const grand = taxable + tax + delCharge;
     
     const itemsText = cart.map(i => {
@@ -4540,9 +4545,13 @@ function showPermissionDeniedHelp() {
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
 
+    const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+    const drinkTotal = cart
+        .filter(i => drinkKeywords.some(kw => i.name.toLowerCase().includes(kw)))
+        .reduce((s, i) => s + (i.price * i.qty), 0);
+
     let disc = 0;
     if (orderType === 'Delivery') {
-        const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
         const eligible = cart
             .filter(i => {
                 const n = i.name.toLowerCase();
@@ -4555,8 +4564,9 @@ function showPermissionDeniedHelp() {
     }
 
     const taxable = foodTotal + sc - disc;
+    const taxableForTax = Math.max(0, taxable - drinkTotal);
     const taxRate = getTaxRate();
-    const tax = Math.round(taxable * taxRate);
+    const tax = Math.round(taxableForTax * taxRate);
     const grand = taxable + tax + delCharge;
 
     const summaryHTML = cart.map((i, idx) => `
@@ -5101,9 +5111,16 @@ async function loadDeliveryHistory() {
         const manType = document.getElementById('man-type')?.value || 'Dine-In';
         const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
 
-        const subtotal = subtotalRaw + sc - discount;
-        let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
-        const tax = Math.round(subtotal * taxRate);
+            const subtotal = subtotalRaw + sc - discount;
+
+    // Drinks (Bar Menu) are excluded from PRA tax
+    const drinkTotal = manCart
+        .filter(c => drinkKeywords.some(kw => c.name.toLowerCase().includes(kw)))
+        .reduce((s, c) => s + (c.price * c.qty), 0);
+    const taxableForTax = Math.max(0, subtotal - drinkTotal);
+
+    let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
+    const tax = Math.round(taxableForTax * taxRate);
         const fee = parseInt(document.getElementById('man-fee')?.value || 0) || 0;
         const grand = subtotal + tax + fee;
         return { subtotalRaw, discount, sc, subtotal, tax, fee, grand, taxRate, eligibleSubtotal };
