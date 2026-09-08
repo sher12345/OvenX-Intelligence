@@ -3950,7 +3950,7 @@ function unlockOrderButton() {
     );
 
     const drinkKeywords = [
-        "coke", "sprite", "cola", "buddy", "1 liter", "1.5l", "1.5 l", 
+        "coke", "sprite", "cola", "1 liter", "1.5l", "1.5 l", 
         "water", "margarita", "lemonade", "pina colada", "red rose", 
         "fresh lime", "blue lagoon", "mint", "drink", "next cola"
     ];
@@ -5090,41 +5090,52 @@ async function loadDeliveryHistory() {
     }
 
         function manCalcTotals() {
-        const subtotalRaw = manCart.reduce((s, c) => s + (c.price * c.qty), 0);
-        const pct = parseFloat(document.getElementById('man-discount-pct')?.value || 0) || 0;
+    const subtotalRaw = manCart.reduce((s, c) => s + (c.price * c.qty), 0);
+    const pct = parseFloat(document.getElementById('man-discount-pct')?.value || 0) || 0;
 
-        // Exclude Deals + Drinks from discount-eligible amount, same rule as website checkout
-        const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
-        const isDealItem = (name) => dealsData.some(d => name.toLowerCase().includes(d.name.toLowerCase()));
-        const eligibleSubtotal = manCart
-            .filter(c => {
-                const n = c.name.toLowerCase();
-                if (isDealItem(n)) return false;
-                if (drinkKeywords.some(kw => n.includes(kw))) return false;
-                return true;
-            })
-            .reduce((s, c) => s + (c.price * c.qty), 0);
+    // 1. REFINED DRINK LIST: Removed "buddy" and "drink" 
+    // This ensures "Extreme Buddy" is treated as food for TAX purposes.
+    const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola"];
+    
+    // 2. DEAL IDENTIFICATION: Logic to detect if an item is a Deal
+    const isDealItem = (name) => dealsData.some(d => name.toLowerCase().includes(d.name.toLowerCase()));
 
-        const discount = Math.round(eligibleSubtotal * (pct / 100));
+    // 3. ELIGIBLE SUB-TOTAL: 
+    // This filters the cart to ONLY include regular food. 
+    // It excludes any item that is a Deal OR a Drink.
+    const eligibleSubtotal = manCart
+        .filter(c => {
+            const n = c.name.toLowerCase();
+            if (isDealItem(n)) return false; // Skip Deals
+            if (drinkKeywords.some(kw => n.includes(kw))) return false; // Skip Drinks
+            return true; // Only regular Food is eligible for discount
+        })
+        .reduce((s, c) => s + (c.price * c.qty), 0);
 
-        // 7% Service Charge for Dine-In only, same rule as website checkout
-        const manType = document.getElementById('man-type')?.value || 'Dine-In';
-        const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
+    const discount = Math.round(eligibleSubtotal * (pct / 100));
 
-            const subtotal = subtotalRaw + sc - discount;
+    // 4. SERVICE CHARGE: 7% for Dine-In only
+    const manType = document.getElementById('man-type')?.value || 'Dine-In';
+    const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
 
-    // Drinks (Bar Menu) are excluded from PRA tax
+    const subtotal = subtotalRaw + sc - discount;
+
+    // 5. TAX CALCULATION:
+    // Subtract actual drinks (which are tax-exempt) from the subtotal before applying PRA tax.
     const drinkTotal = manCart
         .filter(c => drinkKeywords.some(kw => c.name.toLowerCase().includes(kw)))
         .reduce((s, c) => s + (c.price * c.qty), 0);
+    
     const taxableForTax = Math.max(0, subtotal - drinkTotal);
 
     let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
     const tax = Math.round(taxableForTax * taxRate);
-        const fee = parseInt(document.getElementById('man-fee')?.value || 0) || 0;
-        const grand = subtotal + tax + fee;
-        return { subtotalRaw, discount, sc, subtotal, tax, fee, grand, taxRate, eligibleSubtotal };
-    }
+    
+    const fee = parseInt(document.getElementById('man-fee')?.value || 0) || 0;
+    const grand = subtotal + tax + fee;
+
+    return { subtotalRaw, discount, sc, subtotal, tax, fee, grand, taxRate, eligibleSubtotal };
+}
 
     function renderManSummary() {
         const box = document.getElementById('man-summary-box');
