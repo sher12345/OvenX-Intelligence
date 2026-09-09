@@ -1416,9 +1416,9 @@ body {
 
 <!-- BRANCH SELECTOR SCREEN -->
 <div id="branch-selector-screen">
-    <div class="bouncing-logo">
-        <p class="branch-sel-logo">OVEN <span>X</span></p>
-    </div>
+    <div class="bouncing-logo" id="branch-sel-logo-tap">
+    <p class="branch-sel-logo">OVEN <span>X</span></p>
+</div>
     <p class="branch-tagline">Select Your Branch</p>
     <div class="branch-detect-box" id="branch-detect-box">
         <div class="branch-spinner"></div>
@@ -4554,7 +4554,7 @@ function showPermissionDeniedHelp() {
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
 
-    const drinkKeywords = ["coke","sprite","cola","buddy","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","drink","next cola"];
+    const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola"];
     const drinkTotal = cart
         .filter(i => drinkKeywords.some(kw => i.name.toLowerCase().includes(kw)))
         .reduce((s, i) => s + (i.price * i.qty), 0);
@@ -7894,6 +7894,21 @@ async function adminManualClearStaleOrders() {
     alert("Stale orders cleared (if any existed before today's 2AM cutoff).");
     renderKitchenOrders();
 }
+
+setTimeout(() => {
+    let branchLogoTaps = 0, branchLogoTimer;
+    const branchLogo = document.getElementById('branch-sel-logo-tap');
+    if (!branchLogo) return;
+    branchLogo.addEventListener('click', () => {
+        branchLogoTaps++;
+        clearTimeout(branchLogoTimer);
+        branchLogoTimer = setTimeout(() => branchLogoTaps = 0, 2000);
+        if (branchLogoTaps >= 5) {
+            branchLogoTaps = 0;
+            openAdminLogin();
+        }
+    });
+}, 1000);
 </script>
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
