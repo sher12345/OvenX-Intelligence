@@ -2005,6 +2005,8 @@ body {
             <div style="display:flex; gap:10px;">
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
+                <button class="header-back-btn btn-3d" style="background:#c0392b;" onclick="adminManualClearStaleOrders()">🗑️ CLEAR STALE (ADMIN)</button>
+                <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
                 <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
             </div>
         </div>
@@ -2548,20 +2550,27 @@ riderPhones: {
     function haversineKm(lat1,lng1,lat2,lng2){const R=6371,t=x=>x*Math.PI/180;const a=Math.sin(t(lat2-lat1)/2)**2+Math.cos(t(lat1))*Math.cos(t(lat2))*Math.sin(t(lng2-lng1)/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
     function fmtDist(km){return km<1?Math.round(km*1000)+' m away':km.toFixed(1)+' km away';}
 
-    // ── Branch open/closed status (PKT = UTC+5, no daylight saving) ──
-    function getBranchOpenStatus() {
-        const now = new Date();
-        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const pkt = new Date(utcMs + (5 * 60 * 60000));
-        const hour = pkt.getHours();
-        const CLOSE_HOUR = 2;   // closes at 2 AM PKT
-        const OPEN_HOUR = 10;   // reopens at 10 AM PKT
-        const isClosed = hour >= CLOSE_HOUR && hour < OPEN_HOUR;
-        return !isClosed;
+    // ── Branch open/closed status (admin-controlled flag, fail-open) ──
+    let BRANCH_OPEN_OVERRIDE = { MULTAN: true, BWP: true };
+
+    async function loadBranchOpenStatus() {
+        if (!sb) return;
+        try {
+            const { data } = await sb.from('app_settings').select('key,value')
+                .in('key', ['branch_closed_MULTAN','branch_closed_BWP']);
+            (data||[]).forEach(row => {
+                const branch = row.key.replace('branch_closed_', '');
+                BRANCH_OPEN_OVERRIDE[branch] = row.value !== 'true';
+            });
+        } catch(e) { /* fail-safe: stays open */ }
+    }
+
+    function getBranchOpenStatus(branchId) {
+        return BRANCH_OPEN_OVERRIDE[branchId] !== false;
     }
     function updateBranchStatusBadges() {
-        const isOpen = getBranchOpenStatus();
         ['MULTAN','BWP'].forEach(id => {
+            const isOpen = getBranchOpenStatus(id);
             const el = document.getElementById('bstatus-' + id);
             if (el) {
                 el.textContent = isOpen ? '● Open Now' : '● Closed';
@@ -2595,7 +2604,8 @@ riderPhones: {
         showBranchCards(nearest);
     }
 
-    function initBranchSelector() {
+    async function initBranchSelector() {
+    await loadBranchOpenStatus();
     // Force Chrome to show something immediately
     document.getElementById('branch-selector-screen').style.display = 'flex';
     try {
@@ -2630,7 +2640,7 @@ riderPhones: {
         if (!b) return;
 
         // ── CLOSED HOURS CHECK ──
-        if (!getBranchOpenStatus()) {
+        if (!getBranchOpenStatus(id)) {
             document.getElementById('branch-detect-box').style.display = 'none';
             document.getElementById('branch-cards-wrap').style.display = 'flex';
             document.getElementById('branch-manual-btn').style.display = 'block';
@@ -2811,7 +2821,6 @@ loadCustomItemsIntoMenu();
         }
     } catch(e) { console.error('OvenX autoclear exception:', e); }
 }
-autoClearStaleOrders();
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
     let manCart = [], manPaymentMethod = "Cash", _manPickerFlat = [];
@@ -5284,6 +5293,37 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
         }, 3000);
     }
 }
+    async function adminToggleBranchClosed(branchId) {
+        const pass = prompt("Enter code to open/close this branch:");
+        if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
+        const currentlyOpen = getBranchOpenStatus(branchId);
+        if (!sb) return;
+        await sb.from('app_settings').upsert(
+            [{ key: 'branch_closed_' + branchId, value: currentlyOpen ? 'true' : 'false' }],
+            { onConflict: 'key' }
+        );
+        BRANCH_OPEN_OVERRIDE[branchId] = !currentlyOpen;
+        updateBranchStatusBadges();
+        alert(`${branchId} is now ${currentlyOpen ? 'CLOSED' : 'OPEN'}.`);
+    }
+
+    async function adminToggleAllBranches() {
+        const pass = prompt("Enter code to toggle ALL branches:");
+        if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
+        if (!sb) return;
+        // If ANY branch is open, close all; if all are closed, open all
+        const anyOpen = getBranchOpenStatus('MULTAN') || getBranchOpenStatus('BWP');
+        const newValue = anyOpen ? 'true' : 'false';
+        await sb.from('app_settings').upsert(
+            ['MULTAN','BWP'].map(b => ({ key: 'branch_closed_' + b, value: newValue })),
+            { onConflict: 'key' }
+        );
+        BRANCH_OPEN_OVERRIDE.MULTAN = !anyOpen;
+        BRANCH_OPEN_OVERRIDE.BWP = !anyOpen;
+        updateBranchStatusBadges();
+        alert(`ALL branches are now ${anyOpen ? 'CLOSED' : 'OPEN'}.`);
+    }
+
     async function renderKitchenOrders() {
         if(!sb) return; 
         
@@ -7846,6 +7886,14 @@ setTimeout(() => {
         }
     });
 }, 1000);
+async function adminManualClearStaleOrders() {
+    const pass = prompt("Enter code to clear stale/leftover orders:");
+    if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
+    localStorage.removeItem('ovenx_autoclear_date'); // force it to actually run
+    await autoClearStaleOrders();
+    alert("Stale orders cleared (if any existed before today's 2AM cutoff).");
+    renderKitchenOrders();
+}
 </script>
 <!-- ITEM DETAIL BOTTOM SHEET -->
 <div id="item-sheet-backdrop" onclick="closeItemSheet()"></div>
