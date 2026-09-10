@@ -3950,8 +3950,7 @@ function unlockOrderButton() {
     if (isSubmittingOrder) return; // safety net
     lockOrderButton();
     playClick('thud'); 
-    const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+        const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     
     // === 10% DELIVERY DISCOUNT — FOOD ONLY (Excludes Deals + All Drinks) ===
     const isDealItem = (name) => dealsData.some(d => 
@@ -3982,10 +3981,19 @@ function unlockOrderButton() {
         .filter(item => drinkKeywords.some(kw => item.name.toLowerCase().includes(kw)))
         .reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-    const taxable = foodTotal + sc - deliveryDiscount;
-    const taxableForTax = Math.max(0, taxable - drinkTotal);
+    const dipTotal = cart
+        .filter(item => item.name.toLowerCase().includes('dip'))
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+    // Tax FIRST, only on taxable food (excl. drinks/dips/discount)
+    const taxableForTax = Math.max(0, foodTotal - deliveryDiscount - drinkTotal - dipTotal);
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
+
+    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
+    const sc = (orderType === "Dine-In") ? Math.round((foodTotal + tax) * 0.07) : 0;
+
+    const taxable = foodTotal + sc - deliveryDiscount;
     const grand = taxable + tax + delCharge;
     
     const itemsText = cart.map(i => {
@@ -4552,11 +4560,13 @@ function showPermissionDeniedHelp() {
     chkStep = 3; 
     delCharge = parseFloat(fee) || 0; 
     const foodTotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-    let sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
-
-    const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola"];
+        const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola"];
     const drinkTotal = cart
         .filter(i => drinkKeywords.some(kw => i.name.toLowerCase().includes(kw)))
+        .reduce((s, i) => s + (i.price * i.qty), 0);
+
+    const dipTotal = cart
+        .filter(i => i.name.toLowerCase().includes('dip'))
         .reduce((s, i) => s + (i.price * i.qty), 0);
 
     let disc = 0;
@@ -4572,10 +4582,15 @@ function showPermissionDeniedHelp() {
         disc = Math.round(eligible * 0.10);
     }
 
-    const taxable = foodTotal + sc - disc;
-    const taxableForTax = Math.max(0, taxable - drinkTotal);
+    // Tax FIRST, only on taxable food (excl. drinks/dips/discount)
+    const taxableForTax = Math.max(0, foodTotal - disc - drinkTotal - dipTotal);
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
+
+    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
+    const sc = (orderType === "Dine-In") ? Math.round((foodTotal + tax) * 0.07) : 0;
+
+    const taxable = foodTotal + sc - disc;
     const grand = taxable + tax + delCharge;
 
     const summaryHTML = cart.map((i, idx) => `
@@ -5121,25 +5136,28 @@ async function loadDeliveryHistory() {
         })
         .reduce((s, c) => s + (c.price * c.qty), 0);
 
-    const discount = Math.round(eligibleSubtotal * (pct / 100));
+        const discount = Math.round(eligibleSubtotal * (pct / 100));
 
-    // 4. SERVICE CHARGE: 7% for Dine-In only
-    const manType = document.getElementById('man-type')?.value || 'Dine-In';
-    const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
-
-    const subtotal = subtotalRaw + sc - discount;
-
-    // 5. TAX CALCULATION:
-    // Subtract actual drinks (which are tax-exempt) from the subtotal before applying PRA tax.
+    // Subtract drinks & dips (tax-exempt) before computing tax
     const drinkTotal = manCart
         .filter(c => drinkKeywords.some(kw => c.name.toLowerCase().includes(kw)))
         .reduce((s, c) => s + (c.price * c.qty), 0);
-    
-    const taxableForTax = Math.max(0, subtotal - drinkTotal);
 
+    const dipTotal = manCart
+        .filter(c => c.name.toLowerCase().includes('dip'))
+        .reduce((s, c) => s + (c.price * c.qty), 0);
+
+    // Tax FIRST, on raw items minus drinks/dips/discount
+    const taxableForTax = Math.max(0, subtotalRaw - discount - drinkTotal - dipTotal);
     let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
     const tax = Math.round(taxableForTax * taxRate);
-    
+
+    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
+    const manType = document.getElementById('man-type')?.value || 'Dine-In';
+    const sc = (manType === 'Dine-In') ? Math.round((subtotalRaw + tax) * 0.07) : 0;
+
+    const subtotal = subtotalRaw + sc - discount;
+
     const fee = parseInt(document.getElementById('man-fee')?.value || 0) || 0;
     const grand = subtotal + tax + fee;
 
