@@ -2064,6 +2064,7 @@ body {
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
+              <button class="header-back-btn btn-3d" style="background:#16a34a;" onclick="downloadAuditExcel()">EXCEL REPORT 📊</button>
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadAuditCSV()">DOWNLOAD CSV 📥</button>
                 <button class="header-back-btn btn-3d" onclick="closeAuditReport()">EXIT</button>
             </div>
@@ -2499,6 +2500,7 @@ body {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
   // ══════════════════════════════════════════
     // BRANCH CONFIGURATION
@@ -2568,6 +2570,23 @@ riderPhones: {
 
     function getBranchOpenStatus(branchId) {
         return BRANCH_OPEN_OVERRIDE[branchId] !== false;
+    }
+        // ── Paginate any Supabase table fully, bypassing the 1000-row default cap ──
+    async function fetchAllRows(table, buildQuery) {
+        let allRows = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+            let query = sb.from(table).select('*').range(from, from + pageSize - 1);
+            if (buildQuery) query = buildQuery(query);
+            const { data, error } = await query;
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            allRows = allRows.concat(data);
+            if (data.length < pageSize) break;
+            from += pageSize;
+        }
+        return allRows;
     }
     function updateBranchStatusBadges() {
         ['MULTAN','BWP'].forEach(id => {
@@ -4837,8 +4856,8 @@ async function loadDeliveryHistory() {
     
     list.innerHTML = data.map(calc => {
         const date = new Date(calc.created_at).toLocaleString('en-PK', {
-            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-        });
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi'
+});
         return `
             <div class="delivery-history-card">
                 <div class="distance-badge">${calc.distance_one_way.toFixed(1)} km</div>
@@ -4907,9 +4926,9 @@ async function loadDeliveryHistory() {
             csvContent += `${row.name},${row.phone},${new Date(row.created_at).toLocaleDateString()}\n`;
         });
 
-        const encodedUri = encodeURI(csvContent);
+        const blob = new Blob(["\uFEFF" + csvContent.replace("data:text/csv;charset=utf-8,", "")], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
+        link.setAttribute("href", URL.createObjectURL(blob));
         link.setAttribute("download", `OvenX_Club_Members_${new Date().toLocaleDateString()}.csv`);
         document.body.appendChild(link);
         link.click();
@@ -5527,9 +5546,9 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
 
     const printArea = document.getElementById('print-area');
     const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-    }).replace(',', '');
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Karachi'
+}).replace(',', '');
 
     // Exact same values shown in kitchen panel
     const subtotal = o.subtotal || 0;
@@ -5662,7 +5681,28 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
     });
 }
 
-    async function adminVoidOrder(id) { if(!confirm("Delete order?")) return; playClick('thud'); await sb.from('kitchen_orders').delete().eq('id', id); renderKitchenOrders(); }
+    async function adminVoidOrder(id) {
+        if (!confirm("Void this order? It will be kept in the audit trail as VOIDED, not deleted.")) return;
+        playClick('thud');
+        if (!sb) return;
+        const { data: o, error: fetchErr } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
+        if (fetchErr || !o) { alert("Error loading order to void."); return; }
+
+        const archiveRow = {
+            id: o.id, type: o.type, location: o.location, items: o.items,
+            status: 'VOIDED', subtotal: o.subtotal, delivery_fee: o.delivery_fee,
+            discount: o.discount, discount_claimed: o.discount_claimed, tax: o.tax,
+            payment_method: o.payment_method, branch: o.branch,
+            latitude: o.latitude, longitude: o.longitude,
+            customer_name: o.customer_name, phone: o.phone, rider: o.rider,
+            created_at: o.created_at
+        };
+        const { error: archiveErr } = await sb.from('kitchen_orders_archive').upsert([archiveRow], { onConflict: 'id' });
+        if (archiveErr) { alert("Error archiving voided order — not deleted, please retry."); return; }
+
+        await sb.from('kitchen_orders').delete().eq('id', id);
+        renderKitchenOrders();
+    }
     async function applyCustomDiscount(id) {
         if (!sb) return;
         const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
@@ -7342,19 +7382,22 @@ function setAuditBranchFilter(f) {
 async function loadAuditReportData() {
     if (!sb) { auditReportOrders = []; renderAuditReport(); return; }
 
-    // Voided orders (adminVoidOrder) are hard-deleted from kitchen_orders,
-    // so anything still in this table is automatically "not voided".
-    // We also skip PENDING (not yet accepted by kitchen).
-    const [liveRes, archiveRes] = await Promise.all([
-        sb.from('kitchen_orders').select('*').neq('status', 'PENDING'),
-        sb.from('kitchen_orders_archive').select('*')
-    ]);
+    try {
+        const [liveRows, archiveRows] = await Promise.all([
+            fetchAllRows('kitchen_orders', q => q.neq('status', 'PENDING')),
+            fetchAllRows('kitchen_orders_archive')
+        ]);
 
-    const liveOrders = (!liveRes.error && liveRes.data) ? liveRes.data.map(o => ({ ...o, _source: 'live' })) : [];
-    const archivedOrders = (!archiveRes.error && archiveRes.data) ? archiveRes.data.map(o => ({ ...o, _source: 'archive' })) : [];
+        const liveOrders = liveRows.map(o => ({ ...o, _source: 'live' }));
+        const archivedOrders = archiveRows.map(o => ({ ...o, _source: 'archive' }));
 
-    auditReportOrders = [...liveOrders, ...archivedOrders]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        auditReportOrders = [...liveOrders, ...archivedOrders]
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } catch (e) {
+        console.error('Audit fetch failed:', e);
+        alert('⚠️ Could not load the full audit history — figures may be incomplete. Check your connection and try again.');
+        auditReportOrders = [];
+    }
 
     renderAuditReport();
 }
@@ -7467,16 +7510,18 @@ function getAuditFiltered() {
 
 function renderAuditReport() {
     const filtered = getAuditFiltered();
+    const nonVoided = filtered.filter(o => o.status !== 'VOIDED');
 
-    const totalTax = filtered.reduce((s, o) => s + (o.tax || 0), 0);
-    const totalSubtotal = filtered.reduce((s, o) => s + (o.subtotal || 0), 0);
-    const totalDelivery = filtered.reduce((s, o) => s + (o.delivery_fee || 0), 0);
-    const totalDiscount = filtered.reduce((s, o) => s + (o.discount || 0), 0);
+    const totalTax = nonVoided.reduce((s, o) => s + (o.tax || 0), 0);
+    const totalSubtotal = nonVoided.reduce((s, o) => s + (o.subtotal || 0), 0);
+    const totalDelivery = nonVoided.reduce((s, o) => s + (o.delivery_fee || 0), 0);
+    const totalDiscount = nonVoided.reduce((s, o) => s + (o.discount || 0), 0);
     const grandTotal = totalSubtotal + totalTax + totalDelivery;
+    const voidedCount = filtered.length - nonVoided.length;
 
-    const cashTax = filtered.filter(o => (o.payment_method || 'Cash') === 'Cash').reduce((s,o) => s + (o.tax||0), 0);
-    const cardTax = filtered.filter(o => o.payment_method === 'Card').reduce((s,o) => s + (o.tax||0), 0);
-    const onlineTax = filtered.filter(o => o.payment_method === 'Online').reduce((s,o) => s + (o.tax||0), 0);
+    const cashTax = nonVoided.filter(o => (o.payment_method || 'Cash') === 'Cash').reduce((s,o) => s + (o.tax||0), 0);
+    const cardTax = nonVoided.filter(o => o.payment_method === 'Card').reduce((s,o) => s + (o.tax||0), 0);
+    const onlineTax = nonVoided.filter(o => o.payment_method === 'Online').reduce((s,o) => s + (o.tax||0), 0);
 
     document.getElementById('audit-report-stats').innerHTML = `
         <div class="adm-stat red"><div class="adm-stat-val">Rs ${totalTax}</div><div class="adm-stat-lbl">Total Tax Collected</div></div>
@@ -7487,15 +7532,17 @@ function renderAuditReport() {
         <div class="adm-stat orange"><div class="adm-stat-val">Rs ${cardTax}</div><div class="adm-stat-lbl">Card Tax (5%)</div></div>
         <div class="adm-stat green"><div class="adm-stat-val">Rs ${onlineTax}</div><div class="adm-stat-lbl">Online Tax (8%)</div></div>
         <div class="adm-stat gold"><div class="adm-stat-val">Rs ${totalDiscount}</div><div class="adm-stat-lbl">Discounts Given</div></div>
+        <div class="adm-stat red"><div class="adm-stat-val">${voidedCount}</div><div class="adm-stat-lbl">Voided (excl. from totals)</div></div>
     `;
 
         const dupFlags = window._auditDupFlags || new Map();
 
     const rows = filtered.map(o => {
-        const dt = new Date(o.created_at).toLocaleString('en-PK', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const dt = new Date(o.created_at).toLocaleString('en-PK', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit', timeZone: 'Asia/Karachi'});
         const total = (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0);
         const dupReason = dupFlags.get(o.id);
-        return `<tr id="audit-row-${o.id}" style="${dupReason ? 'background:#fff7ed;' : ''}">
+        const isVoided = o.status === 'VOIDED';
+        return `<tr id="audit-row-${o.id}" style="${isVoided ? 'background:#f3f4f6; opacity:0.65;' : (dupReason ? 'background:#fff7ed;' : '')}">
             <td style="padding:8px;font-size:12px;">${dt}</td>
             <td style="padding:8px;font-size:12px;">${o.branch || 'MULTAN'}</td>
             <td style="padding:8px;font-size:12px;">${o.type}</td>
@@ -7505,7 +7552,7 @@ function renderAuditReport() {
             <td style="padding:8px;font-size:12px;font-weight:900;color:#c0392b;">Rs ${o.tax || 0}</td>
             <td style="padding:8px;font-size:12px;">Rs ${o.delivery_fee || 0}</td>
             <td style="padding:8px;font-size:12px;font-weight:900;">Rs ${total}</td>
-            <td style="padding:8px;font-size:11px;">${dupReason ? `<span style="background:#fed7aa;color:#9a3412;padding:3px 8px;border-radius:8px;font-weight:800;white-space:nowrap;">${dupReason}</span>` : ''}</td>
+            <td style="padding:8px;font-size:11px;">${isVoided ? `<span style="background:#e5e7eb;color:#374151;padding:3px 8px;border-radius:8px;font-weight:800;">🚫 VOIDED</span>` : (dupReason ? `<span style="background:#fed7aa;color:#9a3412;padding:3px 8px;border-radius:8px;font-weight:800;white-space:nowrap;">${dupReason}</span>` : '')}</td>
             <td style="padding:8px;font-size:12px;">
                 <button onclick="deleteAuditOrder('${o.id}')" style="background:#fff5f5;color:#c0392b;border:1.5px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">🗑️ DELETE</button>
             </td>
@@ -7528,7 +7575,12 @@ function renderAuditReport() {
 }
 
 async function deleteAuditOrder(id) {
-    if (!confirm("Delete this order permanently?\n\nThis removes it from Supabase and it cannot be recovered.")) return;
+    const code = prompt("Permanently deleting a tax record. Re-enter the Audit Code to confirm:");
+    if (code !== "7530" && code !== "audit123") {
+        if (code !== null) alert("Wrong code — deletion cancelled.");
+        return;
+    }
+    if (!confirm("This is IRREVERSIBLE and removes the record from your tax audit trail entirely.\n\nVoiding an order (from the Kitchen Panel) is almost always the right tool instead — it keeps the record. Continue with permanent deletion?")) return;
     playClick('thud');
     const order = auditReportOrders.find(o => o.id === id);
     const table = (order && order._source === 'archive') ? 'kitchen_orders_archive' : 'kitchen_orders';
@@ -7541,29 +7593,206 @@ async function deleteAuditOrder(id) {
     admShowToast('🗑️', 'Order deleted', 'success');
 }
 
+function fmtPKT(iso) {
+    const p = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Karachi',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).formatToParts(new Date(iso)).reduce((a, x) => (a[x.type] = x.value, a), {});
+    const hh = p.hour === '24' ? '00' : p.hour;
+    return { date: `${p.year}-${p.month}-${p.day}`, time: `${hh}:${p.minute}:${p.second}` };
+}
+
 function downloadAuditCSV() {
     const filtered = getAuditFiltered();
     if (filtered.length === 0) { alert("No data to export!"); return; }
 
-    let csv = "Date,Branch,Type,Location,Payment Method,Subtotal,Tax,Delivery Fee,Discount,Grand Total,Status\n";
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+
+    let csv = "Date,Time,Branch,Type,Location,Customer,Phone,Payment Method,Subtotal,Tax,Delivery Fee,Discount,Grand Total,Status\n";
     filtered.forEach(o => {
-        const dt = new Date(o.created_at).toLocaleString('en-PK');
+        const t = fmtPKT(o.created_at);
         const total = (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0);
-        const loc = (o.location || '').replace(/"/g, "'");
-        csv += `"${dt}","${o.branch||'MULTAN'}","${o.type}","${loc}","${o.payment_method||'Cash'}",${o.subtotal||0},${o.tax||0},${o.delivery_fee||0},${o.discount||0},${total},${o.status}\n`;
+        csv += [
+            esc(t.date), esc(t.time), esc(o.branch||'MULTAN'), esc(o.type),
+            esc(o.location), esc(o.customer_name), esc(o.phone),
+            esc(o.payment_method||'Cash'),
+            o.subtotal||0, o.tax||0, o.delivery_fee||0, o.discount||0, total,
+            esc(o.status)
+        ].join(',') + "\n";
     });
 
-    const totalTax = filtered.reduce((s,o)=>s+(o.tax||0),0);
-    csv += `\n,,,,,,TOTAL TAX COLLECTED:,${totalTax},,,\n`;
+    const nonVoided = filtered.filter(o => o.status !== 'VOIDED');
+    const tTax = nonVoided.reduce((s,o)=>s+(o.tax||0),0);
+    const tSub = nonVoided.reduce((s,o)=>s+(o.subtotal||0),0);
+    const tDel = nonVoided.reduce((s,o)=>s+(o.delivery_fee||0),0);
+    csv += `\n,,,,,,,,"TOTALS (excl. voided)",${tSub},${tTax},${tDel},${tSub+tTax+tDel},\n`;
 
-    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csv);
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `OvenX_Tax_Audit_${auditBranchFilter}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.href = url;
+    link.download = `OvenX_Tax_Audit_${auditBranchFilter}_${fmtPKT(new Date().toISOString()).date}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     playClick('thud');
+}
+async function downloadAuditExcel() {
+    const filtered = getAuditFiltered();
+    if (!filtered.length) { alert("No data to export!"); return; }
+    if (typeof ExcelJS === 'undefined') { alert("Excel library not loaded. Check your connection and reload."); return; }
+
+    playClick('thud');
+    const dupFlags = window._auditDupFlags || new Map();
+    const nonVoided = filtered.filter(o => o.status !== 'VOIDED');
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Oven X';
+    wb.created = new Date();
+
+    const RED='FFC0392B', ORANGE='FFE67E22', GREEN='FF16A34A', GREY='FF6B7280';
+    const money = '"Rs" #,##0';
+
+    // ══ SHEET 1: SUMMARY ══
+    const s = wb.addWorksheet('Summary', { views:[{showGridLines:false}] });
+    s.columns = [{width:34},{width:20},{width:14}];
+
+    s.mergeCells('A1:C1');
+    const t = s.getCell('A1');
+    t.value = 'OVEN X — TAX AUDIT REPORT';
+    t.font = { size:18, bold:true, color:{argb:'FFFFFFFF'} };
+    t.fill = { type:'pattern', pattern:'solid', fgColor:{argb:RED} };
+    t.alignment = { horizontal:'center', vertical:'middle' };
+    s.getRow(1).height = 34;
+
+    s.mergeCells('A2:C2');
+    const sub = s.getCell('A2');
+    sub.value = `Branch: ${auditBranchFilter}   •   Generated: ${fmtPKT(new Date().toISOString()).date} ${fmtPKT(new Date().toISOString()).time} PKT`;
+    sub.font = { size:10, color:{argb:'FFFFFFFF'} };
+    sub.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ORANGE} };
+    sub.alignment = { horizontal:'center' };
+
+    const sum = (f) => nonVoided.reduce((a,o)=>a+(o[f]||0),0);
+    const taxBy = (m) => nonVoided.filter(o=>(o.payment_method||'Cash')===m).reduce((a,o)=>a+(o.tax||0),0);
+
+    const rows = [
+        ['', '', ''],
+        ['METRIC','VALUE','NOTE'],
+        ['Total Orders', filtered.length, 'incl. voided'],
+        ['Voided Orders', filtered.length - nonVoided.length, 'excluded from totals'],
+        ['Flagged Duplicates', dupFlags.size, 'review manually'],
+        ['', '', ''],
+        ['Total Shop Sales', sum('subtotal'), ''],
+        ['Total Delivery Fees', sum('delivery_fee'), ''],
+        ['Total Discounts Given', sum('discount'), ''],
+        ['GRAND TOTAL COLLECTED', sum('subtotal')+sum('tax')+sum('delivery_fee'), ''],
+        ['', '', ''],
+        ['Cash Tax (16%)', taxBy('Cash'), ''],
+        ['Card Tax (8%)', taxBy('Card'), ''],
+        ['Online Tax (8%)', taxBy('Online'), ''],
+        ['TOTAL TAX PAYABLE', sum('tax'), 'PRA']
+    ];
+    rows.forEach(r => s.addRow(r));
+
+    s.getRow(4).eachCell(c => {
+        c.font = { bold:true, size:10, color:{argb:'FFFFFFFF'} };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GREY} };
+    });
+    [9,10,11,14,15,16,17].forEach(rn => { s.getCell(`B${rn}`).numFmt = money; });
+    [12,17].forEach(rn => {
+        s.getRow(rn).eachCell(c => {
+            c.font = { bold:true, size:12, color:{argb:RED} };
+            c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF4E5'} };
+            c.border = { top:{style:'medium'}, bottom:{style:'medium'} };
+        });
+    });
+    s.getCell('C17').font = { bold:true, color:{argb:RED} };
+
+    // ══ SHEET 2: ORDERS ══
+    const o = wb.addWorksheet('Orders', { views:[{state:'frozen', ySplit:1}] });
+    o.columns = [
+        {header:'Date',        key:'date',  width:12},
+        {header:'Time',        key:'time',  width:10},
+        {header:'Branch',      key:'br',    width:10},
+        {header:'Type',        key:'type',  width:11},
+        {header:'Location',    key:'loc',   width:30},
+        {header:'Customer',    key:'cust',  width:18},
+        {header:'Phone',       key:'phone', width:15},
+        {header:'Payment',     key:'pay',   width:10},
+        {header:'Subtotal',    key:'sub',   width:12},
+        {header:'Tax',         key:'tax',   width:11},
+        {header:'Delivery',    key:'del',   width:11},
+        {header:'Discount',    key:'disc',  width:11},
+        {header:'Grand Total', key:'tot',   width:14},
+        {header:'Status',      key:'st',    width:12},
+        {header:'Flag',        key:'flag',  width:32}
+    ];
+
+    const hdr = o.getRow(1);
+    hdr.height = 26;
+    hdr.eachCell(c => {
+        c.font = { bold:true, size:10, color:{argb:'FFFFFFFF'} };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:RED} };
+        c.alignment = { horizontal:'center', vertical:'middle' };
+        c.border = { bottom:{style:'medium', color:{argb:ORANGE}} };
+    });
+
+    filtered.forEach((ord, i) => {
+        const p = fmtPKT(ord.created_at);
+        const voided = ord.status === 'VOIDED';
+        const flag = dupFlags.get(ord.id) || '';
+        const row = o.addRow({
+            date:p.date, time:p.time, br:ord.branch||'MULTAN', type:ord.type,
+            loc:ord.location||'', cust:ord.customer_name||'', phone:ord.phone||'',
+            pay:ord.payment_method||'Cash',
+            sub:ord.subtotal||0, tax:ord.tax||0, del:ord.delivery_fee||0, disc:ord.discount||0,
+            tot:(ord.subtotal||0)+(ord.tax||0)+(ord.delivery_fee||0),
+            st:ord.status, flag:flag.replace(/[^\x20-\x7E]/g,'').trim()
+        });
+
+        ['sub','tax','del','disc','tot'].forEach(k => row.getCell(k).numFmt = money);
+        row.getCell('tax').font = { bold:true, color:{argb:RED} };
+        row.getCell('tot').font = { bold:true };
+        if ((ord.discount||0) > 0) row.getCell('disc').font = { color:{argb:GREEN}, bold:true };
+
+        let bg = i % 2 ? 'FFFAFAFA' : null;
+        if (flag) bg = 'FFFFF4E5';
+        if (voided) bg = 'FFEFEFEF';
+        if (bg) row.eachCell(c => c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} });
+        if (voided) row.eachCell(c => c.font = { ...(c.font||{}), strike:true, color:{argb:GREY} });
+
+        row.getCell('br').alignment = { horizontal:'center' };
+        row.getCell('br').font = { bold:true, size:9, color:{argb: ord.branch==='BWP' ? 'FF5D3A1A' : RED} };
+        row.getCell('st').alignment = { horizontal:'center' };
+        row.getCell('flag').font = { size:9, color:{argb:'FF9A3412'} };
+    });
+
+    // Totals row
+    const last = o.rowCount;
+    const tr = o.addRow({
+        loc:'TOTALS (excl. voided)',
+        sub:sum('subtotal'), tax:sum('tax'), del:sum('delivery_fee'), disc:sum('discount'),
+        tot:sum('subtotal')+sum('tax')+sum('delivery_fee')
+    });
+    tr.eachCell(c => {
+        c.font = { bold:true, size:11, color:{argb:'FFFFFFFF'} };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GREY} };
+        c.border = { top:{style:'double'} };
+    });
+    ['sub','tax','del','disc','tot'].forEach(k => tr.getCell(k).numFmt = money);
+
+    o.autoFilter = { from:'A1', to:{ row:last, column:15 } };
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `OvenX_Audit_${auditBranchFilter}_${fmtPKT(new Date().toISOString()).date}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 applyAdminOverrides();
