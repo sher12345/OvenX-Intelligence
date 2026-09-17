@@ -1657,7 +1657,7 @@ body {
                             </div>
                         </div>
                         <div style="background:rgba(255,255,255,0.2); padding:8px 15px; border-radius:10px;">
-                            <p style="font-size:11px; margin:0;">Rs. 16/km</p>
+                            <p id="calc-rate-per-km" style="font-size:11px; margin:0;">Rs. 16/km</p>
                         </div>
                     </div>
                     
@@ -2005,6 +2005,7 @@ body {
             <div style="display:flex; gap:10px;">
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
+                <button id="fuel-price-btn" class="header-back-btn btn-3d" style="background:#fd7e14;" onclick="openFuelPricePrompt()">⛽ Set Fuel Price</button>
                 <button class="header-back-btn btn-3d" style="background:#c0392b;" onclick="adminManualClearStaleOrders()">🗑️ CLEAR STALE (ADMIN)</button>
                 <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
                 <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
@@ -2579,6 +2580,81 @@ riderPhones: {
         });
     }
 
+    // ── FUEL PRICE → DELIVERY RATE ──
+    function computeRatePerKm(fuelPrice) {
+        return Math.round(fuelPrice / FUEL_MILEAGE_KM_PER_LITER);
+    }
+
+    async function loadFuelPriceSetting() {
+        if (!sb) return;
+        try {
+            const { data } = await sb.from('app_settings').select('value').eq('key', 'fuel_price').single();
+            if (data && data.value) {
+                currentFuelPrice = parseFloat(data.value);
+                PRICE_PER_KM = computeRatePerKm(currentFuelPrice);
+            } else {
+                currentFuelPrice = null;
+                PRICE_PER_KM = DEFAULT_PRICE_PER_KM;
+            }
+        } catch (e) {
+            currentFuelPrice = null;
+            PRICE_PER_KM = DEFAULT_PRICE_PER_KM;
+        }
+        updateFuelPriceBadge();
+        updateCalcRateLabel();
+    }
+
+    function updateFuelPriceBadge() {
+        const btn = document.getElementById('fuel-price-btn');
+        if (!btn) return;
+        if (currentFuelPrice !== null) {
+            btn.innerHTML = `⛽ Fuel Rs ${currentFuelPrice}/L → Rs ${PRICE_PER_KM}/km`;
+            btn.style.background = '#16a34a';
+        } else {
+            btn.innerHTML = `⛽ Set Fuel Price (default Rs ${DEFAULT_PRICE_PER_KM}/km)`;
+            btn.style.background = '#fd7e14';
+        }
+    }
+
+    function updateCalcRateLabel() {
+        const el = document.getElementById('calc-rate-per-km');
+        if (el) el.innerText = 'Rs. ' + PRICE_PER_KM + '/km';
+    }
+
+    async function openFuelPricePrompt() {
+        playClick('pop');
+        const input = prompt(
+            "⛽ Enter today's fuel price (Rs/Liter):\n\nDelivery rate = fuel price ÷ " + FUEL_MILEAGE_KM_PER_LITER + " km/L, rounded.\n\nLeave blank + OK to reset to default Rs " + DEFAULT_PRICE_PER_KM + "/km.",
+            currentFuelPrice !== null ? currentFuelPrice : ''
+        );
+        if (input === null) return;
+        if (!sb) { alert("No database connection."); return; }
+
+        if (input.trim() === '') {
+            await sb.from('app_settings').upsert([{ key: 'fuel_price', value: '' }], { onConflict: 'key' });
+            currentFuelPrice = null;
+            PRICE_PER_KM = DEFAULT_PRICE_PER_KM;
+            updateFuelPriceBadge();
+            updateCalcRateLabel();
+            playClick('thud');
+            alert(`Reset to default Rs ${DEFAULT_PRICE_PER_KM}/km.`);
+            return;
+        }
+
+        const fuelPrice = parseFloat(input);
+        if (isNaN(fuelPrice) || fuelPrice <= 0) { alert("Please enter a valid number."); return; }
+
+        const newRate = computeRatePerKm(fuelPrice);
+        await sb.from('app_settings').upsert([{ key: 'fuel_price', value: String(fuelPrice) }], { onConflict: 'key' });
+
+        currentFuelPrice = fuelPrice;
+        PRICE_PER_KM = newRate;
+        updateFuelPriceBadge();
+        updateCalcRateLabel();
+        playClick('thud');
+        alert(`✅ Fuel price set to Rs ${fuelPrice}/L\nDelivery rate updated: Rs ${newRate}/km (round trip counted automatically).`);
+    }
+
 
     function showBranchCards(nearestId) {
         updateBranchStatusBadges();
@@ -2830,7 +2906,10 @@ let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = 
     const LOYALTY_PRIZES = ["Pan Pizza (S)", "Zinger Burger", "Club Sandwich", "Loaded Fries", "6pcs Wings", "Chipotle Wrap"];
     
     let OVENX_COORDS = { lat: 30.2197, lng: 71.4711 };
-    const PRICE_PER_KM = 16;
+    let PRICE_PER_KM = 16;
+    const DEFAULT_PRICE_PER_KM = 16;
+    const FUEL_MILEAGE_KM_PER_LITER = 22; // avg bike mileage — fuel price ÷ this = Rs/km rate
+    let currentFuelPrice = null;
 const TAX_RATE_CASH = 0.16;
 const TAX_RATE_CARD = 0.08;
 const TAX_RATE_ONLINE = 0.08;
@@ -4303,6 +4382,7 @@ function removeItem(idx) {
     document.getElementById('delivery-calc-overlay').style.display = 'flex';
     setScrollLock(true);
     currentCalcData = null;
+    updateCalcRateLabel();
 
     // Reset the error-state HTML back to default in case it was overwritten last time
     resetCalcErrorState();
@@ -4808,6 +4888,7 @@ async function loadDeliveryHistory() {
         renderKitchenOrders(); 
         if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); 
         setScrollLock(true); 
+        loadFuelPriceSetting();
     }
     
     function closeKitchenPanel() { 
@@ -7487,6 +7568,7 @@ function downloadAuditCSV() {
 
 applyAdminOverrides();
 setupRealtimeNotifications();
+loadFuelPriceSetting();
     const savedOrderId = localStorage.getItem('ovenx_last_order_id');
 if (savedOrderId) initCustomerTracking(savedOrderId, null);
     // ── LANDING PAGE LOGIC ──
