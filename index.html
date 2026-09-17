@@ -4088,8 +4088,8 @@ function unlockOrderButton() {
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
 
-    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
-    const sc = (orderType === "Dine-In") ? Math.round((foodTotal + tax) * 0.07) : 0;
+    // S.C on food subtotal only — NOT on PRA tax
+    const sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
 
     const taxable = foodTotal + sc - deliveryDiscount;
     const grand = taxable + tax + delCharge;
@@ -4686,8 +4686,8 @@ function showPermissionDeniedHelp() {
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
 
-    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
-    const sc = (orderType === "Dine-In") ? Math.round((foodTotal + tax) * 0.07) : 0;
+    // S.C on food subtotal only — NOT on PRA tax
+    const sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
 
     const taxable = foodTotal + sc - disc;
     const grand = taxable + tax + delCharge;
@@ -5254,7 +5254,8 @@ async function loadDeliveryHistory() {
 
     // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
     const manType = document.getElementById('man-type')?.value || 'Dine-In';
-    const sc = (manType === 'Dine-In') ? Math.round((subtotalRaw + tax) * 0.07) : 0;
+    // S.C on food subtotal only — NOT on PRA tax
+    const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
 
     const subtotal = subtotalRaw + sc - discount;
 
