@@ -5668,7 +5668,7 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
         b.innerText = r;
         b.onclick = () => {
             const rOrders = orders.filter(o => o.rider === r);
-            const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.delivery_fee || 0), 0);
+            const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.tax || 0) + (o.delivery_fee || 0), 0);
             const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
             document.getElementById('audit-result-box').style.display = 'block'; 
             document.getElementById('audit-rider-name').innerText = r;
