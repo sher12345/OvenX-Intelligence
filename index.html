@@ -2006,7 +2006,6 @@ body {
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
                 <button id="fuel-price-btn" class="header-back-btn btn-3d" style="background:#fd7e14;" onclick="openFuelPricePrompt()">⛽ Set Fuel Price</button>
-                <button class="header-back-btn btn-3d" style="background:#c0392b;" onclick="adminManualClearStaleOrders()">🗑️ CLEAR STALE (ADMIN)</button>
                 <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
                 <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
             </div>
@@ -2840,82 +2839,7 @@ loadCustomItemsIntoMenu();
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
-    // ── AUTO-CLEAR STALE ORDERS AT CLOSING (2 AM PKT) ──
-    // Deletes any kitchen_orders left over from before today's 2AM close,
-    // so nothing carries over and blinks red the next day. Runs once per day.
-    async function autoClearStaleOrders() {
-    if (!sb) return;
-    const now = new Date();
-    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const pkt = new Date(utcMs + (5 * 60 * 60000));
-
-    // Today's 2 AM PKT cutoff, in real UTC time
-    const cutoffPkt = new Date(pkt.getFullYear(), pkt.getMonth(), pkt.getDate(), 2, 0, 0, 0);
-    const cutoffUtcMs = cutoffPkt.getTime() - (5 * 60 * 60000) - (now.getTimezoneOffset() * 60000);
-    const cutoffDate = new Date(cutoffUtcMs);
-
-    // Only run once we're actually past today's 2AM cutoff
-    if (pkt.getTime() < cutoffPkt.getTime()) return;
-
-    const todayKey = pkt.toISOString().slice(0, 10); // YYYY-MM-DD in PKT terms
-    if (localStorage.getItem('ovenx_autoclear_date') === todayKey) return; // already ran today
-
-    try {
-        // 1. Fetch stale orders first
-        const { data: staleOrders, error: fetchError } = await sb
-            .from('kitchen_orders')
-            .select('*')
-            .lt('created_at', cutoffDate.toISOString());
-
-        if (fetchError) throw fetchError;
-
-        if (staleOrders && staleOrders.length > 0) {
-            // 2. Copy them into the permanent archive table
-            const archiveRows = staleOrders.map(o => ({
-                id: o.id,
-                type: o.type,
-                location: o.location,
-                items: o.items,
-                status: o.status,
-                subtotal: o.subtotal,
-                delivery_fee: o.delivery_fee,
-                discount: o.discount,
-                discount_claimed: o.discount_claimed,
-                tax: o.tax,
-                payment_method: o.payment_method,
-                branch: o.branch,
-                latitude: o.latitude,
-                longitude: o.longitude,
-                customer_name: o.customer_name,
-                phone: o.phone,
-                rider: o.rider,
-                created_at: o.created_at
-            }));
-
-            const { error: archiveError } = await sb
-                .from('kitchen_orders_archive')
-                .upsert(archiveRows, { onConflict: 'id' });
-
-            if (archiveError) {
-                console.error('OvenX archive error:', archiveError);
-                return; // don't delete if archiving failed — don't want to lose data
-            }
-        }
-
-        // 3. Now safe to delete from the live kitchen panel table
-        const { error: deleteError } = await sb
-            .from('kitchen_orders')
-            .delete()
-            .lt('created_at', cutoffDate.toISOString());
-
-        if (!deleteError) {
-            localStorage.setItem('ovenx_autoclear_date', todayKey);
-            console.log('OvenX: archived + cleared', (staleOrders||[]).length, 'orders from before', cutoffDate.toISOString());
-        } else {
-            console.error('OvenX autoclear delete error:', deleteError);
-        }
-    } catch(e) { console.error('OvenX autoclear exception:', e); }
-}
+    
 
 let cart = [], selectedItem = null, selectedQty = 1, orderType = "", tableNum = "", userAddress = "", deliveryPhone = "", delCharge = 0, chkStep = 1, dealChoices = [], currentFlavorStep = 0, isQRScan = false, kitchenInterval = null, currentKitchenFilter = 'ALL', paymentMethod = "Cash";    let currentCalcData = null;
     let manCart = [], manPaymentMethod = "Cash", _manPickerFlat = [];
@@ -4778,32 +4702,11 @@ function showPermissionDeniedHelp() {
 
     async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
 async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
-async function clearReadyOrders() { 
-    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
-    if(!confirm(`Clear Ready Dine-In orders for ${branch.name} only?`)) return; 
-    playClick('pop'); 
-    if(!sb) return; 
-    const { data: ready } = await sb
-        .from('kitchen_orders')
-        .select('id')
-        .eq('status', 'READY')
-        .neq('type', 'Delivery')
-        .eq('branch', branch.id);
-    if(ready && ready.length > 0) { 
-        await sb.from('kitchen_orders').delete().in('id', ready.map(o => o.id)); 
-        renderKitchenOrders(); 
-    } else {
-        alert(`No ready dine-in orders for ${branch.name}.`);
-    }
+async function clearReadyOrders() {
+    alert("This action is disabled. Orders are never permanently deleted — use VOID ALL on individual orders if needed, which keeps them in the audit trail.");
 }
 async function clearDeliveriesWithPassword() {
-    const branch = activeBranch || BRANCH_CONFIG.MULTAN;
-    const p = prompt("Enter Audit Code to Clear ALL Deliveries:");
-    if(p === "7530") {
-        playClick('thud'); if(!sb) return;
-        const { error } = await sb.from('kitchen_orders').delete().eq('type', 'Delivery').eq('branch', branch.id);
-        if(!error) { alert(`Delivery Audit Cleared for ${branch.name}!`); renderKitchenOrders(); } else alert("Error clearing database.");
-    } else if (p !== null) { alert("Denied! Wrong Password."); }
+    alert("This action is disabled. Delivery order history is never bulk-deleted to keep the tax audit trail complete. Void individual orders instead if required.");
 }
     
     function setKitchenFilter(f) {
@@ -7554,8 +7457,8 @@ function renderAuditReport() {
             <td style="padding:8px;font-size:12px;">Rs ${o.delivery_fee || 0}</td>
             <td style="padding:8px;font-size:12px;font-weight:900;">Rs ${total}</td>
             <td style="padding:8px;font-size:11px;">${isVoided ? `<span style="background:#e5e7eb;color:#374151;padding:3px 8px;border-radius:8px;font-weight:800;">🚫 VOIDED</span>` : (dupReason ? `<span style="background:#fed7aa;color:#9a3412;padding:3px 8px;border-radius:8px;font-weight:800;white-space:nowrap;">${dupReason}</span>` : '')}</td>
-            <td style="padding:8px;font-size:12px;">
-                <button onclick="deleteAuditOrder('${o.id}')" style="background:#fff5f5;color:#c0392b;border:1.5px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">🗑️ DELETE</button>
+            <td style="padding:8px;">
+                <button onclick="deleteAuditOrder('${o.id}')" style="background:#fff5f5;color:#c0392b;border:1px solid #fecaca;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">🗑️ DELETE</button>
             </td>
         </tr>`;
     }).join('');
@@ -7567,8 +7470,7 @@ function renderAuditReport() {
                 <th style="padding:8px;font-size:11px;">Type</th><th style="padding:8px;font-size:11px;">Location</th>
                 <th style="padding:8px;font-size:11px;">Payment</th><th style="padding:8px;font-size:11px;">Subtotal</th>
                 <th style="padding:8px;font-size:11px;">Tax</th><th style="padding:8px;font-size:11px;">Delivery</th>
-                <th style="padding:8px;font-size:11px;">Total</th><th style="padding:8px;font-size:11px;">Flag</th>
-                <th style="padding:8px;font-size:11px;">Action</th>
+                <th style="padding:8px;font-size:11px;">Total</th><th style="padding:8px;font-size:11px;">Flag</th><th style="padding:8px;font-size:11px;">Action</th>
             </tr></thead>
             <tbody>${rows || '<tr><td colspan="11" style="text-align:center;padding:20px;color:#999;">No orders found</td></tr>'}</tbody>
         </table>
@@ -7576,22 +7478,44 @@ function renderAuditReport() {
 }
 
 async function deleteAuditOrder(id) {
-    const code = prompt("Permanently deleting a tax record. Re-enter the Audit Code to confirm:");
-    if (code !== "7530" && code !== "audit123") {
-        if (code !== null) alert("Wrong code — deletion cancelled.");
-        return;
-    }
-    if (!confirm("This is IRREVERSIBLE and removes the record from your tax audit trail entirely.\n\nVoiding an order (from the Kitchen Panel) is almost always the right tool instead — it keeps the record. Continue with permanent deletion?")) return;
+    if (!sb) return alert("No database connection.");
+    const order = auditReportOrders.find(o => String(o.id) === String(id));
+    if (!order) return alert("Order not found.");
+
+    const pass = prompt("🔒 Enter delete code to permanently remove this order:");
+    if (pass === null) return;
+    if (pass !== "7530") return alert("Wrong code!");
+
+    const t = fmtPKT(order.created_at);
+    const total = (order.subtotal||0) + (order.tax||0) + (order.delivery_fee||0);
+    if (!confirm(
+        `PERMANENTLY DELETE this order?\n\n` +
+        `${t.date} ${t.time}\n` +
+        `${order.type} — ${order.location}\n` +
+        `Total: Rs ${total}\n\n` +
+        `This cannot be undone.`
+    )) return;
+
     playClick('thud');
-    const order = auditReportOrders.find(o => o.id === id);
-    const table = (order && order._source === 'archive') ? 'kitchen_orders_archive' : 'kitchen_orders';
-    if (sb) {
-        const { error } = await sb.from(table).delete().eq('id', id);
-        if (error) { alert("Error deleting order. Try again."); return; }
+    try {
+        // The order may live in either table, so remove from both
+        const r1 = await sb.from('kitchen_orders').delete().eq('id', id).select('id');
+        if (r1.error) throw r1.error;
+        const r2 = await sb.from('kitchen_orders_archive').delete().eq('id', id).select('id');
+        if (r2.error) throw r2.error;
+
+        const deleted = (r1.data || []).length + (r2.data || []).length;
+        if (deleted === 0) {
+            alert("Nothing was deleted. Supabase permissions (RLS) are probably blocking DELETE on this table.");
+            return;
+        }
+
+        auditReportOrders = auditReportOrders.filter(o => String(o.id) !== String(id));
+        renderAuditReport();
+    } catch (e) {
+        console.error('Delete audit order failed:', e);
+        alert("Delete failed: " + (e.message || e));
     }
-    auditReportOrders = auditReportOrders.filter(o => o.id !== id);
-    renderAuditReport();
-    admShowToast('🗑️', 'Order deleted', 'success');
 }
 
 function fmtPKT(iso) {
@@ -8217,12 +8141,7 @@ setTimeout(() => {
     });
 }, 1000);
 async function adminManualClearStaleOrders() {
-    const pass = prompt("Enter code to clear stale/leftover orders:");
-    if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
-    localStorage.removeItem('ovenx_autoclear_date'); // force it to actually run
-    await autoClearStaleOrders();
-    alert("Stale orders cleared (if any existed before today's 2AM cutoff).");
-    renderKitchenOrders();
+    alert("Stale-order clearing has been permanently disabled to protect order and tax history. Orders now stay in the system indefinitely — use 'VOID ALL' on individual orders if one needs to be removed from the active kitchen view.");
 }
 
 setTimeout(() => {
