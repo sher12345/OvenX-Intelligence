@@ -4050,7 +4050,7 @@ function unlockOrderButton() {
     const grand = taxable + tax + delCharge;
     
     const itemsText = cart.map(i => {
-        let detail = i.qty + "x " + i.name;
+        let detail = i.qty + "x " + i.name + " @ Rs " + (i.price * i.qty);
         if (i.note) detail += " [" + i.note + "]"; 
         return detail;
     }).join("\n");
@@ -5248,7 +5248,7 @@ async function loadDeliveryHistory() {
 
         const t = manCalcTotals();
         const itemsText = manCart.map(c => {
-            let line = `${c.qty}x ${c.name}`;
+            let line = `${c.qty}x ${c.name} @ Rs ${c.price * c.qty}`;
             if (c.note) line += ` [${c.note}]`;
             return line;
         }).join("\n");
@@ -5497,6 +5497,24 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
             if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
         }
     }
+    // Customer receipt: name on the left, price on the right
+function renderReceiptItems(itemsText) {
+    return String(itemsText || '').split('\n').map(line => {
+        const m = line.match(/^(.+?)\s@\sRs\s(\d+)(.*)$/);
+        if (m) {
+            return `<div style="display:flex;justify-content:space-between;gap:8px;">
+                        <span style="flex:1;text-align:left;">${m[1]}${m[3]}</span>
+                        <span style="white-space:nowrap;">${m[2]}</span>
+                    </div>`;
+        }
+        return `<div style="text-align:left;">${line || '&nbsp;'}</div>`;
+    }).join('');
+}
+
+// Kitchen ticket: remove the prices
+function stripItemPrices(itemsText) {
+    return String(itemsText || '').replace(/\s@\sRs\s\d+/g, '');
+}
 
             async function printOrderData(id, type) {
     if (!sb) return alert("Database connection error");
@@ -5551,7 +5569,7 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
                 <div style="border-bottom:1px solid #000;margin-bottom:5px;"></div>
                 
                 <!-- Items exactly as stored -->
-                <div style="text-align:left;font-size:14px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">${o.items}</div>
+                <div style="text-align:left;font-size:14px;font-weight:bold;line-height:1.8;">${renderReceiptItems(o.items)}</div>
                 
                 <div style="border-bottom:1px dashed #000;margin:10px 0;"></div>
                 <div style="font-size:14px;line-height:1.8;text-align:left;">
@@ -5595,7 +5613,7 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
                 </div>
                 ${o.phone ? `<div style="font-size:16px;margin-top:6px;">📞 ${o.phone}</div>` : ''}
                 <div style="text-align:left;font-size:20px;font-weight:bold;margin-top:12px;white-space:pre-wrap;line-height:1.7;">
-                    ${o.items}
+                    ${stripItemPrices(o.items)}
                 </div>
                 <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
                     <b>Shop: Rs ${subtotal}</b><br>
@@ -5676,7 +5694,7 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
     const pr = prompt("Price:");
     if (!ni) return;
     playClick('thud');
-    const updatedItems = items + "\n" + ni + " [RECALL]";
+    const updatedItems = items + "\n" + ni + " @ Rs " + (parseInt(pr) || 0) + " [RECALL]";
     const updatedSub = parseInt(sub || 0) + parseInt(pr || 0);
     try {
         await callAdminAction('recallItem', { id, items: updatedItems, subtotal: updatedSub });
