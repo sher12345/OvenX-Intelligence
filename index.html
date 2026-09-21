@@ -2887,6 +2887,13 @@ loadCustomItemsIntoMenu();
         } catch(e) { } 
     }
 
+    function b64enc(str) {
+        try { return btoa(unescape(encodeURIComponent(str || ''))); } catch(e) { return ''; }
+    }
+    function b64dec(str) {
+        try { return decodeURIComponent(escape(atob(str || ''))); } catch(e) { return ''; }
+    }
+
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
     const ADMIN_ACTIONS_URL = "https://frjcefugnvitexxcated.supabase.co/functions/v1/admin-actions";
@@ -5346,8 +5353,9 @@ function formatCCMessage(order) {
            `*Total: Rs ${total}*`;
 }
 
-function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, btnElement) {
+function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt, btnElement) {
     playClick('thud');
+    const items = b64dec(itemsB64);
     
     const order = {
         id: orderId,
@@ -5532,15 +5540,15 @@ const orderBranch = o.branch || 'MULTAN';
 card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location} <span class="order-branch-tag ${orderBranch}">${orderBranch}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
 ${priceHtml}
                 <div class="admin-actions">
-                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
-                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
+                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}')">VOID ITEM</button>
+                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}')">RECALL</button>
                     <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
                     <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
                     <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
+${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
                 ${riderHtml}
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
@@ -6028,32 +6036,42 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
-    async function adminRecallItem(id, items, sub) {
+    async function adminRecallItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
+    const items = b64dec(itemsB64);
     const ni = prompt("Add item:");
     const pr = prompt("Price:");
     if (!ni) return;
     playClick('thud');
-    const updatedItems = items + "\n" + ni + " @ Rs " + (parseInt(pr) || 0) + " [RECALL]";
-    const updatedSub = parseInt(sub || 0) + parseInt(pr || 0);
+    const addedPrice = parseInt(pr) || 0;
+    const updatedItems = items + "\n" + ni + " @ Rs " + addedPrice + " [RECALL]";
+    const scAdd = (orderType === 'Dine-In') ? Math.round(addedPrice * 0.07) : 0;
+    const updatedSub = parseInt(sub || 0) + addedPrice + scAdd;
+    const rate = payMethod === 'Card' ? TAX_RATE_CARD : payMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
+    const updatedTax = Math.round((parseInt(existingTax) || 0) + addedPrice * rate);
     try {
-        await callAdminAction('recallItem', { id, items: updatedItems, subtotal: updatedSub });
+        await callAdminAction('recallItem', { id, items: updatedItems, subtotal: updatedSub, tax: updatedTax });
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
-    async function adminVoidItem(id, items, sub) {
-    const arr = items.split('\n').filter(line => line.trim());
-    if (arr.length === 0) return alert("No items to void");
-    let msg = "Select Line # to Void:\n\n";
-    arr.forEach((it, i) => msg += `${i+1}. ${it.trim()}\n`);
-    const ch = prompt(msg);
-    const idx = parseInt(ch) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= arr.length) return alert("Invalid choice");
-    const ps = prompt(`Subtract price for: "${arr[idx].trim()}"?`, "0");
+    async function adminVoidItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
+    const items = b64dec(itemsB64);
+    const ni = prompt("Which item number to void? (1,2,3...)");
+    if (!ni) return;
     playClick('thud');
-    arr.splice(idx, 1);
-    const updatedSub = Math.max(0, parseInt(sub || 0) - parseInt(ps || 0));
+    const idx = parseInt(ni) - 1;
+    const arr = items.split('\n');
+    if (idx < 0 || idx >= arr.length) return alert("Invalid item number!");
+    const line = arr[idx];
+    const priceMatch = line.match(/@ Rs (\d+)/);
+    const voidedPrice = priceMatch ? parseInt(priceMatch[1]) : 0;
+    arr[idx] = line + " | VOIDED [VOID: " + new Date().toLocaleTimeString() + "]";
+    const updatedItems = arr.join('\n');
+    const scSub = (orderType === 'Dine-In') ? Math.round(voidedPrice * 0.07) : 0;
+    const updatedSub = Math.max(0, parseInt(sub || 0) - voidedPrice - scSub);
+    const rate = payMethod === 'Card' ? TAX_RATE_CARD : payMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
+    const updatedTax = Math.max(0, Math.round((parseInt(existingTax) || 0) - voidedPrice * rate));
     try {
-        await callAdminAction('voidItem', { id, items: arr.join('\n'), subtotal: updatedSub });
+        await callAdminAction('voidItem', { id, items: updatedItems, subtotal: updatedSub, tax: updatedTax });
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
