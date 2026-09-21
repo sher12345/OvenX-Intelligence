@@ -2836,6 +2836,37 @@ loadCustomItemsIntoMenu();
 
     const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
     const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
+    const ADMIN_ACTIONS_URL = "https://frjcefugnvitexxcated.supabase.co/functions/v1/admin-actions";
+let _adminSecret = null;
+
+async function callAdminAction(action, payload) {
+    if (!_adminSecret) {
+        alert("Admin session expired. Please log in again.");
+        openAdminLogin();
+        throw new Error("No admin secret set");
+    }
+    const res = await fetch(ADMIN_ACTIONS_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        },
+        body: JSON.stringify({ action, secret: _adminSecret, payload })
+    });
+    const data = await res.json();
+    if (res.status === 401) {
+        _adminSecret = null;
+        alert("Wrong or expired admin code. Please log in again.");
+        openAdminLogin();
+        throw new Error("Unauthorized");
+    }
+    if (!res.ok || data.error) {
+        alert("Action failed: " + (data.error || res.status));
+        throw new Error(data.error || "Request failed");
+    }
+    return data;
+}
     let sb = null;
     try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Supabase load error"); }
 
@@ -4564,19 +4595,33 @@ function showPermissionDeniedHelp() {
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
     function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
     
-    function verifyAdmin() { 
-        const pass = adminPassTracker;
-        if(pass === "123") {
-            playClick('thud');
-            closeAdminLogin();
-            openKitchenPanel();
-            if ("Notification" in window) Notification.requestPermission();
-        } else {
-            alert("Wrong Code!");
-            adminPassTracker = "";
-            document.getElementById('adminPassword').value = "";
-        }
+    async function verifyAdmin() {
+    const candidate = adminPassTracker; // whatever the staff member typed
+    if (!candidate) { alert("Enter a code first!"); return; }
+ 
+    try {
+        const res = await fetch(ADMIN_ACTIONS_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
+            },
+            body: JSON.stringify({ action: "ping", secret: candidate, payload: {} })
+        });
+        if (!res.ok) throw new Error("bad code");
+ 
+        _adminSecret = candidate;
+        playClick('thud');
+        closeAdminLogin();
+        openKitchenPanel();
+        if ("Notification" in window) Notification.requestPermission();
+    } catch (e) {
+        alert("Wrong Code!");
+        adminPassTracker = "";
+        document.getElementById('adminPassword').value = "";
     }
+}
 
     function renderFinalSummary(fee) {
     isSubmittingOrder = false; // fresh render means we're not mid-submit
@@ -4700,10 +4745,19 @@ function showPermissionDeniedHelp() {
     `;
 }
 
-    async function updateStatus(id, newStatus) { playClick('thud'); if(sb) await sb.from('kitchen_orders').update({ status: newStatus }).eq('id', id); renderKitchenOrders(); }
-async function assignRider(id, rider) { playClick('pop'); if(sb) await sb.from('kitchen_orders').update({ rider: rider }).eq('id', id); renderKitchenOrders(); }
-async function clearReadyOrders() {
-    alert("This action is disabled. Orders are never permanently deleted — use VOID ALL on individual orders if needed, which keeps them in the audit trail.");
+    async function updateStatus(id, newStatus) {
+    playClick('thud');
+    try {
+        await callAdminAction('updateStatus', { id, status: newStatus });
+        renderKitchenOrders();
+    } catch (e) { /* alert already shown inside callAdminAction */ }
+}
+async function assignRider(id, rider) {
+    playClick('pop');
+    try {
+        await callAdminAction('assignRider', { id, rider });
+        renderKitchenOrders();
+    } catch (e) { /* alert already shown */ }
 }
 async function clearDeliveriesWithPassword() {
     alert("This action is disabled. Delivery order history is never bulk-deleted to keep the tax audit trail complete. Void individual orders instead if required.");
@@ -4814,10 +4868,11 @@ async function loadDeliveryHistory() {
     }
     
     function closeKitchenPanel() { 
-        document.getElementById('kitchen-panel-overlay').style.display = 'none'; 
-        if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } 
-        setScrollLock(false); 
-    }
+    document.getElementById('kitchen-panel-overlay').style.display = 'none'; 
+    if(kitchenInterval) { clearInterval(kitchenInterval); kitchenInterval = null; } 
+    setScrollLock(false); 
+    _adminSecret = null;
+}
     
     async function downloadCustomerData() {
         if(!confirm("Download Customer Database?")) return;
@@ -5586,81 +5641,65 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
 }
 
     async function adminVoidOrder(id) {
-        if (!confirm("Void this order? It will be kept in the audit trail as VOIDED, not deleted.")) return;
-        playClick('thud');
-        if (!sb) return;
-        const { data: o, error: fetchErr } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
-        if (fetchErr || !o) { alert("Error loading order to void."); return; }
-
-        const archiveRow = {
-            id: o.id, type: o.type, location: o.location, items: o.items,
-            status: 'VOIDED', subtotal: o.subtotal, delivery_fee: o.delivery_fee,
-            discount: o.discount, discount_claimed: o.discount_claimed, tax: o.tax,
-            payment_method: o.payment_method, branch: o.branch,
-            latitude: o.latitude, longitude: o.longitude,
-            customer_name: o.customer_name, phone: o.phone, rider: o.rider,
-            created_at: o.created_at
-        };
-        const { error: archiveErr } = await sb.from('kitchen_orders_archive').upsert([archiveRow], { onConflict: 'id' });
-        if (archiveErr) { alert("Error archiving voided order — not deleted, please retry."); return; }
-
-        await sb.from('kitchen_orders').delete().eq('id', id);
+    if (!confirm("Void this order? It will be kept in the audit trail as VOIDED, not deleted.")) return;
+    playClick('thud');
+    try {
+        await callAdminAction('voidOrder', { id });
         renderKitchenOrders();
-    }
+    } catch (e) { /* alert already shown */ }
+}
     async function applyCustomDiscount(id) {
-        if (!sb) return;
-        const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', id).single();
-        if (error || !o) { alert("Error loading order."); return; }
-
-        const pct = prompt("Enter discount percentage to apply (e.g. 10 for 10%):", "0");
-        if (pct === null) return;
-        const pctNum = parseFloat(pct);
-        if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) { alert("Please enter a valid percentage between 0 and 100."); return; }
-
-        // Always calculate off the true base subtotal — add back any discount already applied
-        const baseSubtotal = (o.subtotal || 0) + (o.discount || 0);
-
-        // Only discount the eligible portion (excludes Deals & Drinks). Orders placed
-        // before this field existed fall back to the old full-subtotal behaviour.
-        const eligibleBase = (o.eligible_subtotal !== null && o.eligible_subtotal !== undefined && o.eligible_subtotal > 0)
-            ? o.eligible_subtotal
-            : baseSubtotal;
-
-        const newDiscount = Math.round(eligibleBase * (pctNum / 100));
-        const newSubtotal = baseSubtotal - newDiscount;
-
-        let taxRate = 0;
-        if (o.payment_method === 'Card') taxRate = TAX_RATE_CARD;
-        else if (o.payment_method === 'Online') taxRate = TAX_RATE_ONLINE;
-        else taxRate = TAX_RATE_CASH;
-        const newTax = Math.round(newSubtotal * taxRate);
-
-        playClick('thud');
-        const { error: updErr } = await sb.from('kitchen_orders').update({
-            subtotal: newSubtotal,
-            discount: newDiscount,
-            tax: newTax,
-            discount_claimed: true
-        }).eq('id', id);
-
-        if (updErr) { alert("Error applying discount."); return; }
+    const pct = prompt("Enter discount percentage to apply (e.g. 10 for 10%):", "0");
+    if (pct === null) return;
+    const pctNum = parseFloat(pct);
+    if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) {
+        alert("Please enter a valid percentage between 0 and 100.");
+        return;
+    }
+    playClick('thud');
+    try {
+        await callAdminAction('applyDiscount', { id, pct: pctNum });
         renderKitchenOrders();
-    }
-    async function adminChangeTable(id, currentLoc) { const nl = prompt("New Table/Address:", currentLoc); if(nl) { playClick('pop'); await sb.from('kitchen_orders').update({ location: nl }).eq('id', id); renderKitchenOrders(); } }
-    async function adminRecallItem(id, items, sub) { const ni = prompt("Add item:"); const pr = prompt("Price:"); if(ni) { playClick('thud'); const updatedItems = items + "\n" + ni + " [RECALL]"; const updatedSub = parseInt(sub || 0) + parseInt(pr || 0); await sb.from('kitchen_orders').update({ items: updatedItems, subtotal: updatedSub }).eq('id', id); renderKitchenOrders(); } }
-    async function adminVoidItem(id, items, sub) { 
-        const arr = items.split('\n').filter(line => line.trim()); 
-        if (arr.length === 0) return alert("No items to void");
-        let msg = "Select Line # to Void:\n\n"; 
-        arr.forEach((it, i) => msg += `${i+1}. ${it.trim()}\n`);
-        const ch = prompt(msg); 
-        const idx = parseInt(ch) - 1;
-        if(isNaN(idx) || idx < 0 || idx >= arr.length) return alert("Invalid choice");
-        const ps = prompt(`Subtract price for: "${arr[idx].trim()}"?`, "0");
-        playClick('thud'); arr.splice(idx, 1); 
-        const updatedSub = Math.max(0, parseInt(sub || 0) - parseInt(ps || 0));
-        await sb.from('kitchen_orders').update({ items: arr.join('\n'), subtotal: updatedSub }).eq('id', id); renderKitchenOrders();
-    }
+    } catch (e) { /* alert already shown */ }
+}
+    async function adminChangeTable(id, currentLoc) {
+    const nl = prompt("New Table/Address:", currentLoc);
+    if (!nl) return;
+    playClick('pop');
+    try {
+        await callAdminAction('changeTable', { id, location: nl });
+        renderKitchenOrders();
+    } catch (e) { /* alert already shown */ }
+}
+    async function adminRecallItem(id, items, sub) {
+    const ni = prompt("Add item:");
+    const pr = prompt("Price:");
+    if (!ni) return;
+    playClick('thud');
+    const updatedItems = items + "\n" + ni + " [RECALL]";
+    const updatedSub = parseInt(sub || 0) + parseInt(pr || 0);
+    try {
+        await callAdminAction('recallItem', { id, items: updatedItems, subtotal: updatedSub });
+        renderKitchenOrders();
+    } catch (e) { /* alert already shown */ }
+}
+    async function adminVoidItem(id, items, sub) {
+    const arr = items.split('\n').filter(line => line.trim());
+    if (arr.length === 0) return alert("No items to void");
+    let msg = "Select Line # to Void:\n\n";
+    arr.forEach((it, i) => msg += `${i+1}. ${it.trim()}\n`);
+    const ch = prompt(msg);
+    const idx = parseInt(ch) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= arr.length) return alert("Invalid choice");
+    const ps = prompt(`Subtract price for: "${arr[idx].trim()}"?`, "0");
+    playClick('thud');
+    arr.splice(idx, 1);
+    const updatedSub = Math.max(0, parseInt(sub || 0) - parseInt(ps || 0));
+    try {
+        await callAdminAction('voidItem', { id, items: arr.join('\n'), subtotal: updatedSub });
+        renderKitchenOrders();
+    } catch (e) { /* alert already shown */ }
+}
 
     function renderPublicDeals() {
     const list = document.getElementById('deals-list');
