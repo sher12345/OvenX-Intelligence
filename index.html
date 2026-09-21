@@ -2004,6 +2004,7 @@ body {
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
+                <button class="header-back-btn btn-3d" style="background:#7c3aed;" onclick="openCardRecords()">🎓 CARD RECORDS</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
                 <button id="fuel-price-btn" class="header-back-btn btn-3d" style="background:#fd7e14;" onclick="openFuelPricePrompt()">⛽ Set Fuel Price</button>
                 <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
@@ -2046,6 +2047,58 @@ body {
                     CLEAR HISTORY
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+<!-- CARD ENTRY POPUP (per order) -->
+<div id="card-entry-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:10000;backdrop-filter:blur(8px);">
+    <div class="modal" style="max-width:440px;text-align:left;">
+        <h3 style="color:#7c3aed;font-weight:900;margin-top:0;text-align:center;">🎓 Discount Card Details</h3>
+        <div id="card-entry-order-info" style="background:#f5f3ff;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:700;color:#5b21b6;line-height:1.6;"></div>
+        <select id="card-type" class="big-input" style="margin-top:12px;padding:14px;">
+            <option value="Student">Student Card</option>
+            <option value="Medical Student">Medical Student Card</option>
+        </select>
+        <input type="text" id="card-number" placeholder="🪪 Card / Roll / ID Number" class="big-input" style="margin-top:10px;padding:14px;" onblur="lookupCardByNumber()">
+        <div id="card-lookup-note" style="font-size:12px;font-weight:700;margin:6px 4px 0;"></div>
+        <input type="text" id="card-holder" placeholder="👤 Card Holder Name" class="big-input" style="margin-top:10px;padding:14px;">
+        <input type="tel" id="card-phone" placeholder="📞 Phone" class="big-input" style="margin-top:10px;padding:14px;" maxlength="15">
+        <input type="text" id="card-institution" placeholder="🏫 College / University" class="big-input" style="margin-top:10px;padding:14px;">
+        <textarea id="card-notes" placeholder="Notes (optional)" class="big-input" style="margin-top:10px;padding:14px;height:60px;"></textarea>
+        <button class="confirm-btn btn-3d" style="background:#7c3aed;box-shadow:0 6px 0px #5b21b6;font-size:16px;padding:16px;" onclick="saveCardEntry()">SAVE CARD RECORD</button>
+        <button onclick="closeCardEntry()" style="margin-top:12px;border:none;background:none;color:gray;font-weight:bold;width:100%;">CANCEL</button>
+    </div>
+</div>
+
+<!-- CARD RECORDS VIEWER -->
+<div id="card-records-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:10000;backdrop-filter:blur(10px);">
+    <div class="kitchen-modal" style="max-width:1100px;">
+        <div class="kitchen-header">
+            <h2 style="margin:0;color:#7c3aed;font-weight:900;">🎓 CARD RECORDS</h2>
+            <div style="display:flex;gap:10px;">
+                <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCardRecordsCSV()">EXPORT CSV 📥</button>
+                <button class="header-back-btn btn-3d" onclick="closeCardRecords()">EXIT</button>
+            </div>
+        </div>
+        <div style="padding:20px;overflow-y:auto;flex:1;background:#f9f9f9;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;">
+                <input type="text" id="cr-search" class="adm-search" placeholder="🔍 Search name, phone, card no, college..." oninput="renderCardRecords()" style="flex:2;min-width:220px;">
+                <select id="cr-type" class="adm-select" onchange="renderCardRecords()">
+                    <option value="all">All Card Types</option>
+                    <option value="Student">Student</option>
+                    <option value="Medical Student">Medical Student</option>
+                </select>
+                <select id="cr-branch" class="adm-select" onchange="renderCardRecords()">
+                    <option value="all">All Branches</option>
+                    <option value="MULTAN">Multan</option>
+                    <option value="BWP">Bahawalpur</option>
+                </select>
+                <input type="date" id="cr-from" class="adm-search" style="max-width:150px;" onchange="renderCardRecords()">
+                <span style="color:#999;font-size:12px;">to</span>
+                <input type="date" id="cr-to" class="adm-search" style="max-width:150px;" onchange="renderCardRecords()">
+            </div>
+            <div id="card-records-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin-bottom:20px;"></div>
+            <div id="card-records-list"></div>
         </div>
     </div>
 </div>
@@ -5408,7 +5461,8 @@ function sendToCC(orderId, items, location, subtotal, deliveryFee, createdAt, bt
             let query = sb.from('kitchen_orders').select('*').neq('status','PENDING').order('created_at', { ascending: false });
             if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
             if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
-            const { data: orders } = await query; 
+            const { data: orders } = await query;
+            const cardMap = await fetchCardMap(); 
             const list = document.getElementById('kitchen-orders-list');
             list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
             const now = new Date(); 
@@ -5475,13 +5529,14 @@ if (o.type === 'Takeaway') {
 }
 
 const orderBranch = o.branch || 'MULTAN';
-card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location} <span class="order-branch-tag ${orderBranch}">${orderBranch}</span></div>${customerInfoHtml}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
+card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location} <span class="order-branch-tag ${orderBranch}">${orderBranch}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
 ${priceHtml}
                 <div class="admin-actions">
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">VOID ITEM</button>
                     <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', \`${o.items.replace(/`/g, "\\'")}\`, ${o.subtotal || 0})">RECALL</button>
                     <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
                     <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
+                    <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
@@ -5514,6 +5569,290 @@ function renderReceiptItems(itemsText) {
 // Kitchen ticket: remove the prices
 function stripItemPrices(itemsText) {
     return String(itemsText || '').replace(/\s@\sRs\s\d+/g, '');
+}
+
+// ══════════════════════════════════════════
+// DISCOUNT CARD RECORDS (Student / Medical Student)
+// ══════════════════════════════════════════
+let cardRecords = [];
+let cardEntryOrder = null;
+
+function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+// Latest card records keyed by order id (used for the badge on kitchen cards)
+async function fetchCardMap() {
+    const map = {};
+    if (!sb) return map;
+    try {
+        const { data } = await sb.from('card_records')
+            .select('order_id,card_type,holder_name,card_number')
+            .not('order_id', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(300);
+        (data || []).forEach(r => { if (!map[r.order_id]) map[r.order_id] = r; });
+    } catch (e) { /* table not created yet - kitchen keeps working */ }
+    return map;
+}
+
+function cardBadgeHtml(rec) {
+    if (!rec) return '';
+    return `<div style="background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;font-size:12px;font-weight:900;padding:5px 10px;border-radius:8px;display:inline-block;margin:6px 0;">🎓 ${escHtml(rec.card_type)} — ${escHtml(rec.holder_name)}${rec.card_number ? ' (#' + escHtml(rec.card_number) + ')' : ''}</div>`;
+}
+
+async function openCardEntry(orderId) {
+    if (!sb) return alert("No database connection.");
+    playClick('pop');
+    const { data: o, error } = await sb.from('kitchen_orders').select('*').eq('id', orderId).single();
+    if (error || !o) return alert("Error loading order.");
+    cardEntryOrder = o;
+
+    let existing = null;
+    const { data: ex } = await sb.from('card_records').select('*').eq('order_id', String(o.id)).limit(1);
+    if (ex && ex.length) existing = ex[0];
+
+    const disc = o.discount || 0;
+    document.getElementById('card-entry-order-info').innerHTML =
+        `${escHtml(o.type)} — ${escHtml(o.location)}<br>` +
+        (disc > 0
+            ? `<span style="color:#16a34a;">✅ Discount on this order: Rs ${disc}</span>`
+            : `<span style="color:#c2410c;">⚠️ No discount applied yet — tap % DISCOUNT on the order first.</span>`);
+
+    document.getElementById('card-type').value = existing ? existing.card_type : 'Student';
+    document.getElementById('card-number').value = existing ? (existing.card_number || '') : '';
+    document.getElementById('card-holder').value = existing ? existing.holder_name : (o.customer_name || '');
+    document.getElementById('card-phone').value = existing ? (existing.phone || '') : (o.phone || '');
+    document.getElementById('card-institution').value = existing ? (existing.institution || '') : '';
+    document.getElementById('card-notes').value = existing ? (existing.notes || '') : '';
+    const note = document.getElementById('card-lookup-note');
+    note.style.color = '#5b21b6';
+    note.textContent = existing ? '✏️ Card already recorded for this order — you can edit it.' : '';
+    document.getElementById('card-entry-overlay').style.display = 'flex';
+}
+
+// When a card number is typed, check if we've seen it before and auto-fill
+async function lookupCardByNumber() {
+    const note = document.getElementById('card-lookup-note');
+    const num = document.getElementById('card-number').value.trim().toUpperCase();
+    if (!num || !sb) return;
+    const { data, error } = await sb.from('card_records').select('*')
+        .eq('card_number', num).order('created_at', { ascending: false }).limit(100);
+    if (error) return;
+    const prev = (data || []).filter(r => !cardEntryOrder || r.order_id !== String(cardEntryOrder.id));
+    if (!prev.length) {
+        note.style.color = '#c2410c';
+        note.textContent = '🆕 New card — no previous orders recorded.';
+        return;
+    }
+    const last = prev[0];
+    const setIfEmpty = (id, v) => { const el = document.getElementById(id); if (el && !el.value.trim() && v) el.value = v; };
+    setIfEmpty('card-holder', last.holder_name);
+    setIfEmpty('card-phone', last.phone);
+    setIfEmpty('card-institution', last.institution);
+    note.style.color = '#16a34a';
+    note.textContent = `✅ Known card (${last.holder_name}) — ${prev.length} previous order(s), last on ${fmtPKT(last.created_at).date}.`;
+}
+
+async function saveCardEntry() {
+    if (!sb || !cardEntryOrder) return;
+    const holder = document.getElementById('card-holder').value.trim();
+    const number = document.getElementById('card-number').value.trim().toUpperCase();
+    if (!number) return alert("Please enter the card number!");
+    if (!holder) return alert("Please enter the card holder's name!");
+
+    // Re-read the order so the record has the latest discount / totals
+    const { data: fresh } = await sb.from('kitchen_orders').select('*').eq('id', cardEntryOrder.id).single();
+    const o = fresh || cardEntryOrder;
+    if ((o.discount || 0) <= 0 && !confirm("No discount has been applied to this order yet.\n\nSave the card record anyway?")) return;
+
+    const row = {
+        branch: o.branch || 'MULTAN',
+        card_type: document.getElementById('card-type').value,
+        card_number: number,
+        holder_name: holder,
+        phone: document.getElementById('card-phone').value.trim() || null,
+        institution: document.getElementById('card-institution').value.trim() || null,
+        order_id: String(o.id),
+        order_type: o.type,
+        location: o.location,
+        items: o.items,
+        subtotal: o.subtotal || 0,
+        discount: o.discount || 0,
+        tax: o.tax || 0,
+        delivery_fee: o.delivery_fee || 0,
+        total: (o.subtotal || 0) + (o.tax || 0) + (o.delivery_fee || 0),
+        notes: document.getElementById('card-notes').value.trim() || null
+    };
+
+    const { error } = await sb.from('card_records').upsert([row], { onConflict: 'order_id' });
+    if (error) {
+        alert("Save failed: " + error.message + "\n\nHave you created the card_records table in Supabase?");
+        return;
+    }
+    playClick('thud');
+    closeCardEntry();
+    renderKitchenOrders();
+}
+
+function closeCardEntry() {
+    document.getElementById('card-entry-overlay').style.display = 'none';
+    cardEntryOrder = null;
+}
+
+// ── Card Records viewer ──
+async function openCardRecords() {
+    playClick('pop');
+    document.getElementById('card-records-overlay').style.display = 'flex';
+    document.getElementById('card-records-list').innerHTML = '<p style="text-align:center;padding:30px;color:#999;">Loading...</p>';
+    await loadCardRecords();
+}
+
+function closeCardRecords() {
+    document.getElementById('card-records-overlay').style.display = 'none';
+}
+
+async function loadCardRecords() {
+    if (!sb) { cardRecords = []; renderCardRecords(); return; }
+    try {
+        cardRecords = await fetchAllRows('card_records', q => q.order('created_at', { ascending: false }));
+    } catch (e) {
+        cardRecords = [];
+        document.getElementById('card-records-list').innerHTML =
+            `<p style="text-align:center;padding:30px;color:#c62828;">Could not load card records. Make sure the <b>card_records</b> table exists in Supabase.<br><small>${escHtml(e.message || e)}</small></p>`;
+        return;
+    }
+    renderCardRecords();
+}
+
+function getCardRecordsFiltered() {
+    const s = (document.getElementById('cr-search')?.value || '').trim().toLowerCase();
+    const type = document.getElementById('cr-type').value;
+    const branch = document.getElementById('cr-branch').value;
+    const from = document.getElementById('cr-from').value;
+    const to = document.getElementById('cr-to').value;
+    return cardRecords.filter(r => {
+        if (type !== 'all' && r.card_type !== type) return false;
+        if (branch !== 'all' && (r.branch || 'MULTAN') !== branch) return false;
+        if (from && new Date(r.created_at) < new Date(from + 'T00:00:00')) return false;
+        if (to && new Date(r.created_at) > new Date(to + 'T23:59:59')) return false;
+        if (s) {
+            const hay = [r.holder_name, r.phone, r.card_number, r.institution].join(' ').toLowerCase();
+            if (!hay.includes(s)) return false;
+        }
+        return true;
+    });
+}
+
+function renderCardRecords() {
+    const list = getCardRecordsFiltered();
+
+    // Group by card number (falls back to phone / name)
+    const groups = {};
+    list.forEach(r => {
+        const key = String(r.card_number || r.phone || r.holder_name || r.id).toUpperCase();
+        if (!groups[key]) groups[key] = {
+            holder_name: r.holder_name, card_type: r.card_type, card_number: r.card_number,
+            phone: r.phone, institution: r.institution, orders: [], spent: 0, discount: 0
+        };
+        const g = groups[key];
+        g.orders.push(r);
+        g.spent += Number(r.total || 0);
+        g.discount += Number(r.discount || 0);
+    });
+    const arr = Object.values(groups);
+    window._cardGroups = arr;
+
+    const totalDisc = list.reduce((s, r) => s + Number(r.discount || 0), 0);
+    const totalSales = list.reduce((s, r) => s + Number(r.total || 0), 0);
+    document.getElementById('card-records-stats').innerHTML = `
+        <div class="adm-stat red"><div class="adm-stat-val">${arr.length}</div><div class="adm-stat-lbl">Unique Cards</div></div>
+        <div class="adm-stat orange"><div class="adm-stat-val">${list.length}</div><div class="adm-stat-lbl">Card Orders</div></div>
+        <div class="adm-stat green"><div class="adm-stat-val">Rs ${totalSales}</div><div class="adm-stat-lbl">Total Sales</div></div>
+        <div class="adm-stat gold"><div class="adm-stat-val">Rs ${totalDisc}</div><div class="adm-stat-lbl">Discount Given</div></div>
+    `;
+
+    if (!arr.length) {
+        document.getElementById('card-records-list').innerHTML = '<p style="text-align:center;padding:30px;color:#999;">No card records found.</p>';
+        return;
+    }
+
+    document.getElementById('card-records-list').innerHTML = arr.map((g, i) => {
+        const isMed = g.card_type === 'Medical Student';
+        const pillBg = isMed ? '#fce7f3' : '#ede9fe';
+        const pillFg = isMed ? '#9d174d' : '#5b21b6';
+        const rows = g.orders.map(r => {
+            const t = fmtPKT(r.created_at);
+            return `<tr style="border-top:1px solid #f0ece8;vertical-align:top;">
+                <td style="padding:8px;font-size:11px;white-space:nowrap;">${t.date}<br>${t.time}</td>
+                <td style="padding:8px;font-size:11px;">${escHtml(r.branch || 'MULTAN')}</td>
+                <td style="padding:8px;font-size:11px;">${escHtml(r.order_type)}<br><span style="color:#999;">${escHtml(r.location)}</span></td>
+                <td style="padding:8px;font-size:11px;white-space:pre-wrap;">${escHtml(r.items)}${r.notes ? '<br><i style="color:#7c3aed;">Note: ' + escHtml(r.notes) + '</i>' : ''}</td>
+                <td style="padding:8px;font-size:12px;font-weight:800;white-space:nowrap;">Rs ${Number(r.total || 0)}</td>
+                <td style="padding:8px;font-size:12px;font-weight:800;color:#16a34a;white-space:nowrap;">-Rs ${Number(r.discount || 0)}</td>
+            </tr>`;
+        }).join('');
+        return `
+        <div style="background:white;border:2px solid #ede9fe;border-radius:18px;padding:16px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <div style="font-size:17px;font-weight:900;color:#1a1a1a;">👤 ${escHtml(g.holder_name)}</div>
+                    <div style="margin-top:4px;"><span style="background:${pillBg};color:${pillFg};font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;">🎓 ${escHtml(g.card_type)}</span></div>
+                    <div style="font-size:12px;color:#666;margin-top:8px;line-height:1.8;">
+                        🪪 ${escHtml(g.card_number || '—')}<br>
+                        📞 ${escHtml(g.phone || '—')}<br>
+                        🏫 ${escHtml(g.institution || '—')}
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px;color:#999;font-weight:700;">ORDERS</div>
+                    <div style="font-size:26px;font-weight:900;color:#7c3aed;">${g.orders.length}</div>
+                    <div style="font-size:12px;color:#666;">Spent: <b>Rs ${g.spent}</b></div>
+                    <div style="font-size:12px;color:#16a34a;">Discount given: <b>Rs ${g.discount}</b></div>
+                </div>
+            </div>
+            <button onclick="toggleCardHistory(${i})" style="margin-top:12px;width:100%;padding:10px;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;">📜 VIEW ORDER HISTORY ▾</button>
+            <div id="card-hist-${i}" style="display:none;margin-top:10px;overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:#f5f3ff;text-align:left;">
+                        <th style="padding:8px;font-size:11px;">Date</th><th style="padding:8px;font-size:11px;">Branch</th>
+                        <th style="padding:8px;font-size:11px;">Type</th><th style="padding:8px;font-size:11px;">Items</th>
+                        <th style="padding:8px;font-size:11px;">Total</th><th style="padding:8px;font-size:11px;">Discount</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleCardHistory(i) {
+    const el = document.getElementById('card-hist-' + i);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function downloadCardRecordsCSV() {
+    const list = getCardRecordsFiltered();
+    if (!list.length) { alert("No data to export!"); return; }
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    let csv = "Date,Time,Branch,Card Type,Card Number,Holder Name,Phone,Institution,Order Type,Location,Items,Subtotal,Discount,Tax,Delivery Fee,Total,Notes\n";
+    list.forEach(r => {
+        const t = fmtPKT(r.created_at);
+        csv += [
+            esc(t.date), esc(t.time), esc(r.branch || 'MULTAN'), esc(r.card_type), esc(r.card_number),
+            esc(r.holder_name), esc(r.phone), esc(r.institution), esc(r.order_type), esc(r.location),
+            esc(r.items), Number(r.subtotal || 0), Number(r.discount || 0), Number(r.tax || 0),
+            Number(r.delivery_fee || 0), Number(r.total || 0), esc(r.notes)
+        ].join(',') + "\n";
+    });
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `OvenX_Card_Records_${fmtPKT(new Date().toISOString()).date}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    playClick('thud');
 }
 
             async function printOrderData(id, type) {
