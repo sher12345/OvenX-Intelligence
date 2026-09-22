@@ -6036,44 +6036,253 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
+const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita",
+  "lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola"];
+
+function isTaxExempt(name) {
+    const n = name.toLowerCase();
+    return drinkKeywords.some(kw => n.includes(kw)) || n.includes('dip');
+}
     async function adminRecallItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
     const items = b64dec(itemsB64);
+
     const ni = prompt("Add item:");
     const pr = prompt("Price:");
+
     if (!ni) return;
-    playClick('thud');
+
     const addedPrice = parseInt(pr) || 0;
-    const updatedItems = items + "\n" + ni + " @ Rs " + addedPrice + " [RECALL]";
-    const scAdd = (orderType === 'Dine-In') ? Math.round(addedPrice * 0.07) : 0;
-    const updatedSub = parseInt(sub || 0) + addedPrice + scAdd;
-    const rate = payMethod === 'Card' ? TAX_RATE_CARD : payMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
-    const updatedTax = Math.round((parseInt(existingTax) || 0) + addedPrice * rate);
+    if (addedPrice <= 0) return alert("Invalid price!");
+
+    playClick('thud');
+
+    // Add recalled item
+    const updatedItems =
+        items + "\n" +
+        ni + " @ Rs " + addedPrice + " [RECALL]";
+
+    // -----------------------------------------
+    // RECALCULATE COMPLETE BILL
+    // -----------------------------------------
+
+    const lines = updatedItems
+        .split('\n')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    let rawSubtotal = 0;
+    let taxableFood = 0;
+
+    lines.forEach(line => {
+        const match = line.match(/@ Rs\s+(\d+)/);
+        if (!match) return;
+
+        const price = parseInt(match[1]) || 0;
+
+        rawSubtotal += price;
+
+        // Drinks and dips are PRA tax exempt.
+        const header = line.toLowerCase();
+
+        if (!isTaxExempt(header)) {
+            taxableFood += price;
+        }
+    });
+
+    // PRA TAX
+    const rate =
+        payMethod === 'Card'
+            ? TAX_RATE_CARD
+            : payMethod === 'Online'
+                ? TAX_RATE_ONLINE
+                : TAX_RATE_CASH;
+
+    const updatedTax = Math.round(taxableFood * rate);
+
+    // S.C. is ALWAYS 7% of the COMPLETE BILL
+    // including beverages, toppings, etc.
+    const sc =
+        orderType === 'Dine-In'
+            ? Math.round(rawSubtotal * 0.07)
+            : 0;
+
+    const updatedSub = rawSubtotal + sc;
+
     try {
-        await callAdminAction('recallItem', { id, items: updatedItems, subtotal: updatedSub, tax: updatedTax });
-        renderKitchenOrders();
-    } catch (e) { /* alert already shown */ }
+        await callAdminAction('recallItem', {
+            id,
+            items: updatedItems,
+            subtotal: updatedSub,
+            tax: updatedTax
+        });
+
+        await renderKitchenOrders();
+
+    } catch (e) {
+        /* alert already shown */
+    }
 }
     async function adminVoidItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
     const items = b64dec(itemsB64);
-    const ni = prompt("Which item number to void? (1,2,3...)");
+
+    // -----------------------------------------
+    // GROUP REAL ITEMS
+    // -----------------------------------------
+
+    const rawLines = items.split('\n');
+
+    const groupedItems = [];
+    let current = '';
+
+    rawLines.forEach(line => {
+        const trimmed = line.trim();
+
+        if (!trimmed) return;
+
+        // A real item starts with:
+        // 1x Item Name @ Rs 123
+        const isNewItem =
+            /^\d+x\s+.+?\s+@\s+Rs\s+\d+/.test(trimmed);
+
+        if (isNewItem) {
+            if (current) groupedItems.push(current);
+            current = trimmed;
+        } else {
+            // Deal Category / Includes lines stay attached
+            // to the item above.
+            if (current) {
+                current += '\n' + trimmed;
+            }
+        }
+    });
+
+    if (current) groupedItems.push(current);
+
+    if (!groupedItems.length) {
+        return alert("No items found in this order.");
+    }
+
+    // -----------------------------------------
+    // SHOW ONLY REAL TOP-LEVEL ITEMS
+    // -----------------------------------------
+
+    const itemList = groupedItems
+        .map((item, i) => `${i + 1}. ${item}`)
+        .join('\n');
+
+    const ni = prompt(
+        "Which item do you want to void?\n\n" +
+        itemList +
+        "\n\nType the item number:"
+    );
+
     if (!ni) return;
+
+    const selectedNumber = parseInt(ni);
+
+    if (
+        isNaN(selectedNumber) ||
+        selectedNumber < 1 ||
+        selectedNumber > groupedItems.length
+    ) {
+        return alert("Invalid item number!");
+    }
+
     playClick('thud');
-    const idx = parseInt(ni) - 1;
-    const arr = items.split('\n');
-    if (idx < 0 || idx >= arr.length) return alert("Invalid item number!");
-    const line = arr[idx];
-    const priceMatch = line.match(/@ Rs (\d+)/);
-    const voidedPrice = priceMatch ? parseInt(priceMatch[1]) : 0;
-    arr[idx] = line + " | VOIDED [VOID: " + new Date().toLocaleTimeString() + "]";
-    const updatedItems = arr.join('\n');
-    const scSub = (orderType === 'Dine-In') ? Math.round(voidedPrice * 0.07) : 0;
-    const updatedSub = Math.max(0, parseInt(sub || 0) - voidedPrice - scSub);
-    const rate = payMethod === 'Card' ? TAX_RATE_CARD : payMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
-    const updatedTax = Math.max(0, Math.round((parseInt(existingTax) || 0) - voidedPrice * rate));
+
+    // -----------------------------------------
+    // REMOVE ITEM COMPLETELY
+    // -----------------------------------------
+
+    const selectedItem =
+        groupedItems[selectedNumber - 1];
+
+    const priceMatch =
+        selectedItem.match(/@ Rs\s+(\d+)/);
+
+    const voidedPrice =
+        priceMatch ? parseInt(priceMatch[1]) : 0;
+
+    if (voidedPrice <= 0) {
+        return alert("Could not determine item price.");
+    }
+
+    groupedItems.splice(selectedNumber - 1, 1);
+
+    const updatedItems =
+        groupedItems.join('\n');
+
+    // -----------------------------------------
+    // RECALCULATE COMPLETE REMAINING BILL
+    // -----------------------------------------
+
+    let rawSubtotal = 0;
+    let taxableFood = 0;
+
+    groupedItems.forEach(item => {
+
+        // Price comes ONLY from the top-level
+        // item header.
+        const header =
+            item.split('\n')[0].trim();
+
+        const match =
+            header.match(/@ Rs\s+(\d+)/);
+
+        if (!match) return;
+
+        const price =
+            parseInt(match[1]) || 0;
+
+        // S.C. includes EVERYTHING.
+        rawSubtotal += price;
+
+        // PRA tax excludes beverages/dips.
+        if (!isTaxExempt(header.toLowerCase())) {
+            taxableFood += price;
+        }
+    });
+
+    // -----------------------------------------
+    // PRA TAX
+    // -----------------------------------------
+
+    const rate =
+        payMethod === 'Card'
+            ? TAX_RATE_CARD
+            : payMethod === 'Online'
+                ? TAX_RATE_ONLINE
+                : TAX_RATE_CASH;
+
+    const updatedTax =
+        Math.round(taxableFood * rate);
+
+    // -----------------------------------------
+    // S.C. = 7% OF COMPLETE REMAINING BILL
+    // -----------------------------------------
+
+    const sc =
+        orderType === 'Dine-In'
+            ? Math.round(rawSubtotal * 0.07)
+            : 0;
+
+    const updatedSub =
+        rawSubtotal + sc;
+
     try {
-        await callAdminAction('voidItem', { id, items: updatedItems, subtotal: updatedSub, tax: updatedTax });
-        renderKitchenOrders();
-    } catch (e) { /* alert already shown */ }
+
+        await callAdminAction('voidItem', {
+            id,
+            items: updatedItems,
+            subtotal: updatedSub,
+            tax: updatedTax
+        });
+
+        await renderKitchenOrders();
+
+    } catch (e) {
+        /* alert already shown */
+    }
 }
 
     function renderPublicDeals() {
