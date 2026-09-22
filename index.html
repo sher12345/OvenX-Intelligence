@@ -4653,7 +4653,25 @@ function showPermissionDeniedHelp() {
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
-    function handlePassInput(el) { let cur = el.value; if(cur.length < adminPassTracker.length) adminPassTracker = adminPassTracker.substring(0, cur.length); else { let last = cur.substring(cur.length-1); if(last !== "🍕") adminPassTracker += last; } el.value = "🍕".repeat(adminPassTracker.length); }
+    function handlePassInput(el) {
+    const cur = el.value;
+
+    // Handle Backspace/Delete correctly
+    if (cur.length < adminPassTracker.length) {
+        adminPassTracker = adminPassTracker.substring(0, cur.length);
+    }
+    // Add only the newly typed character
+    else if (cur.length > adminPassTracker.length) {
+        const last = cur.substring(cur.length - 1);
+
+        if (last !== "🍕") {
+            adminPassTracker += last;
+        }
+    }
+
+    // Keep the password field masked
+    el.value = "🍕".repeat(adminPassTracker.length);
+}
     
     async function verifyAdmin() {
     const candidate = adminPassTracker; // whatever the staff member typed
@@ -5876,11 +5894,20 @@ function downloadCardRecordsCSV() {
 
     // Exact same values shown in kitchen panel
     const subtotal = o.subtotal || 0;
-    const delFee = o.delivery_fee || 0;
-    const discount = o.discount || 0;
-    const tax = o.tax || 0;
-    const payMethod = o.payment_method || 'Cash';
-    const grandTotal = subtotal + tax + delFee;
+const delFee = o.delivery_fee || 0;
+const discount = o.discount || 0;
+const tax = o.tax || 0;
+const payMethod = o.payment_method || 'Cash';
+
+// S.C. is already included in o.subtotal.
+// Recover the original raw item subtotal so S.C. can be shown separately.
+const isDineIn = o.type === 'Dine-In';
+const sc = isDineIn
+    ? Math.round(((subtotal + discount) * 7) / 107)
+    : 0;
+
+const rawSubtotal = subtotal - sc + discount;
+const grandTotal = subtotal + tax + delFee;
     const discBase = (o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (subtotal + discount);
 const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
 
@@ -5921,8 +5948,13 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
                 <div style="border-bottom:1px dashed #000;margin:10px 0;"></div>
                 <div style="font-size:14px;line-height:1.8;text-align:left;">
                     <div style="display:flex;justify-content:space-between;">
-                        <span>Shop:</span><span>Rs ${subtotal}</span>
-                    </div>
+    <span>Shop Subtotal:</span><span>Rs ${rawSubtotal}</span>
+</div>
+
+${sc > 0 ? `
+<div style="display:flex;justify-content:space-between;">
+    <span>S.C (7%):</span><span>Rs ${sc}</span>
+</div>` : ''}
                     ${discount > 0 ? `
                     <div style="display:flex;justify-content:space-between;font-weight:bold;">
                         <span>${discPct}% Discount:</span><span>-Rs ${discount}</span>
@@ -5963,9 +5995,10 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
                     ${stripItemPrices(o.items)}
                 </div>
                 <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
-                    <b>Shop: Rs ${subtotal}</b><br>
-                    ${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
-                    ${tax > 0 ? `<span>Tax (${payMethod}): Rs ${tax}</span><br>` : ''}
+                    <b>Shop Subtotal: Rs ${rawSubtotal}</b><br>
+${sc > 0 ? `<span>S.C (7%): Rs ${sc}</span><br>` : ''}
+${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
+${tax > 0 ? `<span>PRA Tax (${payMethod}): Rs ${tax}</span><br>` : ''}
                     ${delFee > 0 ? `<span>Del: Rs ${delFee}</span><br>` : ''}
                     <b style="font-size:20px;">Total: Rs ${grandTotal}</b>
                 </div>
