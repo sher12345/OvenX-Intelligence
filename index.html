@@ -2653,8 +2653,8 @@ riderPhones: {
 
     // ── FUEL PRICE → DELIVERY RATE ──
     function computeRatePerKm(fuelPrice) {
-        return Math.round(fuelPrice / FUEL_MILEAGE_KM_PER_LITER);
-    }
+    return fuelPrice / FUEL_MILEAGE_KM_PER_LITER;
+}
 
     async function loadFuelPriceSetting() {
         if (!sb) return;
