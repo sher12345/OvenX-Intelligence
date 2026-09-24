@@ -5691,8 +5691,8 @@ const orderBranch = o.branch || 'MULTAN';
 card.innerHTML = `<span class="kitchen-badge kb-${o.status.toLowerCase()}">${o.status}</span><div style="font-weight:900; color:var(--red); font-size:18px;">${o.type.toUpperCase()} - ${o.location} <span class="order-branch-tag ${orderBranch}">${orderBranch}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${o.items}</div>
 ${priceHtml}
                 <div class="admin-actions">
-                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}')">VOID ITEM</button>
-                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}')">RECALL</button>
+                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
+                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
                     <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
                     <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
                     <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
@@ -6209,12 +6209,40 @@ function isTaxExempt(name) {
     const n = name.toLowerCase();
     return drinkKeywords.some(kw => n.includes(kw)) || n.includes('dip');
 }
-    async function adminRecallItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
+
+// Recompute the full bill after a recall/void, keeping the original discount %
+function recalcBillAfterEdit(itemsText, orderType, payMethod, oldDiscount, oldEligible, oldSubtotal) {
+    const isDeal = n => dealsData.some(d => n.includes(d.name.toLowerCase()));
+    let raw = 0, taxableFood = 0, eligible = 0;
+
+    itemsText.split('\n').map(x => x.trim()).forEach(line => {
+        const m = line.match(/^(.*?)\s@\sRs\s+(\d+)/);
+        if (!m) return;
+        const name = m[1].toLowerCase();      // item name only, ignore notes
+        const price = parseInt(m[2]) || 0;
+        raw += price;
+        if (!isTaxExempt(name)) taxableFood += price;
+        if (!isDeal(name) && !drinkKeywords.some(kw => name.includes(kw))) eligible += price;
+    });
+
+    // Keep the same discount ratio the order already had
+    const oldBase = oldEligible > 0 ? oldEligible : (oldSubtotal + oldDiscount);
+    const ratio = (oldDiscount > 0 && oldBase > 0) ? oldDiscount / oldBase : 0;
+    const discount = Math.round(eligible * ratio);
+
+    const rate = payMethod === 'Card' ? TAX_RATE_CARD
+               : payMethod === 'Online' ? TAX_RATE_ONLINE
+               : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
+    const tax = Math.round(Math.max(0, taxableFood - discount) * rate);
+    const sc = orderType === 'Dine-In' ? Math.round(raw * 0.07) : 0;
+
+    return { subtotal: raw + sc - discount, tax, discount, eligible };
+}
+    async function adminRecallItem(id, itemsB64, sub, payMethod, existingTax, orderType, oldDiscount, oldEligible) {
     const items = b64dec(itemsB64);
 
     const ni = prompt("Add item:");
     const pr = prompt("Price:");
-
     if (!ni) return;
 
     const addedPrice = parseInt(pr) || 0;
@@ -6222,73 +6250,22 @@ function isTaxExempt(name) {
 
     playClick('thud');
 
-    // Add recalled item
-    const updatedItems =
-        items + "\n" +
-        ni + " @ Rs " + addedPrice + " [RECALL]";
-
-    // -----------------------------------------
-    // RECALCULATE COMPLETE BILL
-    // -----------------------------------------
-
-    const lines = updatedItems
-        .split('\n')
-        .map(x => x.trim())
-        .filter(Boolean);
-
-    let rawSubtotal = 0;
-    let taxableFood = 0;
-
-    lines.forEach(line => {
-        const match = line.match(/@ Rs\s+(\d+)/);
-        if (!match) return;
-
-        const price = parseInt(match[1]) || 0;
-
-        rawSubtotal += price;
-
-        // Drinks and dips are PRA tax exempt.
-        const header = line.toLowerCase();
-
-        if (!isTaxExempt(header)) {
-            taxableFood += price;
-        }
-    });
-
-    // PRA TAX
-    const rate =
-        payMethod === 'Card'
-            ? TAX_RATE_CARD
-            : payMethod === 'Online'
-                ? TAX_RATE_ONLINE
-                : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
-
-    const updatedTax = Math.round(taxableFood * rate);
-
-    // S.C. is ALWAYS 7% of the COMPLETE BILL
-    // including beverages, toppings, etc.
-    const sc =
-        orderType === 'Dine-In'
-            ? Math.round(rawSubtotal * 0.07)
-            : 0;
-
-    const updatedSub = rawSubtotal + sc;
+    const updatedItems = items + "\n" + ni + " @ Rs " + addedPrice + " [RECALL]";
+    const bill = recalcBillAfterEdit(updatedItems, orderType, payMethod, oldDiscount || 0, oldEligible || 0, sub || 0);
 
     try {
         await callAdminAction('recallItem', {
             id,
             items: updatedItems,
-            subtotal: updatedSub,
-            tax: updatedTax
+            subtotal: bill.subtotal,
+            tax: bill.tax,
+            discount: bill.discount,
+            eligible_subtotal: bill.eligible
         });
-
         await renderKitchenOrders();
-
-    } catch (e) {
-        /* alert already shown */
-    }
+    } catch (e) { /* alert already shown */ }
 }
-    async function adminVoidItem(id, itemsB64, sub, payMethod, existingTax, orderType) {
+    async function adminVoidItem(id, itemsB64, sub, payMethod, existingTax, orderType, oldDiscount, oldEligible) {
     const items = b64dec(itemsB64);
 
     // -----------------------------------------
@@ -6378,77 +6355,20 @@ function isTaxExempt(name) {
     const updatedItems =
         groupedItems.join('\n');
 
-    // -----------------------------------------
-    // RECALCULATE COMPLETE REMAINING BILL
-    // -----------------------------------------
-
-    let rawSubtotal = 0;
-    let taxableFood = 0;
-
-    groupedItems.forEach(item => {
-
-        // Price comes ONLY from the top-level
-        // item header.
-        const header =
-            item.split('\n')[0].trim();
-
-        const match =
-            header.match(/@ Rs\s+(\d+)/);
-
-        if (!match) return;
-
-        const price =
-            parseInt(match[1]) || 0;
-
-        // S.C. includes EVERYTHING.
-        rawSubtotal += price;
-
-        // PRA tax excludes beverages/dips.
-        if (!isTaxExempt(header.toLowerCase())) {
-            taxableFood += price;
-        }
-    });
-
-    // -----------------------------------------
-    // PRA TAX
-    // -----------------------------------------
-
-    const rate =
-        payMethod === 'Card'
-            ? TAX_RATE_CARD
-            : payMethod === 'Online'
-                ? TAX_RATE_ONLINE
-                : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
-
-    const updatedTax =
-        Math.round(taxableFood * rate);
-
-    // -----------------------------------------
-    // S.C. = 7% OF COMPLETE REMAINING BILL
-    // -----------------------------------------
-
-    const sc =
-        orderType === 'Dine-In'
-            ? Math.round(rawSubtotal * 0.07)
-            : 0;
-
-    const updatedSub =
-        rawSubtotal + sc;
+        // RECALCULATE COMPLETE REMAINING BILL (keeps original discount %)
+    const bill = recalcBillAfterEdit(updatedItems, orderType, payMethod, oldDiscount || 0, oldEligible || 0, sub || 0);
 
     try {
-
         await callAdminAction('voidItem', {
             id,
             items: updatedItems,
-            subtotal: updatedSub,
-            tax: updatedTax
+            subtotal: bill.subtotal,
+            tax: bill.tax,
+            discount: bill.discount,
+            eligible_subtotal: bill.eligible
         });
-
         await renderKitchenOrders();
-
-    } catch (e) {
-        /* alert already shown */
-    }
+    } catch (e) { /* alert already shown */ }
 }
 
     function renderPublicDeals() {
