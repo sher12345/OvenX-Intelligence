@@ -3258,55 +3258,99 @@ function proceedFromSheet() {
         return;
     }
 
-    // Always sync from Supabase — DB is source of truth
-    if (sb) {
-        try {
-            const { data } = await sb.from('gold_club_members')
-                .select('*').eq('phone', phone);
+    // GOLD CLUB: Supabase is the ONLY source of truth for stamps.
+    if (!sb) {
+        console.warn('Gold Club: database unavailable.');
+        document.getElementById('join-club-btn').style.display = 'none';
+        document.getElementById('recover-stamps-btn').style.display = 'block';
+        document.getElementById('loyalty-display').style.display = 'none';
+        return;
+    }
 
-            if (data && data.length > 0) {
-                const member = data[0];
-                localStorage.setItem('ovenx_member_name', member.name);
-                localStorage.setItem('ovenx_stamps', member.stamps || 0);
-            } else {
-                // Phone in localStorage but not in DB — clear cache
-                localStorage.removeItem('ovenx_member_name');
-                localStorage.removeItem('ovenx_member_phone');
-                localStorage.removeItem('ovenx_stamps');
-                document.getElementById('join-club-btn').style.display = 'block';
-                document.getElementById('recover-stamps-btn').style.display = 'block';
-                document.getElementById('loyalty-display').style.display = 'none';
-                return;
-            }
-        } catch(e) {
-            console.warn('Supabase sync failed, using localStorage cache:', e);
+    try {
+        const { data, error } = await sb
+            .from('gold_club_members')
+            .select('name, phone, stamps')
+            .eq('phone', phone)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            // Local phone no longer exists in Gold Club.
+            localStorage.removeItem('ovenx_member_name');
+            localStorage.removeItem('ovenx_member_phone');
+            localStorage.removeItem('ovenx_stamps');
+
+            document.getElementById('join-club-btn').style.display = 'block';
+            document.getElementById('recover-stamps-btn').style.display = 'block';
+            document.getElementById('loyalty-display').style.display = 'none';
+            return;
         }
-    }
 
-    const name = localStorage.getItem('ovenx_member_name');
-    const stamps = parseInt(localStorage.getItem('ovenx_stamps') || 0);
+        // Server values only.
+        const name = data.name || '';
+        const stamps = Math.max(0, Math.min(10, Number(data.stamps) || 0));
 
-    document.getElementById('recover-stamps-btn').style.display = 'none';
-    document.getElementById('join-club-btn').style.display = 'none';
-    document.getElementById('loyalty-display').style.display = 'block';
-    document.getElementById('club-member-name').innerText = name.toUpperCase();
+        // Name is okay to cache.
+        localStorage.setItem('ovenx_member_name', name);
 
-    const row1 = document.getElementById('stamp-row-1');
-    const row2 = document.getElementById('stamp-row-2');
-    row1.innerHTML = ""; row2.innerHTML = "";
+        // IMPORTANT:
+        // Do NOT save stamps to localStorage.
+        localStorage.removeItem('ovenx_stamps');
 
-    for (let i = 1; i <= 10; i++) {
-        const circle = document.createElement('div');
-        circle.className = "stamp-circle" + (i <= stamps ? " filled" : "");
-        circle.innerHTML = i <= stamps ? "🔥" : i;
-        if (i <= 6) row1.appendChild(circle); else row2.appendChild(circle);
-    }
+        document.getElementById('recover-stamps-btn').style.display = 'none';
+        document.getElementById('join-club-btn').style.display = 'none';
+        document.getElementById('loyalty-display').style.display = 'block';
+        document.getElementById('club-member-name').innerText = name.toUpperCase();
 
-    const msg = document.getElementById('loyalty-msg');
-    if (stamps >= 10) {
-        msg.innerHTML = "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>Order now to claim your gift!";
-    } else {
-        msg.innerHTML = `Order ${10 - stamps} more times (Above Rs 1000) to unlock a <span class='gold-label'>Free Mystery Meal</span>`;
+        const row1 = document.getElementById('stamp-row-1');
+        const row2 = document.getElementById('stamp-row-2');
+
+        row1.innerHTML = "";
+        row2.innerHTML = "";
+
+        for (let i = 1; i <= 10; i++) {
+            const circle = document.createElement('div');
+
+            circle.className =
+                "stamp-circle" + (i <= stamps ? " filled" : "");
+
+            circle.innerHTML =
+                i <= stamps ? "🔥" : i;
+
+            if (i <= 6) {
+                row1.appendChild(circle);
+            } else {
+                row2.appendChild(circle);
+            }
+        }
+
+        const msg = document.getElementById('loyalty-msg');
+
+        if (stamps >= 10) {
+            msg.innerHTML =
+                "🎁 <span class='gold-label'>UNLOCKED: MYSTERY MEAL!</span><br>" +
+                "Order now to claim your gift!";
+        } else {
+            msg.innerHTML =
+                `Order ${10 - stamps} more times (Above Rs 1000) to unlock a ` +
+                `<span class='gold-label'>Free Mystery Meal</span>`;
+        }
+
+    } catch (e) {
+        console.error('Gold Club load failed:', e);
+
+        // NEVER fall back to localStorage stamps.
+        // Showing an unknown balance is safer than showing an old balance.
+        document.getElementById('join-club-btn').style.display = 'none';
+        document.getElementById('recover-stamps-btn').style.display = 'block';
+        document.getElementById('loyalty-display').style.display = 'none';
+
+        alert(
+            "Unable to load your Gold Club stamps right now. " +
+            "Please check your internet connection and try again."
+        );
     }
 }
 
@@ -3323,38 +3367,63 @@ function proceedFromSheet() {
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
     async function recoverStamps() {
     let phone = prompt("Enter your registered WhatsApp number:");
-    if (!phone) return;
-    
-    // Normalize
-    phone = phone.replace(/[\s\-\(\)]/g, '');
-    if (phone.startsWith('0')) phone = '92' + phone.slice(1);
-    if (!phone.startsWith('92')) phone = '92' + phone;
 
-    if (!sb) { alert("No connection to database."); return; }
+    if (!phone) return;
+
+    // Normalize phone
+    phone = phone.replace(/[\s\-\(\)]/g, '');
+
+    if (phone.startsWith('0')) {
+        phone = '92' + phone.slice(1);
+    }
+
+    if (!phone.startsWith('92')) {
+        phone = '92' + phone;
+    }
+
+    if (!sb) {
+        alert("No connection to database.");
+        return;
+    }
 
     try {
-        const { data, error } = await sb.from('gold_club_members')
-            .select('*').eq('phone', phone);
+        const { data, error } = await sb
+            .from('gold_club_members')
+            .select('name, phone, stamps')
+            .eq('phone', phone)
+            .maybeSingle();
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
-            alert("No account found for this number. Please register first!");
+        if (!data) {
+            alert(
+                "No Gold Club account found for this number. " +
+                "Please register first!"
+            );
             return;
         }
 
-        const member = data[0];
-        localStorage.setItem('ovenx_member_name', member.name);
-        localStorage.setItem('ovenx_member_phone', member.phone);
-        localStorage.setItem('ovenx_stamps', member.stamps || 0);
-        document.getElementById('join-club-btn').style.display = 'none';
-        document.getElementById('recover-stamps-btn').style.display = 'none';
-        await renderLoyaltyCard();
-        alert(`Welcome back ${member.name}! You have ${member.stamps || 0} stamps 🔥`);
+        // Recover identity only.
+        // Stamps remain on Supabase.
+        localStorage.setItem('ovenx_member_name', data.name);
+        localStorage.setItem('ovenx_member_phone', data.phone);
 
-    } catch(e) {
-        alert("Connection error. Please check internet and try again.");
-        console.error(e);
+        // Remove old/local stamp cache completely.
+        localStorage.removeItem('ovenx_stamps');
+
+        await renderLoyaltyCard();
+
+        alert(
+            `Welcome back ${data.name}! ` +
+            `Your ${Number(data.stamps) || 0} stamps are safely stored in your Gold Club account 🔥`
+        );
+
+    } catch (e) {
+        console.error('Gold Club recovery error:', e);
+        alert(
+            "Connection error. Your stamps have NOT been changed. " +
+            "Please check your internet connection and try again."
+        );
     }
 }
     async function saveClubProfile() {
@@ -3378,13 +3447,22 @@ function proceedFromSheet() {
                 // Already registered — restore their data
                 const existing = data[0];
                 localStorage.setItem('ovenx_member_name', existing.name);
-                localStorage.setItem('ovenx_member_phone', existing.phone);
-                localStorage.setItem('ovenx_stamps', existing.stamps || 0);
-                document.getElementById('loyalty-setup-overlay').style.display = 'none';
-                setScrollLock(false);
-                await renderLoyaltyCard();
-                alert(`Welcome back, ${existing.name}! You have ${existing.stamps || 0} stamps 🔥`);
-                return;
+localStorage.setItem('ovenx_member_phone', existing.phone);
+
+// Never store the stamp balance locally.
+localStorage.removeItem('ovenx_stamps');
+
+document.getElementById('loyalty-setup-overlay').style.display = 'none';
+setScrollLock(false);
+
+await renderLoyaltyCard();
+
+alert(
+    `Welcome back, ${existing.name}! ` +
+    `You have ${Number(existing.stamps) || 0} stamps 🔥`
+);
+
+return;
             }
 
             // New member — insert
@@ -3400,9 +3478,12 @@ function proceedFromSheet() {
     }
 
     localStorage.setItem('ovenx_member_name', n);
-    localStorage.setItem('ovenx_member_phone', p);
-    localStorage.setItem('ovenx_stamps', 0);
-    document.getElementById('loyalty-setup-overlay').style.display = 'none';
+localStorage.setItem('ovenx_member_phone', p);
+
+// Stamp balance lives in Supabase only.
+localStorage.removeItem('ovenx_stamps');
+
+document.getElementById('loyalty-setup-overlay').style.display = 'none';
     setScrollLock(false);
     await renderLoyaltyCard();
     alert(`Welcome to the Club, ${n}! 👑`);
@@ -4252,19 +4333,66 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
                 let stamps = member.stamps || 0;
 
                 if (stamps >= 10) {
-                    const prize = LOYALTY_PRIZES[Math.floor(Math.random() * LOYALTY_PRIZES.length)];
-                    bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-                    await sb.from('gold_club_members')
-                        .update({ stamps: 0 })
-                        .eq('phone', memberPhone);
-                    localStorage.setItem('ovenx_stamps', 0);
-                } else if (foodTotal >= 1000) {
-                    const newStamps = stamps + 1;
-                    await sb.from('gold_club_members')
-                        .update({ stamps: newStamps })
-                        .eq('phone', memberPhone);
-                    localStorage.setItem('ovenx_stamps', newStamps);
-                }
+
+    const prize =
+        LOYALTY_PRIZES[
+            Math.floor(Math.random() * LOYALTY_PRIZES.length)
+        ];
+
+    // Reset only after Supabase confirms it.
+    const { data: resetMember, error: resetError } = await sb
+        .from('gold_club_members')
+        .update({ stamps: 0 })
+        .eq('phone', memberPhone)
+        .select('phone, stamps')
+        .maybeSingle();
+
+    if (resetError) {
+        throw resetError;
+    }
+
+    if (!resetMember || Number(resetMember.stamps) !== 0) {
+        throw new Error('Gold Club reward reset was not confirmed by server.');
+    }
+
+    // Never cache stamp count locally.
+    localStorage.removeItem('ovenx_stamps');
+
+    bonus =
+        "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
+
+    console.log(
+        `✅ Gold Club reward claimed for ${memberPhone}. Stamps reset to 0.`
+    );
+
+} else if (foodTotal >= 1000) {
+
+    // Atomically add 1 Gold Club stamp on the server.
+// This prevents two simultaneous orders from overwriting each other.
+const { data: newStamps, error: stampError } = await sb
+    .rpc('increment_gold_club_stamp', {
+        member_phone: memberPhone
+    });
+
+if (stampError) {
+    throw stampError;
+}
+
+const savedStamps = Number(newStamps);
+
+if (!Number.isFinite(savedStamps)) {
+    throw new Error(
+        'Gold Club stamp increment was not confirmed by server.'
+    );
+}
+
+// Never cache stamp count locally.
+localStorage.removeItem('ovenx_stamps');
+
+console.log(
+    `✅ Gold Club stamp added atomically: ${savedStamps}/10`
+);
+}
             }
         } catch(e) {
             console.error('Stamp sync error:', e);
