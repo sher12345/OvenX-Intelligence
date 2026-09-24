@@ -1199,7 +1199,7 @@ body {
         </div>
         <div style="position:absolute; animation: rotate-msg-3 12s ease-in-out infinite; display:flex; align-items:center; gap:8px;">
             <span style="color:white; font-size:13px; font-weight:800; letter-spacing:0.5px;">
-                📋 As per PRA regulation, 16% tax applies on Cash orders, 8% on Card payments
+                📋 As per PRA regulation, 16% tax applies on Dine-In Cash orders, 8% on Card & Online payments
             </span>
         </div>
     </div>
@@ -2950,6 +2950,8 @@ const TAX_RATE_ONLINE = 0.08;
 function getTaxRate() { 
     if (paymentMethod === 'Card') return TAX_RATE_CARD;
     if (paymentMethod === 'Online') return TAX_RATE_ONLINE;
+    // Cash: no PRA tax on Takeaway & Delivery, 16% only on Dine-In
+    if (orderType === 'Takeaway' || orderType === 'Delivery') return 0;
     return TAX_RATE_CASH; 
 }
 function setPaymentMethod(method) { playClick('pop'); paymentMethod = method; renderFinalSummary(delCharge); }
@@ -4799,7 +4801,7 @@ function showPermissionDeniedHelp() {
             <p style="font-size:12px;color:#888;margin:6px 0 10px;">Govt. tax rate depends on payment method (PRA regulation).</p>
             <div style="display:flex; gap:8px; flex-wrap: wrap;">
                 <!-- Always show Cash -->
-                <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Cash' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Cash' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Cash' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Cash')">💵 CASH<br><small style="font-weight:600;">16% Tax</small></button>
+                <button class="next-btn btn-3d" style="flex:1; min-width:85px; margin-bottom:5px; background:${paymentMethod==='Cash' ? 'var(--red)' : '#eee'}; color:${paymentMethod==='Cash' ? 'white' : '#666'}; box-shadow:0 6px 0px ${paymentMethod==='Cash' ? 'var(--dark-red)' : '#ccc'};" onclick="setPaymentMethod('Cash')">💵 CASH<br><small style="font-weight:600;">${orderType === 'Dine-In' ? '16% Tax' : 'No Tax'}</small></button>
                 
                 <!-- Only show Card if NOT a Delivery order -->
                 ${orderType !== 'Delivery' ? `
@@ -5285,7 +5287,8 @@ async function loadDeliveryHistory() {
 
     // Tax FIRST, on raw items minus drinks/dips/discount
     const taxableForTax = Math.max(0, subtotalRaw - discount - drinkTotal - dipTotal);
-    let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : TAX_RATE_CASH;
+    const _mt = document.getElementById('man-type')?.value || 'Dine-In';
+    let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : (_mt === 'Dine-In' ? TAX_RATE_CASH : 0);
     const tax = Math.round(taxableForTax * taxRate);
 
     // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
@@ -6128,7 +6131,7 @@ function isTaxExempt(name) {
             ? TAX_RATE_CARD
             : payMethod === 'Online'
                 ? TAX_RATE_ONLINE
-                : TAX_RATE_CASH;
+                : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
 
     const updatedTax = Math.round(taxableFood * rate);
 
@@ -6285,7 +6288,7 @@ function isTaxExempt(name) {
             ? TAX_RATE_CARD
             : payMethod === 'Online'
                 ? TAX_RATE_ONLINE
-                : TAX_RATE_CASH;
+                : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
 
     const updatedTax =
         Math.round(taxableFood * rate);
