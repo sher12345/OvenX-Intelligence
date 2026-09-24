@@ -5233,12 +5233,14 @@ async function loadDeliveryHistory() {
     }
 
     function renderManPaymentButtons() {
-        const container = document.getElementById('man-payment-buttons');
-        const methods = [
-            { key: 'Cash', label: '💵 CASH', rate: TAX_RATE_CASH },
-            { key: 'Card', label: '💳 CARD', rate: TAX_RATE_CARD },
-            { key: 'Online', label: '🌐 ONLINE', rate: TAX_RATE_ONLINE }
-        ];
+    const container = document.getElementById('man-payment-buttons');
+    const manType = document.getElementById('man-type')?.value || 'Dine-In';
+
+    const methods = [
+        { key: 'Cash', label: '💵 CASH', rate: manType === 'Dine-In' ? TAX_RATE_CASH : 0 },
+        { key: 'Card', label: '💳 CARD', rate: TAX_RATE_CARD },
+        { key: 'Online', label: '🌐 ONLINE', rate: TAX_RATE_ONLINE }
+    ];
         container.innerHTML = methods.map(m => `
             <button class="btn-3d" style="flex:1; padding:12px; border-radius:12px; border:none; font-weight:900; font-size:12px; background:${manPaymentMethod===m.key ? 'var(--red)' : '#eee'}; color:${manPaymentMethod===m.key ? 'white' : '#666'}; box-shadow:0 4px 0px ${manPaymentMethod===m.key ? 'var(--dark-red)' : '#ccc'};" onclick="manSetPaymentMethod('${m.key}')">${m.label}<br><small>${Math.round(m.rate*100)}% Tax</small></button>
         `).join('');
