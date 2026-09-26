@@ -6031,15 +6031,15 @@ const delFee = o.delivery_fee || 0;
 const discount = o.discount || 0;
 const tax = o.tax || 0;
 const payMethod = o.payment_method || 'Cash';
-
-// S.C. is already included in o.subtotal.
-// Recover the original raw item subtotal so S.C. can be shown separately.
 const isDineIn = o.type === 'Dine-In';
-const sc = isDineIn
-    ? Math.round(((subtotal + discount) * 7) / 107)
-    : 0;
 
-const rawSubtotal = subtotal - sc + discount;
+// Reconstruct the breakdown from the actual item lines (works correctly
+// with the food-only discount model): rawSubtotal is the true
+// pre-discount, pre-S.C. total; S.C. is whatever makes the stored
+// subtotal add up (0 for non-Dine-In, since discount there is also
+// food-only with no S.C. applied).
+const rawSubtotal = sumRawItemsTotal(o.items);
+const sc = subtotal - rawSubtotal + discount;
 const grandTotal = subtotal + tax + delFee;
     const discBase = (o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (subtotal + discount);
 const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
@@ -6208,6 +6208,18 @@ const drinkKeywords = ["coke","sprite","cola","1 liter","1.5l","1.5 l","water","
 function isTaxExempt(name) {
     const n = name.toLowerCase();
     return drinkKeywords.some(kw => n.includes(kw)) || n.includes('dip');
+}
+
+// Sums the raw, pre-discount, pre-S.C. price of every item line — used
+// to correctly reconstruct the receipt breakdown regardless of how the
+// discount/S.C. were computed server-side.
+function sumRawItemsTotal(itemsText) {
+    let total = 0;
+    String(itemsText || '').split('\n').forEach(line => {
+        const m = line.trim().match(/^\d+x\s+.+?\s+@\s+Rs\s+(\d+)/i);
+        if (m) total += parseInt(m[1], 10) || 0;
+    });
+    return total;
 }
 
 // Recompute the full bill after a recall/void, keeping the original discount %
