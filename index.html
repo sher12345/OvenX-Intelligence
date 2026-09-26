@@ -5647,7 +5647,7 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
                 let priceHtml = ""; 
 if (o.subtotal) {
     const hasDiscount = o.discount && o.discount > 0;
-    const discBase = (o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (o.subtotal + o.discount);
+    const discBase = (o.type === 'Delivery' && o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (o.subtotal + o.discount);
     const discPct = hasDiscount ? Math.round((o.discount / discBase) * 100) : 0;
     const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:900; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ ${discPct}% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
     const sourceBadge = o.discount_claimed 
@@ -6041,7 +6041,7 @@ const sc = isDineIn
 
 const rawSubtotal = subtotal - sc + discount;
 const grandTotal = subtotal + tax + delFee;
-    const discBase = (o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (subtotal + discount);
+    const discBase = (o.type === 'Delivery' && o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (subtotal + discount);
 const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
 
     if (type === 'front') {
