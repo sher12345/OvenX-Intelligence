@@ -4186,8 +4186,9 @@ function unlockOrderButton() {
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
 
-    // S.C on food subtotal only — NOT on PRA tax
-    const sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+    // S.C. now applies AFTER tax, on (food after discount + tax + beverages)
+    const preSCTotal = foodTotal - deliveryDiscount + tax;
+    const sc = (orderType === "Dine-In") ? Math.round(preSCTotal * 0.07) : 0;
 
     const taxable = foodTotal + sc - deliveryDiscount;
     const grand = taxable + tax + delCharge;
@@ -4858,13 +4859,14 @@ function showPermissionDeniedHelp() {
         disc = Math.round(eligible * 0.10);
     }
 
-    // Tax FIRST, only on taxable food (excl. drinks/dips/discount)
+        // Tax FIRST, only on taxable food (excl. drinks/dips)
     const taxableForTax = Math.max(0, foodTotal - disc - drinkTotal - dipTotal);
     const taxRate = getTaxRate();
     const tax = Math.round(taxableForTax * taxRate);
 
-    // S.C on food subtotal only — NOT on PRA tax
-    const sc = (orderType === "Dine-In") ? Math.round(foodTotal * 0.07) : 0;
+    // S.C. now applies AFTER tax, on (food after discount + tax + beverages)
+    const preSCTotal = foodTotal - disc + tax;
+    const sc = (orderType === "Dine-In") ? Math.round(preSCTotal * 0.07) : 0;
 
     const taxable = foodTotal + sc - disc;
     const grand = taxable + tax + delCharge;
@@ -5421,10 +5423,10 @@ async function loadDeliveryHistory() {
     let taxRate = manPaymentMethod === 'Card' ? TAX_RATE_CARD : manPaymentMethod === 'Online' ? TAX_RATE_ONLINE : (_mt === 'Dine-In' ? TAX_RATE_CASH : 0);
     const tax = Math.round(taxableForTax * taxRate);
 
-    // S.C AFTER tax, on the tax-inclusive amount (matches physical POS)
+    // S.C. now applies AFTER tax, on (food after discount + tax + beverages)
     const manType = document.getElementById('man-type')?.value || 'Dine-In';
-    // S.C on food subtotal only — NOT on PRA tax
-    const sc = (manType === 'Dine-In') ? Math.round(subtotalRaw * 0.07) : 0;
+    const preSCTotal = subtotalRaw - discount + tax;
+    const sc = (manType === 'Dine-In') ? Math.round(preSCTotal * 0.07) : 0;
 
     const subtotal = subtotalRaw + sc - discount;
 
@@ -6246,7 +6248,10 @@ function recalcBillAfterEdit(itemsText, orderType, payMethod, oldDiscount, oldEl
                : payMethod === 'Online' ? TAX_RATE_ONLINE
                : (orderType === 'Dine-In' ? TAX_RATE_CASH : 0);
     const tax = Math.round(Math.max(0, taxableFood - discount) * rate);
-    const sc = orderType === 'Dine-In' ? Math.round(raw * 0.07) : 0;
+
+    // S.C. now applies AFTER tax, on (raw bill after discount + tax)
+    const preSCTotal = raw - discount + tax;
+    const sc = orderType === 'Dine-In' ? Math.round(preSCTotal * 0.07) : 0;
 
     return { subtotal: raw + sc - discount, tax, discount, eligible };
 }
