@@ -257,6 +257,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 /* Rider badge on live orders */
 .rider-tag{font-size:11px;font-weight:700;color:#5dade2;background:rgba(41,128,185,0.12);padding:2px 8px;border-radius:5px;display:inline-block;margin-bottom:4px;}
 
+/* NEW STATUS STYLES */
+.sp-preparing{background:rgba(41,128,185,.2);color:#5dade2}
+.sp-ready{background:rgba(39,174,96,.2);color:var(--green)}
+.sp-out,.sp-paid{background:rgba(100,100,100,.2);color:var(--text3)}
+.order-card.preparing{border-color:var(--blue)}
+.order-card.ready{border-color:var(--green)}
+
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
 </style>
 </head>
@@ -684,10 +691,6 @@ const dealsData = [
   {n:"The Roll Out",d:"2x Roll + 2x Buddy Drink",p:1099},
   {n:"Triple Blaze",d:"3x Zinger + 1L Drink",p:1349},
   {n:"Flame & Fame",d:"2x CM Grilled (Single Patty) + 2x Buddy Drink",p:1199},
-  {n:"Midnight Deal 1",d:"2x Med Extreme + 1.5L Drink",p:2699},
-  {n:"Midnight Deal 2",d:"Large Wings + 2x Large Pan + 1.5L",p:3249},
-  {n:"Midnight Deal 3",d:"Large Wings + 2x Large Premium + 1.5L",p:3649},
-  {n:"Midnight Deal 4",d:"1x Med + 1x Large Extreme + 1.5L",p:3149}
 ];
 // ══════════════════════════════════
 // DEAL FLAVOR MAP (matches web app)
@@ -699,10 +702,6 @@ const dealFlavorMap = {
   '02 PIZZA DEAL':   ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
   '03 PIZZA DEAL':   ['Kabab Crust','Crown Crust','Cheese Crust'],
   '04 PIZZA DEAL':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
-  'Midnight Deal 1': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
-  'Midnight Deal 2': ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
-  'Midnight Deal 3': ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
-  'Midnight Deal 4': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
   // Custom deals
   'Solo Inferno':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
   'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
@@ -710,12 +709,50 @@ const dealFlavorMap = {
 };
 const dealConfig = {
   'Family Feast': 2,
-  'Midnight Deal 1': 2,
-  'Midnight Deal 2': 2,
-  'Midnight Deal 3': 2,
-  'Midnight Deal 4': 2,
   'The Roll Out': 2,
 };
+
+const CORE_DEALS=['01 PIZZA DEAL','02 PIZZA DEAL','03 PIZZA DEAL','04 PIZZA DEAL','Extreme Buddy','Family Feast'];
+let _ov={}, _dbDeals=null;
+
+async function loadMenuOverrides(branch){
+  _ov={}; _dbDeals=null;
+  try{
+    const {data:ov}=await sb.from('menu_overrides').select('*').eq('branch',branch);
+    (ov||[]).forEach(r=>_ov[r.item_name]=r);
+    const {data:ci}=await sb.from('custom_menu_items').select('*').eq('branch',branch).eq('available',true);
+    (ci||[]).forEach(i=>{
+      let p; try{p=JSON.parse(i.price);}catch(e){p=parseInt(i.price);}
+      menuData[i.category]=menuData[i.category]||[];
+      if(!menuData[i.category].some(x=>x.n===i.name)) menuData[i.category].push({n:i.name,p,_b:branch});
+    });
+    const {data:cd}=await sb.from('custom_deals').select('*').eq('branch',branch).eq('available',true);
+    _dbDeals=cd||[];
+    _dbDeals.forEach(d=>{ if(!dealsData.some(x=>x.n===d.name)) dealsData.push({n:d.name,d:d.deal_desc||'',p:d.price}); });
+  }catch(e){ console.warn('overrides load failed',e); }
+}
+function getItems(cat){
+  return (menuData[cat]||[]).filter(i=>{
+    if(i.bwp && orderBranch!=='BWP') return false;
+    if(i._b && i._b!==orderBranch) return false;
+    const o=_ov[i.n]; return !(o && o.available===false);
+  }).map(i=>{
+    const o=_ov[i.n]; if(!o||!o.prices) return i;
+    if(o.prices._flat) return {...i,p:o.prices._flat};
+    if(typeof i.p==='object'&&typeof o.prices==='object') return {...i,p:{...i.p,...o.prices}};
+    return i;
+  });
+}
+function getDeals(){
+  return dealsData.filter(d=>{
+    if(_ov[d.n]&&_ov[d.n].available===false) return false;
+    if(_dbDeals && !CORE_DEALS.includes(d.n) && !_dbDeals.some(x=>x.name===d.n)) return false;
+    return true;
+  }).map(d=>{
+    const o=_ov[d.n], db=_dbDeals&&_dbDeals.find(x=>x.name===d.n);
+    return {...d,p:(o&&o.prices&&o.prices._flat)||(db&&db.price)||d.p};
+  });
+}
 
 // ═══════════════════════════════
 // STATE
@@ -782,7 +819,7 @@ async function doLogin() {
   }
 
   startClock();
-  renderMenu();
+  loadMenuOverrides(orderBranch).then(()=>renderMenu());
   renderLiveOrders();
   renderRiders();
   renderStats();
@@ -850,11 +887,18 @@ function setOrderType(t) {
   renderActionGrid();
 }
 
-function setOrderBranch(b) {
+async function setOrderBranch(b) {
+
   orderBranch = b;
+
   document.querySelectorAll('.branch-btn').forEach(btn => btn.classList.remove('active'));
+
   const el = document.getElementById('ob-' + b);
+
   if (el) el.classList.add('active');
+
+await loadMenuOverrides(b).then(()=>{const q=document.getElementById('menu-search').value; q?filterMenu(q):renderMenu();});
+
 }
 
 // ═══════════════════════════════
@@ -895,6 +939,7 @@ function renderMenu(filter = '') {
   catBar.appendChild(dealBtn);
 
   for (let cat in menuData) {
+    if (!getItems(cat).length) continue;
     const btn = document.createElement('button');
     btn.className = 'cat-btn-item' + (activeCategory === cat ? ' active' : '');
     btn.textContent = cat;
@@ -904,7 +949,7 @@ function renderMenu(filter = '') {
 
   if (activeCategory === '__deals__') {
     const dg = document.createElement('div'); dg.className = 'deals-grid';
-    dealsData.filter(d => !filter || d.n.toLowerCase().includes(filter.toLowerCase())).forEach(deal => {
+    getDeals().filter(d => !filter || d.n.toLowerCase().includes(filter.toLowerCase())).forEach(deal => {
       const card = document.createElement('div'); card.className = 'deal-card-o';
       card.innerHTML = `<div class="dco-name">${deal.n}</div><div class="dco-desc">${deal.d}</div><div class="dco-price">Rs ${deal.p}</div>`;
       card.onclick = () => openSizeModal({ n: deal.n, p: deal.p });
@@ -914,7 +959,7 @@ function renderMenu(filter = '') {
   }
 
   const ig = document.createElement('div'); ig.className = 'items-grid';
-  const items = (menuData[activeCategory] || []).filter(i => !filter || i.n.toLowerCase().includes(filter.toLowerCase()));
+  const items = getItems(activeCategory).filter(i => !filter || i.n.toLowerCase().includes(filter.toLowerCase()));
   items.forEach(item => {
     const card = document.createElement('div'); card.className = 'menu-card';
     const priceStr = typeof item.p === 'object' ? 'From Rs ' + Object.values(item.p)[0] : 'Rs ' + item.p;
@@ -933,7 +978,7 @@ function filterMenu(val) {
   const ig = document.createElement('div'); ig.className = 'items-grid';
   let found = 0;
   for (let cat in menuData) {
-    menuData[cat].filter(i => i.n.toLowerCase().includes(lv)).forEach(item => {
+    getItems(cat).filter(i => i.n.toLowerCase().includes(lv)).forEach(item => {
       const card = document.createElement('div'); card.className = 'menu-card';
       const ps = typeof item.p === 'object' ? 'From Rs ' + Object.values(item.p)[0] : 'Rs ' + item.p;
       card.innerHTML = `<div class="mc-name">${item.n}</div><div class="mc-price">${ps}</div><div class="mc-cat">${cat}</div>`;
@@ -941,7 +986,7 @@ function filterMenu(val) {
       ig.appendChild(card); found++;
     });
   }
-  dealsData.filter(d => d.n.toLowerCase().includes(lv)).forEach(d => {
+  getDeals().filter(d => d.n.toLowerCase().includes(lv)).forEach(d => {
     const card = document.createElement('div'); card.className = 'deal-card-o';
     card.innerHTML = `<div class="dco-name">${d.n}</div><div class="dco-desc">${d.d}</div><div class="dco-price">Rs ${d.p}</div>`;
     card.onclick = () => openSizeModal({ n: d.n, p: d.p });
@@ -1340,8 +1385,8 @@ async function renderLiveOrders() {
   const branchFilter = document.getElementById('live-branch-filter').value;
   const showCompleted = document.getElementById('show-completed').checked;
   try {
-    let statuses = ['PENDING','WAITING','ASSIGNED'];
-    if (showCompleted) statuses.push('COMPLETED');
+    let statuses = ['PENDING','WAITING','PREPARING','READY','ASSIGNED','OUT'];
+    if (showCompleted) statuses.push('COMPLETED','PAID');
     let query = sb.from('kitchen_orders')
       .select('*')
       .in('status', statuses)
@@ -1366,7 +1411,7 @@ async function renderLiveOrders() {
 
     // Sort: PENDING first, then WAITING, then rest
     const sorted = [...data].sort((a, b) => {
-      const order = { PENDING: 0, WAITING: 1, ASSIGNED: 2, COMPLETED: 3 };
+      const order = { PENDING:0, WAITING:1, PREPARING:2, READY:3, ASSIGNED:4, OUT:5, COMPLETED:6, PAID:7 };
       return (order[a.status] ?? 9) - (order[b.status] ?? 9);
     });
 
@@ -1377,7 +1422,7 @@ async function renderLiveOrders() {
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
       const timerStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-      const isCompleted = o.status === 'COMPLETED';
+      const isCompleted = ['COMPLETED','PAID'].includes(o.status);
       const isPending = o.status === 'PENDING';
 
       const card = document.createElement('div');
@@ -1409,14 +1454,16 @@ async function renderLiveOrders() {
         </div>
         ${o.phone ? `<div class="oc-phone">📞 ${o.phone}</div>` : ''}
         ${o.customer_name ? `<div style="font-size:12px;color:var(--text2);margin-bottom:3px;">👤 ${o.customer_name}</div>` : ''}
-        ${o.rider_name ? `<div class="rider-tag">🛵 ${o.rider_name}</div>` : ''}
+        ${(o.rider_name || o.rider)
+  ? `<div class="rider-tag">🛵 ${o.rider_name || o.rider}</div>`
+  : ''}
         <div class="oc-items">${o.items||'—'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Tax: Rs ${o.tax||0} | Del: Rs ${o.delivery_fee||0}</span>
           <span class="oc-total">Rs ${(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0)}</span>
         </div>
         ${!isCompleted && !isPending ? `<div class="oc-actions">
-          ${o.status==='WAITING' ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
+          ${['WAITING','PREPARING','READY'].includes(o.status) && !(o.rider_name||o.rider) ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
           ${o.status==='ASSIGNED' ? `<span style="font-size:11px;color:var(--text3);">Waiting for rider to complete...</span>` : ''}
           ${o.phone ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
           <button class="oc-btn red" onclick="deleteOrder('${o.id}')">🗑️</button>
@@ -1482,11 +1529,22 @@ async function loadPendingModeSetting() {
 }
 
 async function deleteOrder(id) {
-  if (!confirm('Delete this order?')) return;
+  if (!confirm('Void this order?')) return;
+
   try {
-    await sb.from('kitchen_orders').delete().eq('id', id);
-    showToast('Deleted', 'error'); renderLiveOrders();
-  } catch(e) { showToast('Delete failed', 'error'); }
+    const { error } = await sb
+      .from('kitchen_orders')
+      .update({ status: 'VOIDED' })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    showToast('Voided', 'error');
+    renderLiveOrders();
+
+  } catch(e) {
+    showToast('Void failed: ' + e.message, 'error');
+  }
 }
 
 function notifyCustomer(phone, branch) {
@@ -1540,12 +1598,17 @@ let _assignRiderName = '';
 function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
 
 async function confirmAssign() {
-  if (!_assignRiderId) { showToast('Select a rider', 'error'); return; }
+  if (!_assignRiderId) {
+    showToast('Select a rider', 'error');
+    return;
+  }
+
   try {
     await sb.from('kitchen_orders').update({
       status: 'ASSIGNED',
       assigned_rider: _assignRiderId,
-      rider_name: _assignRiderName
+      rider_name: _assignRiderName,
+      rider: _assignRiderName
     }).eq('id', _assignOrderId);
 
     showToast('✅ Assigned to ' + _assignRiderName, 'success');
@@ -1780,7 +1843,7 @@ async function renderStats() {
   document.getElementById('shift-duration').textContent = shiftHrs > 0 ? `${shiftHrs}h ${shiftRem}m` : `${shiftMins}m`;
 
   const orders    = shiftOrders;
-  const salesOnly = orders.filter(o => !['void','return'].includes(o.method));
+  const salesOnly = orders.filter(o => o.status !== 'VOIDED');
 
   // Totals
   const totalOrders  = salesOnly.length;
@@ -1806,12 +1869,14 @@ async function renderStats() {
   `;
 
   // Payment breakdown — reads payment_method set by rider
-  const cashOrders   = salesOnly.filter(o=>o.payment_method==='cash');
-  const cardOrders   = salesOnly.filter(o=>['card','bank'].includes(o.payment_method||''));
-  const jazzOrders   = salesOnly.filter(o=>o.payment_method==='jazzcash');
-  const fpOrders     = salesOnly.filter(o=>o.payment_method==='foodpanda');
-  const creditOrders = salesOnly.filter(o=>o.payment_method==='credited');
-  const unpaidOrders = salesOnly.filter(o=>!o.payment_method);
+const pm = o => (o.payment_method || '').toLowerCase();
+
+const cashOrders   = salesOnly.filter(o => pm(o) === 'cash');
+const cardOrders   = salesOnly.filter(o => ['card', 'bank', 'online'].includes(pm(o)));
+const jazzOrders   = salesOnly.filter(o => pm(o) === 'jazzcash');
+const fpOrders     = salesOnly.filter(o => pm(o) === 'foodpanda');
+const creditOrders = salesOnly.filter(o => pm(o) === 'credited');
+const unpaidOrders = salesOnly.filter(o => !o.payment_method);
 
   const cashTotal   = cashOrders.reduce((s,o)=>s+(o.total||0),0);
   const cardTotal   = cardOrders.reduce((s,o)=>s+(o.total||0),0);
@@ -1989,7 +2054,7 @@ function exportShiftCSV() {
     '',
     '#,Time,Branch,Type,Customer,Phone,Address,Items,Subtotal,Del Charge,SC,Discount,Grand Total,Status,Rider'
   ];
-  shiftOrders.filter(o=>!['void','return'].includes(o.method)).forEach((o,i) => {
+  shiftOrders.filter(o => o.status !== 'VOIDED').forEach((o, i) => {
     const clean = s => (s||'—').toString().replace(/,/g,';').replace(/\n/g,' ');
     const items = Array.isArray(o.items) ? o.items.map(i=>`${i.qty}x ${i.name}`).join(' | ') : clean(o.itemsText||o.items_text||o.items);
 const subtotal = Array.isArray(o.items) ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
