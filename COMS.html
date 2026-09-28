@@ -359,6 +359,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   <span style="font-size:12px;color:var(--text3);">%</span>
   <span style="margin-left:auto;font-size:12px;color:var(--text3);" id="sc-preview"></span>
 </div>
+<div class="disc-row">
+  <span class="disc-label">Pay:</span>
+  <button class="del-preset" id="pay-Cash" onclick="setPay('Cash')">💵 Cash</button>
+  <button class="del-preset" id="pay-Card" onclick="setPay('Card')">💳 Card</button>
+  <button class="del-preset" id="pay-Online" onclick="setPay('Online')">🌐 Online</button>
+</div>
 
 <!-- DISCOUNT ROW -->
 <div class="disc-row">
@@ -378,6 +384,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
         <div class="total-block" id="total-block">
           <div class="total-line"><span>Subtotal</span><span id="t-sub">Rs 0</span></div>
           <div class="total-line" id="sc-line" style="display:none;"><span>SC (7%)</span><span id="t-sc">Rs 0</span></div>
+          <div class="total-line" id="tax-line" style="display:none;"><span>PRA Tax</span><span id="t-tax">Rs 0</span></div>
           <div class="total-line" id="del-line" style="display:none;"><span>Delivery Charge</span><span id="t-del">Rs 0</span></div>
           <div class="total-line" id="disc-line" style="display:none;color:var(--green);"><span>Discount</span><span id="t-disc">−Rs 0</span></div>
           <div class="total-line grand"><span>GRAND TOTAL</span><span id="t-grand">Rs 0</span></div>
@@ -592,20 +599,20 @@ const BRANCHES = {
 // ── MENU DATA ──
 const menuData = {
   "Starters":[
-    {n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:599},{n:"Pizza Fries",p:720},
-    {n:"Dragon Shots",p:399},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},
+    {n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:699},{n:"Pizza Fries",p:799},
+    {n:"Dragon Shots",p:449},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},
     {n:"Hot Wings",p:{M:399,L:780}},{n:"Honey Chili Wings",p:{M:449,L:880}},
     {n:"Cheese Sticks",p:449},{n:"Meat Sticks",p:449},{n:"Nuggets",p:{M:350,L:650}}
   ],
   "Sandwiches":[
-    {n:"Health Harvest",p:599},{n:"Khameera Sandwich",p:699},{n:"Club Sandwich",p:599}
+    {n:"Health Harvest",p:720},{n:"Khameera Sandwich",p:799},{n:"Club Sandwich",p:720}
   ],
   "Fried Burgers":[
     {n:"Chicken Patty Burger",p:299},{n:"Zinger Burger",p:420},{n:"Mighty Burger",p:699},
-    {n:"Chipotle Burger",p:699},{n:"Crispy Jalapeno",p:549},{n:"Stuff Jalapeno",p:649}
+    {n:"Chipotle Burger",p:699},{n:"Crispy Jalapeno",p:549},{n:"Stuff Jalapeno",p:699}
   ],
   "Grilled Burgers":[
-    {n:"CM Grilled",p:599},{n:"Smokey Grilled",p:550},{n:"Peri Peri Grilled",p:749},
+    {n:"CM Grilled",p:599},{n:"Smokey Grilled",p:699},{n:"Peri Peri Grilled",p:699},
     {n:"Drizzler X",p:799},{n:"Jalapeno Blaze",p:749},{n:"Mexi Fiesta",p:749}
   ],
   "Pan Pizza":[
@@ -629,16 +636,16 @@ const menuData = {
     {n:"Cheese Crust",p:{Med:1399,Large:1799}},{n:"Crusti Thin",p:1699}
   ],
   "Platters":[
-    {n:"Khameera Sandwich Platter",p:699},{n:"Calzone Platter",p:899},{n:"Behari Platter",p:999}
+    {n:"Khameera Sandwich Platter",p:799},{n:"Calzone Platter",p:990},{n:"Behari Platter",p:1090}
   ],
   "Pasta":[
-    {n:"Alfredo Pasta",p:799},{n:"OvenX Flaming Pasta",p:650},
-    {n:"Fire Kissed Pasta",p:749},{n:"X-Special Pasta",p:749}
+    {n:"Alfredo Pasta",p:849},{n:"OvenX Flaming Pasta",p:699},
+    {n:"Fire Kissed Pasta",p:749},{n:"X-Special Pasta",p:849}
   ],
   "Wraps & Rolls":[
     {n:"Chipotle Wrap",p:699},{n:"BBQ Wrap",p:699},{n:"Donar Kabab",p:799},
-    {n:"Crunch Wrap",p:550},{n:"Zingeratha Roll",p:449},{n:"Paratha Roll",p:449},
-    {n:"Malai Roll",p:449},{n:"Behari Roll",p:749},{n:"Peri Peri Wrap",p:749}
+    {n:"Crunch Wrap",p:549},{n:"Zingeratha Roll",p:499},{n:"Paratha Roll",p:449},
+    {n:"Malai Roll",p:499},{n:"Behari Roll",p:799},{n:"Peri Peri Wrap",p:749}
   ],
   "Steaks (BWP)":[
     {n:"Mexican Steak",p:1549,bwp:true},{n:"Moroccan Steak",p:1549,bwp:true},
@@ -655,7 +662,7 @@ const menuData = {
     {n:"Pepsi Buddy",p:130,bwp:true},{n:"Pepsi Litter",p:190,bwp:true},
     {n:"Pepsi Tin",p:210,bwp:true},{n:"Pepsi Tin Diet",p:220,bwp:true},
     {n:"Sprite Tin",p:210},{n:"Sprite Tin Diet",p:220},{n:"Sprite Litter",p:190},
-    {n:"Blue Lagoon",p:220,bwp:true}
+    {n:"Blue Lagoon",p:220,bwp:true},{n:"Mint Margarita",p:249,bwp:true},{n:"Lemonade",p:249,bwp:true},{n:"Pina Colada",p:349,bwp:true},{n:"Red Rose",p:220,bwp:true},{n:"Fresh Lime",p:220,bwp:true}
   ],
   "Add-ons":[
     {n:"Dip: BBQ",p:70},{n:"Dip: Peri Peri",p:70},{n:"Dip: Bonfire",p:70},
@@ -667,7 +674,7 @@ const dealsData = [
   {n:"01 PIZZA DEAL",d:"1 Large Pan Pizza + 1L Drink",p:1299},
   {n:"02 PIZZA DEAL",d:"1 Large Premium Pizza + 1L Drink",p:1599},
   {n:"03 PIZZA DEAL",d:"1 Large Crown Pizza + 1L Drink",p:1699},
-  {n:"04 PIZZA DEAL",d:"1 Large Extreme Pizza + 1L Drink",p:2150},
+  {n:"04 PIZZA DEAL",d:"1 Large Extreme Pizza + 1L Drink",p:2149},
   {n:"Extreme Buddy",d:"1 Med Extreme Pizza + 1L Drink",p:1649},
   {n:"Family Feast",d:"2 Med Pizzas + 2 Zingers + 1L + 6 Wings",p:2499},
   {n:"Solo Inferno",d:"1x Small Pizza + 1x Buddy Drink + 2 Wings",p:699},
@@ -839,7 +846,7 @@ function setOrderType(t) {
   // Reset SC state when switching
   scEnabled = t === 'Dine-In';
 
-  renderTotals();
+  if(orderType==='Delivery'&&payMethod==='Card')payMethod='Cash'; setPay(payMethod);
   renderActionGrid();
 }
 
@@ -1098,6 +1105,37 @@ function changeQtyCart(idx, d) {
   if (cart[idx].qty <= 0) cart.splice(idx, 1);
   renderCart();
 }
+const TAX_RATE_CASH=0.16, TAX_RATE_CARD=0.08, TAX_RATE_ONLINE=0.08;
+const DRINK_KW=["coke","sprite","cola","1 liter","1.5l","1.5 l","water","margarita","lemonade","pina colada","red rose","fresh lime","blue lagoon","mint","next cola","pepsi","7up"];
+let payMethod='Cash';
+const isDrink=n=>DRINK_KW.some(k=>n.toLowerCase().includes(k));
+const isDeal=n=>dealsData.some(d=>n.toLowerCase().includes(d.n.toLowerCase()));
+
+function calcBill(){
+  const food=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const discVal=parseFloat(document.getElementById('disc-amount').value)||0;
+  const del=orderType==='Delivery'?(parseFloat(document.getElementById('del-charge').value)||0):0;
+  const eligible=cart.reduce((s,i)=>s+((isDeal(i.name)||isDrink(i.name))?0:i.price*i.qty),0);
+  const disc=discType==='pct'?Math.round(eligible*discVal/100):Math.min(discVal,eligible);
+  const exempt=cart.reduce((s,i)=>s+((isDrink(i.name)||i.name.toLowerCase().includes('dip'))?i.price*i.qty:0),0);
+  const taxRate=payMethod==='Card'?TAX_RATE_CARD:payMethod==='Online'?TAX_RATE_ONLINE:(orderType==='Dine-In'?TAX_RATE_CASH:0);
+  const tax=Math.round(Math.max(0,food-disc-exempt)*taxRate);
+  const scPct=parseInt(document.getElementById('sc-pct')?.value)||7;
+  const sc=(scEnabled&&orderType==='Dine-In')?Math.round((food-disc+tax)*scPct/100):0;
+  const subtotal=food+sc-disc;
+  return {food,eligible,disc,tax,taxRate,sc,scPct,del,subtotal,grand:Math.max(0,subtotal+tax+del)};
+}
+function setPay(m){
+  payMethod=m;
+  ['Cash','Card','Online'].forEach(k=>{
+    const b=document.getElementById('pay-'+k), on=k===m;
+    b.style.color=on?'var(--green)':'var(--text2)';
+    b.style.background=on?'rgba(39,174,96,0.15)':'transparent';
+    b.style.borderColor=on?'rgba(39,174,96,0.4)':'var(--border)';
+  });
+  document.getElementById('pay-Card').style.display=orderType==='Delivery'?'none':'';
+  renderTotals();
+}
 
 let scEnabled  = false;
 let discType   = 'flat';
@@ -1125,43 +1163,7 @@ function setDiscType(type) {
   renderTotals();
 }
 
-function renderTotals() {
-  const food    = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const scPct   = parseInt(document.getElementById('sc-pct')?.value) || 7;
-  const sc      = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
-  const del     = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
-  const discVal = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const DISCOUNT_EXCLUDED = [
-  // Bar menu
-  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
-  // All deals by name
-  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
-  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
-  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
-];
-const discountableFood = cart.reduce((s, i) => {
-  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
-  return s + (excluded ? 0 : i.price * i.qty);
-}, 0);
-const disc = discType === 'pct'
-  ? Math.round(discountableFood * discVal / 100)
-  : Math.min(discVal, discountableFood);
-  const grand   = Math.max(0, food + sc + del - disc);
-
-  document.getElementById('t-sub').textContent   = 'Rs ' + food;
-  document.getElementById('t-sc').textContent    = 'Rs ' + sc;
-  document.getElementById('t-del').textContent   = 'Rs ' + del;
-  document.getElementById('t-disc').textContent  = '−Rs ' + disc;
-  document.getElementById('t-grand').textContent = 'Rs ' + grand;
-
-  document.getElementById('sc-line').style.display   = sc > 0   ? 'flex' : 'none';
-  document.getElementById('del-line').style.display  = del > 0  ? 'flex' : 'none';
-  document.getElementById('disc-line').style.display = disc > 0 ? 'flex' : 'none';
-
-  // SC preview next to toggle
-  const scPreview = document.getElementById('sc-preview');
-  if (scPreview) scPreview.textContent = sc > 0 ? 'Rs ' + sc : '';
-}
+function renderTotals() { const b = calcBill(); const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; }; set('t-sub', 'Rs ' + b.food); set('t-sc', 'Rs ' + b.sc); set('t-tax', 'Rs ' + b.tax); set('t-del', 'Rs ' + b.del); set('t-disc', '−Rs ' + b.disc); set('t-grand', 'Rs ' + b.grand); const show = (id, c) => { const el = document.getElementById(id); if (el) el.style.display = c ? 'flex' : 'none'; }; show('sc-line', b.sc > 0); show('tax-line', b.tax > 0); show('del-line', b.del > 0); show('disc-line', b.disc > 0); const sp = document.getElementById('sc-preview'); if (sp) { sp.textContent = b.sc > 0 ? 'Rs ' + b.sc : ''; } }
 
 function setDelCharge(v) { document.getElementById('del-charge').value = v; renderTotals(); }
 function setDisc(v) { document.getElementById('disc-amount').value = v; renderTotals(); }
@@ -1177,44 +1179,14 @@ function clearOrder() {
   renderCart();
 }
 
-// ═══════════════════════════════
-// BUILD ORDER OBJECT
-// ═══════════════════════════════
-function buildOrderObj() {
-  const custName  = document.getElementById('cust-name').value.trim();
-  const custPhone = document.getElementById('cust-phone').value.trim();
-  const address   = document.getElementById('order-address').value.trim();
-  const tableNum  = document.getElementById('table-num').value.trim();
-  const note      = document.getElementById('order-note').value.trim();
-  const delCharge = parseFloat(document.getElementById('del-charge').value) || 0;
-  const discVal   = parseFloat(document.getElementById('disc-amount').value) || 0;
-
-  // ✅ food must be declared BEFORE disc and sc use it
-  const food  = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const DISCOUNT_EXCLUDED = [
-  // Bar menu
-  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
-  // All deals by name
-  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
-  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
-  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
-];
-const discountableFood = cart.reduce((s, i) => {
-  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
-  return s + (excluded ? 0 : i.price * i.qty);
-}, 0);
-const disc = discType === 'pct'
-  ? Math.round(discountableFood * discVal / 100)
-  : Math.min(discVal, discountableFood);
-  const scPct = parseInt(document.getElementById('sc-pct')?.value) || 7;
-  const sc    = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
-
-  const grand = Math.max(0, food + sc + delCharge - disc);
-  const itemsText = cart.map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
-  const fullItems = note ? itemsText + '\n📝 Note: ' + note : itemsText;
-  const location = orderType === 'Delivery' ? address : orderType === 'Dine-In' ? tableNum : 'Takeaway';
-
-  return { custName, custPhone, address, tableNum, note, delCharge, disc, food, sc, grand, itemsText, fullItems, location };
+function buildOrderObj(){
+  const g=id=>document.getElementById(id).value.trim();
+  const custName=g('cust-name'),custPhone=g('cust-phone'),address=g('order-address'),tableNum=g('table-num'),note=g('order-note');
+  const b=calcBill();
+  const itemsText=cart.map(i=>`${i.qty}x ${i.name} @ Rs ${i.price*i.qty}${i.note?' ['+i.note+']':''}`).join('\n');
+  const fullItems=note?itemsText+'\nNote: '+note:itemsText;
+  const location=orderType==='Delivery'?address:orderType==='Dine-In'?tableNum:'Takeaway';
+  return {custName,custPhone,address,tableNum,note,delCharge:b.del,disc:b.disc,food:b.food,sc:b.sc,tax:b.tax,eligible:b.eligible,grand:b.grand,itemsText,fullItems,location};
 }
 
 // ═══════════════════════════════
@@ -1228,7 +1200,9 @@ async function sendToKitchen() {
 
   const orderObj = {
     type: orderType, location: d.location, items: d.fullItems, status: 'WAITING',
-    subtotal: d.food + d.sc - d.disc, delivery_fee: d.delCharge, discount: d.disc,
+    subtotal: d.food + d.sc - d.disc,
+    tax: d.tax, payment_method: payMethod, eligible_subtotal: d.eligible, discount_claimed: d.disc > 0,
+    delivery_fee: d.delCharge, discount: d.disc,
     branch: orderBranch, customer_name: d.custName || null, phone: d.custPhone || null,
     source: 'OFFICE', assigned_rider: null, rider_name: null
   };
@@ -1263,9 +1237,10 @@ function sendToWhatsAppBranch() {
     (orderType === 'Dine-In' ? `*Table:* ${d.tableNum}\n` : '') +
     `\n${d.itemsText}\n\n` +
     `Subtotal: Rs ${d.food}` +
-    (d.sc > 0 ? `\nSC (7%): Rs ${d.sc}` : '') +
-    (d.disc > 0 ? `\nDiscount: -Rs ${d.disc}` : '') +
-    `\n*Total: Rs ${d.grand}*` +
+(d.sc > 0 ? `\nSC (7%): Rs ${d.sc}` : '') +
+(d.tax > 0 ? `\nPRA Tax (${payMethod}): Rs ${d.tax}` : '') +
+(d.disc > 0 ? `\nDiscount: -Rs ${d.disc}` : '') +
+`\n*Total: Rs ${d.grand}*` +
     (d.note ? `\n📝 ${d.note}` : '')
   );
   window.open(`https://wa.me/${br.waPhone}?text=${msg}`, '_blank');
@@ -1280,7 +1255,9 @@ async function sendToKitchenSilent() {
   const d = buildOrderObj();
   const orderObj = {
     type: orderType, location: d.location, items: d.fullItems, status: 'WAITING',
-    subtotal: d.food + d.sc - d.disc, delivery_fee: 0, discount: d.disc,
+    subtotal: d.food + d.sc - d.disc, 
+    tax: d.tax, payment_method: payMethod, eligible_subtotal: d.eligible, discount_claimed: d.disc > 0,
+    delivery_fee: 0, discount: d.disc,
     branch: orderBranch, customer_name: d.custName || null, phone: d.custPhone || null,
     source: 'OFFICE', assigned_rider: null, rider_name: null
   };
@@ -1313,29 +1290,10 @@ function sendWhatsAppNotify() {
   else if (waPhone.startsWith('3') && waPhone.length === 10) waPhone = '92' + waPhone;
 
   const br       = BRANCHES[orderBranch] || BRANCHES.MULTAN;
-  const food     = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const scPct    = parseInt(document.getElementById('sc-pct')?.value) || 7;
-  const sc       = (scEnabled && orderType === 'Dine-In') ? Math.round(food * scPct / 100) : 0;
-  const del      = orderType === 'Delivery' ? (parseFloat(document.getElementById('del-charge').value) || 0) : 0;
-  const discVal  = parseFloat(document.getElementById('disc-amount').value) || 0;
-  // Exclude drinks and deals from discount — same as POS
-const DISCOUNT_EXCLUDED = [
-  // Bar menu
-  'Coke','Sprite','Water','Next Cola','Pepsi','7up','Blue Lagoon',
-  // All deals by name
-  'PIZZA DEAL','Midnight Deal','Family Feast','Extreme Buddy',
-  'Burger Deal','Solo Inferno','The X Bite','The Duo Hit',
-  'Double Crunch','The Roll Out','Triple Blaze','Flame & Fame'
-];
-const discountableFood = cart.reduce((s, i) => {
-  const excluded = DISCOUNT_EXCLUDED.some(ex => i.name.toUpperCase().includes(ex.toUpperCase()));
-  return s + (excluded ? 0 : i.price * i.qty);
-}, 0);
-const disc = discType === 'pct'
-  ? Math.round(discountableFood * discVal / 100)
-  : Math.min(discVal, discountableFood);
-  const grand    = Math.max(0, food + sc + del - disc);
-  const discPct  = discType === 'pct' ? ` (${discVal}% off)` : '';
+  const b=calcBill();
+const food=b.food, sc=b.sc, scPct=b.scPct, del=b.del, disc=b.disc, tax=b.tax, grand=b.grand;
+const discVal=parseFloat(document.getElementById('disc-amount').value)||0;
+const discPct=discType==='pct'?` (${discVal}% off)`:'';
 
   const itemLines = cart.map(i =>
     `  • ${i.qty}x ${i.name}${i.note ? ' (' + i.note + ')' : ''}  —  Rs ${i.price * i.qty}`
@@ -1355,6 +1313,7 @@ const disc = discType === 'pct'
     `-----------------------------`,
     `Subtotal:          Rs ${food}`,
     sc   > 0 ? `Service Charge (${scPct}%): Rs ${sc}` : null,
+    tax>0 ? `PRA Tax (${Math.round(b.taxRate*100)}% — ${payMethod}): Rs ${tax}` : null,
     del  > 0 ? `Delivery Charge:   Rs ${del}` : null,
     disc > 0 ? `Discount${discPct}:        -Rs ${disc}` : null,
     `-----------------------------`,
@@ -1453,8 +1412,8 @@ async function renderLiveOrders() {
         ${o.rider_name ? `<div class="rider-tag">🛵 ${o.rider_name}</div>` : ''}
         <div class="oc-items">${o.items||'—'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Del: Rs ${o.delivery_fee||0}</span>
-          <span class="oc-total">Rs ${(o.subtotal||0)+(o.delivery_fee||0)}</span>
+          <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Tax: Rs ${o.tax||0} | Del: Rs ${o.delivery_fee||0}</span>
+          <span class="oc-total">Rs ${(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0)}</span>
         </div>
         ${!isCompleted && !isPending ? `<div class="oc-actions">
           ${o.status==='WAITING' ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
@@ -1792,7 +1751,8 @@ async function renderStats() {
             delivery_fee:   dbOrder.delivery_fee,
             discount:       dbOrder.discount,
             sc:             0,
-            total: (dbOrder.subtotal||0) + (dbOrder.delivery_fee||0),
+              total: (dbOrder.subtotal||0) + (dbOrder.tax||0) + (dbOrder.delivery_fee||0),
+  tax: dbOrder.tax||0,
             customer_name:  dbOrder.customer_name,
             phone:          dbOrder.phone,
             rider_name:     dbOrder.rider_name,
@@ -1828,7 +1788,8 @@ async function renderStats() {
   const totalDelFees = salesOnly.filter(o=>o.type==='Delivery').reduce((s,o) => s + (o.delCharge||o.delivery_fee||0), 0);
   const totalDisc    = salesOnly.reduce((s,o) => s + (o.disc||o.discount||0), 0);
   const totalSC      = salesOnly.reduce((s,o) => s + (o.sc||0), 0);
-  const shopRevenue  = totalRevenue - totalDelFees;
+    const totalTax = salesOnly.reduce((s,o)=>s+(o.tax||0),0);
+  const shopRevenue = totalRevenue - totalDelFees - totalTax;
   const deliveries   = salesOnly.filter(o=>o.type==='Delivery').length;
   const takeaways    = salesOnly.filter(o=>o.type==='Takeaway').length;
   const dineins      = salesOnly.filter(o=>o.type==='Dine-In').length;
@@ -2226,5 +2187,6 @@ document.getElementById('bar-count').textContent = '0';
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
