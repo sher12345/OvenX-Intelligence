@@ -6015,6 +6015,39 @@ function downloadCardRecordsCSV() {
     URL.revokeObjectURL(url);
     playClick('thud');
 }
+// Builds a clean, price-free item list for the kitchen ticket
+function buildKitchenItemsHtml(itemsText) {
+    const items = [];
+    String(itemsText || '').split('\n').forEach(raw => {
+        const line = raw.trim();
+        if (!line) return;
+        const m = line.match(/^(\d+)x\s+(.+?)\s+@\s+Rs\s+\d+\s*(?:\[(.*))?$/);
+        if (m) {
+            const item = { qty: m[1], name: m[2], notes: [] };
+            if (m[3]) item.notes.push(m[3].replace(/\]$/, '').trim());
+            items.push(item);
+        } else if (items.length) {
+            items[items.length - 1].notes.push(line.replace(/\]$/, '').trim());
+        }
+    });
+
+    return items.map(it => {
+        const notes = it.notes
+            .filter(n => n && n !== 'Smart Add-on' && n !== 'Add-on')
+            .map(n => {
+                const isCustom = /^note:/i.test(n);
+                return `<div style="font-size:14px;margin:2px 0 0 26px;line-height:1.3;${isCustom ? 'font-weight:bold;border:1.5px solid #000;padding:2px 5px;display:inline-block;' : ''}">${isCustom ? '&#9888; ' : '- '}${escHtml(n)}</div>`;
+            }).join('');
+        return `
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:9px;">
+            <div style="font-size:24px;font-weight:900;min-width:34px;line-height:1.1;">${it.qty}x</div>
+            <div style="flex:1;text-align:left;">
+                <div style="font-size:19px;font-weight:bold;line-height:1.2;">${escHtml(it.name)}</div>
+                ${notes}
+            </div>
+        </div>`;
+    }).join('');
+}
 
             async function printOrderData(id, type) {
     if (!sb) return alert("Database connection error");
@@ -6049,20 +6082,7 @@ const discPct = discount > 0 ? Math.round((discount / discBase) * 100) : 0;
     if (type === 'front') {
         printArea.innerHTML = `
             <div style="text-align:center;font-family:'Courier New',Courier,monospace;color:black;padding:10px;">
-                <div style="font-weight:bold;font-size:12px;margin-bottom:5px;">*** CUSTOMER RECEIPT ***</div>
-                <div style="margin-bottom:10px;">
-                    <h1 style="margin:0;font-size:32px;letter-spacing:2px;font-weight:900;">OVEN X</h1>
-                    <div style="font-size:12px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;display:inline-block;padding:2px 10px;margin-top:2px;">
-                        ${(activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase()} BRANCH
-                    </div>
-                </div>
-                <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">
-                    ${(activeBranch || BRANCH_CONFIG.MULTAN).address}<br>
-                    Phone: 0${(activeBranch || BRANCH_CONFIG.MULTAN).phone.slice(2)}<br>
-                    Reg No: D936064 &nbsp;|&nbsp; POS ID: 197843<br>
-                    PNTN: D936064-1<br>
-                    -----------------------------------
-                </div>
+
                 <div style="text-align:left;font-size:13px;line-height:1.6;">
                     <b>Bill No:</b> ${o.id.slice(0,8).toUpperCase()}<br>
                     <b>Date  :</b> ${dateTime}<br>
@@ -6113,33 +6133,43 @@ ${sc > 0 ? `
                 </div>
                 ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">🎉 ${discPct}% discount applied — saved Rs ${discount}</div>` : ''}
                 <div style="margin-top:16px;font-size:12px;">
-                    <b>Thank You For Visiting Us!</b><br>
-                    theovenx.com
+                    <b>Thank You For Visiting Us!</b>
                 </div>
             </div>`;
-    } else {
+        } else {
+        const isCar = String(o.location || '').startsWith('Car Dine');
+        const typeLabel = isCar ? 'CAR DINE' : o.type.toUpperCase();
+        // Kitchen only needs: table for dine-in, plate for car dine. No delivery address.
+        let bigLine = '';
+        if (o.type === 'Dine-In') bigLine = 'TABLE ' + escHtml(o.location);
+        else if (isCar) bigLine = escHtml(String(o.location).replace('Car Dine:', '').trim());
+        const shortId = String(o.id).slice(0, 6).toUpperCase();
+
         printArea.innerHTML = `
-            <div style="text-align:center;font-family:sans-serif;color:black;">
-                <h2 style="margin:0;border-bottom:2px solid #000;">KITCHEN TICKET</h2>
-                <h1 style="margin:5px 0;font-size:28px;">${o.location}</h1>
-                <div style="font-size:20px;font-weight:bold;background:#000;color:#fff;padding:4px;">
-                    ${o.type.toUpperCase()}
+            <div style="font-family:Arial,Helvetica,sans-serif;color:#000;text-align:center;padding:4px 2px;">
+
+                <div style="font-size:13px;font-weight:bold;letter-spacing:3px;">KITCHEN ORDER</div>
+                <div style="border-top:3px solid #000;margin:5px 0 8px;"></div>
+
+                <div style="border:3px solid #000;padding:6px 0;font-size:28px;font-weight:900;letter-spacing:2px;">
+                    ${typeLabel}
                 </div>
-                ${o.phone ? `<div style="font-size:16px;margin-top:6px;">📞 ${o.phone}</div>` : ''}
-                <div style="text-align:left;font-size:20px;font-weight:bold;margin-top:12px;white-space:pre-wrap;line-height:1.7;">
-                    ${stripItemPrices(o.items)}
+
+                ${bigLine ? `<div style="font-size:30px;font-weight:900;margin:8px 0 2px;line-height:1.1;">${bigLine}</div>` : ''}
+
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:bold;margin-top:8px;">
+                    <span>#${shortId}</span>
+                    <span>${dateTime}</span>
                 </div>
-                <div style="margin-top:15px;border-top:2px solid #000;padding-top:10px;font-size:16px;text-align:right;">
-                    <b>Shop Subtotal: Rs ${rawSubtotal}</b><br>
-${sc > 0 ? `<span>S.C (7%): Rs ${sc}</span><br>` : ''}
-${discount > 0 ? `<span style="font-size:14px;">Discount: -Rs ${discount}</span><br>` : ''}
-${tax > 0 ? `<span>PRA Tax (${payMethod}): Rs ${tax}</span><br>` : ''}
-                    ${delFee > 0 ? `<span>Del: Rs ${delFee}</span><br>` : ''}
-                    <b style="font-size:20px;">Total: Rs ${grandTotal}</b>
+
+                <div style="border-top:2px dashed #000;margin:8px 0 10px;"></div>
+
+                <div style="text-align:left;">
+                    ${buildKitchenItemsHtml(o.items)}
                 </div>
-                <div style="margin-top:10px;font-size:13px;color:#666;">
-                    ${new Date(o.created_at).toLocaleTimeString()}
-                </div>
+
+                <div style="border-top:3px solid #000;margin:8px 0 4px;"></div>
+                <div style="font-size:12px;font-weight:bold;">*** END OF ORDER ***</div>
             </div>`;
     }
 
