@@ -65,7 +65,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .order-type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:7px;}
 .otype-btn{padding:9px 6px;border-radius:9px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;}
 .otype-btn.active{border-color:var(--orange);background:rgba(230,126,34,0.15);color:white;}
-.branch-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.branch-row{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:6px;
+}
 .branch-btn{padding:8px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;}
 .branch-btn.active{border-color:var(--blue);background:rgba(41,128,185,0.15);color:#5dade2;}
 
@@ -276,12 +281,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <div class="login-logo">OVEN <span>X</span></div>
     <div class="login-sub">Office Console</div>
     <div class="login-badge">📞 Centralized Order System</div>
-    <select class="login-select" id="login-branch">
-      <option value="">— Select Branch —</option>
-      <option value="MULTAN">🍕 Multan Branch</option>
-      <option value="BWP">🥩 Bahawalpur Branch</option>
-      <option value="ALL">🌐 All Branches (Manager)</option>
-    </select>
+    <!-- Branch is selected for each order -->
     <input class="login-input" type="text" id="login-name" placeholder="Your Name" autocomplete="off">
     <input class="login-input" type="password" id="login-pin" placeholder="PIN" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">START SHIFT</button>
@@ -327,7 +327,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
           <button class="otype-btn" id="ot-dinein" onclick="setOrderType('Dine-In')">🍽️ Dine-In</button>
         </div>
         <div class="branch-row" id="branch-select-row">
-          <button class="branch-btn active" id="ob-MULTAN" onclick="setOrderBranch('MULTAN')">🍕 Multan</button>
+          <button class="branch-btn" id="ob-MULTAN" onclick="setOrderBranch('MULTAN')">🍕 Multan</button>
           <button class="branch-btn" id="ob-BWP" onclick="setOrderBranch('BWP')">🥩 Bahawalpur</button>
         </div>
         <div class="addr-wrap" id="addr-wrap">
@@ -591,8 +591,8 @@ const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STAFF_PINS = {
-  'Admin':'1234','Manager':'5678','Agent 1':'0001','Agent 2':'0002',
-  'Agent 3':'0003','Shift 1':'1111','Shift 2':'2222','Ali':'1111','Usman':'2222'
+  'Admin':'1234','Manager':'5678','Rafay':'0001','Ali':'0002',
+  'Shehneela':'0003','Shift 1':'1111','Shift 2':'2222','Ali':'1111','Usman':'2222'
 };
 
 const BRANCHES = {
@@ -760,9 +760,9 @@ function getDeals(){
 let pendingModeEnabled = true;
 let _shiftClosed = false;
 let currentAgent = '';
-let agentBranch  = 'MULTAN';
+let agentBranch  = 'ALL';
 let shiftStart   = null;
-let orderBranch  = 'MULTAN';
+let orderBranch  = '';
 let orderType    = 'Delivery';
 let cart         = [];
 let shiftOrders  = [];
@@ -782,15 +782,13 @@ let _requiredCount = 1;
 // LOGIN
 // ═══════════════════════════════
 async function doLogin() {
-  const branch = document.getElementById('login-branch').value;
   const name   = document.getElementById('login-name').value.trim();
   const pin    = document.getElementById('login-pin').value.trim();
   const errEl  = document.getElementById('login-err');
   errEl.style.display = 'none';
 
-  if (!branch) { showLoginErr('Select a branch'); return; }
-  if (!name)   { showLoginErr('Enter your name'); return; }
-  if (!pin)    { showLoginErr('Enter your PIN');  return; }
+  if (!name) { showLoginErr('Enter your name'); return; }
+  if (!pin)  { showLoginErr('Enter your PIN'); return; }
 
   try {
     const { data } = await sb.from('staff').select('*')
@@ -803,20 +801,17 @@ async function doLogin() {
   }
 
   currentAgent = name;
-  agentBranch  = branch;
+  agentBranch  = 'ALL';
   shiftStart   = new Date();
-  orderBranch  = branch === 'ALL' ? 'MULTAN' : branch;
+  orderBranch  = '';
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
   document.getElementById('bar-agent').textContent = currentAgent;
-  document.getElementById('bar-branch').textContent = branch === 'ALL' ? 'All' : BRANCHES[branch].name;
+  document.getElementById('bar-branch').textContent = 'Per Order';
 
-  if (branch !== 'ALL') {
-    document.getElementById('live-branch-filter').value = branch;
-    setOrderBranch(branch);
-    document.getElementById('branch-select-row').style.display = 'none';
-  }
+  document.getElementById('live-branch-filter').value = 'ALL';
+  document.getElementById('branch-select-row').style.display = 'flex';
 
   startClock();
   loadMenuOverrides(orderBranch).then(()=>renderMenu());
@@ -897,7 +892,15 @@ async function setOrderBranch(b) {
 
   if (el) el.classList.add('active');
 
-await loadMenuOverrides(b).then(()=>{const q=document.getElementById('menu-search').value; q?filterMenu(q):renderMenu();});
+  const label = document.getElementById('current-order-branch-label');
+  if (label) {
+    label.textContent = BRANCHES[b]?.name || b;
+  }
+
+  await loadMenuOverrides(b).then(() => {
+    const q = document.getElementById('menu-search').value;
+    q ? filterMenu(q) : renderMenu();
+  });
 
 }
 
