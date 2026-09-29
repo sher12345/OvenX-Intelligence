@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>OvenX Rider App</title>
+<meta name="theme-color" content="#0a0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -112,6 +117,46 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
 /* Completed orders section */
 .completed-toggle{width:100%;padding:11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;text-align:center;}
+/* ── UI UPGRADE ── */
+body{padding-bottom:env(safe-area-inset-bottom);}
+.app-header{background:rgba(20,25,32,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding-top:calc(14px + env(safe-area-inset-top));}
+.header-name{letter-spacing:.2px;}
+.status-toggle{padding:9px 16px;}
+.summary-bar{gap:10px;}
+.sum-card{background:linear-gradient(160deg,var(--surface),var(--surface2));border-radius:16px;padding:14px 8px;}
+.sum-val{font-size:20px;}
+.order-card{position:relative;border-radius:20px;padding:18px;border:1px solid var(--border);border-left:5px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.25);}
+.order-card.new-order{border-left-color:var(--orange);border-color:rgba(230,126,34,.35);}
+.order-card.in-progress{border-left-color:var(--blue);border-color:rgba(41,128,185,.35);}
+.oc-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.oc-top .oc-badge,.oc-top .oc-branch-tag{margin:0;}
+.oc-age{margin-left:auto;font-size:12px;font-weight:700;color:var(--text3);}
+.oc-addr{font-size:17px;margin-bottom:8px;}
+.oc-cust{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin-bottom:10px;}
+.oc-cust b{color:var(--orange);font-weight:700;}
+.oc-items-block{border:1px solid var(--border);}
+details.oc-items summary{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);cursor:pointer;margin-bottom:8px;list-style:none;}
+details.oc-items summary::-webkit-details-marker{display:none;}
+.oc-total-row{background:var(--surface2);border-radius:14px;padding:12px 14px;}
+.big-btn{padding:18px;border-radius:16px;font-size:15px;}
+.quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.quick-row .sm-btn{padding:13px 6px;border-radius:12px;font-size:12px;}
+.sm-btn.call{background:rgba(39,174,96,.15);color:#27ae60;border:1px solid rgba(39,174,96,.3);}
+.cancel-link{width:100%;padding:11px;border-radius:12px;background:transparent;border:1px dashed rgba(192,57,43,.4);color:#c0392b;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;margin-top:2px;}
+.empty-state{background:var(--surface);border:1px dashed var(--border);border-radius:20px;}
+
+/* new-order banner */
+.order-banner{position:fixed;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-140%);width:min(92vw,400px);background:linear-gradient(135deg,#e67e22,#c0392b);color:#fff;border-radius:18px;padding:14px 16px;display:flex;gap:12px;align-items:center;z-index:10000;box-shadow:0 12px 32px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.32,.72,0,1);}
+.order-banner.show{transform:translate(-50%,0);}
+.ob-icon{font-size:28px;animation:ring .6s ease-in-out infinite alternate;}
+.ob-t{font-weight:900;font-size:15px;}
+.ob-s{font-size:12px;opacity:.9;margin-top:2px;}
+@keyframes ring{from{transform:rotate(-14deg);}to{transform:rotate(14deg);}}
+
+/* enable-alerts strip */
+.alert-setup{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(230,126,34,.12);border-bottom:1px solid rgba(230,126,34,.35);padding:12px 16px;font-size:12px;color:var(--text2);}
+.alert-setup b{display:block;color:var(--orange);font-size:13px;}
+.alert-setup button{background:var(--orange);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-family:var(--font);font-weight:800;font-size:12px;cursor:pointer;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -151,7 +196,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     </div>
   </div>
 
-  <div class="app-body">
+  <div id="order-banner" class="order-banner" onclick="this.classList.remove('show')"></div>
+<div id="alert-setup" class="alert-setup" style="display:none;">
+  <div><b>Turn on order alerts</b>Sound + vibration even when minimized</div>
+  <button onclick="enableAlerts()">ENABLE</button>
+</div>
+<div class="app-body">
     <!-- SUMMARY -->
     <div class="summary-bar">
       <div class="sum-card">
@@ -203,6 +253,123 @@ let dutyStatus   = 'on-duty';
 let completedVisible = false;
 let _pollTimer   = null;
 let _allOrders   = [];
+
+// ═══════════════════════════════
+// ALERTS: sound, vibration, notifications, push
+// ═══════════════════════════════
+const VAPID_PUBLIC_KEY = 'BOdmHMXuxddCoLIVccuCtVPZIH27zq-tubxLhdMDRu_VonBlHUcZeUSc-IvDoa6tM9EL0mrLYOjWEqY9WBgcNoQ';
+let _audioCtx = null, _wakeLock = null, _seenIds = new Set(), _seeded = false;
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function unlockAudio(){
+  try{
+    _audioCtx = _audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended') _audioCtx.resume();
+  }catch(e){}
+}
+document.addEventListener('click',unlockAudio);
+document.addEventListener('touchstart',unlockAudio,{passive:true});
+
+function ringAlarm(){
+  unlockAudio(); if(!_audioCtx) return;
+  const t0=_audioCtx.currentTime;
+  [0,.35,.7].forEach(t=>{
+    const o=_audioCtx.createOscillator(), g=_audioCtx.createGain();
+    o.type='square'; o.frequency.value=880;
+    g.gain.setValueAtTime(.001,t0+t);
+    g.gain.exponentialRampToValueAtTime(.25,t0+t+.02);
+    g.gain.exponentialRampToValueAtTime(.001,t0+t+.28);
+    o.connect(g); g.connect(_audioCtx.destination);
+    o.start(t0+t); o.stop(t0+t+.3);
+  });
+}
+
+async function showLocalNotification(o){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const opts={
+    body:(o&&o.location)?('📍 '+o.location):'A new order was assigned to you',
+    icon:'icon-192.png', badge:'icon-192.png',
+    tag:'new-order', renotify:true, requireInteraction:true,
+    vibrate:[400,150,400,150,800]
+  };
+  try{
+    const reg=await navigator.serviceWorker.getRegistration();
+    if(reg) reg.showNotification('🔔 New delivery assigned',opts);
+    else new Notification('🔔 New delivery assigned',opts);
+  }catch(e){}
+}
+
+function showOrderBanner(o){
+  const b=document.getElementById('order-banner'); if(!b) return;
+  b.innerHTML=`<div class="ob-icon">🔔</div><div><div class="ob-t">New delivery assigned</div><div class="ob-s">${esc((o&&o.location)||'Tap to view')}</div></div>`;
+  b.classList.add('show');
+  clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove('show'),8000);
+}
+
+function alertNewOrder(o){
+  if(o&&o.id!=null){ if(_seenIds.has(o.id)) return; _seenIds.add(o.id); }
+  ringAlarm();
+  if(navigator.vibrate) navigator.vibrate([400,150,400,150,800]);
+  showOrderBanner(o);
+  if(document.hidden) showLocalNotification(o);
+}
+
+// Safety net: catches assignments even if realtime dropped while the phone slept
+function detectNewOrders(list){
+  if(!_seeded){ list.forEach(o=>_seenIds.add(o.id)); _seeded=true; return; }
+  list.filter(o=>o.status==='ASSIGNED'&&!_seenIds.has(o.id)).forEach(alertNewOrder);
+}
+
+function urlB64ToUint8Array(b64){
+  const pad='='.repeat((4-b64.length%4)%4);
+  const raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+
+async function subscribePush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)) return;
+  if(VAPID_PUBLIC_KEY.startsWith('PASTE')) return;
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC_KEY)});
+  await sb.from('push_subscriptions').upsert([{
+    rider_id:String(riderId), rider_name:riderName, branch:riderBranch,
+    subscription:sub.toJSON(), updated_at:new Date().toISOString()
+  }],{onConflict:'rider_id'});
+}
+
+function refreshAlertBanner(){
+  const el=document.getElementById('alert-setup'); if(!el) return;
+  const ok='Notification' in window && Notification.permission==='granted';
+  el.style.display=ok?'none':'flex';
+}
+
+async function enableAlerts(){
+  unlockAudio();
+  if(!('Notification' in window)){ showToast('On iPhone: Share → Add to Home Screen first','error'); return; }
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){ try{ await subscribePush(); showToast('Alerts enabled','success'); }catch(e){ console.error(e); } }
+  else showToast('Notifications blocked in browser settings','error');
+  refreshAlertBanner();
+}
+
+async function requestWakeLock(){
+  try{ if('wakeLock' in navigator) _wakeLock=await navigator.wakeLock.request('screen'); }catch(e){}
+}
+
+async function initAlerts(){
+  if('serviceWorker' in navigator){
+    try{ await navigator.serviceWorker.register('./sw.js'); }catch(e){ console.error('SW',e); }
+  }
+  refreshAlertBanner();
+  if('Notification' in window && Notification.permission==='granted') subscribePush().catch(console.error);
+  requestWakeLock();
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && riderId){ requestWakeLock(); loadOrders(); }
+});
 
 // ═══════════════════════════════
 // LOGIN / PUNCH IN
@@ -263,6 +430,7 @@ async function riderLogin() {
   }
 
   document.getElementById('splash').style.display = 'none';
+  initAlerts();
   document.getElementById('app').classList.add('active');
   document.getElementById('hdr-name').textContent = '🛵 ' + name;
   updateDutyUI();
@@ -337,6 +505,7 @@ async function loadOrders() {
     if (e1) throw e1;
 
     const activeList   = assigned  || [];
+    detectNewOrders(activeList);
     const doneList     = completed || [];
 
     // Update stats
@@ -366,51 +535,55 @@ function renderOrders(activeList, doneList) {
       <div class="empty-state">
         <div class="empty-icon">✅</div>
         <div class="empty-title">No orders assigned</div>
-        <div class="empty-sub">The office will assign deliveries to you.<br>Stay on duty to receive orders!</div>
+        <div class="empty-sub">Stay on duty. You'll get a sound, vibration<br>and notification the moment one arrives.</div>
       </div>`;
   } else {
     list.innerHTML = '';
     activeList.forEach(o => {
-      const elapsed = Math.floor((now - new Date(o.created_at)) / 1000);
-      const mins = Math.floor(elapsed / 60);
-      const secs = elapsed % 60;
+      const mins = Math.floor((now - new Date(o.created_at)) / 60000);
       const isDelivering = o.status === 'DELIVERING';
+      const ph = String(o.phone || '').replace(/[^\d+]/g, '');
+      const id = esc(o.id);
 
       const card = document.createElement('div');
       card.className = `order-card ${isDelivering ? 'in-progress' : 'new-order'}`;
       card.innerHTML = `
-        <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 Delivering' : '🔔 New Order'}</span>
-        <span class="oc-branch-tag">${o.branch || 'MULTAN'}</span>
-        <div class="oc-addr">📍 ${o.location || 'No address'}</div>
-        ${o.phone ? `<div class="oc-phone">📞 ${o.phone}</div>` : ''}
-        ${o.customer_name ? `<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">👤 ${o.customer_name}</div>` : ''}
-        <div class="oc-items-block">${o.items || '—'}</div>
+        <div class="oc-top">
+          <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 Delivering' : '🔔 New order'}</span>
+          <span class="oc-branch-tag">${esc(o.branch || 'MULTAN')}</span>
+          <span class="oc-age">⏱ ${mins} min ago</span>
+        </div>
+        <div class="oc-addr">📍 ${esc(o.location || 'No address')}</div>
+        <div class="oc-cust">
+          ${o.customer_name ? `<span>👤 ${esc(o.customer_name)}</span>` : ''}
+          ${ph ? `<span><b>📞 ${esc(o.phone)}</b></span>` : ''}
+        </div>
+        <details class="oc-items" open>
+          <summary>Items ▾</summary>
+          <div class="oc-items-block">${esc(o.items || '—')}</div>
+        </details>
         <div class="oc-total-row">
           <div>
-            <div class="oc-total-label">Shop Total: Rs ${o.subtotal || 0}</div>
-            <div class="oc-del-info">+ Del: <strong style="color:var(--green);">Rs ${o.delivery_fee || 0}</strong></div>
+            <div class="oc-total-label">Shop: Rs ${o.subtotal || 0}</div>
+            <div class="oc-del-info">+ Delivery: <strong style="color:var(--green);">Rs ${o.delivery_fee || 0}</strong></div>
           </div>
           <div class="oc-total-val">Rs ${(o.subtotal||0) + (o.delivery_fee||0)}</div>
         </div>
-        <div class="oc-timer">⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} ago</div>
         <div class="oc-actions">
-  ${!isDelivering ? `<button class="big-btn start" onclick="startDelivery('${o.id}')">▶ START DELIVERY</button>` : ''}
-  ${isDelivering ? `<button class="big-btn complete" onclick="markComplete('${o.id}')">✅ MARK DELIVERED</button>` : ''}
-  <div class="small-btn-row">
-    ${o.phone ? `<button class="sm-btn wa" onclick="directCall('${o.phone}')" style="background:rgba(39,174,96,0.15);color:#27ae60;border:1px solid rgba(39,174,96,0.3);">📞 Call</button>
-<button class="sm-btn wa" onclick="openWhatsApp('${o.phone}')">💬 WA</button>` : ''}
-    ${o.location ? `<button class="sm-btn map" onclick="openMaps('${o.id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
-  </div>
-  <button onclick="cancelOrder('${o.id}')"
-    style="width:100%;padding:11px;border-radius:10px;background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.3);color:#c0392b;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">
-    🚫 Report Cancellation
-  </button>
-</div>`;
+          ${!isDelivering
+            ? `<button class="big-btn start" onclick="startDelivery('${id}')">▶ Start delivery</button>`
+            : `<button class="big-btn complete" onclick="markComplete('${id}')">✅ Mark delivered</button>`}
+          <div class="quick-row">
+            ${ph ? `<button class="sm-btn call" onclick="directCall('${ph}')">📞 Call</button>
+                    <button class="sm-btn wa" onclick="openWhatsApp('${ph}')">💬 WhatsApp</button>` : ''}
+            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
+          </div>
+          <button class="cancel-link" onclick="cancelOrder('${id}')">🚫 Report cancellation</button>
+        </div>`;
       list.appendChild(card);
     });
   }
 
-  // Completed section
   const toggleBtn = document.getElementById('toggle-completed');
   if (doneList.length) {
     toggleBtn.style.display = 'block';
@@ -668,7 +841,7 @@ function startPolling() {
       event: 'UPDATE', schema: 'public', table: 'kitchen_orders',
       filter: `assigned_rider=eq.${riderId}`
     }, (payload) => {
-      if (payload.new.status === 'ASSIGNED') showToast('🔔 New order assigned!', 'success');
+      if (payload.new.status === 'ASSIGNED') alertNewOrder(payload.new);
       loadOrders();
     })
     .subscribe();
@@ -721,5 +894,6 @@ async function cancelOrder(orderId) {
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
