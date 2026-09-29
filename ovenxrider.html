@@ -371,6 +371,20 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden && riderId){ requestWakeLock(); loadOrders(); }
 });
 
+let _idsCache = { t: 0, ids: [] };
+async function getMyIds() {
+  if (!riderId || String(riderId).startsWith('local-')) return [riderId];
+  if (Date.now() - _idsCache.t < 60000 && _idsCache.ids.length) return _idsCache.ids;
+  const ids = new Set([String(riderId)]);
+  try {
+    const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await sb.from('rider_attendance').select('id,phone').gte('punched_in', since);
+    (data || []).forEach(r => { if (normPhone(r.phone) === normPhone(riderPhone)) ids.add(String(r.id)); });
+  } catch (e) {}
+  _idsCache = { t: Date.now(), ids: [...ids] };
+  return _idsCache.ids;
+}
+
 function normPhone(p){
   let d = String(p||'').replace(/\D/g,'');
   if (d.startsWith('92')) d = d.slice(2);
@@ -438,13 +452,20 @@ const existing = (todayRows || [])
       showToast('Punched in! Office can see you now 🟢', 'success');
     }
   } catch(e) {
-    // Fallback if Supabase fails
-    riderId     = 'local-' + Date.now();
+    // Fallback if Supabase fails: reuse last known id so orders don't vanish
+    let savedId = null;
+    try { savedId = (JSON.parse(localStorage.getItem('ovenx_rider_session') || 'null') || {}).riderId; } catch(_) {}
+    riderId     = savedId || ('local-' + Date.now());
     riderRecord = { id: riderId, name, phone, branch, status: 'on-duty' };
     showToast('Logged in (offline mode)', 'info');
     console.error(e);
   }
 
+  try {
+    if (riderId && !String(riderId).startsWith('local-')) {
+      localStorage.setItem('ovenx_rider_session', JSON.stringify({ name, phone, branch, riderId: String(riderId), ts: Date.now() }));
+    }
+  } catch(e) {}
   document.getElementById('splash').style.display = 'none';
   initAlerts();
   document.getElementById('app').classList.add('active');
@@ -466,6 +487,7 @@ async function riderLogout() {
   if (riderId && !riderId.startsWith('local-')) {
     await sb.from('rider_attendance').update({ status: 'off-duty', punched_out: new Date().toISOString() }).eq('id', riderId);
   }
+  try { localStorage.removeItem('ovenx_rider_session'); } catch(e) {}
   location.reload();
 }
 
@@ -505,7 +527,7 @@ async function loadOrders() {
     // Get assigned orders for this rider
     const { data: assigned, error: e1 } = await sb.from('kitchen_orders')
       .select('*')
-      .eq('assigned_rider', riderId)
+      .in('assigned_rider', await getMyIds())
       .in('status', ['ASSIGNED', 'DELIVERING'])
       .order('created_at', { ascending: true });
 
@@ -514,7 +536,7 @@ async function loadOrders() {
     const iso = today.toISOString();
     const { data: completed, error: e2 } = await sb.from('kitchen_orders')
       .select('*')
-      .eq('assigned_rider', riderId)
+      .in('assigned_rider', await getMyIds())
       .eq('status', 'COMPLETED')
       .or(`completed_at.gte.${iso},created_at.gte.${iso}`)
       .order('completed_at', { ascending: false, nullsFirst: false });
@@ -874,6 +896,23 @@ function startPolling() {
 // TOAST
 // ═══════════════════════════════
 let _toastTimer;
+
+function autoResume() {
+  try {
+    const s = JSON.parse(localStorage.getItem('ovenx_rider_session') || 'null');
+    if (!s || !s.name || !s.phone) return;
+    // Only resume within 16 hours of login (one shift)
+    if (Date.now() - (s.ts || 0) > 16 * 60 * 60 * 1000) {
+      localStorage.removeItem('ovenx_rider_session');
+      return;
+    }
+    document.getElementById('rider-name-input').value = s.name;
+    document.getElementById('rider-phone-input').value = s.phone;
+    document.getElementById('rider-branch-input').value = s.branch || 'MULTAN';
+    riderLogin();
+  } catch(e) { console.error('autoResume', e); }
+}
+window.addEventListener('load', autoResume);
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
@@ -914,6 +953,7 @@ async function cancelOrder(orderId) {
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
