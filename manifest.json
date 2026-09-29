@@ -1,7 +1,7 @@
 {
   "name": "OvenX Rider",
   "short_name": "OvenX Rider",
-  "start_url": "./",
+  "start_url": "./ovenxrider.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0a0d12",
