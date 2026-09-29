@@ -250,7 +250,7 @@ let riderName    = '';
 let riderPhone   = '';
 let riderBranch  = 'MULTAN';
 let dutyStatus   = 'on-duty';
-let completedVisible = false;
+let completedVisible = true;
 let _pollTimer   = null;
 let _allOrders   = [];
 
@@ -511,12 +511,14 @@ async function loadOrders() {
 
     // Get today's completed by this rider
     const today = new Date(); today.setHours(0,0,0,0);
-    const { data: completed } = await sb.from('kitchen_orders')
+    const iso = today.toISOString();
+    const { data: completed, error: e2 } = await sb.from('kitchen_orders')
       .select('*')
       .eq('assigned_rider', riderId)
       .eq('status', 'COMPLETED')
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false });
+      .or(`completed_at.gte.${iso},created_at.gte.${iso}`)
+      .order('completed_at', { ascending: false, nullsFirst: false });
+    if (e2) { console.error(e2); showToast('Audit load failed: ' + e2.message, 'error'); }
 
     if (e1) throw e1;
 
@@ -567,7 +569,7 @@ function renderOrders(activeList, doneList) {
         <div class="oc-top">
           <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 Delivering' : '🔔 New order'}</span>
           <span class="oc-branch-tag">${esc(o.branch || 'MULTAN')}</span>
-          <span class="oc-age">⏱ ${mins} min ago</span>
+          <span class="oc-age" style="color:${mins>45?'#c0392b':'#8892a4'}">⏱ ${mins} / 45 min</span>
         </div>
         <div class="oc-addr">📍 ${esc(o.location || 'No address')}</div>
         <div class="oc-cust">
@@ -601,7 +603,7 @@ function renderOrders(activeList, doneList) {
   }
 
   const toggleBtn = document.getElementById('toggle-completed');
-  if (doneList.length) {
+  if (true) {
     toggleBtn.style.display = 'block';
     toggleBtn.textContent = completedVisible
       ? `📦 Hide Completed (${doneList.length})`
@@ -777,6 +779,8 @@ function toggleCompleted() {
 async function startDelivery(orderId) {
   try {
     await sb.from('kitchen_orders').update({ status: 'DELIVERING' }).eq('id', orderId);
+    // Best-effort: stamp delivery start (ignored if column doesn't exist)
+    try { await sb.from('kitchen_orders').update({ delivery_started_at: new Date().toISOString() }).eq('id', orderId); } catch(e) {}
     showToast('🚚 Delivery started!', 'success');
     loadOrders();
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
@@ -910,6 +914,7 @@ async function cancelOrder(orderId) {
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
