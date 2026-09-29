@@ -12,7 +12,7 @@ self.addEventListener('push', e => {
     renotify: true,
     requireInteraction: true,
     vibrate: [400, 150, 400, 150, 800],
-    data: { url: './' }
+    data: { url: './ovenxrider.html' }
   }));
 });
 
@@ -21,7 +21,7 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const c of list) if ('focus' in c) return c.focus();
-      return clients.openWindow('./');
+      return clients.openWindow('./ovenxrider.html');
     })
   );
 });
