@@ -429,7 +429,8 @@ body {
 
         .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
         .kitchen-card.status-preparing { border-left-color: #007bff; }
-        .kitchen-card.status-ready { border-left-color: var(--wa-green); opacity: 0.6; }
+        .kitchen-card.status-ready, .kitchen-card.status-completed, .kitchen-card.status-assigned { border-left-color: var(--wa-green); opacity: 0.6; }
+.kb-completed, .kb-assigned { background: #e8f5e9; color: var(--wa-green); }
         .kitchen-card.warning { box-shadow: 0 0 25px #ffd700; border-left-color: #ffd700 !important; animation: bounce 2s infinite; }
         .kitchen-card.late { background: #fff1f1; border-left-color: #ff0000 !important; box-shadow: 0 0 35px #ff0000; animation: aggressive-shake 0.2s infinite; border: 2px solid red; }
         .order-timer { font-size: 22px; font-weight: 900; color: #444; margin-top: 5px; font-family: monospace; }
@@ -5633,7 +5634,7 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
                 const remaining = (25 * 60000) - (now - createdAt);
                 let timeLabel = ""; 
                 let alertClass = "";
-                if (o.status !== 'READY' && o.status !== 'OUT' && o.status !== 'PAID' && o.status !== 'VOIDED') { 
+                if (!['READY','ASSIGNED','OUT','PAID','COMPLETED','VOIDED'].includes(o.status)) { 
     if (remaining <= 0) { 
         alertClass = "late"; 
         timeLabel = "LATE"; 
@@ -5642,8 +5643,8 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
     timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
     if (remaining <= 5 * 60000) alertClass = "warning"; 
 }
-} else if (o.status === 'OUT' || o.status === 'PAID') {
-    timeLabel = '✓ Done';
+} else if (['ASSIGNED','OUT','PAID','COMPLETED'].includes(o.status)) {
+    timeLabel = o.status === 'ASSIGNED' ? '🛵 With Rider' : '✓ Done';
     alertClass = '';
                 }
                 let priceHtml = ""; 
