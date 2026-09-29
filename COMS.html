@@ -595,6 +595,13 @@ const STAFF_PINS = {
   'Shehneela':'0003','Shift 1':'1111','Shift 2':'2222','Ali':'1111','Usman':'2222'
 };
 
+function normPhone(p){
+  let d = String(p||'').replace(/\D/g,'');
+  if (d.startsWith('92')) d = d.slice(2);
+  if (d.startsWith('0'))  d = d.slice(1);
+  return d;
+}
+
 const BRANCHES = {
   MULTAN:{ id:'MULTAN', name:'Multan', phone:'923001450301', waPhone:'923001450301' },
   BWP:   { id:'BWP',    name:'Bahawalpur', phone:'923003450301', waPhone:'923003450301' }
@@ -1643,19 +1650,33 @@ async function renderRiders() {
 
     if (error) throw error;
 
-    _riders = data || [];
+    const allRows = data || [];
+    const rank = s => s==='on-duty' ? 2 : s==='on-break' ? 1 : 0;
+    const byPhone = new Map();
+    allRows.forEach(r => {
+      const key = normPhone(r.phone) || ('id-' + r.id);
+      const cur = byPhone.get(key);
+      if (!cur || rank(r.status) > rank(cur.status) ||
+         (rank(r.status) === rank(cur.status) && new Date(r.punched_in) > new Date(cur.punched_in)))
+        byPhone.set(key, r);
+    });
+    _riders = [...byPhone.values()].sort((a,b) => new Date(b.punched_in) - new Date(a.punched_in));
 
-    // Count active orders per rider
-    const riderIds = _riders.map(r => r.id);
-    if (riderIds.length) {
+    // Count active orders across all of a person's rows
+    const countByRow = {};
+    if (allRows.length) {
       const { data: activeOrders } = await sb.from('kitchen_orders')
         .select('assigned_rider')
         .eq('status', 'ASSIGNED')
-        .in('assigned_rider', riderIds);
-      const countMap = {};
-      (activeOrders || []).forEach(o => { countMap[o.assigned_rider] = (countMap[o.assigned_rider] || 0) + 1; });
-      _riders.forEach(r => r.active_orders = countMap[r.id] || 0);
+        .in('assigned_rider', allRows.map(r => r.id));
+      (activeOrders || []).forEach(o => { countByRow[o.assigned_rider] = (countByRow[o.assigned_rider] || 0) + 1; });
     }
+    _riders.forEach(r => {
+      const key = normPhone(r.phone);
+      r.active_orders = allRows
+        .filter(x => key ? normPhone(x.phone) === key : x.id === r.id)
+        .reduce((s,x) => s + (countByRow[x.id] || 0), 0);
+    });
 
     // Update riders badge
     const onDutyCount = _riders.filter(r => r.status === 'on-duty').length;
@@ -1702,18 +1723,33 @@ async function renderRiders() {
   }
 }
 
+async function punchInOrResume({ name, phone, branch }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const { data } = await sb.from('rider_attendance').select('*')
+    .gte('punched_in', today.toISOString());
+  const ex = (data || [])
+    .filter(r => phone && normPhone(r.phone) === normPhone(phone))
+    .sort((a,b) => new Date(b.punched_in) - new Date(a.punched_in))[0];
+  if (ex) {
+    const { error } = await sb.from('rider_attendance')
+      .update({ status: 'on-duty', punched_out: null }).eq('id', ex.id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await sb.from('rider_attendance').insert([{
+    name, phone: phone || null, status: 'on-duty', branch,
+    punched_in: new Date().toISOString(), punched_out: null
+  }]);
+  if (error) throw error;
+}
+
 async function punchInRider() {
   const name  = document.getElementById('punch-name').value.trim();
   const phone = document.getElementById('punch-phone').value.trim();
   if (!name) { showToast('Enter rider name', 'error'); return; }
 
   try {
-    const { error } = await sb.from('rider_attendance').insert([{
-      name, phone: phone || null, status: 'on-duty',
-      branch: agentBranch === 'ALL' ? 'MULTAN' : agentBranch,
-      punched_in: new Date().toISOString(), punched_out: null
-    }]);
-    if (error) throw error;
+    await punchInOrResume({ name, phone, branch: agentBranch === 'ALL' ? 'MULTAN' : agentBranch });
     document.getElementById('punch-name').value = '';
     document.getElementById('punch-phone').value = '';
     showToast('✅ ' + name + ' punched in!', 'success');
@@ -1752,11 +1788,7 @@ async function addNewRider() {
   const branch = document.getElementById('new-rider-branch').value;
   if (!name) { showToast('Enter rider name', 'error'); return; }
   try {
-    const { error } = await sb.from('rider_attendance').insert([{
-      name, phone: phone || null, status: 'on-duty',
-      branch, punched_in: new Date().toISOString(), punched_out: null
-    }]);
-    if (error) throw error;
+    await punchInOrResume({ name, phone, branch });
     document.getElementById('add-rider-modal').classList.remove('open');
     showToast('✅ ' + name + ' added!', 'success');
     renderRiders();
@@ -2255,6 +2287,7 @@ document.getElementById('bar-count').textContent = '0';
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
