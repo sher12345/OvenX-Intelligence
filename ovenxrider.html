@@ -401,12 +401,21 @@ async function riderLogin() {
 const { data: todayRows } = await sb.from('rider_attendance')
   .select('*')
   .gte('punched_in', today.toISOString())
-  .lt('punched_in', tomorrow.toISOString())
-  .neq('status', 'off-duty');
-const existing = (todayRows || []).find(r => normPhone(r.phone) === normPhone(phone));
+  .lt('punched_in', tomorrow.toISOString());
+
+const existing = (todayRows || [])
+  .filter(r => normPhone(r.phone) === normPhone(phone))
+  .sort((a, b) => new Date(b.punched_in) - new Date(a.punched_in))[0];
 
     if (existing) {
-      // Already punched in — just resume session
+      // Reactivate if the rider had exited earlier today
+      if (existing.status === 'off-duty') {
+        const { error: upErr } = await sb.from('rider_attendance')
+          .update({ status: 'on-duty', punched_out: null })
+          .eq('id', existing.id);
+        if (upErr) throw upErr;
+        existing.status = 'on-duty';
+      }
       riderRecord = existing;
       riderId     = existing.id;
       dutyStatus  = existing.status;
