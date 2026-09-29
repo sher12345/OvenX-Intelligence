@@ -1639,8 +1639,11 @@ async function renderRiders() {
 
   try {
     // Today's date range
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     let { data, error } = await sb.from('rider_attendance')
       .select('*')
@@ -1651,74 +1654,383 @@ async function renderRiders() {
     if (error) throw error;
 
     const allRows = data || [];
-    const rank = s => s==='on-duty' ? 2 : s==='on-break' ? 1 : 0;
+
+    // Keep the latest/current row for each rider
+    const rank = s =>
+      s === 'on-duty' ? 2 :
+      s === 'on-break' ? 1 : 0;
+
     const byPhone = new Map();
+
     allRows.forEach(r => {
       const key = normPhone(r.phone) || ('id-' + r.id);
       const cur = byPhone.get(key);
-      if (!cur || rank(r.status) > rank(cur.status) ||
-         (rank(r.status) === rank(cur.status) && new Date(r.punched_in) > new Date(cur.punched_in)))
-        byPhone.set(key, r);
-    });
-    _riders = [...byPhone.values()].sort((a,b) => new Date(b.punched_in) - new Date(a.punched_in));
 
-    // Count active orders across all of a person's rows
+      if (
+        !cur ||
+        rank(r.status) > rank(cur.status) ||
+        (
+          rank(r.status) === rank(cur.status) &&
+          new Date(r.punched_in) > new Date(cur.punched_in)
+        )
+      ) {
+        byPhone.set(key, r);
+      }
+    });
+
+    _riders = [...byPhone.values()].sort(
+      (a, b) => new Date(b.punched_in) - new Date(a.punched_in)
+    );
+
+    // Count active orders
     const countByRow = {};
+
     if (allRows.length) {
       const { data: activeOrders } = await sb.from('kitchen_orders')
         .select('assigned_rider')
         .eq('status', 'ASSIGNED')
         .in('assigned_rider', allRows.map(r => r.id));
-      (activeOrders || []).forEach(o => { countByRow[o.assigned_rider] = (countByRow[o.assigned_rider] || 0) + 1; });
+
+      (activeOrders || []).forEach(o => {
+        countByRow[o.assigned_rider] =
+          (countByRow[o.assigned_rider] || 0) + 1;
+      });
     }
+
     _riders.forEach(r => {
       const key = normPhone(r.phone);
+
       r.active_orders = allRows
-        .filter(x => key ? normPhone(x.phone) === key : x.id === r.id)
-        .reduce((s,x) => s + (countByRow[x.id] || 0), 0);
+        .filter(x =>
+          key
+            ? normPhone(x.phone) === key
+            : x.id === r.id
+        )
+        .reduce(
+          (s, x) => s + (countByRow[x.id] || 0),
+          0
+        );
     });
 
     // Update riders badge
-    const onDutyCount = _riders.filter(r => r.status === 'on-duty').length;
+    const onDutyCount = _riders.filter(
+      r => r.status === 'on-duty'
+    ).length;
+
     const badge = document.getElementById('riders-badge');
-    if (onDutyCount > 0) { badge.style.display = 'inline'; badge.textContent = onDutyCount; }
-    else badge.style.display = 'none';
+
+    if (onDutyCount > 0) {
+      badge.style.display = 'inline';
+      badge.textContent = onDutyCount;
+    } else {
+      badge.style.display = 'none';
+    }
 
     if (!_riders.length) {
-      grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center;grid-column:1/-1;">No riders punched in today.<br>Use the punch-in form above.</div>';
+      grid.innerHTML = `
+        <div style="
+          color:var(--text3);
+          font-size:13px;
+          padding:20px;
+          text-align:center;
+          grid-column:1/-1;
+        ">
+          No riders punched in today.<br>
+          Use the punch-in form above.
+        </div>
+      `;
       return;
     }
 
-    grid.innerHTML = '';
-    _riders.forEach(r => {
+    // =========================================================
+    // CREATE RIDER CARD
+    // =========================================================
+    function createRiderCard(r) {
       const card = document.createElement('div');
-      const statusClass = r.status === 'on-duty' ? 'on-duty' : r.status === 'on-break' ? 'on-break' : 'off-duty';
-      const sbClass = r.status === 'on-duty' ? 'rsb-on' : r.status === 'on-break' ? 'rsb-break' : 'rsb-off';
-      const sbLabel = r.status === 'on-duty' ? '● On Duty' : r.status === 'on-break' ? '⏸ On Break' : '○ Off Duty';
-      const punchInTime = new Date(r.punched_in).toLocaleTimeString('en-PK', {hour:'2-digit',minute:'2-digit',hour12:true});
+
+      const statusClass =
+        r.status === 'on-duty'
+          ? 'on-duty'
+          : r.status === 'on-break'
+            ? 'on-break'
+            : 'off-duty';
+
+      const sbClass =
+        r.status === 'on-duty'
+          ? 'rsb-on'
+          : r.status === 'on-break'
+            ? 'rsb-break'
+            : 'rsb-off';
+
+      const sbLabel =
+        r.status === 'on-duty'
+          ? '● On Duty'
+          : r.status === 'on-break'
+            ? '⏸ On Break'
+            : '○ Off Duty';
+
+      const punchInTime = new Date(
+        r.punched_in
+      ).toLocaleTimeString('en-PK', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      const branchName =
+        r.branch === 'MULTAN'
+          ? 'Multan'
+          : r.branch === 'BWP'
+            ? 'Bahawalpur'
+            : r.branch === 'BOTH'
+              ? 'Both Branches'
+              : 'Branch Not Set';
 
       card.className = `rider-card ${statusClass}`;
+
       card.innerHTML = `
         <div class="rider-avatar">🛵</div>
+
         <div class="rider-name">${r.name}</div>
-        ${r.phone ? `<div class="rider-phone">📞 ${r.phone}</div>` : ''}
-        <div class="rider-status-badge ${sbClass}">${sbLabel}</div>
-        <div class="rider-stats">In: <span>${punchInTime}</span>${r.punched_out ? ' · Out: <span>' + new Date(r.punched_out).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) + '</span>' : ''}</div>
-        <div class="rider-stats">Active orders: <span>${r.active_orders || 0}</span></div>
-        ${r.status === 'on-duty' ? `
-        <div class="rider-actions">
-          <button class="rb orange" onclick="updateRiderStatus('${r.id}','on-break')">⏸ Break</button>
-          <button class="rb red" onclick="punchOutRider('${r.id}')">✕ Punch Out</button>
-        </div>` : r.status === 'on-break' ? `
-        <div class="rider-actions">
-          <button class="rb green" onclick="updateRiderStatus('${r.id}','on-duty')">▶ Resume</button>
-          <button class="rb red" onclick="punchOutRider('${r.id}')">✕ Punch Out</button>
-        </div>` : `<div style="font-size:11px;color:var(--text3);">Shift ended</div>`}
+
+        ${
+          r.phone
+            ? `<div class="rider-phone">📞 ${r.phone}</div>`
+            : ''
+        }
+
+        <div style="
+          display:inline-block;
+          font-size:9px;
+          font-weight:800;
+          padding:3px 8px;
+          border-radius:20px;
+          margin-bottom:6px;
+          text-transform:uppercase;
+          letter-spacing:.7px;
+          background:${
+            r.branch === 'MULTAN'
+              ? 'rgba(41,128,185,.15)'
+              : r.branch === 'BWP'
+                ? 'rgba(230,126,34,.15)'
+                : 'rgba(255,255,255,.08)'
+          };
+          color:${
+            r.branch === 'MULTAN'
+              ? '#5dade2'
+              : r.branch === 'BWP'
+                ? 'var(--orange)'
+                : 'var(--text2)'
+          };
+        ">
+          📍 ${branchName}
+        </div>
+
+        <div class="rider-status-badge ${sbClass}">
+          ${sbLabel}
+        </div>
+
+        <div class="rider-stats">
+          In:
+          <span>${punchInTime}</span>
+
+          ${
+            r.punched_out
+              ? ` · Out:
+                 <span>
+                   ${new Date(r.punched_out).toLocaleTimeString(
+                     'en-PK',
+                     {
+                       hour: '2-digit',
+                       minute: '2-digit',
+                       hour12: true
+                     }
+                   )}
+                 </span>`
+              : ''
+          }
+        </div>
+
+        <div class="rider-stats">
+          Active orders:
+          <span>${r.active_orders || 0}</span>
+        </div>
+
+        ${
+          r.status === 'on-duty'
+            ? `
+              <div class="rider-actions">
+                <button
+                  class="rb orange"
+                  onclick="updateRiderStatus('${r.id}','on-break')">
+                  ⏸ Break
+                </button>
+
+                <button
+                  class="rb red"
+                  onclick="punchOutRider('${r.id}')">
+                  ✕ Punch Out
+                </button>
+              </div>
+            `
+            : r.status === 'on-break'
+              ? `
+                <div class="rider-actions">
+                  <button
+                    class="rb green"
+                    onclick="updateRiderStatus('${r.id}','on-duty')">
+                    ▶ Resume
+                  </button>
+
+                  <button
+                    class="rb red"
+                    onclick="punchOutRider('${r.id}')">
+                    ✕ Punch Out
+                  </button>
+                </div>
+              `
+              : `
+                <div style="
+                  font-size:11px;
+                  color:var(--text3);
+                ">
+                  Shift ended
+                </div>
+              `
+        }
       `;
-      grid.appendChild(card);
-    });
+
+      return card;
+    }
+
+    // =========================================================
+    // CREATE BRANCH SECTION
+    // =========================================================
+    function createBranchSection(title, emoji, riders, accent) {
+
+      if (!riders.length) return;
+
+      const section = document.createElement('div');
+
+      section.style.cssText = `
+        grid-column:1/-1;
+        margin-bottom:8px;
+      `;
+
+      const heading = document.createElement('div');
+
+      heading.style.cssText = `
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:10px 4px;
+        margin-top:4px;
+        margin-bottom:8px;
+        border-bottom:1px solid var(--border);
+        color:${accent};
+        font-size:12px;
+        font-weight:900;
+        letter-spacing:1.5px;
+        text-transform:uppercase;
+      `;
+
+      heading.innerHTML = `
+        <span>${emoji} ${title}</span>
+        <span style="
+          font-size:10px;
+          background:${accent}22;
+          color:${accent};
+          padding:3px 8px;
+          border-radius:20px;
+        ">
+          ${riders.length} RIDER${riders.length !== 1 ? 'S' : ''}
+        </span>
+      `;
+
+      section.appendChild(heading);
+
+      const branchGrid = document.createElement('div');
+
+      branchGrid.style.cssText = `
+        display:grid;
+        grid-template-columns:repeat(
+          auto-fill,
+          minmax(200px, 1fr)
+        );
+        gap:10px;
+        margin-bottom:12px;
+      `;
+
+      riders.forEach(r => {
+        branchGrid.appendChild(createRiderCard(r));
+      });
+
+      section.appendChild(branchGrid);
+      grid.appendChild(section);
+    }
+
+    // =========================================================
+    // SEPARATE RIDERS BY BRANCH
+    // =========================================================
+
+    const multanRiders = _riders.filter(
+      r => r.branch === 'MULTAN'
+    );
+
+    const bwpRiders = _riders.filter(
+      r => r.branch === 'BWP'
+    );
+
+    const bothRiders = _riders.filter(
+      r => r.branch === 'BOTH'
+    );
+
+    const unknownRiders = _riders.filter(
+      r => !r.branch
+    );
+
+    grid.innerHTML = '';
+
+    createBranchSection(
+      'MULTAN RIDERS',
+      '📍',
+      multanRiders,
+      '#5dade2'
+    );
+
+    createBranchSection(
+      'BAHAWALPUR RIDERS',
+      '📍',
+      bwpRiders,
+      'var(--orange)'
+    );
+
+    createBranchSection(
+      'BOTH BRANCHES',
+      '🔄',
+      bothRiders,
+      'var(--green)'
+    );
+
+    createBranchSection(
+      'BRANCH NOT SET',
+      '⚠️',
+      unknownRiders,
+      'var(--text2)'
+    );
+
   } catch(e) {
-    grid.innerHTML = `<div style="color:var(--red);padding:20px;grid-column:1/-1;">Error loading riders. Make sure the rider_attendance table exists in Supabase.</div>`;
+    grid.innerHTML = `
+      <div style="
+        color:var(--red);
+        padding:20px;
+        grid-column:1/-1;
+      ">
+        Error loading riders.
+        Make sure the rider_attendance table exists in Supabase.
+      </div>
+    `;
+
     console.error(e);
   }
 }
