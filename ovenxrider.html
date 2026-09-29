@@ -371,6 +371,13 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden && riderId){ requestWakeLock(); loadOrders(); }
 });
 
+function normPhone(p){
+  let d = String(p||'').replace(/\D/g,'');
+  if (d.startsWith('92')) d = d.slice(2);
+  if (d.startsWith('0'))  d = d.slice(1);
+  return d;
+}
+
 // ═══════════════════════════════
 // LOGIN / PUNCH IN
 // ═══════════════════════════════
@@ -380,6 +387,7 @@ async function riderLogin() {
   const branch = document.getElementById('rider-branch-input').value;
 
   if (!name) { showSplashErr('Enter your name'); return; }
+  if (normPhone(phone).length !== 10) { showSplashErr('Enter valid phone: 03xx-xxxxxxx'); return; }
 
   riderName   = name;
   riderPhone  = phone;
@@ -390,13 +398,12 @@ async function riderLogin() {
     const today = new Date(); today.setHours(0,0,0,0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
 
-    const { data: existing } = await sb.from('rider_attendance')
-      .select('*')
-      .eq('name', name)
-      .gte('punched_in', today.toISOString())
-      .lt('punched_in', tomorrow.toISOString())
-      .neq('status', 'off-duty')
-      .maybeSingle();
+const { data: todayRows } = await sb.from('rider_attendance')
+  .select('*')
+  .gte('punched_in', today.toISOString())
+  .lt('punched_in', tomorrow.toISOString())
+  .neq('status', 'off-duty');
+const existing = (todayRows || []).find(r => normPhone(r.phone) === normPhone(phone));
 
     if (existing) {
       // Already punched in — just resume session
@@ -408,7 +415,7 @@ async function riderLogin() {
       // Fresh punch in — insert row, office sees it instantly
       const { data, error } = await sb.from('rider_attendance').insert([{
         name,
-        phone: phone || null,
+        phone: '0' + normPhone(phone),
         branch,
         status: 'on-duty',
         punched_in: new Date().toISOString(),
