@@ -5631,10 +5631,11 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
             let isAnyOrderLate = false;
             orders && orders.forEach((o) => {
                 const createdAt = new Date(o.created_at); 
-                const remaining = (25 * 60000) - (now - createdAt);
+                const limitMins = o.status === 'DELIVERING' ? 45 : 25;
+                const remaining = (limitMins * 60000) - (now - createdAt);
                 let timeLabel = ""; 
                 let alertClass = "";
-                if (!['READY','ASSIGNED','OUT','PAID','COMPLETED','VOIDED'].includes(o.status)) { 
+                if (!['READY','ASSIGNED','OUT','PAID','COMPLETED','VOIDED','CANCELLED'].includes(o.status)) { 
     if (remaining <= 0) { 
         alertClass = "late"; 
         timeLabel = "LATE"; 
@@ -5643,8 +5644,8 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
     timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
     if (remaining <= 5 * 60000) alertClass = "warning"; 
 }
-} else if (['ASSIGNED','OUT','PAID','COMPLETED'].includes(o.status)) {
-    timeLabel = o.status === 'ASSIGNED' ? '🛵 With Rider' : '✓ Done';
+} else if (['ASSIGNED','OUT','PAID','COMPLETED','CANCELLED'].includes(o.status)) {
+    timeLabel = o.status === 'ASSIGNED' ? '🛵 With Rider' : (o.status === 'CANCELLED' ? '🚫 Cancelled' : '✓ Done');
     alertClass = '';
                 }
                 let priceHtml = ""; 
@@ -5707,6 +5708,7 @@ ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendT
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
                     ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}
+                    ${(o.status === 'DELIVERING' || o.status === 'ASSIGNED') ? `<button class="next-btn" style="background:#16a34a; border-radius:12px; flex:1;" onclick="if(confirm('Mark this order as delivered?')) updateStatus('${o.id}', 'COMPLETED')">MARK DELIVERED ✅</button>` : ''}
                 </div>`;
                 list.appendChild(card);
             });
