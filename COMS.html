@@ -1473,7 +1473,7 @@ async function renderLiveOrders() {
           <span class="oc-total">Rs ${(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0)}</span>
         </div>
         ${!isCompleted && !isPending ? `<div class="oc-actions">
-          ${['WAITING','PREPARING','READY'].includes(o.status) && !(o.rider_name||o.rider) ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}')">🛵 Assign Rider</button>` : ''}
+          ${['WAITING','PREPARING','READY'].includes(o.status) && !(o.rider_name||o.rider) ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}','${o.branch||''}')">🛵 Assign Rider</button>` : ''}
           ${o.status==='ASSIGNED' ? `<span style="font-size:11px;color:var(--text3);">Waiting for rider to complete...</span>` : ''}
           ${o.phone ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
           <button class="oc-btn red" onclick="deleteOrder('${o.id}')">🗑️</button>
@@ -1569,57 +1569,88 @@ function notifyCustomer(phone, branch) {
 // ═══════════════════════════════
 // ASSIGN RIDER MODAL
 // ═══════════════════════════════
-function openAssignModal(orderId, orderLoc) {
+async function openAssignModal(orderId, orderLoc, ordBranch) {
   _assignOrderId = orderId;
   _assignRiderId = null;
+  _assignRiderName = '';
+  _nextRiderId = null;
   document.getElementById('assign-order-info').textContent = '📍 ' + orderLoc;
   const list = document.getElementById('assign-riders-list');
-  list.innerHTML = '';
-
-  const onDutyRiders = _riders.filter(r => r.status === 'on-duty');
-  if (!onDutyRiders.length) {
-    list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;text-align:center;">No riders on duty right now.<br>Punch in a rider from the Riders tab.</div>';
-  } else {
-    onDutyRiders.forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'rider-option';
-      div.id = 'ro-' + r.id;
-      const activeCount = r.active_orders || 0;
-      div.innerHTML = `
-        <div class="ro-avatar">🛵</div>
-        <div class="ro-info">
-          <div class="ro-name">${r.name}</div>
-          <div class="ro-status">● On Duty${r.phone ? ' · ' + r.phone : ''}</div>
-          <div class="ro-count">${activeCount} active order${activeCount !== 1 ? 's' : ''}</div>
-        </div>`;
-      div.onclick = () => {
-        document.querySelectorAll('.rider-option').forEach(x => x.classList.remove('sel'));
-        div.classList.add('sel');
-        _assignRiderId = r.id;
-        _assignRiderName = r.name;
-      };
-      list.appendChild(div);
-    });
-  }
+  list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;text-align:center;">Loading queue...</div>';
   document.getElementById('assign-modal').classList.add('open');
-}
 
-let _assignRiderName = '';
-function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
+  await renderRiders(); // refresh counts
 
-async function confirmAssign() {
-  if (!_assignRiderId) {
-    showToast('Select a rider', 'error');
+  const eligible = sortRidersForRotation(
+    _riders.filter(r => r.status === 'on-duty' &&
+      (!ordBranch || r.branch === ordBranch || r.branch === 'BOTH'))
+  );
+
+  list.innerHTML = '';
+  if (!eligible.length) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;text-align:center;">No riders on duty for this branch.<br>Punch in a rider from the Riders tab.</div>';
     return;
   }
 
+  _nextRiderId = eligible[0].id;
+
+  const pick = (div, r) => {
+    document.querySelectorAll('.rider-option').forEach(x => x.classList.remove('sel'));
+    div.classList.add('sel');
+    _assignRiderId = r.id;
+    _assignRiderName = r.name;
+  };
+
+  eligible.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'rider-option';
+    div.id = 'ro-' + r.id;
+    const lastTxt = r.last_assigned
+      ? new Date(r.last_assigned).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })
+      : 'none yet';
+    div.innerHTML = `
+      <div class="ro-avatar">${i === 0 ? '⭐' : '🛵'}</div>
+      <div class="ro-info">
+        <div class="ro-name">${r.name} ${i === 0 ? '<span style="font-size:10px;color:var(--green);font-weight:800;">NEXT</span>' : '<span style="font-size:10px;color:var(--text3);">#' + (i + 1) + '</span>'}</div>
+        <div class="ro-status">● On Duty${r.phone ? ' · ' + r.phone : ''}</div>
+        <div class="ro-count">Active: ${r.active_orders || 0} · Today: ${r.today_count || 0} · Last: ${lastTxt}</div>
+      </div>`;
+    div.onclick = () => pick(div, r);
+    list.appendChild(div);
+    if (i === 0) pick(div, r); // preselect NEXT
+  });
+}
+
+let _assignRiderName = '';
+let _nextRiderId = null;
+
+function sortRidersForRotation(list) {
+  return [...list].sort((a, b) =>
+    (a.active_orders || 0) - (b.active_orders || 0) ||
+    (a.today_count || 0)  - (b.today_count || 0)  ||
+    (a.last_assigned || 0) - (b.last_assigned || 0) ||
+    new Date(a.punched_in) - new Date(b.punched_in)
+  );
+}
+function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
+
+async function confirmAssign() {
+  if (!_assignRiderId) { showToast('Select a rider', 'error'); return; }
+
+  if (_nextRiderId && _assignRiderId !== _nextRiderId) {
+    const nextName = _riders.find(r => r.id === _nextRiderId)?.name || 'the next rider';
+    if (!confirm(`${nextName} is next in the queue.\n\nAssign to ${_assignRiderName} anyway?`)) return;
+  }
+
   try {
-    await sb.from('kitchen_orders').update({
+    const { error } = await sb.from('kitchen_orders').update({
       status: 'ASSIGNED',
       assigned_rider: _assignRiderId,
       rider_name: _assignRiderName,
-      rider: _assignRiderName
+      rider: _assignRiderName,
+      assigned_at: new Date().toISOString()
     }).eq('id', _assignOrderId);
+    if (error) throw error;
 
     showToast('✅ Assigned to ' + _assignRiderName, 'success');
     closeAssignModal();
@@ -1710,6 +1741,36 @@ async function renderRiders() {
           (s, x) => s + (countByRow[x.id] || 0),
           0
         );
+    });
+
+    // ── FAIR ROTATION STATS ──
+    const idToKey = {};
+    allRows.forEach(r => { idToKey[String(r.id)] = normPhone(r.phone) || ('id-' + r.id); });
+    const rotStats = {};
+    if (allRows.length) {
+      const { data: todayOrders } = await sb.from('kitchen_orders')
+        .select('assigned_rider, assigned_at, created_at')
+        .in('assigned_rider', allRows.map(r => r.id))
+        .in('status', ['ASSIGNED','OUT','COMPLETED','PAID'])
+        .gte('created_at', today.toISOString());
+      (todayOrders || []).forEach(o => {
+        const k = idToKey[String(o.assigned_rider)];
+        if (!k) return;
+        const t = new Date(o.assigned_at || o.created_at).getTime();
+        rotStats[k] = rotStats[k] || { count: 0, last: 0 };
+        rotStats[k].count++;
+        if (t > rotStats[k].last) rotStats[k].last = t;
+      });
+    }
+    _riders.forEach(r => {
+      const s = rotStats[normPhone(r.phone) || ('id-' + r.id)];
+      r.today_count = s ? s.count : 0;
+      r.last_assigned = s ? s.last : 0;
+      r.queue = null;
+    });
+    ['MULTAN','BWP','BOTH'].forEach(br => {
+      sortRidersForRotation(_riders.filter(r => r.status === 'on-duty' && r.branch === br))
+        .forEach((r, i) => r.queue = i + 1);
     });
 
     // Update riders badge
@@ -1854,7 +1915,9 @@ async function renderRiders() {
         <div class="rider-stats">
           Active orders:
           <span>${r.active_orders || 0}</span>
+          · Today: <span>${r.today_count || 0}</span>
         </div>
+        ${r.queue ? `<div style="font-size:10px;font-weight:800;letter-spacing:1px;margin-bottom:6px;color:${r.queue===1?'var(--green)':'var(--text3)'};">${r.queue===1?'⭐ NEXT IN QUEUE':'QUEUE #'+r.queue}</div>` : ''}
 
         ${
           r.status === 'on-duty'
@@ -2599,6 +2662,7 @@ document.getElementById('bar-count').textContent = '0';
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
