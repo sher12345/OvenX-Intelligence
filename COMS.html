@@ -2542,7 +2542,7 @@ const unpaidOrders = salesOnly.filter(o => !o.payment_method);
     const disc     = o.disc || o.discount || 0;
     const total    = o.total || 0;
     const delFee   = o.delCharge || o.delivery_fee || 0;
-    const subtotal = o.subtotal || (total - delFee);
+    const subtotal = (o.subtotal || 0) + disc;   // add the discount back to get the pre-discount bill
     const discPct  = subtotal > 0 ? Math.round((disc / subtotal) * 100) : 0;
     const orderNum = salesOnly.length - i;
     const custName = o.customer_name || o.custName || 'unknown';
