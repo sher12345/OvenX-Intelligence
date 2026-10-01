@@ -284,7 +284,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .new-badge{font-size:9px;font-weight:900;letter-spacing:1px;padding:2px 7px;border-radius:5px;background:var(--green);color:white;margin-left:6px;animation:livepulse 1.2s infinite;}
 .order-card.is-new{box-shadow:0 0 0 2px rgba(39,174,96,0.45);}
 
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--text3);}
+.orders-table td,.orders-table th{white-space:nowrap;}
+.orders-table thead th{position:sticky;top:0;background:var(--surface);z-index:1;}
 </style>
 </head>
 <body>
@@ -510,43 +515,52 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;" id="type-breakdown"></div>
     </div>
 
-    <!-- DETAILED ORDERS TABLE -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;">
-      <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">All Orders This Shift</div>
-        <div style="font-size:11px;color:var(--text3);" id="orders-count-label">0 orders</div>
+        <!-- ORDERS: DELIVERY | TAKEAWAY + DINE-IN -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,900px),1fr));gap:12px;margin-bottom:14px;align-items:start;">
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--red);">🚚 Delivery Orders</div>
+          <div style="font-size:11px;color:var(--text3);" id="del-count-label">0 orders</div>
+        </div>
+        <div style="overflow-x:auto;max-height:520px;overflow-y:auto;">
+          <table class="orders-table" style="min-width:0;">
+            <thead><tr>
+              <th>#</th><th>Time</th><th>Branch</th><th>Customer</th><th>Phone</th><th>Address</th>
+              <th>Subtotal</th><th>Del.</th><th>Disc.</th><th style="text-align:right;">Total</th><th>Status</th><th>Rider</th>
+            </tr></thead>
+            <tbody id="stats-tbody"></tbody>
+          </table>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="orders-table" style="min-width:900px;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Time</th>
-              <th>Branch</th>
-              <th>Type</th>
-              <th>Customer</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Items</th>
-              <th>Subtotal</th>
-              <th>Del. Charge</th>
-              <th>SC</th>
-              <th>Discount</th>
-              <th style="text-align:right;">Grand Total</th>
-              <th>Status</th>
-              <th>Rider</th>
-            </tr>
-          </thead>
-          <tbody id="stats-tbody"></tbody>
-        </table>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--green);">🥡 Takeaway &amp; 🍽️ Dine-In</div>
+          <div style="font-size:11px;color:var(--text3);" id="other-count-label">0 orders</div>
+        </div>
+        <div style="overflow-x:auto;max-height:520px;overflow-y:auto;">
+          <table class="orders-table" style="min-width:0;">
+            <thead><tr>
+              <th>#</th><th>Time</th><th>Branch</th><th>Type</th><th>Customer</th><th>Phone</th>
+              <th>Subtotal</th><th>SC</th><th>Disc.</th><th style="text-align:right;">Total</th><th>Status</th>
+            </tr></thead>
+            <tbody id="stats-tbody-other"></tbody>
+          </table>
+        </div>
       </div>
+
     </div>
 
     <!-- ANOMALY ALERTS -->
     <div id="anomaly-section"></div>
 
-  </div>
-</div>
+  </div><!-- /stats-body -->
+</div><!-- /view-stats -->
+
+    </div><!-- /right-panel -->
+  </div><!-- /app-body -->
+</div><!-- /#app -->
 
 <!-- SIZE MODAL -->
 <div class="modal-backdrop" id="size-modal">
@@ -824,7 +838,17 @@ async function doLogin() {
 
   currentAgent = name;
   agentBranch  = 'ALL';
-  shiftStart   = new Date();
+  shiftStart = null;
+  try {
+    const s = JSON.parse(localStorage.getItem('ovenx_office_shift') || 'null');
+    if (s && s.agent === name && Date.now() - s.start < 16 * 60 * 60 * 1000) {
+      shiftStart = new Date(s.start);
+    }
+  } catch(e) {}
+  if (!shiftStart) {
+    shiftStart = new Date();
+    try { localStorage.setItem('ovenx_office_shift', JSON.stringify({ agent: name, start: shiftStart.getTime() })); } catch(e) {}
+  }
   orderBranch  = '';
 
   document.getElementById('login-screen').style.display = 'none';
@@ -2441,44 +2465,65 @@ const unpaidOrders = salesOnly.filter(o => !o.payment_method);
       <div style="font-size:12px;color:var(--text3);margin-top:3px;">Rs ${t.val.toLocaleString()}</div>
     </div>`).join('');
 
-  // Detailed orders table
-  document.getElementById('orders-count-label').textContent = totalOrders + ' order' + (totalOrders!==1?'s':'');
+  // Detailed orders: Delivery | Takeaway + Dine-In
+  const fmtT = d => new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+  const stColor = s => s==='COMPLETED'?'var(--green)':(s==='ASSIGNED'||s==='DELIVERING')?'var(--blue)':'var(--orange)';
+  const itemsOf = o => (Array.isArray(o.items)
+    ? o.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
+    : (o.itemsText || o.items_text || o.items || '—').toString().replace(/\n/g,', '));
 
-  if (!salesOnly.length) {
-    document.getElementById('stats-tbody').innerHTML =
-      '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:24px;">No orders this shift yet</td></tr>';
-  } else {
-    document.getElementById('stats-tbody').innerHTML = salesOnly.slice().reverse().map((o, idx) => {
-      const time     = new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
-      const subtotal = Array.isArray(o.items) ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
-      const delFee   = o.delCharge || o.delivery_fee || 0;
-      const sc       = o.sc || 0;
-      const disc     = o.disc || o.discount || 0;
-      const grand    = o.total || 0;
-      const itemsStr = Array.isArray(o.items)
-  ? o.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
-  : (o.itemsText || o.items_text || o.items || '—').toString().replace(/\n/g,', ');
-      const statusColor = o.status==='COMPLETED'?'var(--green)':o.status==='ASSIGNED'?'var(--blue)':'var(--orange)';
+  const numbered = salesOnly.slice()
+    .sort((a,b) => new Date(a.time) - new Date(b.time))
+    .map((o,i) => ({ o, n: i + 1 }))
+    .reverse(); // newest first, numbers stay chronological
 
-      return `<tr>
-        <td style="color:var(--text3);font-size:11px;">${salesOnly.length - idx}</td>
-        <td style="color:var(--text2);white-space:nowrap;">${time}</td>
-        <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||orderBranch}</span></td>
-        <td style="color:var(--text2);">${o.type||'—'}</td>
-        <td style="color:white;font-weight:600;">${o.customer_name||o.custName||'—'}</td>
-        <td style="color:var(--orange);font-size:12px;">${o.phone||o.custPhone||'—'}</td>
-        <td style="color:var(--text2);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.location||o.address||''}">${(o.location||o.address||'—').slice(0,25)}</td>
-        <td style="color:var(--text2);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${itemsStr}">${itemsStr.slice(0,35)}${itemsStr.length>35?'…':''}</td>
-        <td style="color:var(--text);">Rs ${subtotal}</td>
-        <td style="color:${delFee>0?'var(--orange)':'var(--text3)'};">${delFee>0?'Rs '+delFee:'—'}</td>
-        <td style="color:${sc>0?'var(--blue)':'var(--text3)'};">${sc>0?'Rs '+sc:'—'}</td>
-        <td style="color:${disc>0?'var(--red)':'var(--text3)'};">${disc>0?'−Rs '+disc:'—'}</td>
-        <td style="text-align:right;font-weight:800;color:var(--orange);">Rs ${grand}</td>
-        <td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(39,174,96,0.1);color:${statusColor};">${o.status||'SENT'}</span></td>
-        <td style="color:var(--blue);font-size:11px;">${o.rider_name||o.riderName||'—'}</td>
-      </tr>`;
-    }).join('');
-  }
+  const rowHtml = ({o,n}, mode) => {
+    const subtotal = Array.isArray(o.items) ? o.items.reduce((s,i)=>s+(i.price*i.qty),0) : (o.subtotal||0);
+    const delFee = o.delCharge || o.delivery_fee || 0;
+    const sc = o.sc || 0;
+    const disc = o.disc || o.discount || 0;
+    const items = itemsOf(o);
+    const branchCell = `<td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||orderBranch||'—'}</span></td>`;
+    const common =
+      `<td style="color:var(--text3);font-size:11px;">${n}</td>` +
+      `<td style="color:var(--text2);white-space:nowrap;">${fmtT(o.time)}</td>` + branchCell;
+    const discCell = `<td style="color:${disc>0?'var(--red)':'var(--text3)'};">${disc>0?'−Rs '+disc:'—'}</td>`;
+    const totalCell = `<td style="text-align:right;font-weight:800;color:var(--orange);">Rs ${o.total||0}</td>`;
+    const statusCell = `<td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(39,174,96,0.1);color:${stColor(o.status)};">${o.status||'SENT'}</span></td>`;
+    const cust = `<td style="color:white;font-weight:600;">${o.customer_name||o.custName||'—'}</td>`;
+    const phone = `<td style="color:var(--orange);font-size:12px;">${o.phone||o.custPhone||'—'}</td>`;
+
+    if (mode === 'del') {
+      const addr = (o.location||o.address||'—');
+      return `<tr title="${items.replace(/"/g,'&quot;')}">` + common + cust + phone +
+        `<td style="color:var(--text2);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${addr}">${addr.slice(0,28)}</td>` +
+        `<td>Rs ${subtotal}</td>` +
+        `<td style="color:${delFee>0?'var(--orange)':'var(--text3)'};">${delFee>0?'Rs '+delFee:'—'}</td>` +
+        discCell + totalCell + statusCell +
+        `<td style="color:var(--blue);font-size:11px;">${o.rider_name||o.riderName||'—'}</td></tr>`;
+    }
+    return `<tr title="${items.replace(/"/g,'&quot;')}">` + common +
+      `<td style="color:var(--text2);">${o.type||'—'}</td>` + cust + phone +
+      `<td>Rs ${subtotal}</td>` +
+      `<td style="color:${sc>0?'var(--blue)':'var(--text3)'};">${sc>0?'Rs '+sc:'—'}</td>` +
+      discCell + totalCell + statusCell + `</tr>`;
+  };
+
+  const delRows   = numbered.filter(x => x.o.type === 'Delivery');
+  const otherRows = numbered.filter(x => x.o.type !== 'Delivery');
+
+  const lbl = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n + ' order' + (n!==1?'s':''); };
+  lbl('del-count-label', delRows.length);
+  lbl('other-count-label', otherRows.length);
+
+  document.getElementById('stats-tbody').innerHTML = delRows.length
+    ? delRows.map(x => rowHtml(x,'del')).join('')
+    : '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:24px;">No delivery orders yet</td></tr>';
+
+  const otherBody = document.getElementById('stats-tbody-other');
+  if (otherBody) otherBody.innerHTML = otherRows.length
+    ? otherRows.map(x => rowHtml(x,'other')).join('')
+    : '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px;">No takeaway / dine-in orders yet</td></tr>';
 
   // Anomaly detection — flags suspicious patterns
   // Anomaly detection
@@ -2663,6 +2708,7 @@ async function closeShift() {
   shiftOrders = shiftOrders.filter(o => !isVoidStatus(o.status));
   const shiftStartSnapshot = shiftStart;
 _shiftClosed = true;
+try { localStorage.removeItem('ovenx_office_shift'); } catch(e) {}
 shiftStart = null;
 sb.removeAllChannels();
 clearInterval(_liveTimer);
