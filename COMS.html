@@ -838,17 +838,12 @@ async function doLogin() {
 
   currentAgent = name;
   agentBranch  = 'ALL';
-  shiftStart = null;
+  const sod = new Date(); sod.setHours(0,0,0,0);
+  shiftStart = sod;
   try {
-    const s = JSON.parse(localStorage.getItem('ovenx_office_shift') || 'null');
-    if (s && s.agent === name && Date.now() - s.start < 16 * 60 * 60 * 1000) {
-      shiftStart = new Date(s.start);
-    }
+    const lc = parseInt(localStorage.getItem('ovenx_office_last_close_' + name) || '0');
+    if (lc > sod.getTime()) shiftStart = new Date(lc);
   } catch(e) {}
-  if (!shiftStart) {
-    shiftStart = new Date();
-    try { localStorage.setItem('ovenx_office_shift', JSON.stringify({ agent: name, start: shiftStart.getTime() })); } catch(e) {}
-  }
   orderBranch  = '';
 
   document.getElementById('login-screen').style.display = 'none';
@@ -1439,7 +1434,7 @@ async function renderLiveOrders() {
     let query = sb.from('kitchen_orders')
       .select('*')
       .in('status', statuses)
-      .in('type', ['Delivery', 'Takeaway'])
+      .in('type', ['Delivery', 'Takeaway', 'Dine-In'])
       .order('created_at', { ascending: false })
       .limit(120);
     if (branchFilter !== 'ALL') query = query.eq('branch', branchFilter);
@@ -1531,9 +1526,9 @@ async function renderLiveOrders() {
           <span class="oc-total">Rs ${(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0)}</span>
         </div>
         ${!isCompleted && !isPending ? `<div class="oc-actions">
-          ${['WAITING','PREPARING','READY'].includes(o.status) && !(o.rider_name||o.rider) ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}','${o.branch||''}')">🛵 Assign Rider</button>` : ''}
+          ${o.type === 'Delivery' && ['WAITING','PREPARING','READY'].includes(o.status) && !(o.rider_name||o.rider) ? `<button class="oc-btn assign" onclick="openAssignModal('${o.id}','${(o.location||'').replace(/'/g,"\\'")}','${o.branch||''}')">🛵 Assign Rider</button>` : ''}
           ${['ASSIGNED','DELIVERING'].includes(o.status) ? `<span style="font-size:11px;color:var(--text3);">${o.status==='DELIVERING' ? '🚚 Rider is on the way...' : 'Assigned, rider has not started yet...'}</span>` : ''}
-          ${o.phone ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
+          ${o.phone && o.type !== 'Dine-In' ? `<button class="oc-btn wa" onclick="notifyCustomer('${o.phone}','${o.branch||'MULTAN'}')">📱 Notify</button>` : ''}
           <button class="oc-btn red" onclick="deleteOrder('${o.id}')">🗑️</button>
         </div>` : ''}
         ${isCompleted ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px;">✅ Completed by ${o.rider_name||'rider'}</div>` : ''}
@@ -1551,9 +1546,22 @@ async function renderLiveOrders() {
       list.forEach(o => grid.appendChild(makeCard(o)));
     };
 
-    addSection('urgent', '⚠️ Needs Action — Confirm / Send to Kitchen', urgent);
-    addSection('today',  '🆕 Today — Newest First', todays);
-    addSection('older',  '📅 Older Orders (Not Today) — Close or Void These', older);
+    const isDel = o => o.type === 'Delivery';
+    const groups = [
+      ['🚚 DELIVERIES', isDel],
+      ['🥡 TAKEAWAY / 🍽️ DINE-IN', o => !isDel(o)]
+    ];
+    groups.forEach(([label, fn]) => {
+      const u = urgent.filter(fn), t = todays.filter(fn), ol = older.filter(fn);
+      if (!u.length && !t.length && !ol.length) return;
+      const banner = document.createElement('div');
+      banner.style.cssText = 'grid-column:1/-1;padding:10px 14px;margin-top:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:14px;font-weight:900;letter-spacing:2px;';
+      banner.innerHTML = `${label} <span style="float:right;font-size:11px;color:var(--text3);">${u.length + t.length + ol.length} orders</span>`;
+      grid.appendChild(banner);
+      addSection('urgent', '⚠️ Needs Action', u);
+      addSection('today',  '🆕 Today — Newest First', t);
+      addSection('older',  '📅 Older (Not Today) — Close or Void', ol);
+    });
 
   } catch(e) {
     grid.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;grid-column:1/-1;">Error loading orders</div>';
@@ -2267,7 +2275,7 @@ async function renderStats() {
      let query = sb.from('kitchen_orders')
         .select('*')
         .gte('created_at', shiftStart.toISOString())
-        .in('type', ['Delivery', 'Takeaway'])
+        .in('type', ['Delivery', 'Takeaway', 'Dine-In'])
         .order('created_at', { ascending: true });
       if (agentBranch !== 'ALL') query = query.eq('branch', agentBranch);
       const { data } = await query;
@@ -2275,7 +2283,7 @@ async function renderStats() {
       liveDbOrders = (data || []).filter(o => {
         if (o.type === 'Delivery') return true;
         if (o.type === 'Takeaway') return true;
-        if (o.type === 'Dine-In') return shiftOrders.some(local => local.id === o.id);
+        if (o.type === 'Dine-In') return o.source === 'OFFICE' || shiftOrders.some(local => local.id === o.id);
         return false;
       });
 
@@ -2708,7 +2716,7 @@ async function closeShift() {
   shiftOrders = shiftOrders.filter(o => !isVoidStatus(o.status));
   const shiftStartSnapshot = shiftStart;
 _shiftClosed = true;
-try { localStorage.removeItem('ovenx_office_shift'); } catch(e) {}
+try { localStorage.setItem('ovenx_office_last_close_' + currentAgent, String(Date.now())); } catch(e) {}
 shiftStart = null;
 sb.removeAllChannels();
 clearInterval(_liveTimer);
@@ -2777,7 +2785,7 @@ clearInterval(_clockTimer);
         branch: agentBranch === 'ALL' ? 'ALL' : agentBranch,
         date: new Date().toISOString().slice(0,10),
         staff: currentAgent,
-        shift_start: shiftStart?.toISOString() || null,
+        shift_start: shiftStartSnapshot?.toISOString() || null,
         shift_end: new Date().toISOString(),
         total_sales: total - delFees,
         bills_count: shiftOrders.length,
