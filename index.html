@@ -4966,7 +4966,43 @@ function showPermissionDeniedHelp() {
 async function assignRider(id, rider) {
     playClick('pop');
     try {
-        await callAdminAction('assignRider', { id, rider });
+        // Rider's phone from BRANCH_CONFIG
+        let phone = null;
+        Object.values(BRANCH_CONFIG).forEach(b => {
+            if (b.riderPhones && b.riderPhones[rider]) phone = b.riderPhones[rider];
+        });
+        const norm = p => {
+            let d = String(p || '').replace(/\D/g, '');
+            if (d.startsWith('92')) d = d.slice(2);
+            if (d.startsWith('0'))  d = d.slice(1);
+            return d;
+        };
+
+        // Find today's attendance row (rider must be punched in)
+        let attendanceId = null;
+        if (sb && phone) {
+            const start = new Date(); start.setHours(0, 0, 0, 0);
+            const { data } = await sb.from('rider_attendance')
+                .select('id,phone,status,punched_in')
+                .gte('punched_in', start.toISOString());
+            const rows = (data || [])
+                .filter(r => norm(r.phone) === norm(phone) && r.status !== 'off-duty')
+                .sort((a, b) => new Date(b.punched_in) - new Date(a.punched_in));
+            if (rows[0]) attendanceId = rows[0].id;
+        }
+
+        if (!attendanceId) {
+            if (!confirm(
+                rider + " is not punched in today (or his phone doesn't match).\n\n" +
+                "If you continue, the order is marked with his name but it will NOT appear in his rider app.\n\nContinue anyway?"
+            )) return;
+        }
+
+        await callAdminAction('assignRider', {
+            id, rider,
+            assigned_rider: attendanceId,
+            rider_name: rider
+        });
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
