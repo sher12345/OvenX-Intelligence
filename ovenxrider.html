@@ -157,6 +157,42 @@ details.oc-items summary::-webkit-details-marker{display:none;}
 .alert-setup{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(230,126,34,.12);border-bottom:1px solid rgba(230,126,34,.35);padding:12px 16px;font-size:12px;color:var(--text2);}
 .alert-setup b{display:block;color:var(--orange);font-size:13px;}
 .alert-setup button{background:var(--orange);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-family:var(--font);font-weight:800;font-size:12px;cursor:pointer;flex-shrink:0;}
+/* ── PRO LAYOUT v2 ── */
+.app-body{padding:14px 14px 40px;}
+.summary-bar{gap:8px;margin-bottom:16px;}
+.sum-card{padding:12px 6px;border-radius:14px;}
+.sum-val{font-size:19px;line-height:1.1;}
+.sum-lbl{font-size:9px;margin-top:4px;}
+.order-card{padding:0;overflow:hidden;margin-bottom:16px;}
+.rc-head{display:flex;align-items:center;gap:8px;padding:12px 16px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);}
+.rc-head .oc-badge,.rc-head .oc-branch-tag{margin:0;}
+.rc-age{margin-left:auto;font-size:12px;font-weight:800;color:var(--text2);font-variant-numeric:tabular-nums;}
+.rc-bar{height:3px;background:rgba(255,255,255,.06);}
+.rc-bar i{display:block;height:100%;background:var(--blue);}
+.rc-bar i.warn{background:var(--orange);}
+.rc-bar i.late{background:var(--red);}
+.rc-sec{padding:14px 16px;border-bottom:1px solid var(--border);}
+.rc-label{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;display:flex;justify-content:space-between;}
+.rc-addr{font-size:18px;font-weight:800;line-height:1.35;color:var(--text);}
+.rc-cust{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.rc-cname{font-size:15px;font-weight:700;color:var(--text);}
+.rc-cphone{font-size:13px;color:var(--orange);font-weight:700;margin-top:2px;}
+.rc-callbtn{width:44px;height:44px;border-radius:50%;border:1px solid rgba(39,174,96,.35);background:rgba(39,174,96,.15);font-size:18px;cursor:pointer;flex-shrink:0;}
+.rc-items{list-style:none;}
+.rc-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.07);}
+.rc-item:last-child{border-bottom:none;padding-bottom:0;}
+.rc-qty{min-width:32px;height:26px;border-radius:7px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:var(--orange);}
+.rc-iname{flex:1;font-size:14px;font-weight:700;color:var(--text);line-height:1.3;}
+.rc-inote{font-size:12px;font-weight:500;color:var(--text2);margin-top:3px;line-height:1.4;}
+.rc-collect{margin:14px 16px 0;border-radius:14px;background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.3);padding:12px 14px;}
+.rc-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:2px 0;}
+.rc-row b{color:var(--text);font-weight:700;}
+.rc-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:8px;border-top:1px solid rgba(230,126,34,.3);}
+.rc-total span:first-child{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);}
+.rc-total span:last-child{font-size:26px;font-weight:900;color:var(--orange);}
+.rc-actions{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px;}
+.quick-row{grid-template-columns:repeat(3,1fr);}
+.quick-row .sm-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:11px 4px;font-size:11px;}
 </style>
 </head>
 <body>
@@ -566,6 +602,24 @@ async function loadOrders() {
   }
 }
 
+// Turns "1x Zinger @ Rs 420 [note]" lines into clean rows
+function parseItems(text) {
+  const items = [];
+  String(text || '').split('\n').forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+    const m = line.match(/^(\d+)x\s+(.+?)\s+@\s+Rs\s+(\d+)\s*(?:\[(.*))?$/);
+    if (m) {
+      items.push({ qty: m[1], name: m[2], notes: m[4] ? [m[4].replace(/\]$/, '').trim()] : [] });
+    } else if (items.length) {
+      items[items.length - 1].notes.push(line.replace(/\]$/, '').trim());
+    } else {
+      items.push({ qty: '•', name: line, notes: [] });
+    }
+  });
+  return items;
+}
+
 function renderOrders(activeList, doneList) {
   const list = document.getElementById('orders-list');
   const now  = new Date();
@@ -587,36 +641,62 @@ function renderOrders(activeList, doneList) {
 
       const card = document.createElement('div');
       card.className = `order-card ${isDelivering ? 'in-progress' : 'new-order'}`;
+            const items = parseItems(o.items);
+      const shop = o.subtotal || 0, tax = o.tax || 0, fee = o.delivery_fee || 0;
+      const collect = shop + tax + fee;
+      const pct = Math.min(100, Math.round((mins / 45) * 100));
+      const barCls = mins > 45 ? 'late' : mins > 30 ? 'warn' : '';
+
       card.innerHTML = `
-        <div class="oc-top">
-          <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 Delivering' : '🔔 New order'}</span>
+        <div class="rc-head">
+          <span class="oc-badge ${isDelivering ? 'active' : 'new'}">${isDelivering ? '🚚 On the way' : '🔔 New order'}</span>
           <span class="oc-branch-tag">${esc(o.branch || 'MULTAN')}</span>
-          <span class="oc-age" style="color:${mins>45?'#c0392b':'#8892a4'}">⏱ ${mins} / 45 min</span>
+          <span class="rc-age" style="color:${mins>45?'#e74c3c':'#8892a4'}">⏱ ${mins} / 45 min</span>
         </div>
-        <div class="oc-addr">📍 ${esc(o.location || 'No address')}</div>
-        <div class="oc-cust">
-          ${o.customer_name ? `<span>👤 ${esc(o.customer_name)}</span>` : ''}
-          ${ph ? `<span><b>📞 ${esc(o.phone)}</b></span>` : ''}
+        <div class="rc-bar"><i class="${barCls}" style="width:${pct}%"></i></div>
+
+        <div class="rc-sec">
+          <div class="rc-label">Deliver to</div>
+          <div class="rc-addr">📍 ${esc(o.location || 'No address')}</div>
         </div>
-        <details class="oc-items" open>
-          <summary>Items ▾</summary>
-          <div class="oc-items-block">${esc(o.items || '—')}</div>
-        </details>
-        <div class="oc-total-row">
+
+        <div class="rc-sec rc-cust">
           <div>
-            <div class="oc-total-label">Shop: Rs ${o.subtotal || 0}</div>
-            <div class="oc-del-info">+ Delivery: <strong style="color:var(--green);">Rs ${o.delivery_fee || 0}</strong></div>
+            <div class="rc-label" style="margin-bottom:4px;">Customer</div>
+            <div class="rc-cname">${esc(o.customer_name || 'Customer')}</div>
+            ${ph ? `<div class="rc-cphone">${esc(o.phone)}</div>` : ''}
           </div>
-          <div class="oc-total-val">Rs ${(o.subtotal||0) + (o.delivery_fee||0)}</div>
+          ${ph ? `<button class="rc-callbtn" onclick="directCall('${ph}')">📞</button>` : ''}
         </div>
-        <div class="oc-actions">
+
+        <div class="rc-sec">
+          <div class="rc-label"><span>Order</span><span>${items.length} item${items.length!==1?'s':''}</span></div>
+          <ul class="rc-items">
+            ${items.map(it => `
+              <li class="rc-item">
+                <div class="rc-qty">${esc(it.qty)}${it.qty && it.qty !== '•' ? '×' : ''}</div>
+                <div class="rc-iname">${esc(it.name)}
+                  ${it.notes.filter(n => n && n !== 'Smart Add-on' && n !== 'Add-on').map(n => `<div class="rc-inote">${esc(n)}</div>`).join('')}
+                </div>
+              </li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="rc-collect">
+          <div class="rc-row"><span>Food bill</span><b>Rs ${shop}</b></div>
+          ${tax > 0 ? `<div class="rc-row"><span>Tax</span><b>Rs ${tax}</b></div>` : ''}
+          <div class="rc-row"><span>Delivery fee (yours)</span><b style="color:var(--green);">Rs ${fee}</b></div>
+          <div class="rc-total"><span>Collect from customer</span><span>Rs ${collect}</span></div>
+        </div>
+
+        <div class="rc-actions">
           ${!isDelivering
             ? `<button class="big-btn start" onclick="startDelivery('${id}')">▶ Start delivery</button>`
             : `<button class="big-btn complete" onclick="markComplete('${id}')">✅ Mark delivered</button>`}
           <div class="quick-row">
-            ${ph ? `<button class="sm-btn call" onclick="directCall('${ph}')">📞 Call</button>
-                    <button class="sm-btn wa" onclick="openWhatsApp('${ph}')">💬 WhatsApp</button>` : ''}
-            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')">🗺 Maps</button>` : ''}
+            ${ph ? `<button class="sm-btn call" onclick="directCall('${ph}')"><span>📞</span>Call</button>
+                    <button class="sm-btn wa" onclick="openWhatsApp('${ph}')"><span>💬</span>WhatsApp</button>` : ''}
+            ${o.location ? `<button class="sm-btn map" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')"><span>🗺</span>Maps</button>` : ''}
           </div>
           <button class="cancel-link" onclick="cancelOrder('${id}')">🚫 Report cancellation</button>
         </div>`;
@@ -953,6 +1033,7 @@ async function cancelOrder(orderId) {
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
