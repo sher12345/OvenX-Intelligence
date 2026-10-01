@@ -421,6 +421,12 @@ async function getMyIds() {
   return _idsCache.ids;
 }
 
+function bizDayStart(){
+  const d = new Date();
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+  d.setHours(6, 0, 0, 0);
+  return d;
+}
 function normPhone(p){
   let d = String(p||'').replace(/\D/g,'');
   if (d.startsWith('92')) d = d.slice(2);
@@ -445,7 +451,7 @@ async function riderLogin() {
 
   try {
     // Check if already punched in today
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = bizDayStart();
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
 
 const { data: todayRows } = await sb.from('rider_attendance')
@@ -568,7 +574,7 @@ async function loadOrders() {
       .order('created_at', { ascending: true });
 
     // Get today's completed by this rider
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = bizDayStart();
     const iso = today.toISOString();
     const { data: completed, error: e2 } = await sb.from('kitchen_orders')
       .select('*')
@@ -685,7 +691,7 @@ function renderOrders(activeList, doneList) {
         <div class="rc-collect">
           <div class="rc-row"><span>Food bill</span><b>Rs ${shop}</b></div>
           ${tax > 0 ? `<div class="rc-row"><span>Tax</span><b>Rs ${tax}</b></div>` : ''}
-          <div class="rc-row"><span>Delivery fee (yours)</span><b style="color:var(--green);">Rs ${fee}</b></div>
+          <div class="rc-row"><span>Delivery fee</span><b style="color:var(--green);">Rs ${fee}</b></div>
           <div class="rc-total"><span>Collect from customer</span><span>Rs ${collect}</span></div>
         </div>
 
@@ -722,9 +728,9 @@ function renderCompleted(doneList) {
   if (!completedVisible) return;
 
   const totalFees     = doneList.reduce((s,o) => s+(o.delivery_fee||0), 0);
-const totalShop     = doneList.reduce((s,o) => o.payment_method==='credited' ? s : s+(o.subtotal||0), 0);
-const totalCash     = doneList.reduce((s,o) => o.payment_method==='credited' ? s : s+(o.subtotal||0)+(o.delivery_fee||0), 0);
-const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((s,o) => s+(o.subtotal||0), 0);
+const totalShop     = doneList.reduce((s,o) => o.payment_method==='credited' ? s : s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
+const totalCash     = totalShop;
+const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((s,o) => s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
 
   el.innerHTML = `
     <!-- SUMMARY HEADER -->
@@ -757,7 +763,7 @@ const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((
       <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
         <div style="font-size:11px;color:#e67e22;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">💰 Hand Over to Manager</div>
         <div style="font-size:28px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
-        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Total collected Rs ${totalCash} − Your fees Rs ${totalFees} = Rs ${totalShop}</div>
+        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Everything collected, including delivery fees, goes back to the shop</div>
       </div>
 
       <!-- MY EARNINGS -->
@@ -783,7 +789,7 @@ ${doneList.map((o, idx) => {
   const createdAt   = o.created_at   ? new Date(o.created_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
   const shopAmt     = o.subtotal || 0;
   const delFee      = o.delivery_fee || 0;
-  const totalAmt    = shopAmt + delFee;
+  const totalAmt    = shopAmt + (o.tax || 0) + delFee;
   const isCredited  = o.payment_method === 'credited';
   const timeTaken   = (o.completed_at && o.created_at)
     ? Math.round((new Date(o.completed_at) - new Date(o.created_at)) / 60000)
@@ -843,7 +849,7 @@ ${doneList.map((o, idx) => {
           <span style="font-size:13px;font-weight:700;color:#f0f2f5;">Rs ${shopAmt}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
-          <span style="font-size:12px;color:#8892a4;">Delivery Fee (mine)</span>
+          <span style="font-size:12px;color:#8892a4;">Delivery Fee</span>
           <span style="font-size:13px;font-weight:700;color:#27ae60;">Rs ${delFee}</span>
         </div>
         ${(o.discount||0) > 0 ? `
@@ -865,7 +871,7 @@ ${doneList.map((o, idx) => {
       <div style="font-size:12px;color:#c0392b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔴 End of Shift — Hand Over</div>
       <div style="font-size:32px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
       <div style="font-size:12px;color:#8892a4;margin-top:5px;">to the manager or cashier</div>
-      <div style="font-size:11px;color:#4a5568;margin-top:8px;">Keep your delivery fees: <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
+      <div style="font-size:11px;color:#4a5568;margin-top:8px;">Delivery fees included: <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
     </div>
   `;
 }
@@ -982,7 +988,7 @@ function autoResume() {
     const s = JSON.parse(localStorage.getItem('ovenx_rider_session') || 'null');
     if (!s || !s.name || !s.phone) return;
     // Only resume within 16 hours of login (one shift)
-    if (Date.now() - (s.ts || 0) > 16 * 60 * 60 * 1000) {
+    if (Date.now() - (s.ts || 0) > 16 * 60 * 60 * 1000 || (s.ts || 0) < bizDayStart().getTime()) {
       localStorage.removeItem('ovenx_rider_session');
       return;
     }
