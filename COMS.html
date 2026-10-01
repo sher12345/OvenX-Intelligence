@@ -269,6 +269,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .order-card.preparing{border-color:var(--blue)}
 .order-card.ready{border-color:var(--green)}
 
+/* LIVE ORDERS SECTIONS */
+.live-section{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 4px;margin-top:6px;border-bottom:1px solid var(--border);font-size:12px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;}
+.live-section .cnt{font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.08);}
+.live-section.urgent{color:var(--orange);} .live-section.urgent .cnt{background:rgba(230,126,34,0.2);}
+.live-section.today{color:var(--green);} .live-section.today .cnt{background:rgba(39,174,96,0.2);}
+.live-section.older{color:var(--text3);} 
+.order-card.is-old{opacity:.55;filter:grayscale(.4);border-style:dashed;}
+.oc-num{font-size:11px;font-weight:900;color:var(--bg);background:var(--orange);padding:2px 8px;border-radius:5px;margin-right:6px;}
+.oc-num.old{background:var(--text3);color:white;}
+.oc-clock{font-size:12px;font-weight:700;color:var(--text2);}
+.new-badge{font-size:9px;font-weight:900;letter-spacing:1px;padding:2px 7px;border-radius:5px;background:var(--green);color:white;margin-left:6px;animation:livepulse 1.2s infinite;}
+.order-card.is-new{box-shadow:0 0 0 2px rgba(39,174,96,0.45);}
+
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
 </style>
 </head>
@@ -1402,43 +1415,59 @@ async function renderLiveOrders() {
       .in('status', statuses)
       .in('type', ['Delivery', 'Takeaway'])
       .order('created_at', { ascending: false })
-      .limit(80);
+      .limit(120);
     if (branchFilter !== 'ALL') query = query.eq('branch', branchFilter);
     const { data, error } = await query;
     if (error) throw error;
 
-    const pending = (data || []).filter(o => o.status === 'PENDING').length;
-    const waiting = (data || []).filter(o => o.status === 'WAITING').length;
+    const rows = data || [];
+    const urgentCount = rows.filter(o => ['PENDING','WAITING'].includes(o.status)).length;
     const badge = document.getElementById('live-badge');
-    const urgentCount = pending + waiting;
     if (urgentCount > 0) { badge.style.display = 'inline'; badge.textContent = urgentCount; }
     else badge.style.display = 'none';
 
-    if (!data || !data.length) {
-      grid.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;grid-column:1/-1;">No active delivery orders</div>';
+    if (!rows.length) {
+      grid.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;grid-column:1/-1;">No active orders</div>';
       return;
     }
 
-    // Sort: PENDING first, then WAITING, then rest
-    const sorted = [...data].sort((a, b) => {
-      const order = { PENDING:0, WAITING:1, PREPARING:2, READY:3, ASSIGNED:4, OUT:5, COMPLETED:6, PAID:7 };
-      return (order[a.status] ?? 9) - (order[b.status] ?? 9);
-    });
-
     const now = new Date();
-    grid.innerHTML = '';
-    sorted.forEach(o => {
-      const elapsed = Math.floor((now - new Date(o.created_at)) / 1000);
-      const mins = Math.floor(elapsed / 60);
-      const secs = elapsed % 60;
-      const timerStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const isToday = o => new Date(o.created_at) >= startOfToday;
+    const byNewest = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+
+    // Order numbers: 1 = first order of today
+    const numMap = {};
+    rows.filter(isToday)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .forEach((o, i) => numMap[o.id] = i + 1);
+
+    const urgent = rows.filter(o => ['PENDING','WAITING'].includes(o.status)).sort(byNewest);
+    const rest   = rows.filter(o => !['PENDING','WAITING'].includes(o.status));
+    const todays = rest.filter(isToday).sort(byNewest);
+    const older  = rest.filter(o => !isToday(o)).sort(byNewest);
+
+    const fmtAge = sec => {
+      const m = Math.floor(sec / 60);
+      if (m < 60) return m + 'm';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ' + (m % 60) + 'm';
+      return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+    };
+
+    const makeCard = (o) => {
+      const created = new Date(o.created_at);
+      const elapsed = Math.floor((now - created) / 1000);
+      const today = isToday(o);
+      const isNew = today && elapsed < 600 && ['PENDING','WAITING','PREPARING'].includes(o.status);
       const isCompleted = ['COMPLETED','PAID'].includes(o.status);
       const isPending = o.status === 'PENDING';
+      const clock = created.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = today ? '' : created.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }) + ' · ';
+      const numLabel = today ? '#' + numMap[o.id] : 'OLD';
 
       const card = document.createElement('div');
-      card.className = `order-card ${(o.status || 'waiting').toLowerCase()}`;
-
-      // Extra border for pending
+      card.className = `order-card ${(o.status || 'waiting').toLowerCase()}${today ? '' : ' is-old'}${isNew ? ' is-new' : ''}`;
       if (isPending) {
         card.style.borderColor = 'var(--orange)';
         card.style.boxShadow = '0 0 0 2px rgba(230,126,34,0.3)';
@@ -1452,21 +1481,24 @@ async function renderLiveOrders() {
             <button class="oc-btn" style="background:var(--green);color:white;border:none;padding:10px 16px;border-radius:8px;font-weight:800;font-size:12px;width:100%;cursor:pointer;letter-spacing:1px;" onclick="confirmOrder('${o.id}')">✅ CONFIRM — SEND TO KITCHEN</button>
             <button class="oc-btn red" style="margin-top:6px;width:100%;padding:7px;" onclick="deleteOrder('${o.id}')">❌ CANCEL ORDER</button>
           </div>` : ''}
+        <div style="display:flex;align-items:center;margin-bottom:7px;">
+          <span class="oc-num ${today ? '' : 'old'}">${numLabel}</span>
+          <span class="oc-clock">🕐 ${dateStr}${clock}</span>
+          ${isNew ? '<span class="new-badge">NEW</span>' : ''}
+        </div>
         <div class="oc-top">
           <div>
             <div class="oc-loc">${(o.location || '—').slice(0,30)}</div>
-            <div class="oc-type">Delivery · <span class="oc-branch ${o.branch||'MULTAN'}">${o.branch||'—'}</span></div>
+            <div class="oc-type">${o.type || 'Delivery'} · <span class="oc-branch ${o.branch||'MULTAN'}">${o.branch||'—'}</span></div>
           </div>
           <div style="text-align:right;">
             <span class="status-pill sp-${(o.status||'waiting').toLowerCase()}">${o.status||'WAITING'}</span>
-            <div class="oc-timer" style="margin-top:4px;${isCompleted ? 'color:var(--text3);' : ''}">${timerStr}</div>
+            <div class="oc-timer" style="margin-top:4px;${isCompleted || !today ? 'color:var(--text3);' : ''}">${fmtAge(elapsed)} ago</div>
           </div>
         </div>
         ${o.phone ? `<div class="oc-phone">📞 ${o.phone}</div>` : ''}
         ${o.customer_name ? `<div style="font-size:12px;color:var(--text2);margin-bottom:3px;">👤 ${o.customer_name}</div>` : ''}
-        ${(o.rider_name || o.rider)
-  ? `<div class="rider-tag">🛵 ${o.rider_name || o.rider}</div>`
-  : ''}
+        ${(o.rider_name || o.rider) ? `<div class="rider-tag">🛵 ${o.rider_name || o.rider}</div>` : ''}
         <div class="oc-items">${o.items||'—'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:12px;color:var(--text2);">Shop: Rs ${o.subtotal||0} | Tax: Rs ${o.tax||0} | Del: Rs ${o.delivery_fee||0}</span>
@@ -1480,8 +1512,23 @@ async function renderLiveOrders() {
         </div>` : ''}
         ${isCompleted ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px;">✅ Completed by ${o.rider_name||'rider'}</div>` : ''}
       `;
-      grid.appendChild(card);
-    });
+      return card;
+    };
+
+    grid.innerHTML = '';
+    const addSection = (cls, title, list) => {
+      if (!list.length) return;
+      const h = document.createElement('div');
+      h.className = 'live-section ' + cls;
+      h.innerHTML = `<span>${title}</span><span class="cnt">${list.length}</span>`;
+      grid.appendChild(h);
+      list.forEach(o => grid.appendChild(makeCard(o)));
+    };
+
+    addSection('urgent', '⚠️ Needs Action — Confirm / Send to Kitchen', urgent);
+    addSection('today',  '🆕 Today — Newest First', todays);
+    addSection('older',  '📅 Older Orders (Not Today) — Close or Void These', older);
+
   } catch(e) {
     grid.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;grid-column:1/-1;">Error loading orders</div>';
     console.error(e);
@@ -2662,6 +2709,7 @@ document.getElementById('bar-count').textContent = '0';
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
