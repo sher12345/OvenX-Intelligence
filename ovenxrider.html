@@ -732,6 +732,8 @@ function renderCompleted(doneList) {
   const totalFees     = doneList.reduce((s,o) => s+(o.delivery_fee||0), 0);
 const totalShop     = doneList.reduce((s,o) => o.payment_method==='credited' ? s : s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
 const totalCash     = totalShop;
+const totalPending  = doneList.filter(o => !o.settled && o.payment_method !== 'credited')
+  .reduce((s,o) => s + (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0), 0);
 const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((s,o) => s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
 
   el.innerHTML = `
@@ -764,7 +766,7 @@ const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((
       <!-- WHAT TO HAND OVER -->
       <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
         <div style="font-size:11px;color:#e67e22;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">💰 Hand Over to Manager</div>
-        <div style="font-size:28px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
+        <div style="font-size:28px;font-weight:900;color:#e67e22;">Rs ${totalPending.toLocaleString()}</div>
         <div style="font-size:11px;color:#8892a4;margin-top:3px;">Everything collected, including delivery fees, goes back to the shop</div>
       </div>
 
@@ -844,6 +846,11 @@ ${doneList.map((o, idx) => {
         <div style="font-size:11px;color:#4a5568;">✅ Delivered: <span style="color:#27ae60;font-weight:600;">${completedAt}</span></div>
       </div>
 
+      <!-- SETTLEMENT -->
+      ${o.settled
+        ? `<button onclick="settleOrder('${o.id}', false)" style="width:100%;padding:12px;border-radius:12px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27ae60;font-family:var(--font);font-size:13px;font-weight:800;margin-bottom:10px;cursor:pointer;">✅ HISAB DONE${o.settled_at ? ' · ' + new Date(o.settled_at).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : ''}</button>`
+        : `<button onclick="settleOrder('${o.id}', true)" style="width:100%;padding:12px;border-radius:12px;background:rgba(230,126,34,0.15);border:1px solid rgba(230,126,34,0.4);color:#e67e22;font-family:var(--font);font-size:13px;font-weight:800;margin-bottom:10px;cursor:pointer;">💰 MARK HISAB DONE (Manager)</button>`}
+
       <!-- MONEY BREAKDOWN -->
       <div style="background:#1c2330;border-radius:10px;overflow:hidden;">
         <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -871,11 +878,28 @@ ${doneList.map((o, idx) => {
     <!-- FINAL HAND OVER REMINDER -->
     <div style="background:rgba(192,57,43,0.1);border:2px dashed rgba(192,57,43,0.4);border-radius:14px;padding:16px;margin-top:4px;text-align:center;">
       <div style="font-size:12px;color:#c0392b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔴 End of Shift — Hand Over</div>
-      <div style="font-size:32px;font-weight:900;color:#e67e22;">Rs ${totalShop.toLocaleString()}</div>
+      <div style="font-size:32px;font-weight:900;color:#e67e22;">Rs ${totalPending.toLocaleString()}</div>
       <div style="font-size:12px;color:#8892a4;margin-top:5px;">to the manager or cashier</div>
       <div style="font-size:11px;color:#4a5568;margin-top:8px;">Delivery fees included: <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
     </div>
   `;
+}
+
+const MANAGER_PIN = '1234'; // change this to your own PIN
+
+async function settleOrder(orderId, done) {
+  const pin = prompt(done ? 'Manager PIN to confirm money received:' : 'Manager PIN to undo settlement:');
+  if (pin === null) return;
+  if (pin !== MANAGER_PIN) { showToast('Wrong PIN', 'error'); return; }
+  try {
+    const { error } = await sb.from('kitchen_orders').update({
+      settled: done,
+      settled_at: done ? new Date().toISOString() : null
+    }).eq('id', orderId);
+    if (error) throw error;
+    showToast(done ? 'Hisab marked done' : 'Settlement undone', done ? 'success' : 'info');
+    loadOrders();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 function toggleCompleted() {
@@ -1041,10 +1065,6 @@ async function cancelOrder(orderId) {
   }
 }
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
