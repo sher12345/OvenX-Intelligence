@@ -5654,9 +5654,24 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
         alert(`ALL branches are now ${anyOpen ? 'CLOSED' : 'OPEN'}.`);
     }
 
-    function riderMatches(orderName, listName) {
+    let _riderPhoneById = {};
+    function normPh(p) {
+        let d = String(p || '').replace(/\D/g, '');
+        if (d.startsWith('92')) d = d.slice(2);
+        if (d.startsWith('0'))  d = d.slice(1);
+        return d;
+    }
+    function riderMatches(o, listName) {
+        // 1. Match by phone (reliable)
+        let listPhone = '';
+        Object.values(BRANCH_CONFIG).forEach(b => {
+            if (b.riderPhones && b.riderPhones[listName]) listPhone = normPh(b.riderPhones[listName]);
+        });
+        const orderPhone = _riderPhoneById[String(o.assigned_rider)];
+        if (listPhone && orderPhone) return listPhone === orderPhone;
+        // 2. Fallback: match by name
         const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
-        const a = norm(orderName), b = norm(listName);
+        const a = norm(o.rider || o.rider_name), b = norm(listName);
         if (!a || !b) return false;
         return a === b || a.includes(b) || b.includes(a);
     }
@@ -5669,6 +5684,13 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
             if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
             if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
             const { data: orders } = await query;
+            try {
+                const ids = [...new Set((orders || []).map(o => o.assigned_rider).filter(Boolean))];
+                if (ids.length) {
+                    const { data: att } = await sb.from('rider_attendance').select('id,phone').in('id', ids);
+                    (att || []).forEach(r => { _riderPhoneById[String(r.id)] = normPh(r.phone); });
+                }
+            } catch (e) { console.warn('rider phone lookup failed', e); }
             const cardMap = await fetchCardMap(); 
             const list = document.getElementById('kitchen-orders-list');
             list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
@@ -5712,7 +5734,7 @@ if (o.subtotal) {
     </div>`;
 }
                 let riderHtml = ""; 
-                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${riderMatches(o.rider || o.rider_name, r) ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${riderMatches(o, r) ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
 // Build customer info display
@@ -6236,7 +6258,7 @@ ${sc > 0 ? `
         b.className = "rider-btn"; 
         b.innerText = r;
         b.onclick = () => {
-            const rOrders = orders.filter(o => riderMatches(o.rider || o.rider_name, r));
+            const rOrders = orders.filter(o => riderMatches(o, r));
             const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.tax || 0) + (o.delivery_fee || 0), 0);
             const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
             document.getElementById('audit-result-box').style.display = 'block'; 
