@@ -2566,7 +2566,7 @@ body {
     lat: 30.2197, lng: 71.4711,
     phone: '923001450301',
     cc_phone: '923002450301',
-    riders: ["Abdurehman", "Atif", "Ehsan", "Dalawer", "Madni", "Shahzad"],
+    riders: ["Abdurehman", "Atif", "Ehsan", "Rana Dilawar", "Madni"],
 riderPhones: {
     "Abdurehman":  "923286001660",
     "Atif":        "923047373321",
@@ -4981,7 +4981,9 @@ async function assignRider(id, rider) {
         // Find today's attendance row (rider must be punched in)
         let attendanceId = null;
         if (sb && phone) {
-            const start = new Date(); start.setHours(0, 0, 0, 0);
+            const start = new Date();
+            if (start.getHours() < 6) start.setDate(start.getDate() - 1);
+            start.setHours(6, 0, 0, 0);
             const { data } = await sb.from('rider_attendance')
                 .select('id,phone,status,punched_in')
                 .gte('punched_in', start.toISOString());
@@ -5652,6 +5654,13 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
         alert(`ALL branches are now ${anyOpen ? 'CLOSED' : 'OPEN'}.`);
     }
 
+    function riderMatches(orderName, listName) {
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+        const a = norm(orderName), b = norm(listName);
+        if (!a || !b) return false;
+        return a === b || a.includes(b) || b.includes(a);
+    }
+
     async function renderKitchenOrders() {
         if(!sb) return; 
         
@@ -5703,7 +5712,7 @@ if (o.subtotal) {
     </div>`;
 }
                 let riderHtml = ""; 
-                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${o.rider === r ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:900; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${riderMatches(o.rider || o.rider_name, r) ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
                 const card = document.createElement('div'); 
                 card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
 // Build customer info display
@@ -6227,7 +6236,7 @@ ${sc > 0 ? `
         b.className = "rider-btn"; 
         b.innerText = r;
         b.onclick = () => {
-            const rOrders = orders.filter(o => o.rider === r);
+            const rOrders = orders.filter(o => riderMatches(o.rider || o.rider_name, r));
             const cash = rOrders.reduce((s,o) => s + (o.subtotal || 0) + (o.tax || 0) + (o.delivery_fee || 0), 0);
             const fees = rOrders.reduce((s,o) => s + (o.delivery_fee || 0), 0);
             document.getElementById('audit-result-box').style.display = 'block'; 
