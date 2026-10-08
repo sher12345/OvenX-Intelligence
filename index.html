@@ -4194,11 +4194,32 @@ function unlockOrderButton() {
     const taxable = foodTotal + sc - deliveryDiscount;
     const grand = taxable + tax + delCharge;
     
-    const itemsText = cart.map(i => {
+    let itemsText = cart.map(i => {
         let detail = i.qty + "x " + i.name + " @ Rs " + (i.price * i.qty);
         if (i.note) detail += " [" + i.note + "]"; 
         return detail;
     }).join("\n");
+
+    let claimId = null, claimedPrize = null;
+    const memberPhone = localStorage.getItem('ovenx_member_phone');
+    if (memberPhone && sb) {
+        try {
+            const { data: m } = await sb.from('gold_club_members')
+                .select('stamps').eq('phone', memberPhone).maybeSingle();
+            if (m && Number(m.stamps) >= 10) {
+                const { data: claim, error: claimErr } = await sb.rpc('claim_gold_club_reward', {
+                    member_phone: memberPhone,
+                    claim_branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
+                });
+                if (claimErr) throw claimErr;
+                if (claim && claim.prize) {
+                    claimId = claim.claim_id;
+                    claimedPrize = claim.prize;
+                    itemsText += "\n1x FREE GIFT - " + claimedPrize + " @ Rs 0 [Gold Club Reward]";
+                }
+            }
+        } catch(e) { console.error('Gold Club claim error:', e); }
+    }
 
     // Check pending mode
     let pendingMode = true;
@@ -4295,6 +4316,18 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         } 
     } catch(e) { }
 
+    if (claimId && sb) {
+        try {
+            if (orderId) {
+                await sb.rpc('link_gold_club_claim', { p_claim_id: claimId, p_order_id: String(orderId) });
+            } else {
+                await sb.rpc('undo_gold_club_claim', { p_claim_id: claimId });
+                itemsText = itemsText.split("\n").slice(0, -1).join("\n");
+                claimedPrize = null;
+            }
+        } catch(e) { console.error('Claim link/undo error:', e); }
+    }
+
     // Start customer tracking
     if (orderId) initCustomerTracking(orderId, orderObj);
 
@@ -4321,85 +4354,16 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         customerInfo = `\n\n👤 *Name:* ${custName}\n📞 *Phone:* ${deliveryPhone}`;
     }
 
-    // Handle loyalty stamps — must run BEFORE building waMsg
     let bonus = "";
-    const memberPhone = localStorage.getItem('ovenx_member_phone');
-
-    if (memberPhone && sb) {
+    if (claimedPrize) {
+        bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + claimedPrize;
+    } else if (memberPhone && sb && foodTotal >= 1000) {
         try {
-            const { data: memberData } = await sb.from('gold_club_members')
-                .select('*').eq('phone', memberPhone);
-
-            if (memberData && memberData.length > 0) {
-                const member = memberData[0];
-                let stamps = member.stamps || 0;
-
-                if (stamps >= 10) {
-
-    const prize =
-        LOYALTY_PRIZES[
-            Math.floor(Math.random() * LOYALTY_PRIZES.length)
-        ];
-
-    // Reset only after Supabase confirms it.
-    const { data: resetMember, error: resetError } = await sb
-        .from('gold_club_members')
-        .update({ stamps: 0 })
-        .eq('phone', memberPhone)
-        .select('phone, stamps')
-        .maybeSingle();
-
-    if (resetError) {
-        throw resetError;
+            const { error } = await sb.rpc('increment_gold_club_stamp', { member_phone: memberPhone });
+            if (error) throw error;
+        } catch(e) { console.error('Stamp sync error:', e); }
     }
-
-    if (!resetMember || Number(resetMember.stamps) !== 0) {
-        throw new Error('Gold Club reward reset was not confirmed by server.');
-    }
-
-    // Never cache stamp count locally.
     localStorage.removeItem('ovenx_stamps');
-
-    bonus =
-        "\n\n🌟 MEMBER GIFT CLAIMED: " + prize;
-
-    console.log(
-        `✅ Gold Club reward claimed for ${memberPhone}. Stamps reset to 0.`
-    );
-
-} else if (foodTotal >= 1000) {
-
-    // Atomically add 1 Gold Club stamp on the server.
-// This prevents two simultaneous orders from overwriting each other.
-const { data: newStamps, error: stampError } = await sb
-    .rpc('increment_gold_club_stamp', {
-        member_phone: memberPhone
-    });
-
-if (stampError) {
-    throw stampError;
-}
-
-const savedStamps = Number(newStamps);
-
-if (!Number.isFinite(savedStamps)) {
-    throw new Error(
-        'Gold Club stamp increment was not confirmed by server.'
-    );
-}
-
-// Never cache stamp count locally.
-localStorage.removeItem('ovenx_stamps');
-
-console.log(
-    `✅ Gold Club stamp added atomically: ${savedStamps}/10`
-);
-}
-            }
-        } catch(e) {
-            console.error('Stamp sync error:', e);
-        }
-    }
 
     // Build waMsg AFTER bonus is set
     const waMsg = encodeURIComponent(
