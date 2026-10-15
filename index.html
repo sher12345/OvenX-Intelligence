@@ -2771,10 +2771,41 @@ riderPhones: {
         }
     } catch(e) {}
     const saved = localStorage.getItem('ovenx_branch');
-    if (saved && BRANCH_CONFIG[saved]) { selectBranch(saved, true); return; }
-    // Show cards immediately — don't wait for GPS
+
+    // ── Saved branch exists: VERIFY it against the customer's real location ──
+    if (saved && BRANCH_CONFIG[saved] && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                let nearest = null, nearestD = Infinity;
+                Object.values(BRANCH_CONFIG).forEach(b => {
+                    const d = haversineKm(pos.coords.latitude, pos.coords.longitude, b.lat, b.lng);
+                    b._dist = d;
+                    if (d < nearestD) { nearestD = d; nearest = b.id; }
+                });
+
+                if (nearest === saved) {
+                    selectBranch(saved, true);            // correct branch, carry on
+                } else {
+                    // Wrong branch saved from an earlier visit → fix it
+                    cart = []; updateCartBar();           // menus/prices differ per branch
+                    localStorage.setItem('ovenx_branch', nearest);
+                    alert('📍 You are closer to OvenX ' + BRANCH_CONFIG[nearest].name +
+                          '.\n\nSwitching you to that branch so your order goes to the right kitchen.');
+                    selectBranch(nearest, true);
+                }
+            },
+            () => {
+                // Location denied / failed → don't trust the old saved branch, make them choose
+                localStorage.removeItem('ovenx_branch');
+                showBranchCards(null);
+            },
+            { timeout: 8000, maximumAge: 0 }
+        );
+        return;
+    }
+
+    // ── No saved branch (or no GPS support): original behaviour ──
     showBranchCards(null);
-    // GPS runs silently in background to highlight nearest
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             pos => detectNearestBranch(pos.coords.latitude, pos.coords.longitude),
@@ -4692,6 +4723,24 @@ function resetCalcErrorState() {
         const roadDistance = await getRoadDistance(userLat, userLng);
         const straightDistance = calculateStraightDistance(OVENX_COORDS.lat, OVENX_COORDS.lng, userLat, userLng);
         
+        // Wrong-branch guard: is the customer actually closer to the OTHER branch?
+        const otherBranch = Object.values(BRANCH_CONFIG).find(b => b.id !== activeBranch.id);
+        if (otherBranch) {
+            const dOther = calculateStraightDistance(otherBranch.lat, otherBranch.lng, userLat, userLng);
+            if (dOther < straightDistance) {
+                document.getElementById('calc-loading-state').style.display = 'none';
+                closeDeliveryCalc();
+                if (confirm('📍 You are closer to OvenX ' + otherBranch.name + ' than ' + activeBranch.name +
+                            '.\n\nSwitch to ' + otherBranch.name + ' so your order goes to the right branch?\n(Your cart will be cleared)')) {
+                    cart = []; updateCartBar();
+                    document.getElementById('overlay-screen').style.display = 'none';
+                    localStorage.setItem('ovenx_branch', otherBranch.id);
+                    selectBranch(otherBranch.id, true);
+                }
+                return;
+            }
+        }
+
         const usedDistance = roadDistance || (straightDistance * 1.4);
         const roundTrip = usedDistance * 2;
         const cost = Math.ceil(roundTrip * PRICE_PER_KM);
@@ -6177,6 +6226,15 @@ function buildKitchenItemsHtml(itemsText) {
     if (error || !o) return alert("Error loading order.");
 
     const printArea = document.getElementById('print-area');
+
+    // Fetch discount card record (if one was saved for this order)
+    let card = null;
+    try {
+        const { data: cardRows } = await sb.from('card_records')
+            .select('card_type,card_number,holder_name,institution')
+            .eq('order_id', String(o.id)).limit(1);
+        if (cardRows && cardRows.length) card = cardRows[0];
+    } catch (e) { /* table missing or offline: print without card block */ }
     const dateTime = new Date(o.created_at).toLocaleString('en-PK', {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Karachi'
@@ -6253,7 +6311,14 @@ ${sc > 0 ? `
                     CASH RECEIVED: Rs ${grandTotal}<br>
                     CASH REFUND  : Rs 0
                 </div>
-                ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">🎉 ${discPct}% discount applied — saved Rs ${discount}</div>` : ''}
+                ${discount > 0 ? `<div style="margin-top:8px;font-size:11px;border:1px dashed #000;padding:5px;">${discPct}% discount applied - saved Rs ${discount}</div>` : ''}
+                ${card ? `
+                <div style="margin-top:8px;font-size:12px;border:1.5px solid #000;padding:6px;text-align:left;line-height:1.6;">
+                    <div style="text-align:center;font-weight:bold;letter-spacing:1px;border-bottom:1px dashed #000;padding-bottom:3px;margin-bottom:4px;">${escHtml(card.card_type).toUpperCase()} CARD</div>
+                    <b>Name :</b> ${escHtml(card.holder_name)}<br>
+                    <b>Card#:</b> ${escHtml(card.card_number || '-')}
+                    ${card.institution ? `<br><b>Inst :</b> ${escHtml(card.institution)}` : ''}
+                </div>` : ''}
                 <div style="margin-top:16px;font-size:12px;">
                     <b>Thank You For Visiting Us!</b>
                 </div>
