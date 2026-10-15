@@ -1424,7 +1424,7 @@ body {
     <div class="branch-detect-box" id="branch-detect-box">
         <div class="branch-spinner"></div>
         <p style="font-size:13px; color:rgba(255,255,255,0.55); font-weight:700; margin:0 0 12px;">Finding your nearest branch...</p>
-        <button onclick="if(typeof showBranchCards==='function'){showBranchCards(null)}else{document.getElementById('branch-detect-box').style.display='none';document.getElementById('branch-cards-wrap').style.display='flex';document.getElementById('branch-manual-btn').style.display='block';}" style="background:rgba(243,112,33,0.8); border:none; color:white; padding:8px 20px; border-radius:20px; font-weight:900; font-size:12px; cursor:pointer; margin-top:8px;">
+        <button onclick="chooseBranchManually()" style="background:rgba(243,112,33,0.8); border:none; color:white; padding:8px 20px; border-radius:20px; font-weight:900; font-size:12px; cursor:pointer; margin-top:8px;">
     SELECT MANUALLY →
 </button>
     </div>
@@ -2601,6 +2601,11 @@ riderPhones: {
     };
 
     let activeBranch = null;
+    let manualBranchPick = false;   // true once the customer chooses a branch themselves
+    function chooseBranchManually() {
+        manualBranchPick = true;
+        showBranchCards(null);
+    }
     let kitchenBranchFilter = 'ALL';
 
     // ── Branch selector functions ──
@@ -2741,7 +2746,9 @@ riderPhones: {
             if (distEl && b._dist !== undefined) distEl.textContent = fmtDist(b._dist);
             if (nearestId === b.id && nearEl) { nearEl.style.display = 'block'; card.classList.add('highlighted'); }
         });
-        if (nearestId) setTimeout(() => selectBranch(nearestId, false), 2500);
+        if (nearestId && !manualBranchPick) {
+            setTimeout(() => { if (!manualBranchPick) selectBranch(nearestId, false); }, 2500);
+        }
     }
     function detectNearestBranch(ulat, ulng) {
         let nearest = null, nearestD = Infinity;
@@ -2783,6 +2790,7 @@ riderPhones: {
                     if (d < nearestD) { nearestD = d; nearest = b.id; }
                 });
 
+                if (manualBranchPick) return;   // customer already chose manually, don't override
                 if (nearest === saved) {
                     selectBranch(saved, true);            // correct branch, carry on
                 } else {
@@ -2872,13 +2880,14 @@ loadCustomItemsIntoMenu();
         }
     }
 }
-    document.getElementById('bcard-MULTAN').addEventListener('click', () => selectBranch('MULTAN'));
-    document.getElementById('bcard-BWP').addEventListener('click', () => selectBranch('BWP'));
-    document.getElementById('branch-manual-btn').addEventListener('click', () => showBranchCards(null));
+    document.getElementById('bcard-MULTAN').addEventListener('click', () => { manualBranchPick = true; selectBranch('MULTAN'); });
+    document.getElementById('bcard-BWP').addEventListener('click', () => { manualBranchPick = true; selectBranch('BWP'); });
+    document.getElementById('branch-manual-btn').addEventListener('click', () => chooseBranchManually());
 
     function resetBranchSelection() {
         if (!confirm('Switch branch? Your cart will be cleared.')) return;
         cart = []; updateCartBar(); activeBranch = null;
+        manualBranchPick = true;   // they asked to change, so no auto-switching this time
         localStorage.removeItem('ovenx_branch');
         document.getElementById('gateway-screen').style.display = 'none';
         document.getElementById('branch-selector-screen').style.display = 'flex';
