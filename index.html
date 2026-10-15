@@ -2701,7 +2701,7 @@ riderPhones: {
 
     async function openFuelPricePrompt() {
         playClick('pop');
-        const input = prompt(
+        const input = await askText(
             "⛽ Enter today's fuel price (Rs/Liter):\n\nDelivery rate = fuel price ÷ " + FUEL_MILEAGE_KM_PER_LITER + " km/L, rounded.\n\nLeave blank + OK to reset to default Rs " + DEFAULT_PRICE_PER_KM + "/km.",
             currentFuelPrice !== null ? currentFuelPrice : ''
         );
@@ -3495,7 +3495,7 @@ function proceedFromSheet() {
 
     function openLoyaltySetup() { document.getElementById('loyalty-setup-overlay').style.display = 'flex'; setScrollLock(true); }
     async function recoverStamps() {
-    let phone = prompt("Enter your registered WhatsApp number:");
+    let phone = await askText("Enter your registered WhatsApp number:");
 
     if (!phone) return;
 
@@ -5734,7 +5734,7 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
     }
 }
     async function adminToggleBranchClosed(branchId) {
-        const pass = prompt("Enter code to open/close this branch:");
+        const pass = await askText("Enter code to open/close this branch:", '', true);
         if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
         const currentlyOpen = getBranchOpenStatus(branchId);
         if (!sb) return;
@@ -5748,7 +5748,7 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
     }
 
     async function adminToggleAllBranches() {
-        const pass = prompt("Enter code to toggle ALL branches:");
+        const pass = await askText("Enter code to open/close this branch:", '', true);
         if (pass !== "7530") { if (pass !== null) alert("Wrong code!"); return; }
         if (!sb) return;
         // If ANY branch is open, close all; if all are closed, open all
@@ -5874,13 +5874,13 @@ ${priceHtml}
                 <div class="admin-actions">
                     <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
                     <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
-                    <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${o.location.replace(/'/g, "\\'")}')">CHG TABLE</button>
+                    <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${jsq(o.location)}')">CHG TABLE</button>
                     <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
                     <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
                     <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
                     <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
                     <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${o.location.replace(/'/g, "\\'")}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
+${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${jsq(o.location)}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
                 ${riderHtml}
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
@@ -6408,7 +6408,7 @@ ${sc > 0 ? `
     } catch (e) { /* alert already shown */ }
 }
     async function applyCustomDiscount(id) {
-    const pct = prompt("Enter discount percentage to apply (e.g. 10 for 10%):", "0");
+    const pct = await askText("Enter discount percentage to apply (e.g. 10 for 10%):", "0");
     if (pct === null) return;
     const pctNum = parseFloat(pct);
     if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) {
@@ -6422,7 +6422,7 @@ ${sc > 0 ? `
     } catch (e) { /* alert already shown */ }
 }
     async function adminChangeTable(id, currentLoc) {
-    const nl = prompt("New Table/Address:", currentLoc);
+    const nl = await askText("New Table/Address:", currentLoc);
     if (!nl) return;
     playClick('pop');
     try {
@@ -6484,8 +6484,8 @@ function recalcBillAfterEdit(itemsText, orderType, payMethod, oldDiscount, oldEl
     async function adminRecallItem(id, itemsB64, sub, payMethod, existingTax, orderType, oldDiscount, oldEligible) {
     const items = b64dec(itemsB64);
 
-    const ni = prompt("Add item:");
-    const pr = prompt("Price:");
+    const ni = await askText("Add item:");
+    const pr = await askText("Price:");
     if (!ni) return;
 
     const addedPrice = parseInt(pr) || 0;
@@ -6556,7 +6556,7 @@ function recalcBillAfterEdit(itemsText, orderType, payMethod, oldDiscount, oldEl
         .map((item, i) => `${i + 1}. ${item}`)
         .join('\n');
 
-    const ni = prompt(
+    const ni = await askText(
         "Which item do you want to void?\n\n" +
         itemList +
         "\n\nType the item number:"
@@ -7624,9 +7624,9 @@ const ADM_BRANCHES = {
 
 const ADM_PASSWORDS = { MULTAN:'multan@admin', BWP:'bwp@admin', SUPER:'ovenx@super' };
 
-function openAdminPanel() {
+async function openAdminPanel() {
   window._admAvailLoaded = false; // ← ADD THIS
-  const entered = prompt('🔒 Enter Admin Password:');
+  const entered = await askText('🔒 Enter Admin Password:', '', true);
   if (!entered || !Object.values(ADM_PASSWORDS).includes(entered)) {
     alert('❌ Wrong password. Access denied.');
     return;
@@ -8209,9 +8209,9 @@ function resetAuditFilters() {
     renderAuditReport();
 }
 
-function openAuditReportLogin() {
+async function openAuditReportLogin() {
     playClick('pop');
-    const pass = prompt("🔒 Enter Audit Code:");
+    const pass = await askText("🔒 Enter Audit Code:", '', true);
     if (pass === "7530" || pass === "audit123") {
         openAuditReport();
     } else if (pass !== null) {
@@ -8441,7 +8441,7 @@ async function deleteAuditOrder(id) {
     const order = auditReportOrders.find(o => String(o.id) === String(id));
     if (!order) return alert("Order not found.");
 
-    const pass = prompt("🔒 Enter delete code to permanently remove this order:");
+    const pass = await askText("🔒 Enter delete code to permanently remove this order:", '', true);
     if (pass === null) return;
     if (pass !== "7530") return alert("Wrong code!");
 
@@ -8826,7 +8826,7 @@ async function admAddNewItem() {
 
   // Handle new category
   if (cat === '__new__') {
-    cat = prompt('Enter new category name:');
+    cat = await askText('Enter new category name:');
     if (!cat) return;
   }
 
@@ -9044,8 +9044,8 @@ admSwitchBranch = async function(branchId) {
 
 // Load custom data on panel open — hook into openAdminPanel
 const _origOpenAdminPanel = openAdminPanel;
-openAdminPanel = function() {
-  _origOpenAdminPanel();
+openAdminPanel = async function() {
+  await _origOpenAdminPanel();
   admLoadCustomData();
 };
 
@@ -9186,6 +9186,34 @@ setTimeout(() => {
 </div>
 <!-- Cloudflare Web Analytics -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" 
-        data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'>
+        data-cf-beacon='{"token": "80b7337066234d5c97e6656da5a7fef3"}'></script>
+        <script>
+function askText(message, def) {
+  return new Promise(resolve => {
+    const o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center';
+    o.innerHTML = '<div style="background:#fff;padding:20px;border-radius:12px;min-width:280px;font-family:sans-serif">' +
+      '<div class="ask-msg" style="margin-bottom:10px;font-weight:700"></div>' +
+      '<input class="ask-in" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:8px">' +
+      '<div style="margin-top:12px;text-align:right">' +
+      '<button class="ask-cancel" style="padding:8px 14px;margin-right:6px">Cancel</button>' +
+      '<button class="ask-ok" style="padding:8px 14px;background:#c0392b;color:#fff;border:0;border-radius:6px">OK</button></div></div>';
+    o.querySelector('.ask-msg').textContent = message;
+    const inp = o.querySelector('.ask-in');
+    inp.value = def || '';
+    const done = v => { o.remove(); resolve(v); };
+    o.querySelector('.ask-ok').onclick = () => done(inp.value);
+    o.querySelector('.ask-cancel').onclick = () => done(null);
+    inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+    document.body.appendChild(o);
+    inp.focus();
+  });
+}
+function jsq(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;').replace(/[\r\n]+/g, ' ');
+}
+</script>
 </body>
 </html>
