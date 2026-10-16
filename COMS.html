@@ -491,7 +491,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <!-- STATS VIEW -->
 <div class="view" id="view-stats">
   <div class="live-header">
+    <div style="display:flex;align-items:center;gap:12px;">
     <div class="live-title">📊 My Shift Report</div>
+    <select id="stats-branch-filter" onchange="renderStats()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;">
+      <option value="ALL">All Branches</option>
+      <option value="MULTAN">Multan</option>
+      <option value="BWP">Bahawalpur</option>
+    </select>
+  </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <button style="padding:6px 13px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;" onclick="renderStats()">↻ Refresh</button>
       <button style="padding:6px 13px;border-radius:8px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;" onclick="exportShiftCSV()">📊 Export</button>
@@ -507,6 +514,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div style="font-size:13px;color:var(--text2);">🕐 Now: <span style="color:white;font-weight:700;" id="shift-current-time">—</span></div>
       <div style="font-size:13px;color:var(--text2);">⏱ Duration: <span style="color:var(--green);font-weight:700;" id="shift-duration">—</span></div>
     </div>
+
+    <!-- BRANCH BREAKDOWN -->
+    <div id="branch-breakdown" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;"></div>
 
     <!-- STAT CARDS -->
     <div class="stats-grid" id="stats-grid"></div>
@@ -2394,7 +2404,26 @@ async function renderStats() {
   document.getElementById('shift-duration').textContent = shiftHrs > 0 ? `${shiftHrs}h ${shiftRem}m` : `${shiftMins}m`;
 
   const orders    = shiftOrders;
-  const salesOnly = orders.filter(o => !isVoidStatus(o.status));
+  const allSales = orders.filter(o => !isVoidStatus(o.status));
+  const bf = document.getElementById('stats-branch-filter')?.value || 'ALL';
+  const salesOnly = bf === 'ALL' ? allSales : allSales.filter(o => o.branch === bf);
+
+  // Per-branch summary (always shows both branches, ignores the dropdown)
+  document.getElementById('branch-breakdown').innerHTML = ['MULTAN','BWP'].map(b => {
+    const L    = allSales.filter(o => o.branch === b);
+    const tot  = L.reduce((s,o)=>s+(o.total||0),0);
+    const del  = L.filter(o=>o.type==='Delivery').reduce((s,o)=>s+(o.delCharge||o.delivery_fee||0),0);
+    const tax  = L.reduce((s,o)=>s+(o.tax||0),0);
+    const disc = L.reduce((s,o)=>s+(o.disc||o.discount||0),0);
+    const col  = b==='MULTAN' ? '#5dade2' : 'var(--orange)';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid ${col};border-radius:11px;padding:12px 16px;">
+      <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:${col};margin-bottom:8px;">${BRANCHES[b].name}</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;"><span>Orders</span><b style="color:white;">${L.length}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;"><span>Shop Revenue</span><b style="color:var(--green);">Rs ${(tot-del-tax).toLocaleString()}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;"><span>Delivery Fees</span><b style="color:var(--orange);">Rs ${del.toLocaleString()}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);"><span>Discounts</span><b style="color:var(--red);">Rs ${disc.toLocaleString()}</b></div>
+    </div>`;
+  }).join('');
 
   // Totals
   const totalOrders  = salesOnly.length;
@@ -2501,7 +2530,7 @@ const unpaidOrders = salesOnly.filter(o => !o.payment_method);
     const sc = o.sc || 0;
     const disc = o.disc || o.discount || 0;
     const items = itemsOf(o);
-    const branchCell = `<td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||orderBranch||'—'}</span></td>`;
+    const branchCell = `<td><span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(192,57,43,0.15);color:#f08070;">${o.branch||'—'}</span></td>`;
     const common =
       `<td style="color:var(--text3);font-size:11px;">${n}</td>` +
       `<td style="color:var(--text2);white-space:nowrap;">${fmtT(o.time)}</td>` + branchCell;
@@ -2836,5 +2865,6 @@ document.getElementById('bar-count').textContent = '0';
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
