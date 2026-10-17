@@ -4370,6 +4370,7 @@ function unlockOrderButton() {
         discount: deliveryDiscount,
         eligible_subtotal: eligibleTotal,
         discount_claimed: window._discountClaimed === true,
+        ai_assisted: window._botAssisted === true,
         tax: tax,
         payment_method: paymentMethod,
         branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
@@ -4502,7 +4503,8 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
         `${tax > 0 ? '\nPRA Tax (' + Math.round(taxRate*100) + '% - ' + paymentMethod + '): Rs ' + tax : ''}` +
         `${delCharge > 0 ? '\nDelivery Charge: Rs ' + delCharge : ''}` +
         `\n*Grand Total: Rs ${grand}*` +
-        `${bonus}`
+        `${bonus}` +
+        `${window._botAssisted ? '\n\n🤖 Ordered via AI Assistant' : ''}`
     );
 
     // Send to WhatsApp
@@ -9292,7 +9294,10 @@ setTimeout(() => {
       menuData[cat].forEach(function(it){
         if (it.bwpOnly && !isBWP) return;
         if (!isItemAvailable(it.name)) return;
-        list.push({ n: it.name, c: cat.replace(/[^\w\s&\/]/g,'').trim(), p: getItemPrice(it) });
+        var desc = (typeof itemDescriptions !== 'undefined' && itemDescriptions[it.name]) || '';
+        var row = { n: it.name, c: cat.replace(/[^\w\s&\/]/g,'').trim(), p: getItemPrice(it) };
+        if (desc) row.d = desc.slice(0, 260);   // description = the only source for ingredients
+        list.push(row);
       });
     }
     return list;
@@ -9397,6 +9402,7 @@ setTimeout(() => {
 
   function botCheckout(o, res){
     res.lines.forEach(function(l){ cart.push(l); });
+    window._botAssisted = true;   // mark this order as AI-assisted
     window._botTake = null;
     updateCartBar();
     document.getElementById('oxBot').style.display = 'none';
@@ -9575,6 +9581,7 @@ function jsq(s) {
     .replace(/"/g, '&quot;').replace(/[\r\n]+/g, ' ');
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
