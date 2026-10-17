@@ -9297,6 +9297,37 @@ setTimeout(() => {
     }
     return list;
   }
+    // ── Deals available to the customer right now (same rules as the Hot Deals tab) ──
+  function dealList(){
+    var isBWP = activeBranch.id === 'BWP', br = activeBranch;
+    return dealsData.filter(function(d){
+      if (d.bwpOnly && !isBWP) return false;
+      if (br.excludedDeals && br.excludedDeals.includes(d.name)) return false;
+      if (!isItemAvailable(d.name)) return false;
+      return true;
+    });
+  }
+  function dealPrice(d){
+    var o = _overrideMap[d.name];
+    return (o && o.prices && o.prices._flat) || d.price;
+  }
+  function stepOptions(step){
+    var isBWP = activeBranch.id === 'BWP';
+    return (menuData[step.cat] || []).filter(function(i){
+      return !(i.bwpOnly && !isBWP) && isItemAvailable(i.name);
+    }).map(function(i){ return i.name; });
+  }
+  function botDeals(){
+    return dealList().map(function(d){
+      return { n:d.name, d:d.desc, p:dealPrice(d), inc:d.fixedItems||[],
+               f:(d.flavorsNeeded||[]).map(function(s){ return { label:s.label, options:stepOptions(s) }; }) };
+    });
+  }
+  function pickOption(options, wanted){
+    var w = String(wanted||'').replace(/^\[.*?\]\s*/,'').trim().toLowerCase();
+    return options.find(function(o){ return o.toLowerCase() === w; }) ||
+           options.find(function(o){ return w && (o.toLowerCase().indexOf(w) > -1 || w.indexOf(o.toLowerCase()) > -1); });
+  }
 
   function findItem(name){
     var n = String(name||'').trim().toLowerCase();
@@ -9311,6 +9342,7 @@ setTimeout(() => {
   // Turn the model's order into REAL cart lines using YOUR prices
   function resolveOrder(o){
     var lines = [];
+    // regular menu items
     for (var i = 0; i < (o.items||[]).length; i++){
       var r = o.items[i], it = findItem(r.name);
       if (!it) return { error: '"' + r.name + '" is not on the menu right now.' };
@@ -9323,6 +9355,23 @@ setTimeout(() => {
       var qty = Math.max(1, Math.min(20, parseInt(r.qty,10) || 1));
       lines.push({ name: name, price: price, qty: qty, note: r.notes ? 'Note: ' + r.notes : '' });
     }
+    // deals
+    var avail = dealList();
+    for (var j = 0; j < (o.deals||[]).length; j++){
+      var dr = o.deals[j];
+      var deal = avail.find(function(d){ return d.name.toLowerCase() === String(dr.name||'').trim().toLowerCase(); });
+      if (!deal) return { error: 'The deal "' + dr.name + '" is not available right now.' };
+      var steps = deal.flavorsNeeded || [], picks = [];
+      for (var k = 0; k < steps.length; k++){
+        var opts = stepOptions(steps[k]);
+        var hit = pickOption(opts, (dr.choices||[])[k]);
+        if (!hit) return { error: 'Please pick ' + steps[k].label + ' for ' + deal.name + ' (' + opts.join(', ') + ').' };
+        var prefix = steps[k].forceCat ? '[' + steps[k].forceCat + '] ' : '';
+        picks.push(steps[k].label + ': ' + prefix + hit);
+      }
+      var dnote = picks.join(', ') + (deal.fixedItems ? '\nIncludes: ' + deal.fixedItems.join(', ') : '');
+      lines.push({ name: deal.name, price: dealPrice(deal), qty: Math.max(1, Math.min(20, parseInt(dr.qty,10) || 1)), note: dnote });
+    }
     if (!lines.length) return { error: 'No items in the order.' };
     var phone = String(o.phone||'').replace(/[\s\-()]/g,'');
     if (!/^(03\d{9}|\+?923\d{9})$/.test(phone)) return { error: 'That phone number looks wrong. Please send it as 03XX-XXXXXXX.' };
@@ -9334,7 +9383,7 @@ setTimeout(() => {
     var card = document.createElement('div'); card.className = 'oxcard';
     var sub = res.lines.reduce(function(s,l){ return s + l.price*l.qty; }, 0);
     var t = document.createElement('div'); t.style.whiteSpace = 'pre-wrap';
-    t.textContent = res.lines.map(function(l){ return l.qty + 'x ' + l.name + ' — Rs ' + (l.price*l.qty); }).join('\n') +
+    t.textContent = res.lines.map(function(l){ return l.qty + 'x ' + l.name + ' — Rs ' + (l.price*l.qty) + (l.note ? '\n   ' + l.note.replace(/\n/g, '\n   ') : ''); }).join('\n') +
       '\n\nItems: Rs ' + sub + '\n' + o.order_type + ' · ' + o.customer_name + ' · ' + res.phone +
       (o.address ? '\n' + o.address : '') + '\n(Delivery fee, discount and tax are added at checkout)';
     card.appendChild(t);
@@ -9348,6 +9397,7 @@ setTimeout(() => {
 
   function botCheckout(o, res){
     res.lines.forEach(function(l){ cart.push(l); });
+    window._botTake = null;
     updateCartBar();
     document.getElementById('oxBot').style.display = 'none';
     orderType = o.order_type;
@@ -9359,7 +9409,8 @@ setTimeout(() => {
       window.deliveryCustomerName = o.customer_name; deliveryPhone = res.phone; userAddress = o.address; delCharge = 0;
       renderAddressStep();   // customer taps "Calculate delivery fee" as usual
     } else if (orderType === 'Takeaway'){
-      window.takeawayCustomerName = o.customer_name; window.takeawayCustomerPhone = res.phone;
+      window.takeawayCustomerName = null; window.takeawayCustomerPhone = null;
+      window._botTake = { name: o.customer_name, phone: res.phone };
       renderFinalSummary(0);
     } else {
       window.takeawayCustomerName = o.customer_name;
@@ -9368,6 +9419,14 @@ setTimeout(() => {
       renderFinalSummary(0);
     }
   }
+    var _origSummary = renderFinalSummary;
+  window.renderFinalSummary = function(fee){
+    _origSummary(fee);
+    var d = window._botTake; if (!d) return;
+    var n = document.getElementById('takeawayName'), p = document.getElementById('takeawayPhone');
+    if (n){ n.value = d.name || ''; n.oninput = function(){ d.name = n.value; }; }
+    if (p){ p.value = d.phone || ''; p.oninput = function(){ d.phone = p.value; }; }
+  };
 
   // Pre-fill your delivery address form with what the bot collected
   var _origAddr = renderDeliveryAddressInput;
@@ -9392,7 +9451,7 @@ var wait = add('b', '');
 wait.className = 'oxm b oxdots';
 wait.innerHTML = '<span></span><span></span><span></span>';
     try {
-      var r = await sb.functions.invoke('ovenx-chat', { body: { messages: msgs.slice(-20), menu: botMenu(), branchName: activeBranch.name } });
+      var r = await sb.functions.invoke('ovenx-chat', { body: { messages: msgs.slice(-20), menu: botMenu(), deals: botDeals(), branchName: activeBranch.name } });
       wait.remove();
       if (r.error || !r.data) throw new Error('fail');
       var d = r.data;
