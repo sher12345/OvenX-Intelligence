@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <!-- PWA META TAGS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1132,6 +1132,142 @@ body {
 @keyframes glow-pulse {
   0%,100%{opacity:.4;}
   50%{opacity:.75;}
+}
+/* ================= RESPONSIVE ================= */
+html{-webkit-text-size-adjust:100%;}
+img,video{max-width:100%;}
+
+/* ---------- Full-screen centered screens: don't cut the top in landscape ---------- */
+#gateway-screen,#branch-selector-screen{justify-content:center;justify-content:safe center;}
+#ar-nosupport{justify-content:center;justify-content:safe center;overflow-y:auto;}
+
+/* ---------- Customer menu: scales from phone to desktop ---------- */
+.container,.deals-container{max-width:1200px;width:100%;}
+#menu-container .grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+#menu-container .btn{height:auto;aspect-ratio:2/5;max-height:440px;}
+
+@media (min-width:700px){
+  #menu-container .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+  #menu-container .btn{aspect-ratio:3/4;max-height:none;}
+}
+@media (min-width:800px){
+  #deals-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;align-items:start;}
+  #deals-list .deal-card{margin-bottom:0;}
+}
+@media (min-width:900px){
+  .tab-item{flex:0 1 260px;}
+  .search-box-wrap{max-width:720px;margin:0 auto;}
+}
+@media (min-width:1000px){
+  #menu-container .grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .category-scroller{flex-wrap:wrap;white-space:normal;justify-content:center;overflow:visible;}
+}
+@media (min-width:1500px){
+  .container,.deals-container{max-width:1400px;}
+  #menu-container .grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+}
+.search-input{font-size:16px;} /* stops iOS zoom on focus */
+
+/* ---------- Checkout page: readable width on desktop ---------- */
+#overlay-screen{padding:20px max(20px,calc((100vw - 600px)/2)) 40px;}
+
+/* ---------- Bottom sheets: centered, not full-width on desktop ---------- */
+#item-detail-sheet,#track-sheet{left:0 !important;right:0;width:100% !important;max-width:560px;margin:0 auto;max-height:92vh;max-height:92dvh;}
+
+/* ---------- Modals ---------- */
+.modal{max-height:90vh;max-height:90dvh;}
+.delivery-calc-modal{height:min(90vh,800px);height:min(90dvh,800px);}
+@media (max-height:520px){
+  .modal{max-height:96dvh;padding:18px;}
+  .gateway-logo{font-size:40px;}
+  .branch-sel-logo{font-size:38px;}
+}
+@media (max-width:380px){
+  .modal{width:94%;padding:22px 16px;}
+  .stamp-circle{width:34px;height:34px;font-size:12px;}
+  .stamp-row{gap:5px;}
+}
+
+/* ---------- Safe areas (notch / home bar) ---------- */
+#cart-bar{bottom:calc(20px + env(safe-area-inset-bottom,0px));}
+#float-tracker-btn{bottom:calc(90px + env(safe-area-inset-bottom,0px)) !important;}
+#oxBotBtn{bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important;}
+
+/* ---------- Kitchen / Audit / Card-records panels ---------- */
+.kitchen-modal{height:95vh;height:95dvh;}
+.kitchen-header{flex-wrap:wrap;gap:10px;}
+.kitchen-header>div:last-child{flex-wrap:wrap;}
+
+@media (min-width:1000px){
+  #kitchen-orders-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-content:start;}
+  #kitchen-orders-list .kitchen-card{margin-bottom:0;}
+  #kitchen-orders-list>p{grid-column:1/-1;}
+}
+@media (max-width:900px){
+  .kitchen-content-wrapper{flex-direction:column;}
+  #kitchen-orders-list{flex:1 1 0;min-height:0;padding:12px;}
+  #rider-audit-sidebar,#delivery-history-sidebar{flex:0 0 auto;max-height:42%;border-left:none;border-top:4px solid #eee;}
+  .kitchen-card{padding:16px;border-left-width:8px;border-radius:22px;}
+  .k-tab{padding:10px 6px;font-size:11px;}
+  .kitchen-header h2{font-size:18px;}
+  .header-back-btn{padding:7px 10px;font-size:11px;}
+}
+
+/* ---------- Admin panel ---------- */
+.adm-ctx-bar{flex-wrap:wrap;}
+.adm-main{min-height:0;}
+@media (max-width:768px){
+  /* sidebar becomes a swipeable tab bar instead of disappearing */
+  .adm-body{flex-direction:column;}
+  .adm-sidebar{display:flex;width:100%;flex-shrink:0;overflow-x:auto;overflow-y:hidden;padding:0;border-right:none;border-bottom:1px solid #e2e5ea;}
+  .adm-nav-lbl,.adm-nav-div{display:none;}
+  .adm-nav-item{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;padding:12px 14px;}
+  .adm-nav-item.active{border-bottom-color:#c0392b;}
+  .adm-ctx-bar{padding:8px 16px;}
+  .adm-header>div{flex-wrap:wrap;}
+  .adm-save-btn,.adm-close-btn{padding:7px 12px;}
+}
+@media (max-width:600px){
+  .adm-card-body div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important;}
+  .adm-avail-grid,.adm-deal-grid{grid-template-columns:1fr;}
+  .adm-page-title{font-size:22px;}
+  .adm-main{padding:12px;}
+  .adm-toast{left:12px;right:12px;bottom:12px;max-width:none;}
+}
+
+/* ---------- Landing page ---------- */
+.lp-hero{min-height:100vh;min-height:100dvh;}
+.lp-branch-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)) !important;} /* beats the inline 3-column style */
+.lp-categories{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));}
+@media (max-width:600px){
+  .lp-hero-content>button{width:100% !important;max-width:none !important;}
+  .lp-hero-btns>*{flex:1 1 100%;text-align:center;}
+  .lp-stats{padding:36px 16px;}
+  .lp-stat-num{font-size:32px;}
+  .lp-deal-card{flex-direction:column;align-items:flex-start;gap:8px;}
+  .lp-deal-price{margin-left:0;}
+  .lp-footer-top{flex-direction:column;}
+  .lp-badge{font-size:10px;letter-spacing:1px;}
+  /* rotating announcement bar: allow text to wrap instead of being cut off */
+  #landing-page>div:first-child>div[style*="height:22px"]{height:40px !important;}
+  #landing-page>div:first-child div[style*="position:absolute"]{left:0;right:0;justify-content:center;flex-wrap:wrap;text-align:center;line-height:1.25;}
+  #landing-page>div:first-child span{font-size:11px !important;}
+}
+
+/* ---------- AI chat bot: full screen on small phones ---------- */
+@media (max-width:480px){
+  #oxBot{right:0 !important;bottom:0 !important;width:100vw !important;max-width:100vw !important;height:100vh !important;height:100dvh !important;max-height:none !important;border-radius:0 !important;}
+  #oxBotBtn{bottom:calc(166px + env(safe-area-inset-bottom,0px)) !important;} /* stops overlap with the order-tracker button */
+}
+
+/* ---------- AR overlay in landscape ---------- */
+@media (max-height:520px){
+  #ar-tip,#ar-cat-badge{display:none;}
+  #ar-header{padding-top:12px;}
+  #ar-pill{top:64px;}
+  #ar-sizes{bottom:78px;}
+  #ar-bottom{padding-bottom:12px;}
+  #ar-scan-hint{bottom:140px;}
 }
     </style>
 </head>
