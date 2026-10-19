@@ -9373,7 +9373,34 @@ setTimeout(() => {
 @keyframes oxdot{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-6px);opacity:1}}
 #oxBotForm{display:flex;border-top:1px solid #eee}
 #oxBotIn{flex:1;border:0;padding:14px;font-size:16px;outline:none}
-#oxBotForm button{border:0;background:#1a1a1a;color:#fff;padding:0 18px;font-weight:800}
+/* Keep the Send button dark */
+#oxBotForm button[type="submit"]{border:0;background:#1a1a1a;color:#fff;padding:0 18px;font-weight:800;cursor:pointer}
+
+/* Style the Microphone button */
+#oxBotMic {
+  border: 0;
+  background: #e67e22; /* OvenX Orange */
+  color: #fff;
+  padding: 0 18px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+#oxBotMic:active {
+  background: #a04000; /* Darker orange when pressed */
+}
+#oxBotMic.listening {
+  background: #c0392b; /* Red when listening */
+  animation: pulse-mic 1.5s infinite;
+}
+@keyframes pulse-mic{
+  0%{box-shadow:0 0 0 0 rgba(192,57,43,0.7);}
+  70%{box-shadow:0 0 0 10px rgba(192,57,43,0);}
+  100%{box-shadow:0 0 0 0 rgba(192,57,43,0);}
+}
 </style>
 
 <button id="oxBotBtn" onclick="oxBotToggle()" aria-label="Order with AI">
@@ -9395,13 +9422,74 @@ setTimeout(() => {
   <span class="oxh-x" onclick="oxBotToggle()">✕</span>
 </div>
   <div id="oxBotLog"></div>
-  <form id="oxBotForm"><input id="oxBotIn" placeholder="e.g. 1 large chicken tikka pizza" autocomplete="off"><button>Send</button></form>
+  <form id="oxBotForm" style="display: flex; align-items: stretch; border-top: 1px solid #eee;">
+    <input id="oxBotIn" placeholder="e.g. 1 large chicken tikka pizza" autocomplete="off" style="flex: 1; border: none; padding: 14px; font-size: 16px; outline: none;">
+    <button type="button" id="oxBotMic" onclick="toggleVoiceInput()" title="Speak your order">🎤</button>
+    <button type="submit">Send</button>
+  </form>
 </div>
 
 <script>
 (function(){
   var msgs = [], busy = false;
   var log = document.getElementById('oxBotLog');
+
+  // ── VOICE SETUP (LISTENING & SPEAKING) ──
+  var recognition = null;
+  var isListening = false;
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ur-PK'; // Urdu / Roman Urdu
+    recognition.interimResults = false;
+    
+    recognition.onstart = function() {
+      isListening = true;
+      document.getElementById('oxBotMic').classList.add('listening');
+      document.getElementById('oxBotIn').placeholder = "Listening...";
+    };
+    
+    recognition.onresult = function(event) {
+      var transcript = event.results[0][0].transcript;
+      document.getElementById('oxBotIn').value = transcript;
+      // Automatically submit the form
+      document.getElementById('oxBotForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    };
+    
+    recognition.onerror = function() { stopListening(); };
+    recognition.onend = function() { stopListening(); };
+  }
+
+  window.toggleVoiceInput = function() {
+    if (!recognition) {
+      alert("Your browser doesn't support voice input. Please use Chrome or Safari.");
+      return;
+    }
+    if (isListening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  };
+
+  function stopListening() {
+    isListening = false;
+    document.getElementById('oxBotMic').classList.remove('listening');
+    document.getElementById('oxBotIn').placeholder = "e.g. 1 large chicken tikka pizza";
+  }
+
+  window.speakBotReply = function(text) {
+    if (!text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // Stop any previous speech
+    var utterance = new SpeechSynthesisUtterance(text);
+    var voices = window.speechSynthesis.getVoices();
+    var urduVoice = voices.find(function(v) { return v.lang.includes('ur') || v.lang.includes('hi') || v.lang.includes('PK'); });
+    if (urduVoice) utterance.voice = urduVoice;
+    else utterance.lang = 'hi-IN'; // Fallback that pronounces Urdu words decently
+    utterance.rate = 1.05;
+    window.speechSynthesis.speak(utterance);
+  };
+  // ── END VOICE SETUP ──
 
   function add(cls, text){
     var d = document.createElement('div'); d.className = 'oxm ' + cls; d.textContent = text;
@@ -9597,11 +9685,26 @@ wait.innerHTML = '<span></span><span></span><span></span>';
       wait.remove();
       if (r.error || !r.data) throw new Error('fail');
       var d = r.data;
+      
+      // 🔊 SPEAK THE AI REPLY OUT LOUD
+      speakBotReply(d.reply);
+
       if (d.order){
         var res = resolveOrder(d.order);
-        if (res.error){ add('b', res.error); msgs.push({ role:'model', text:res.error }); }
-        else { add('b', d.reply); msgs.push({ role:'model', text:d.reply }); showConfirm(d.order, res); }
-      } else { add('b', d.reply); msgs.push({ role:'model', text:d.reply }); }
+        if (res.error){ 
+          add('b', res.error); 
+          msgs.push({ role:'model', text:res.error }); 
+          speakBotReply(res.error); // Speak the error too
+        }
+        else { 
+          add('b', d.reply); 
+          msgs.push({ role:'model', text:d.reply }); 
+          showConfirm(d.order, res); 
+        }
+      } else { 
+        add('b', d.reply); 
+        msgs.push({ role:'model', text:d.reply }); 
+      }
     } catch(err){
       wait.remove(); add('b', 'Connection problem, please try again.');
     }
@@ -9717,6 +9820,7 @@ function jsq(s) {
     .replace(/"/g, '&quot;').replace(/[\r\n]+/g, ' ');
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
