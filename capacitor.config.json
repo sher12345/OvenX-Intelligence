@@ -1,5 +1,5 @@
 {
   "appId": "com.ovenx.admin",
   "appName": "OvenX Admin",
-  "webDir": "."
+  "webDir": "www"
 }
