@@ -6132,7 +6132,7 @@ if (o.subtotal) {
         ${hasDiscount ? discountBadge : ''}
         ${o.type === 'Delivery' ? sourceBadge : ''}
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <div style="font-size:14px;">Shop: Rs ${o.subtotal}${o.tax > 0 ? ' | Tax ('+(o.payment_method||'Cash')+'): Rs '+o.tax : ''} | Del: Rs ${o.delivery_fee || 0}</div>
+            <div style="font-size:14px;">Shop: Rs ${o.subtotal}${o.tax > 0 ? ' | Tax ('+escHtml(o.payment_method||'Cash')+'): Rs '+o.tax : ''} | Del: Rs ${o.delivery_fee || 0}</div>
             <div style="color:var(--red); font-size:18px; font-weight:700;">Total: Rs ${(o.subtotal + (o.tax || 0) + (o.delivery_fee || 0))}</div>
         </div>
     </div>`;
@@ -6166,8 +6166,8 @@ const orderBranch = o.branch || 'MULTAN';
 card.innerHTML = `<span class="kitchen-badge kb-${escHtml(o.status.toLowerCase())}">${escHtml(o.status)}</span><div style="font-weight:700; color:var(--red); font-size:18px;">${escHtml(o.type).toUpperCase()} - ${escHtml(o.location)} <span class="order-branch-tag ${escHtml(orderBranch)}">${escHtml(orderBranch)}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${escHtml(o.items)}</div>
 ${priceHtml}
                 <div class="admin-actions">
-                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
-                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${o.payment_method || 'Cash'}', ${o.tax || 0}, '${o.type}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
+                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
+                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
                     <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${jsq(o.location)}')">CHG TABLE</button>
                     <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
                     <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
@@ -6599,7 +6599,7 @@ ${sc > 0 ? `
                     </div>` : ''}
                     
                     ${tax > 0 ? `<div style="display:flex;justify-content:space-between;">
-                        <span>PRA Tax (${payMethod}):</span><span>Rs ${tax}</span>
+                        <span>PRA Tax (${escHtml(payMethod)}):</span><span>Rs ${tax}</span>
                     </div>` : ''}
                     ${delFee > 0 ? `
                     <div style="display:flex;justify-content:space-between;">
