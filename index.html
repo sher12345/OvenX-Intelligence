@@ -1611,11 +1611,17 @@ img,video{max-width:100%;}
     
 <button id="join-club-btn" onclick="openLoyaltySetup()" class="gate-btn btn-gold btn-3d">👑 Join Oven X Club & Win Free Meals!</button>
 <button id="recover-stamps-btn" onclick="recoverStamps()" style="display:none; background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:10px 20px; border-radius:12px; font-size:12px; font-weight:700; cursor:pointer; margin-bottom:10px; width:85%; max-width:340px;">🔄 Already a member? Recover Stamps</button>
-    <div class="gateway-options">
+        <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
+        
+        <!-- THIS IS NOW VISIBLE TO EVERYONE -->
         <button class="gate-btn btn-3d btn-outline" onclick="openReviewModal()" style="border-color:var(--gold); color:var(--gold);">⭐ Leave a Review</button>
-    <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
+
+        <!-- THIS REMAINS HIDDEN UNTIL 5 CLICKS -->
+        <div id="staff-buttons" style="display:none; flex-direction:column; gap:12px; width:100%;">
+            
+            <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
     <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
         ⚙️ ADMIN PANEL
     </button>
@@ -10059,5 +10065,6 @@ function jsq(s) {
   <div onclick="closeModelAR()" style="position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;
     background:rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">✕</div>
 </div>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
