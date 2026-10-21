@@ -3467,6 +3467,20 @@ menuData["Wraps 🌯"] = menuData["Wraps & Rolls 🌯"].filter(i =>
     "Meat Sticks": "Our Meat Sticks — juicy, seasoned minced meat on skewers, grilled to perfection. Bold, aromatic, and absolutely delicious!",
     "Nuggets": "Our Chicken Nuggets — bite-sized crispy fried chicken pieces, tender on the inside and golden on the outside. A timeless classic everyone loves!",
 };
+const arModels = {
+  "OvenX Flaming Pasta": "https://frjcefugnvitexxcated.supabase.co/storage/v1/object/public/ar-models/Flaming-Pasta.glb?v=2"
+};
+
+function openModelAR(name, url) {
+  const mv = document.getElementById('mv');
+  mv.src = url;
+  mv.alt = name;
+  document.getElementById('mv-overlay').style.display = 'block';
+}
+function closeModelAR() {
+  document.getElementById('mv-overlay').style.display = 'none';
+}
+
 function openItemSheet(item, imgUrl) {
     const desc = itemDescriptions[item.name];
     
@@ -3490,7 +3504,10 @@ document.getElementById('sheet-img').style.backgroundImage = `url('${sheetImg}')
   arBtn.className = 'ar-trigger-btn';
   arBtn.innerHTML = '<span>🔮</span><span>View in AR — Place on Your Table</span><span class="ar-badge">AR</span>';
   const arImgUrl = (window._adminImgOverrides && window._adminImgOverrides[item.name]) ? window._adminImgOverrides[item.name] : imgUrl;
-arBtn.onclick = () => openAR({ name: item.name, image: arImgUrl, price: item.price });
+  arBtn.onclick = () => {
+    if (arModels[item.name]) openModelAR(item.name, arModels[item.name]);
+    else openAR({ name: item.name, image: arImgUrl, price: item.price });
+  };
   document.querySelector('.sheet-add-btn').insertAdjacentElement('beforebegin', arBtn);
   
     
@@ -9823,5 +9840,38 @@ function jsq(s) {
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+
+<div id="mv-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#111;">
+  <style>
+  /* This makes the food look glossy and appetizing */
+  #mv {
+    filter: contrast(1.1) saturate(1.2);
+  }
+  /* Adds a fake "wet/shiny" light reflection over the food */
+  #mv::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+    z-index: 10;
+  }
+</style>
+
+<model-viewer id="mv" ar ar-modes="webxr scene-viewer quick-look"
+    camera-controls auto-rotate shadow-intensity="1" ar-scale="auto"
+    environment-image="neutral" 
+    exposure="1.2"
+    style="width:100%;height:100%;background:#111;">
+    <button slot="ar-button" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+      background:#c0392b;color:#fff;border:0;border-radius:14px;padding:15px 28px;font-weight:800;font-size:15px;">
+      🔮 View on Your Table
+    </button>
+  </model-viewer>
+  <div onclick="closeModelAR()" style="position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;
+    background:rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">✕</div>
+</div>
 </body>
 </html>
