@@ -1614,7 +1614,9 @@ img,video{max-width:100%;}
     <div class="gateway-options">
         <button class="gate-btn btn-3d btn-orange" onclick="enterApp('deals')">🔥 Best Deals!</button>
         <button class="gate-btn btn-3d btn-red" onclick="enterApp('menu')">📖 Full Menu</button>
+        <button class="gate-btn btn-3d btn-outline" onclick="openReviewModal()" style="border-color:var(--gold); color:var(--gold);">⭐ Leave a Review</button>
         <div id="staff-buttons" style="display:none; flex-direction:column; gap:12px; width:100%;">
+            <button class="gate-btn btn-3d btn-outline" onclick="openReviewModal()" style="border-color:var(--gold); color:var(--gold);">⭐ Leave a Review</button>
     <button class="gate-btn btn-3d btn-outline" onclick="openAdminLogin()">👨‍🍳 KITCHEN PANEL</button>
     <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #c0392b 0%, #e05c2b 100%); color: white; box-shadow: 0 6px 0px #922b21;" onclick="openAdminPanel()">
         ⚙️ ADMIN PANEL
@@ -1622,6 +1624,9 @@ img,video{max-width:100%;}
     <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #16a34a 0%, #0d7a3a 100%); color: white; box-shadow: 0 6px 0px #0a5c2c;" onclick="openAuditReportLogin()">
         📊 AUDIT REPORT
     </button>
+    <button class="gate-btn btn-3d" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%); color: white; box-shadow: 0 6px 0px #a04000;" onclick="openAdminReviews()">
+    ⭐ CUSTOMER REVIEWS
+</button>
 </div>
     </div>
 </div>
@@ -2141,7 +2146,7 @@ img,video{max-width:100%;}
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="header-back-btn btn-3d" style="background:var(--wa-green);" onclick="downloadCustomerData()">CUSTOMERS 📥</button>
-                <button class="header-back-btn btn-3d" style="background:#7c3aed;" onclick="openCardRecords()">🎓 CARD RECORDS</button>
+                <button class="header-back-btn btn-3d" style="background:#f39c12;" onclick="openAdminReviews()">⭐ REVIEWS</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
                 <button id="fuel-price-btn" class="header-back-btn btn-3d" style="background:#fd7e14;" onclick="openFuelPricePrompt()">⛽ Set Fuel Price</button>
                 <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
@@ -3529,7 +3534,138 @@ function proceedFromSheet() {
 }
 
     function setScrollLock(lock) { if(lock) document.body.classList.add('modal-active'); else document.body.classList.remove('modal-active'); }
+    // ══════════════════════════════════════════
+// REVIEWS SYSTEM
+// ══════════════════════════════════════════
+let currentReviewRating = 0;
+
+function openReviewModal() {
+    playClick('pop');
+    document.getElementById('review-overlay').style.display = 'flex';
+    setScrollLock(true);
+    document.getElementById('rev-name').value = '';
+    document.getElementById('rev-phone').value = '';
+    document.getElementById('rev-text').value = '';
+    setReviewStars(0);
+}
+
+function closeReviewModal() {
+    document.getElementById('review-overlay').style.display = 'none';
+    setScrollLock(false);
+}
+
+function setReviewStars(val) {
+    currentReviewRating = val;
+    const stars = document.querySelectorAll('.star');
+    stars.forEach((s, i) => {
+        if (i < val) {
+            s.innerHTML = '★';
+            s.style.color = '#f1c40f';
+        } else {
+            s.innerHTML = '☆';
+            s.style.color = '#ccc';
+        }
+    });
+    if (val > 0) playClick('pop');
+}
+
+async function submitReview() {
+    const name = document.getElementById('rev-name').value.trim();
+    const phone = document.getElementById('rev-phone').value.trim();
+    const text = document.getElementById('rev-text').value.trim();
+
+    if (!name) return alert("Please enter your name.");
+    if (currentReviewRating === 0) return alert("Please select a star rating.");
+    if (!sb) return alert("Connection error. Please try again.");
+
+    playClick('thud');
+    const btn = document.querySelector('#review-overlay .confirm-btn');
+    btn.innerText = "SENDING...";
+    btn.disabled = true;
+
+    try {
+        const { error } = await sb.from('reviews').insert([{
+            branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
+            customer_name: name,
+            phone: phone,
+            rating: currentReviewRating,
+            feedback: text
+        }]);
+        if (error) throw error;
+        alert("Thank you! Your review has been submitted. 🌟");
+        closeReviewModal();
+    } catch(e) {
+        console.error(e);
+        alert("Failed to submit review. Please try again.");
+    } finally {
+        btn.innerText = "SUBMIT REVIEW";
+        btn.disabled = false;
+    }
+}
+
+let allAdminReviews = [];
+
+async function openAdminReviews() {
+    playClick('pop');
+    document.getElementById('admin-reviews-overlay').style.display = 'flex';
+    setScrollLock(true);
+    document.getElementById('admin-reviews-list').innerHTML = '<p style="text-align:center; padding:30px; color:#999;">Loading reviews...</p>';
     
+    if (!sb) return;
+    
+    try {
+        const { data, error } = await sb.from('reviews').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        allAdminReviews = data || [];
+        renderAdminReviews();
+    } catch (e) {
+        document.getElementById('admin-reviews-list').innerHTML = '<p style="text-align:center; color:red;">Failed to load reviews.</p>';
+    }
+}
+
+function closeAdminReviews() {
+    document.getElementById('admin-reviews-overlay').style.display = 'none';
+    setScrollLock(false);
+}
+
+function renderAdminReviews() {
+    const branchFilter = document.getElementById('rev-filter-branch').value;
+    const starFilter = document.getElementById('rev-filter-stars').value;
+    const container = document.getElementById('admin-reviews-list');
+
+    let filtered = allAdminReviews.filter(r => {
+        if (branchFilter !== 'ALL' && r.branch !== branchFilter) return false;
+        if (starFilter !== 'ALL' && r.rating !== parseInt(starFilter)) return false;
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:30px; color:#999;">No reviews match your filters.</p>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(r => {
+        const date = new Date(r.created_at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+        return `
+            <div style="background:white; border-radius:15px; padding:20px; margin-bottom:15px; box-shadow:0 2px 10px rgba(0,0,0,0.05); border-left: 6px solid ${r.rating >= 4 ? '#16a34a' : r.rating === 3 ? '#f39c12' : '#c0392b'};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:18px; font-weight:900; color:#1a1a1a;">${r.customer_name}</div>
+                        <div style="font-size:13px; color:#666;">${r.phone || 'No phone'} • ${r.branch}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:#f1c40f; font-size:20px; letter-spacing:2px;">${stars}</div>
+                        <div style="font-size:11px; color:#999;">${date}</div>
+                    </div>
+                </div>
+                <div style="font-size:14px; color:#444; background:#f9f9f9; padding:12px; border-radius:10px; margin-top:10px;">
+                    ${r.feedback || '<i style="color:#999;">No written feedback provided.</i>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
     async function renderLoyaltyCard() {
     const phone = localStorage.getItem('ovenx_member_phone');
 
@@ -9303,6 +9439,57 @@ setTimeout(() => {
       <button class="sheet-add-btn btn-3d" onclick="proceedFromSheet()">ADD TO BAG 🛒</button>
   </div>
 </div>
+<!-- CUSTOMER REVIEW OVERLAY -->
+<div id="review-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:10000;backdrop-filter:blur(8px);">
+    <div class="modal" style="max-width:400px; text-align:center;">
+        <h2 style="color:var(--red); font-weight:900; margin-top:0;">Rate Your Experience ⭐</h2>
+        <p style="color:#666; font-size:14px; margin-bottom:20px;">We'd love to hear your feedback!</p>
+        
+        <input type="text" id="rev-name" placeholder="👤 Your Name" class="big-input" style="margin-top:0;">
+        <input type="tel" id="rev-phone" placeholder="📞 Phone (optional)" class="big-input">
+        
+        <div style="margin: 20px 0; display:flex; justify-content:center; gap:10px; font-size:40px; cursor:pointer;" id="star-container">
+            <span class="star" data-val="1" onclick="setReviewStars(1)">☆</span>
+            <span class="star" data-val="2" onclick="setReviewStars(2)">☆</span>
+            <span class="star" data-val="3" onclick="setReviewStars(3)">☆</span>
+            <span class="star" data-val="4" onclick="setReviewStars(4)">☆</span>
+            <span class="star" data-val="5" onclick="setReviewStars(5)">☆</span>
+        </div>
+        
+        <textarea id="rev-text" placeholder="What did you love? What can we improve?" class="big-input" style="height:80px;"></textarea>
+        
+        <button class="confirm-btn btn-3d" style="background:var(--orange); box-shadow:0 6px 0px var(--dark-orange);" onclick="submitReview()">SUBMIT REVIEW</button>
+        <button onclick="closeReviewModal()" style="margin-top:15px; border:none; background:none; color:gray; font-weight:bold; width:100%;">CANCEL</button>
+    </div>
+</div>
+
+<!-- ADMIN REVIEWS OVERLAY -->
+<div id="admin-reviews-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:10001;backdrop-filter:blur(10px);">
+    <div class="kitchen-modal" style="max-width:900px; height:85vh;">
+        <div class="kitchen-header">
+            <h2 style="margin:0; color:#f39c12; font-weight:900;">⭐ CUSTOMER REVIEWS</h2>
+            <div style="display:flex; gap:10px;">
+                <select id="rev-filter-branch" class="adm-select" onchange="renderAdminReviews()">
+                    <option value="ALL">All Branches</option>
+                    <option value="MULTAN">Multan</option>
+                    <option value="BWP">Bahawalpur</option>
+                </select>
+                <select id="rev-filter-stars" class="adm-select" onchange="renderAdminReviews()">
+                    <option value="ALL">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
+                </select>
+                <button class="header-back-btn btn-3d" onclick="closeAdminReviews()">EXIT</button>
+            </div>
+        </div>
+        <div style="padding:20px; overflow-y:auto; flex:1; background:#f9f9f9;" id="admin-reviews-list">
+            <!-- Reviews will load here -->
+        </div>
+    </div>
+</div>
 
 <!-- AR OVERLAY -->
 <div id="ar-overlay">
@@ -9729,6 +9916,7 @@ wait.innerHTML = '<span></span><span></span><span></span>';
     document.querySelector('#oxBotForm button').disabled = false;
   };
 })();
+
 </script>
 
 <!-- Cloudflare Web Analytics -->
