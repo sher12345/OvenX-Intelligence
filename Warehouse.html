@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Central Warehouse</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f5f5f7;--card:rgba(255,255,255,.72);--t:#1d1d1f;--t2:#6e6e73;--ac:#c81010;--acs:rgba(200,16,16,.12);--ok:#1a7f4b;--oks:rgba(26,127,75,.12);--bad:#c42b2b;--bads:rgba(196,43,43,.12);--warn:#a65f00;--warns:rgba(166,95,0,.12);--hair:rgba(0,0,0,.08);--in:rgba(0,0,0,.03);--shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.04);--ease-spring:cubic-bezier(.32,.72,0,1);--ease-out:cubic-bezier(.25,1,.5,1)}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:rgba(28,28,30,.72);--t:#f5f5f7;--t2:#a1a1a6;--ac:#ff6b5e;--acs:rgba(255,107,94,.14);--ok:#4cd98a;--oks:rgba(76,217,138,.14);--bad:#ff7b7b;--bads:rgba(255,123,123,.14);--warn:#f5b74a;--warns:rgba(245,183,74,.14);--hair:rgba(255,255,255,.12);--in:rgba(255,255,255,.06);--shadow:0 1px 3px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.2)}}
+*{box-sizing:border-box;margin:0}
+body{font:15px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--t);padding-bottom:84px}
+.top{background:var(--card);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--hair);position:sticky;top:0;z-index:20}
+.top>div{max-width:1100px;margin:auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-weight:800;font-size:18px}.logo small{display:block;font-weight:400;font-size:12px;color:var(--t2)}
+.sp{margin-left:auto}
+#tabs{display:flex;gap:4px}
+#tabs button{border:0;background:none;color:var(--t2);font:600 14px inherit;font-family:inherit;letter-spacing:-.01em;padding:8px 12px;border-radius:10px;cursor:pointer;transition:background 150ms var(--ease-out),color 150ms var(--ease-out),transform 100ms ease-out}
+#tabs button:active{transform:scale(.97)}
+#tabs button.on{background:var(--acs);color:var(--ac)}
+@media(max-width:760px){.top #tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-top:1px solid var(--hair);padding:6px 6px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;z-index:30}#tabs button{flex:1;display:flex;flex-direction:column;align-items:center;font-size:11px;padding:6px 2px}#tabs b{font-size:19px}}
+@media(min-width:761px){#tabs b{display:none}}
+main{max-width:1100px;margin:auto;padding:18px 16px}
+.ph{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.ph h2{font-size:24px;line-height:1.15;letter-spacing:-.02em}.mut{color:var(--t2)}.ph p{font-size:14px;letter-spacing:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:var(--card);border:0;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);border-top:1px solid rgba(255,255,255,.5);overflow:hidden}
+.card.has-table{padding:20px 0 0 0}
+.card.has-table > *:not(.tw) { padding:0 20px; }
+.card.has-table > .tw { margin: 0; }
+@media(prefers-color-scheme:dark){.card{border-top:1px solid rgba(255,255,255,.06)}}
+.card>h3{font-size:16px;margin-bottom:2px;letter-spacing:-.01em}.card>.sub{color:var(--t2);font-size:13px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:0;border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);border-left:4px solid var(--hair)}
+.stat.g{border-left-color:var(--ok)}.stat.r{border-left-color:var(--bad)}.stat.o{border-left-color:var(--warn)}
+.stat small{color:var(--t2);display:block;font-size:13px;letter-spacing:.01em}.stat b{font-size:24px;letter-spacing:-.02em}.stat span{display:block;font-size:12px;color:var(--t2)}
+.qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+.qa button{text-align:left;border:0;background:var(--in);color:var(--t);border-radius:14px;padding:16px;font:600 14px inherit;font-family:inherit;cursor:pointer;box-shadow:var(--shadow);transition:transform 100ms ease-out,box-shadow 150ms var(--ease-out)}
+.qa button:active{transform:scale(.97)}
+.qa button small{display:block;font-weight:400;color:var(--t2);font-size:12px}.qa button:hover{box-shadow:var(--shadow),0 0 0 1px var(--ac)}
+.todo{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}.todo:first-of-type{border-top:0}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--t2);font-weight:600;letter-spacing:.02em;padding:10px 12px;white-space:nowrap;border-bottom:1px solid var(--hair)}
+td{padding:12px;border-bottom:1px solid var(--hair);white-space:nowrap}
+/* Stock table specific layout to fix the gaps without breaking other tables */
+.tbl-stock table{table-layout:fixed}
+.tbl-stock th:nth-child(1),.tbl-stock td:nth-child(1){width:40%}
+.tbl-stock th:nth-child(2),.tbl-stock td:nth-child(2){width:15%}
+.tbl-stock th:nth-child(3),.tbl-stock td:nth-child(3){width:20%}
+.tbl-stock th:nth-child(4),.tbl-stock td:nth-child(4){width:15%}
+.tbl-stock th:nth-child(5),.tbl-stock td:nth-child(5){width:10%;text-align:right}
+
+input,select{font:inherit;color:var(--t);background:var(--in);border:1px solid var(--hair);border-radius:10px;padding:9px 11px;width:100%;outline:0;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
+input:focus,select:focus{outline:0;border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+tr.grp td{background:var(--in);font-weight:800;font-size:13px;color:var(--t);padding:14px 16px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--hair);border-top:1px solid var(--hair)}
+/* Make the category text use the accent color to really pop */
+tr.grp td span.cat-name{color:var(--ac);}
+tr.grp td span.cat-count{color:var(--t2);font-weight:600;font-size:12px;margin-left:6px;}
+.r{text-align:right}.bad{color:var(--bad)}.ok{color:var(--ok)}
+input,select{font:inherit;color:var(--t);background:var(--in);border:1px solid var(--hair);border-radius:10px;padding:9px 11px;width:100%;outline:0;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
+input:focus,select:focus{outline:0;border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.b,.b2{border:0;border-radius:10px;padding:9px 14px;font:600 14px inherit;font-family:inherit;cursor:pointer;background:var(--ac);color:#fff;white-space:nowrap;transition:transform 100ms ease-out,opacity 150ms ease-out}
+.b2{background:var(--in);color:var(--t);border:1px solid var(--hair)}.sm{padding:5px 10px;font-size:13px}
+.b:active,.b2:active{transform:scale(.97)}
+.pill{padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--in);white-space:nowrap}
+.pill.ok{background:var(--oks);color:var(--ok)}.pill.bad{background:var(--bads);color:var(--bad)}.pill.warn{background:var(--warns);color:var(--warn)}.pill.in{background:var(--oks);color:var(--ok)}.pill.out{background:var(--bads);color:var(--bad)}
+.tabs{display:inline-flex;background:var(--in);border:0;border-radius:10px;padding:3px;box-shadow:inset 0 0 0 1px var(--hair)}.tabs button{border:0;background:none;color:var(--t);padding:6px 14px;border-radius:8px;font:600 13px inherit;font-family:inherit;cursor:pointer;transition:background 150ms var(--ease-out),color 150ms var(--ease-out)}.tabs .on{background:var(--ac);color:#fff}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:600;font-size:14px}.flow i{font-style:normal;padding:6px 12px;border-radius:99px;background:var(--acs);color:var(--ac);font-weight:600}.flow span{color:var(--t2)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.32);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+@media(min-width:700px){.ov{align-items:center}}
+.md{width:min(680px,100%);max-height:92vh;overflow:auto;padding:22px;border-radius:20px 20px 0 0;background:var(--card);box-shadow:0 20px 60px rgba(0,0,0,.25);animation:sheetIn 400ms var(--ease-spring)}
+@media(min-width:700px){.md{border-radius:20px}}
+.md h3{font-size:20px;margin-bottom:14px;letter-spacing:-.02em}
+@keyframes sheetIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.md{animation:sheetFade 200ms ease}@keyframes sheetFade{from{opacity:0}to{opacity:1}}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+label{font-size:13px;font-weight:600;color:var(--t2);display:block}label>*{margin-top:4px;font-weight:400}
+.ln{display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:6px;margin-bottom:6px}.ln.np{grid-template-columns:3fr 1fr auto}
+.tot{text-align:right;font-weight:700;font-size:17px;margin:10px 0}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:99px;z-index:99;display:none;font-weight:600;background:var(--card);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--hair);box-shadow:0 6px 24px rgba(0,0,0,.2)}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.ph h2{font-size:21px}}
+</style></head><body>
+<div class="top"><div><div class="logo">Central Warehouse<small>Stock, purchasing and accounts</small></div><div id="tabs"></div><div class="sp row"><span id="sync" class="pill">Connecting…</span></div></div></div>
+<main id="main"></main><div id="toast"></div>
+<script>
+const SB=supabase.createClient('https://frjcefugnvitexxcated.supabase.co','sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ');
+const T={ing:'ingredients',loc:'locations',lv:'stock_levels',par:'parties',led:'ledger',mv:'stock_moves',po:'purchase_orders',poi:'po_items'};
+const S={};let tab='dash',sub={led:'vendor'},D=null;
+const $=i=>document.getElementById(i),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const n=v=>parseFloat(v)||0,money=v=>'Rs '+n(v).toLocaleString('en-PK',{maximumFractionDigits:2}),q3=v=>n(v).toLocaleString('en-PK',{maximumFractionDigits:3});
+const today=()=>new Date(Date.now()+18e6).toISOString().slice(0,10),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m,bad){const t=$('toast');t.textContent=m;t.style.display='block';t.style.color=bad?'var(--bad)':'var(--t)';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200)}
+async function ins(k,rows){const{error}=await SB.from(T[k]).insert(rows);if(error){toast(error.message,1);throw error}S[k].push(...rows)}
+async function upd(k,id,p){const{error}=await SB.from(T[k]).update(p).eq('id',id);if(error){toast(error.message,1);throw error}Object.assign(S[k].find(x=>x.id==id),p)}
+async function load(k){let all=[],p=0;for(;;){const{data,error}=await SB.from(T[k]).select('*').range(p*1000,p*1000+999);if(error)throw error;all.push(...data);if(data.length<1000)break;p++}S[k]=all}
+async function boot(){try{await Promise.all(Object.keys(T).map(load));
+ if(!S.loc.length)await ins('loc',[{id:uid(),name:'Central Warehouse',type:'warehouse'},{id:uid(),name:'Main Outlet',type:'outlet'},{id:uid(),name:'Main Kitchen',type:'kitchen'}]);
+ $('sync').textContent='Connected · '+S.ing.length+' items';$('sync').className='pill ok';render()}catch(e){$('sync').textContent='Not connected';$('sync').className='pill bad';$('main').innerHTML='<div class="card"><h3>Tables are missing or unreachable</h3><p class="sub">Open the SQL setup, run it once in Supabase, then refresh.</p><p class="mut">'+esc(e.message)+'</p><br><button class="b" onclick="sqlM()">Show SQL setup</button></div>'}}
+// stock core
+const ings=()=>S.ing.filter(i=>i.is_active!==false),locName=id=>S.loc.find(l=>l.id==id)?.name||'—',ingOf=id=>S.ing.find(i=>i.id==id)||{name:'?',unit:''};
+const qty=(l,i)=>n(S.lv.find(x=>x.location_id==l&&x.ingredient_id==i)?.qty),total=i=>S.lv.filter(x=>x.ingredient_id==i).reduce((s,x)=>s+n(x.qty),0);
+const central=()=>S.loc.find(l=>l.type=='warehouse')?.id;
+async function bump(l,i,d){let r=S.lv.find(x=>x.location_id==l&&x.ingredient_id==i);if(!r){r={id:l+'_'+i,location_id:l,ingredient_id:i,qty:0};S.lv.push(r)}r.qty=n(r.qty)+d;await SB.from('stock_levels').upsert(r)}
+async function move(m){const r={id:uid(),type:m.type,ingredient_id:m.ing,from_loc:m.from||null,to_loc:m.to||null,qty:m.qty,unitcost:m.cost||ingOf(m.ing).costperunit||0,ref:m.ref||'',note:m.note||'',at:m.date+'T12:00:00+05:00'};
+ await ins('mv',[r]);if(m.from)await bump(m.from,m.ing,-m.qty);if(m.to)await bump(m.to,m.ing,m.qty);
+ const t=total(m.ing);await SB.from('ingredients').update({currentstock:t}).eq('id',m.ing);ingOf(m.ing).currentstock=t}
+// ledger core
+const bal=p=>n(p.opening)+S.led.filter(l=>l.party_id==p.id).reduce((s,l)=>s+n(l.amount),0);
+const led=(party,kind,amount,date,ref,note)=>ins('led',[{id:uid(),party_id:party,bizday:date,kind,amount,ref:ref||'',note:note||''}]);
+// modal / document form
+function modal(h){close_();const o=document.createElement('div');o.className='ov';o.id='ov';o.onclick=e=>{if(e.target==o)close_()};o.innerHTML='<div class="md">'+h+'</div>';document.body.appendChild(o)}
+function close_(){$('ov')?.remove()}
+const opt=a=>a.map(x=>`<option value="${esc(x[0])}">${esc(x[1])}</option>`).join('');
+function doc(o){D=o;const hv=o.head.map(f=>`<label>${f.l}${f.t=='select'?`<select id="h_${f.k}">${opt(f.o)}</select>`:`<input id="h_${f.k}" type="${f.t||'text'}" step="any" value="${esc(f.v??'')}">`}</label>`).join('');
+ modal(`<h3>${o.title}</h3>${o.hint?`<p class="mut" style="margin:-8px 0 12px;font-size:13px">${o.hint}</p>`:''}<div class="grid">${hv}</div>${o.nl?'':'<div id="lines"></div><button class="b2" onclick="addLine()">+ Add item</button><div class="tot" id="tot"></div>'}<button class="b" style="width:100%;margin-top:8px" onclick="saveDoc()">${o.btn||'Save'}</button>`);if(!o.nl)addLine()}
+function addLine(){const r=document.createElement('div');r.className='ln'+(D.price?'':' np');
+ r.innerHTML=`<select onchange="pick(this)"><option value="">Choose item…</option>${opt(ings().map(i=>[i.id,`${i.name} (${i.unit})`]))}</select><input class="q" type="number" step="any" placeholder="Qty" oninput="calc()">${D.price?'<input class="p" type="number" step="any" placeholder="Price" oninput="calc()">':''}<button class="b2" onclick="this.parentNode.remove();calc()">×</button>`;$('lines').appendChild(r)}
+function pick(s){const p=s.parentNode.querySelector('.p');if(p)p.value=ingOf(s.value).costperunit||'';calc()}
+const lines=()=>[...document.querySelectorAll('.ln')].map(r=>({ing:r.querySelector('select').value,qty:n(r.querySelector('.q').value),price:n(r.querySelector('.p')?.value)})).filter(l=>l.ing&&l.qty>0);
+function calc(){if(D.price)$('tot').textContent='Total '+money(lines().reduce((s,l)=>s+l.qty*l.price,0))}
+async function saveDoc(){const h={};D.head.forEach(f=>h[f.k]=$('h_'+f.k).value);const L=D.nl?[]:lines();if(!D.nl&&!L.length)return toast('Add at least one item',1);
+ try{await D.save(h,L);close_();render();toast('Saved')}catch(e){console.error(e)}}
+const need=(from,L)=>L.filter(l=>qty(from,l.ing)<l.qty).map(l=>ingOf(l.ing).name);
+const lowWarn=(from,L)=>{const x=need(from,L);return !x.length||confirm('Not enough stock at '+locName(from)+' for: '+x.join(', ')+'.\nContinue anyway?')};
+const locs=t=>S.loc.filter(l=>!t||t.includes(l.type)).map(l=>[l.id,l.name]),parts=t=>S.par.filter(p=>p.type==t&&p.active!==false).map(p=>[p.id,p.name]);
+// actions
+function newPO(){if(!parts('vendor').length){go('led');return toast('Add a vendor in Accounts first',1)}
+ doc({title:'New purchase order',hint:'Order goods from a vendor. Stock and the vendor bill are added when you tap Receive.',price:1,head:[{k:'v',l:'Vendor',t:'select',o:parts('vendor')},{k:'d',l:'Date',t:'date',v:today()},{k:'l',l:'Deliver to',t:'select',o:locs(['warehouse'])},{k:'note',l:'Note'}],
+ save:async(h,L)=>{const id=uid();await ins('po',[{id,no:'PO-'+(1001+S.po.length),party_id:h.v,bizday:h.d,loc_id:h.l,status:'open',total:L.reduce((s,l)=>s+l.qty*l.price,0),note:h.note}]);await ins('poi',L.map(l=>({id:uid(),po_id:id,ingredient_id:l.ing,qty:l.qty,price:l.price})))}})}
+async function receivePO(id){const po=S.po.find(p=>p.id==id),it=S.poi.filter(i=>i.po_id==id);if(!confirm(`Receive ${po.no} into ${locName(po.loc_id)}?\nStock goes up, prices update and a bill of ${money(po.total)} is added to the vendor account.`))return;
+ for(const i of it){await move({type:'in',ing:i.ingredient_id,to:po.loc_id,qty:n(i.qty),cost:n(i.price),ref:po.no,date:today()});if(n(i.price)>0)await upd('ing',i.ingredient_id,{costperunit:n(i.price)})}
+ await led(po.party_id,'bill',n(po.total),today(),po.no,'Goods received');await upd('po',id,{status:'received'});render();toast('Received · stock and bill updated')}
+async function cancelPO(id){if(confirm('Cancel this order?')){await upd('po',id,{status:'cancelled'});render()}}
+function retDoc(){if(!parts('vendor').length)return toast('Add a vendor first',1);
+ doc({title:'Return goods to vendor',hint:'Removes stock from the warehouse and reduces what you owe the vendor.',price:1,btn:'Post return',head:[{k:'v',l:'Vendor',t:'select',o:parts('vendor')},{k:'d',l:'Date',t:'date',v:today()},{k:'l',l:'Return from',t:'select',o:locs(['warehouse'])},{k:'note',l:'Reason'}],
+ save:async(h,L)=>{if(!lowWarn(h.l,L))throw 0;const t=L.reduce((s,l)=>s+l.qty*l.price,0),ref='RET-'+uid().slice(-4).toUpperCase();for(const l of L)await move({type:'return',ing:l.ing,from:h.l,qty:l.qty,cost:l.price,ref,note:h.note,date:h.d});await led(h.v,'return',-t,h.d,ref,h.note)}})}
+function mvDoc(type){const c={transfer:['Send stock to outlet','warehouse','outlet'],issue:['Issue stock to kitchen','outlet','kitchen']}[type];
+ if(type=='waste')return doc({title:'Record wastage',hint:'Removes spoiled or damaged stock from a location.',btn:'Record wastage',head:[{k:'f',l:'Location',t:'select',o:locs()},{k:'d',l:'Date',t:'date',v:today()},{k:'note',l:'Reason (spoiled, dropped…)'}],save:async(h,L)=>{if(!lowWarn(h.f,L))throw 0;for(const l of L)await move({type:'waste',ing:l.ing,from:h.f,qty:l.qty,note:h.note,date:h.d})}});
+ if(type=='opening')return doc({title:'Add opening stock',hint:'Use this once for starting quantities, or to correct a count.',btn:'Add stock',head:[{k:'t',l:'Location',t:'select',o:locs()},{k:'d',l:'Date',t:'date',v:today()},{k:'note',l:'Note',v:'Opening balance'}],save:async(h,L)=>{for(const l of L)await move({type:'opening',ing:l.ing,to:h.t,qty:l.qty,note:h.note,date:h.d})}});
+ doc({title:c[0],hint:type=='transfer'?'Moves stock from the warehouse to an outlet.':'Moves stock from an outlet to its kitchen.',btn:'Post',head:[{k:'f',l:'From',t:'select',o:locs(c[1]=='outlet'?['outlet','warehouse']:[c[1]])},{k:'t',l:'To',t:'select',o:locs(c[2]=='kitchen'?['kitchen']:['outlet','kitchen'])},{k:'d',l:'Date',t:'date',v:today()},{k:'note',l:'Note'}],
+ save:async(h,L)=>{if(h.f==h.t){toast('From and To must differ',1);throw 0}if(!lowWarn(h.f,L))throw 0;const ref=type.slice(0,3).toUpperCase()+'-'+uid().slice(-4).toUpperCase();for(const l of L)await move({type,ing:l.ing,from:h.f,to:h.t,qty:l.qty,ref,note:h.note,date:h.d})}})}
+function partyDoc(){doc({title:'New account',nl:1,head:[{k:'name',l:'Name'},{k:'type',l:'Type',t:'select',o:[['vendor','Vendor (we pay them)'],['customer','Customer (owes us)'],['staff','Staff (advance / credit)']],v:sub.led},{k:'phone',l:'Phone'},{k:'op',l:'Opening balance (Rs)',t:'number',v:0}],
+ save:async h=>{if(!h.name.trim()){toast('Name required',1);throw 0}await ins('par',[{id:uid(),name:h.name.trim(),type:h.type,phone:h.phone,opening:n(h.op),active:true}])}})}
+function payDoc(id,mode){const p=S.par.find(x=>x.id==id),v=p.type=='vendor',m={pay:v?'Pay vendor':'Receive payment',credit:'Give on credit'}[mode];
+ doc({title:m+' · '+p.name,nl:1,head:[{k:'a',l:'Amount (Rs)',t:'number'},{k:'d',l:'Date',t:'date',v:today()},{k:'m',l:'Method',t:'select',o:[['Cash','Cash'],['Bank','Bank transfer'],['Cheque','Cheque']]},{k:'note',l:'Note / reference'}],
+ save:async h=>{const a=n(h.a);if(a<=0){toast('Enter an amount',1);throw 0}await led(id,mode=='credit'?'credit':v?'payment':'receipt',mode=='credit'?a:-a,h.d,h.m,h.note)}})}
+function itemDoc(){doc({title:'New item',nl:1,head:[{k:'name',l:'Name'},{k:'unit',l:'Unit',t:'select',o:['kg','g','l','ml','pcs','pkt','box','bottle'].map(x=>[x,x])},{k:'cat',l:'Category (e.g. Dairy, Veg, Packaging)',v:'general'},{k:'p',l:'Price per unit (Rs)',t:'number'},{k:'min',l:'Alert me below (warehouse)',t:'number',v:0}],
+ save:async h=>{if(!h.name.trim()){toast('Name required',1);throw 0}const{data,error}=await SB.from('ingredients').insert([{name:h.name.trim(),category:h.cat||'general',unit:h.unit,currentstock:0,openingstock:0,minlevel:n(h.min),costperunit:n(h.p),supplier:'',location:''}]).select();if(error){toast(error.message,1);throw error}S.ing.push(...data);S.ing.sort((a,b)=>a.name.localeCompare(b.name))}})}
+function locDoc(){doc({title:'New location',nl:1,head:[{k:'name',l:'Name'},{k:'t',l:'Type',t:'select',o:[['warehouse','Warehouse'],['outlet','Outlet'],['kitchen','Kitchen / counter']]}],save:async h=>{if(!h.name.trim())throw 0;await ins('loc',[{id:uid(),name:h.name.trim(),type:h.t}])}})}
+async function setPrice(id){const i=ingOf(id),v=prompt(`New price per ${i.unit} for ${i.name} (Rs):`,i.costperunit);if(v===null||n(v)<0)return;await upd('ing',id,{costperunit:n(v)});render();toast('Price updated')}
+async function delParty(id){const p=S.par.find(x=>x.id==id),used=S.led.some(l=>l.party_id==id)||S.po.some(o=>o.party_id==id);
+ if(!confirm(used?`${p.name} has transactions, so the account will be archived (hidden) instead of deleted. Its history stays in your records. Continue?`:`Delete ${p.name}? This cannot be undone.`))return;
+ if(used)await upd('par',id,{active:false});else{const{error}=await SB.from('parties').delete().eq('id',id);if(error)return toast(error.message,1);S.par=S.par.filter(x=>x.id!=id)}
+ render();toast(used?'Account archived':'Account deleted')}
+function statement(id){const p=S.par.find(x=>x.id==id);let b=n(p.opening);const rows=S.led.filter(l=>l.party_id==id).sort((a,c)=>a.bizday.localeCompare(c.bizday)||String(a.createdat).localeCompare(String(c.createdat)));
+ const body=rows.map(l=>{b+=n(l.amount);return[l.bizday,l.kind,l.ref,l.note,n(l.amount)>0?n(l.amount):'',n(l.amount)<0?-n(l.amount):'',b]});window._st=[['Date','Type','Ref','Note','Billed','Paid','Balance'],...body];
+ modal(`<h3>${esc(p.name)}</h3><div class="row" style="margin-bottom:12px"><span class="mut">${p.type=='vendor'?'Amount we owe':'Amount owed to us'}</span><b style="margin-left:auto" class="${b>0?'bad':'ok'}">${money(b)}</b><button class="b2 sm" onclick="csv(_st,'statement-${esc(p.name)}')">Download CSV</button><button class="b2 sm" onclick="print()">Print</button></div><div class="tw"><table><tr><th>Date<th>Type<th>Ref<th class=r>Billed<th class=r>Paid<th class=r>Balance</tr><tr><td colspan=5>Opening balance<td class=r>${money(p.opening)}</tr>${body.map(r=>`<tr><td>${r[0]}<td>${r[1]}<td>${esc(r[2])}<td class=r>${r[4]?money(r[4]):''}<td class=r>${r[5]?money(r[5]):''}<td class=r>${money(r[6])}</tr>`).join('')}</table></div>`)}
+function csv(rows,name){const s=rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'text/csv'}));a.download=name+'.csv';a.click()}
+// views
+const TABS=[['dash','🏠','Home'],['stock','📦','Stock'],['buy','🧾','Buying'],['move','🔄','Movements'],['led','👥','Accounts'],['rep','📊','Reports']];
+const go=t=>{tab=t;render();scrollTo(0,0)};
+function render(){$('tabs').innerHTML=TABS.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="go('${t[0]}')"><b>${t[1]}</b>${t[2]}</button>`).join('');$('main').innerHTML=V[tab]()}
+const ph=(t,d,a)=>`<div class="ph"><div><h2>${t}</h2><p class="mut">${d}</p></div><div class="row">${a||''}</div></div>`;
+const stat=(l,v,s,c)=>`<div class="stat ${c||''}"><small>${l}</small><b>${v}</b><span>${s||''}</span></div>`;
+const V={
+dash(){const val=S.lv.reduce((s,x)=>s+n(x.qty)*n(ingOf(x.ingredient_id).costperunit),0),vs=S.par.filter(p=>p.type=='vendor'),pb=vs.reduce((s,p)=>s+Math.max(0,bal(p)),0),rc=S.par.filter(p=>p.type!='vendor').reduce((s,p)=>s+Math.max(0,bal(p)),0),op=S.po.filter(p=>p.status=='open');
+ const c=central(),low=ings().filter(i=>n(i.minlevel)>0&&qty(c,i.id)<=n(i.minlevel)),owe=vs.filter(p=>bal(p)>0).sort((a,b)=>bal(b)-bal(a)).slice(0,4);
+ const todo=[...low.slice(0,5).map(i=>`<div class="todo"><span class="pill bad">Low</span><span><b>${esc(i.name)}</b> is at ${q3(qty(c,i.id))} ${i.unit} <span class="mut">(alert at ${q3(i.minlevel)})</span></span><button class="b sm sp" onclick="newPO()">Order</button></div>`),
+  ...(op.length?[`<div class="todo"><span class="pill warn">Waiting</span><span>${op.length} purchase order${op.length>1?'s':''} not yet received</span><button class="b2 sm sp" onclick="go('buy')">View</button></div>`]:[]),
+  ...owe.map(p=>`<div class="todo"><span class="pill warn">Payable</span><span>You owe ${esc(p.name)} ${money(bal(p))}</span><button class="b2 sm sp" onclick="payDoc('${p.id}','pay')">Pay</button></div>`)];
+ return ph('Home','What needs your attention today.')+`<div class="stats">${stat('Stock value',money(val),'All locations combined')}${stat('You owe vendors',money(pb),'Total payable',pb?'r':'g')}${stat('Customers owe you',money(rc),'Total receivable')}${stat('Orders to receive',op.length,'Open purchase orders',op.length?'o':'g')}</div>
+ <div class="card"><h3>Quick actions</h3><p class="sub">The most common jobs, one tap away.</p><div class="qa"><button onclick="newPO()">🧾 New purchase order<small>Order from a vendor</small></button><button onclick="mvDoc('transfer')">🚚 Send to outlet<small>Warehouse → Outlet</small></button><button onclick="mvDoc('issue')">🍕 Issue to kitchen<small>Outlet → Kitchen</small></button><button onclick="mvDoc('waste')">🗑️ Record wastage<small>Spoiled or damaged</small></button></div></div>
+ <div class="card"><h3>Needs attention</h3><p class="sub">Low stock, orders to receive and bills to pay.</p>${todo.join('')||'<span class="ok">All clear. Nothing needs action right now.</span>'}</div>
+ <div class="card has-table"><h3>Latest movements</h3><p class="sub">The 8 most recent stock changes.</p>${mvTable(S.mv.slice().sort((a,b)=>b.at.localeCompare(a.at)).slice(0,8))}</div>`},
+stock(){const f=window._loc||'',s=(window._q||'').toLowerCase(),L=ings().filter(i=>i.name.toLowerCase().includes(s)),g={};L.forEach(i=>(g[i.category||'general']=g[i.category||'general']||[]).push(i));
+ const rows=Object.keys(g).sort().map(k=>`<tr class="grp"><td colspan=6><span class="cat-name">${esc(k)}</span><span class="cat-count">${g[k].length} item${g[k].length>1?'s':''}</span></tr>`+g[k].map(i=>{const q=f?qty(f,i.id):total(i.id);const isLow=n(i.minlevel)>0&&S.lv.filter(x=>x.ingredient_id==i.id).some(x=>n(x.qty)<=n(i.minlevel)&&n(x.qty)>0);return `<tr><td style="font-weight:500">${esc(i.name)}<td class="r ${q<=0?'bad':''}" style="font-size:15px"><b>${q3(q)}</b> <span class="mut" style="font-size:12px">${i.unit}</span><td class=r><a style="cursor:pointer;color:var(--ac);font-weight:700;font-size:15px;text-decoration:none" onclick="setPrice('${i.id}')">${money(i.costperunit)}</a><td class=r style="font-weight:600">${money(q*n(i.costperunit))}<td>${q<=0?'<span class="pill bad">Out of stock</span>':isLow?'<span class="pill warn">⚠️ Running low</span>':'<span class="pill ok">In stock</span>'}</tr>`}).join('')).join('');
+ return ph('Stock','What you have right now, grouped by category.',`<button class="b2" onclick="locDoc()">+ Location</button><button class="b" onclick="itemDoc()">+ New item</button>`)+`<div class="card has-table"><div class="row" style="margin-bottom:16px"><select style="width:auto;flex:1;min-width:150px" onchange="_loc=this.value;render()"><option value="">All locations</option>${S.loc.map(l=>`<option value="${l.id}" ${f==l.id?'selected':''}>${esc(l.name)} (${l.type})</option>`).join('')}</select><input style="flex:1;min-width:150px" placeholder="Search items" value="${esc(window._q||'')}" onchange="_q=this.value;render()"></div><div class="tw tbl-stock"><table><tr><th>Item</th><th class=r>In stock</th><th class=r>Price / unit</th><th class=r>Total Value</th><th class=r>Status</th></tr>${rows||'<tr><td colspan=5 class=mut style="text-align:center;padding:20px">No items found.</td></tr>'}</table></div></div>`},
+buy(){const ps=S.po.slice().sort((a,b)=>b.bizday.localeCompare(a.bizday)),st={received:'ok',open:'warn',cancelled:'bad'};
+ return ph('Buying','Order from vendors, then receive the goods when they arrive.',`<button class="b2" onclick="retDoc()">Return to vendor</button><button class="b" onclick="newPO()">+ New order</button>`)+`<div class="card"><div class="flow"><i>1 Create order</i><span>→</span><i>2 Goods arrive</i><span>→</span><i>3 Tap Receive</i><span>= stock + vendor bill</span></div></div><div class="card"><div class="tw"><table><tr><th>Order<th>Date<th>Vendor<th>Deliver to<th class=r>Total<th>Status<th></tr>${ps.map(p=>`<tr><td><b>${p.no}</b><td>${p.bizday}<td>${esc(S.par.find(x=>x.id==p.party_id)?.name)}<td>${esc(locName(p.loc_id))}<td class=r>${money(p.total)}<td><span class="pill ${st[p.status]||''}">${p.status=='open'?'Waiting':p.status}</span><td>${p.status=='open'?`<button class="b sm" onclick="receivePO('${p.id}')">Receive</button> <button class="b2 sm" onclick="cancelPO('${p.id}')">Cancel</button>`:''}</tr>`).join('')||'<tr><td colspan=7 class=mut>No orders yet. Tap “New order” to start.'}</table></div></div>`},
+move(){const ty=window._mt||'',m=S.mv.filter(x=>!ty||x.type==ty).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,80);
+ return ph('Movements','Move stock between places, or remove it when wasted.',`<button class="b2" onclick="mvDoc('opening')">Add opening stock</button>`)+`<div class="card"><h3>Stock flow</h3><p class="sub">Goods travel one way. Pick the step you are doing.</p><div class="flow" style="margin-bottom:14px"><i>Vendor</i><span>→</span><i>Warehouse</i><span>→</span><i>Outlet</i><span>→</span><i>Kitchen</i></div><div class="qa"><button onclick="go('buy')">Vendor → Warehouse<small>Use Buying → Receive</small></button><button onclick="mvDoc('transfer')">Warehouse → Outlet<small>Send stock out</small></button><button onclick="mvDoc('issue')">Outlet → Kitchen<small>Issue for cooking</small></button><button onclick="mvDoc('waste')">Wastage<small>Remove spoiled stock</small></button></div></div>
+ <div class="card has-table"><div class="row" style="padding:0 0 12px 0"><h3 style="margin-right:auto">History</h3><select style="width:auto" onchange="_mt=this.value;render()"><option value="">All types</option>${[['in','Received'],['transfer','Sent to outlet'],['issue','To kitchen'],['waste','Wastage'],['return','Returned'],['opening','Opening']].map(x=>`<option value="${x[0]}" ${ty==x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div>${mvTable(m)}</div>`},
+led(){const t=sub.led,ps=S.par.filter(p=>p.type==t&&p.active!==false),tot=ps.reduce((s,p)=>s+bal(p),0),v=t=='vendor';
+ return ph('Accounts','Who you owe, and who owes you.',`<button class="b" onclick="partyDoc()">+ New account</button>`)+`<div class="row" style="margin-bottom:14px"><div class="tabs">${[['vendor','Vendors'],['customer','Customers'],['staff','Staff']].map(x=>`<button class="${t==x[0]?'on':''}" onclick="sub.led='${x[0]}';render()">${x[1]}</button>`).join('')}</div></div>
+ <div class="stats">${stat(v?'Total you owe':'Total owed to you',money(tot),v?'Across all vendors':'Across all accounts',tot>0?(v?'r':'o'):'g')}${stat('Accounts',ps.length)}</div>
+ <div class="card has-table"><div class="tw"><table><tr><th>Name<th>Phone<th class=r>${v?'Total billed':'Credit given'}<th class=r>${v?'Paid / returned':'Received'}<th class=r>${v?'You owe':'Owes you'}<th></tr>${ps.map(p=>{const e=S.led.filter(l=>l.party_id==p.id),b=e.filter(l=>n(l.amount)>0).reduce((s,l)=>s+n(l.amount),0)+Math.max(0,n(p.opening)),pd=-e.filter(l=>n(l.amount)<0).reduce((s,l)=>s+n(l.amount),0);return `<tr><td><b>${esc(p.name)}</b><td class=mut>${esc(p.phone)}<td class=r>${money(b)}<td class=r>${money(pd)}<td class="r ${bal(p)>0?'bad':'ok'}"><b>${money(bal(p))}</b><td><button class="b2 sm" onclick="statement('${p.id}')">Statement</button> <button class="b sm" onclick="payDoc('${p.id}','pay')">${v?'Pay':'Receive'}</button>${v?'':` <button class="b2 sm" onclick="payDoc('${p.id}','credit')">+ Credit</button>`} <button class="b2 sm bad" onclick="delParty('${p.id}')">Delete</button></tr>`}).join('')||'<tr><td colspan=6 class=mut>No accounts yet. Tap “New account”.'}</table></div></div>`},
+rep(){const mo=window._mo||today().slice(0,7),mv=S.mv.filter(m=>m.at.slice(0,7)==mo),sum=(i,ty)=>mv.filter(m=>m.ingredient_id==i&&ty.includes(m.type)).reduce((s,m)=>s+n(m.qty),0);
+ const items=ings().map(i=>[i.name,i.unit,n(i.costperunit),sum(i.id,['in','opening']),sum(i.id,['issue']),sum(i.id,['waste']),sum(i.id,['return']),total(i.id),total(i.id)*n(i.costperunit)]);window._r1=[['Item','Unit','Price','Received','To kitchen','Wasted','Returned','On hand','Value'],...items];
+ const lv=S.loc.map(l=>[l.name,l.type,S.lv.filter(x=>x.location_id==l.id).reduce((s,x)=>s+n(x.qty)*n(ingOf(x.ingredient_id).costperunit),0)]);window._r2=[['Location','Type','Value'],...lv];
+ const vp=S.par.filter(p=>p.type=='vendor').map(p=>{const e=S.led.filter(l=>l.party_id==p.id),f=k=>e.filter(l=>l.kind==k).reduce((s,l)=>s+n(l.amount),0);return[p.name,n(p.opening),f('bill'),-f('payment'),-f('return'),bal(p)]});window._r3=[['Vendor','Opening','Billed','Paid','Returned','You owe'],...vp];
+ const tb=(h,r,m)=>`<div class="tw"><table><tr>${h.map((x,i)=>`<th class="${i>(m||0)?'r':''}">${x}`).join('')}</tr>${r.map(x=>`<tr>${x.map((c,i)=>`<td class="${i>(m||0)?'r':''}">${typeof c=='number'?(/Price|Value|owe|Billed|Paid|Opening|Returned/.test(h[i])&&h[i]!='Returned'||h[i]=='Returned'&&h==_r3[0]?money(c):q3(c)):esc(c)}`).join('')}</tr>`).join('')}</table></div>`;
+ return ph('Reports','Monthly totals, stock value and vendor balances. Each can be downloaded.')+`<div class="card has-table"><div class="row" style="padding:0 0 12px 0"><h3 style="margin-right:auto">Items this month</h3><input type="month" style="width:auto" value="${mo}" onchange="_mo=this.value;render()"><button class="b2 sm" onclick="csv(_r1,'items-${mo}')">CSV</button></div>${tb(_r1[0],items,1)}</div>
+ <div class="card has-table"><div class="row" style="padding:0 0 12px 0"><h3 style="margin-right:auto">2. Stock value by location</h3><button class="b2 sm" onclick="csv(_r2,'valuation')">CSV</button></div>${tb(_r2[0],lv,1)}</div>
+ <div class="card has-table"><div class="row" style="padding:0 0 12px 0"><h3 style="margin-right:auto">3. Vendor balances</h3><button class="b2 sm" onclick="csv(_r3,'payables')">CSV</button></div>${tb(_r3[0],vp)}</div>`}};
+function mvTable(m){const L={in:['Received','in'],opening:['Opening','in'],transfer:['Sent to outlet',''],issue:['To kitchen',''],waste:['Wastage','out'],return:['Returned','out']};return `<div class="tw"><table><tr><th>Date<th>Type<th>Item<th class=r>Qty<th>Route<th>Ref<th class=r>Value</tr>${m.map(x=>{const l=L[x.type]||[x.type,''];return `<tr><td>${x.at.slice(0,10)}<td><span class="pill ${l[1]}">${l[0]}</span><td>${esc(ingOf(x.ingredient_id).name)}<td class=r>${q3(x.qty)} ${ingOf(x.ingredient_id).unit}<td>${x.from_loc?esc(locName(x.from_loc)):'—'} → ${x.to_loc?esc(locName(x.to_loc)):'—'}<td class=mut>${esc(x.ref)}<td class=r>${money(n(x.qty)*n(x.unitcost))}</tr>`}).join('')||'<tr><td colspan=7 class=mut style="text-align:center;padding:24px">No movements yet.</td></tr>'}</table></div>`}
+function sqlM(){modal(`<h3>Supabase SQL setup</h3><p class="mut" style="margin-bottom:8px">Adds the warehouse tables next to your existing ingredients table. Run once.</p><button class="b2" onclick="navigator.clipboard.writeText($('sq').textContent);toast('Copied')">Copy</button><pre id="sq" style="white-space:pre-wrap;font-size:11px;margin-top:10px">create table if not exists locations(id text primary key,name text not null,type text default 'outlet');
+create table if not exists stock_levels(id text primary key,location_id text references locations(id),ingredient_id integer references ingredients(id),qty numeric default 0);
+create table if not exists parties(id text primary key,name text not null,type text not null,phone text default '',opening numeric default 0,active boolean default true);
+create table if not exists ledger(id text primary key,party_id text references parties(id),bizday date,kind text,amount numeric,ref text default '',note text default '',createdat timestamptz default now());
+create table if not exists stock_moves(id text primary key,type text,ingredient_id integer,from_loc text,to_loc text,qty numeric,unitcost numeric default 0,ref text default '',note text default '',at timestamptz default now());
+create table if not exists purchase_orders(id text primary key,no text,party_id text,bizday date,loc_id text,status text default 'open',total numeric default 0,note text default '');
+create table if not exists po_items(id text primary key,po_id text references purchase_orders(id) on delete cascade,ingredient_id integer,qty numeric,price numeric);</pre>`)}
+boot();
+</script></body></html>
