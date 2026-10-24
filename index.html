@@ -2816,7 +2816,7 @@ riderPhones: {
     "Atif":        "923047373321",
     "Ehsan":       "923193157142",
     "Madni":       "923130555890",
-    "Rana Dilawar": "923167530583",
+    "Rana Dilawar": "923186913345",
     "Shahzad":     "923138322920",
     "Dilawar Siyal": "923144815123",
 },
@@ -5460,13 +5460,8 @@ function showPermissionDeniedHelp() {
     `;
 }
 
-    async function updateStatus(id, newStatus) {
-    playClick('thud');
-    try {
-        await callAdminAction('updateStatus', { id, status: newStatus });
-        renderKitchenOrders();
-    } catch (e) { /* alert already shown inside callAdminAction */ }
-}
+// Instant visual response, then the server call happens behind it
+
 async function assignRider(id, rider) {
     playClick('pop');
     try {
@@ -5615,7 +5610,7 @@ async function loadDeliveryHistory() {
     function openKitchenPanel() { 
         document.getElementById('kitchen-panel-overlay').style.display = 'flex'; 
         renderKitchenOrders(); 
-        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 5000); 
+        if(!kitchenInterval) kitchenInterval = setInterval(renderKitchenOrders, 10000); 
         setScrollLock(true); 
         loadFuelPriceSetting();
     }
@@ -6180,113 +6175,192 @@ function sendToCC(orderId, itemsB64, location, subtotal, deliveryFee, createdAt,
         return a === b || a.includes(b) || b.includes(a);
     }
 
-    async function renderKitchenOrders() {
-        if(!sb) return; 
-        
-        if (currentKitchenFilter !== 'CALC_HISTORY') {
-            let query = sb.from('kitchen_orders').select('*').neq('status','PENDING').order('created_at', { ascending: false });
-            if(currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
-            if(kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
-            const { data: orders } = await query;
-            try {
-                const ids = [...new Set((orders || []).map(o => o.assigned_rider).filter(Boolean))];
-                if (ids.length) {
-                    const { data: att } = await sb.from('rider_attendance').select('id,phone').in('id', ids);
-                    (att || []).forEach(r => { _riderPhoneById[String(r.id)] = normPh(r.phone); });
-                }
-            } catch (e) { console.warn('rider phone lookup failed', e); }
-            const cardMap = await fetchCardMap(); 
-            const list = document.getElementById('kitchen-orders-list');
-            list.innerHTML = (!orders || orders.length === 0) ? "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>" : "";
-            const now = new Date(); 
-            let isAnyOrderLate = false;
-            orders && orders.forEach((o) => {
-                const createdAt = new Date(o.created_at); 
-                const limitMins = o.status === 'DELIVERING' ? 45 : 25;
-                const remaining = (limitMins * 60000) - (now - createdAt);
-                let timeLabel = ""; 
-                let alertClass = "";
-                if (!['READY','ASSIGNED','OUT','PAID','COMPLETED','VOIDED','CANCELLED'].includes(o.status)) { 
-    if (remaining <= 0) { 
-        alertClass = "late"; 
-        timeLabel = "LATE"; 
-        isAnyOrderLate = true; 
-    } else { 
-    timeLabel = Math.floor(remaining/60000) + ":" + Math.floor((remaining%60000)/1000).toString().padStart(2,'0'); 
-    if (remaining <= 5 * 60000) alertClass = "warning"; 
+    // ══════════ KITCHEN: stable-DOM renderer ══════════
+let _kBusy = false, _kAgain = false, _kPressEl = null, _kPressTimer = null,
+    _kLastSiren = 0, _kIO = null;
+const _kPending = new Set();
+const K_DONE = ['READY','ASSIGNED','OUT','PAID','COMPLETED','VOIDED','CANCELLED'];
+
+(function kitchenSetup(){
+  const list = document.getElementById('kitchen-orders-list');
+  list.addEventListener('pointerdown', e => {
+    _kPressEl = e.target.closest('.kitchen-card'); clearTimeout(_kPressTimer);
+  }, true);
+  const rel = () => { clearTimeout(_kPressTimer); _kPressTimer = setTimeout(() => _kPressEl = null, 500); };
+  list.addEventListener('pointerup', rel, true);
+  list.addEventListener('pointercancel', rel, true);
+  if ('IntersectionObserver' in window)
+    _kIO = new IntersectionObserver(es => es.forEach(en =>
+      en.target.classList.toggle('in-view', en.isIntersecting)), { root: list, rootMargin: '150px' });
+  setInterval(tickKitchenTimers, 1000);
+})();
+
+// Updates timers + late/warning classes. Touches the DOM only when something changed.
+function tickKitchenTimers(){
+  if (document.getElementById('kitchen-panel-overlay').style.display !== 'flex') return false;
+  const now = Date.now(); let anyLate = false;
+  document.querySelectorAll('#kitchen-orders-list>.kitchen-card').forEach(c => {
+    const st = c.dataset.status; let txt = '', late = false, warn = false;
+    if (!K_DONE.includes(st)) {
+      const rem = (+c.dataset.limit) * 60000 - (now - c._ts);
+      if (rem <= 0) { late = true; txt = 'LATE'; anyLate = true; }
+      else {
+        warn = rem <= 300000;
+        txt = Math.floor(rem / 60000) + ':' + String(Math.floor((rem % 60000) / 1000)).padStart(2, '0');
+      }
+    } else if (st !== 'READY' && st !== 'VOIDED') {
+      txt = st === 'ASSIGNED' ? '🛵 With Rider' : (st === 'CANCELLED' ? '🚫 Cancelled' : '✓ Done');
+    }
+    if (c._late !== late) { c._late = late; c.classList.toggle('late', late); }
+    if (c._warn !== warn) { c._warn = warn; c.classList.toggle('warning', warn); }
+    const t = c._timer || (c._timer = c.querySelector('.order-timer'));
+    if (t && t.textContent !== txt) t.textContent = txt;
+  });
+  return anyLate;
 }
-} else if (['ASSIGNED','OUT','PAID','COMPLETED','CANCELLED'].includes(o.status)) {
-    timeLabel = o.status === 'ASSIGNED' ? '🛵 With Rider' : (o.status === 'CANCELLED' ? '🚫 Cancelled' : '✓ Done');
-    alertClass = '';
-                }
-                let priceHtml = ""; 
-if (o.subtotal) {
+
+function kitchenCardHtml(o, cardMap){
+  const orderBranch = o.branch || 'MULTAN';
+  let priceHtml = '';
+  if (o.subtotal) {
     const hasDiscount = o.discount && o.discount > 0;
     const discBase = (o.eligible_subtotal && o.eligible_subtotal > 0) ? o.eligible_subtotal : (o.subtotal + o.discount);
     const discPct = hasDiscount ? Math.round((o.discount / discBase) * 100) : 0;
     const discountBadge = hasDiscount ? `<div style="background:#e8f5e9; color:#16a34a; font-size:12px; font-weight:700; padding:5px 10px; border-radius:8px; margin-bottom:8px; display:inline-block; border:1px solid #a5d6a7;">✅ ${discPct}% DISCOUNT APPLIED — Saved: Rs ${o.discount}</div><br>` : '';
-    const sourceBadge = o.discount_claimed 
-        ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
-        : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
+    const sourceBadge = o.discount_claimed
+      ? `<div style="background:#fef3c7; color:#92400e; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #fcd34d; margin-bottom:8px;">🎉 CLAIMED 10% DISCOUNT</div>`
+      : `<div style="background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; display:inline-block; border:1px solid #90caf9; margin-bottom:8px;">🌐 WEBSITE ORDER</div>`;
     priceHtml = `<div class="price-box" style="flex-direction:column; align-items:flex-start; gap:6px;">
-        ${hasDiscount ? discountBadge : ''}
-        ${o.type === 'Delivery' ? sourceBadge : ''}
-        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <div style="font-size:14px;">Shop: Rs ${o.subtotal}${o.tax > 0 ? ' | Tax ('+escHtml(o.payment_method||'Cash')+'): Rs '+o.tax : ''} | Del: Rs ${o.delivery_fee || 0}</div>
-            <div style="color:var(--red); font-size:18px; font-weight:700;">Total: Rs ${(o.subtotal + (o.tax || 0) + (o.delivery_fee || 0))}</div>
-        </div>
-    </div>`;
-}
-                let riderHtml = ""; 
-                if(o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:700; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${riderMatches(o, r) ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
-                const card = document.createElement('div'); 
-                card.className = `kitchen-card status-${o.status.toLowerCase()} ${alertClass}`;
-// Build customer info display
-let customerInfoHtml = '';
-if (o.type === 'Takeaway') {
-    // Extract name and phone from the order items or stored fields
-    // Check if we have stored name/phone in the order object
-    const custName = o.customer_name || '';
-    const custPhone = o.phone || '';
-    
-    if (custName || custPhone) {
-        customerInfoHtml = `<div style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px dashed var(--orange); padding:10px; border-radius:10px; margin-top:8px; margin-bottom:8px;">`;
-        if (custName) customerInfoHtml += `<div style="font-weight:600; color:var(--red); font-size:14px;">👤 ${escHtml(custName)}</div>`;
-        if (custPhone) customerInfoHtml += `<div style="font-weight:700; color:var(--orange); font-size:13px;">📞 ${escHtml(custPhone)}</div>`;
-        customerInfoHtml += `</div>`;
-    }
-} else if (o.phone || o.customer_name) {
+      ${hasDiscount ? discountBadge : ''}
+      ${o.type === 'Delivery' ? sourceBadge : ''}
+      <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+        <div style="font-size:14px;">Shop: Rs ${o.subtotal}${o.tax > 0 ? ' | Tax ('+escHtml(o.payment_method||'Cash')+'): Rs '+o.tax : ''} | Del: Rs ${o.delivery_fee || 0}</div>
+        <div style="color:var(--red); font-size:18px; font-weight:700;">Total: Rs ${(o.subtotal + (o.tax || 0) + (o.delivery_fee || 0))}</div>
+      </div></div>`;
+  }
+  let riderHtml = '';
+  if (o.type === 'Delivery') riderHtml = `<div class="rider-box"><span style="font-size:11px; font-weight:700; color:#888;">ASSIGN RIDER:</span><div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${(BRANCH_CONFIG[o.branch] || BRANCH_CONFIG.MULTAN).riders.map(r => `<button class="rider-btn ${riderMatches(o, r) ? 'selected' : ''}" onclick="assignRider('${o.id}', '${r}')">${r}</button>`).join('')}</div></div>`;
+
+  let customerInfoHtml = '';
+  if (o.phone || o.customer_name) {
     customerInfoHtml = `<div style="background:linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); border:2px dashed var(--orange); padding:10px; border-radius:10px; margin-top:8px; margin-bottom:8px;">`;
     if (o.customer_name) customerInfoHtml += `<div style="font-weight:600; color:var(--red); font-size:14px;">👤 ${escHtml(o.customer_name)}</div>`;
     if (o.phone) customerInfoHtml += `<div style="font-weight:700; color:var(--orange); font-size:13px;">📞 ${escHtml(o.phone)}</div>`;
     customerInfoHtml += `</div>`;
+  }
+
+  return `<span class="kitchen-badge kb-${escHtml(o.status.toLowerCase())}">${escHtml(o.status)}</span><div style="font-weight:700; color:var(--red); font-size:18px;">${escHtml(o.type).toUpperCase()} - ${escHtml(o.location)} <span class="order-branch-tag ${escHtml(orderBranch)}">${escHtml(orderBranch)}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'></div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${escHtml(o.items)}</div>
+${priceHtml}
+<div class="admin-actions">
+  <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
+  <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
+  <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${jsq(o.location)}')">CHG TABLE</button>
+  <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
+  <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
+  <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
+  <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
+  <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
+  ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${jsq(o.location)}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}
+</div>
+${riderHtml}
+<div style="display:flex; gap:10px; margin-top:15px;">
+  ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
+  ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}
+  ${(o.status === 'DELIVERING' || o.status === 'ASSIGNED') ? `<button class="next-btn" style="background:#16a34a; border-radius:12px; flex:1;" onclick="if(confirm('Mark this order as delivered?')) updateStatus('${o.id}', 'COMPLETED')">MARK DELIVERED ✅</button>` : ''}
+</div>`;
 }
 
-const orderBranch = o.branch || 'MULTAN';
-card.innerHTML = `<span class="kitchen-badge kb-${escHtml(o.status.toLowerCase())}">${escHtml(o.status)}</span><div style="font-weight:700; color:var(--red); font-size:18px;">${escHtml(o.type).toUpperCase()} - ${escHtml(o.location)} <span class="order-branch-tag ${escHtml(orderBranch)}">${escHtml(orderBranch)}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'>${timeLabel}</div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${escHtml(o.items)}</div>
-${priceHtml}
-                <div class="admin-actions">
-                    <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
-                    <button class="btn-action btn-recall" onclick="adminRecallItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">RECALL</button>
-                    <button class="btn-action btn-table" onclick="adminChangeTable('${o.id}', '${jsq(o.location)}')">CHG TABLE</button>
-                    <button class="btn-action btn-discount" onclick="applyCustomDiscount('${o.id}')">% DISCOUNT</button>
-                    <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
-                    <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
-                    <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
-                    <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
-${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${jsq(o.location)}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}                </div>
-                ${riderHtml}
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    ${o.status === 'WAITING' ? `<button class="next-btn" style="background:#007bff; border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'PREPARING')">PREPARING</button>` : ''}
-                    ${o.status === 'PREPARING' ? `<button class="next-btn" style="background:var(--wa-green); border-radius:12px; flex:1;" onclick="updateStatus('${o.id}', 'READY')">MARK READY ✅</button>` : ''}
-                    ${(o.status === 'DELIVERING' || o.status === 'ASSIGNED') ? `<button class="next-btn" style="background:#16a34a; border-radius:12px; flex:1;" onclick="if(confirm('Mark this order as delivered?')) updateStatus('${o.id}', 'COMPLETED')">MARK DELIVERED ✅</button>` : ''}
-                </div>`;
-                list.appendChild(card);
-            });
-            if(isAnyOrderLate) playClick('siren');
-            if(currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
-        }
+async function renderKitchenOrders(){
+  if (!sb || currentKitchenFilter === 'CALC_HISTORY') return;
+  if (_kBusy) { _kAgain = true; return; }
+  _kBusy = true;
+  try {
+    let query = sb.from('kitchen_orders').select('*').neq('status', 'PENDING')
+      .order('created_at', { ascending: false }).limit(150);
+    if (currentKitchenFilter === 'DELIVERY') query = query.eq('type', 'Delivery');
+    if (kitchenBranchFilter !== 'ALL') query = query.eq('branch', kitchenBranchFilter);
+
+    const [{ data: orders }, cardMap] = await Promise.all([query, fetchCardMap()]);
+    if (!orders) return;                       // network error: keep what's on screen
+
+    const ids = [...new Set(orders.map(o => o.assigned_rider).filter(Boolean))]
+      .filter(i => !(String(i) in _riderPhoneById));
+    if (ids.length) {
+      try {
+        const { data: att } = await sb.from('rider_attendance').select('id,phone').in('id', ids);
+        (att || []).forEach(r => { _riderPhoneById[String(r.id)] = normPh(r.phone); });
+      } catch (e) {}
     }
+
+    const list = document.getElementById('kitchen-orders-list');
+    if (!orders.length) {
+      list.innerHTML = "<p style='padding:20px; text-align:center; color:#999;'>NO ACTIVE ORDERS</p>";
+      return;
+    }
+    list.querySelectorAll(':scope>:not(.kitchen-card)').forEach(n => n.remove());
+
+    const existing = new Map();
+    list.querySelectorAll(':scope>.kitchen-card').forEach(el => existing.set(el.dataset.id, el));
+
+    let prev = null;
+    orders.forEach(o => {
+      const id = String(o.id);
+      let el = existing.get(id);
+      if (el) existing.delete(id);
+      else {
+        el = document.createElement('div');
+        el.dataset.id = id;
+        el._ts = new Date(o.created_at).getTime();
+        el.dataset.created = o.created_at;
+        if (_kIO) _kIO.observe(el); else el.classList.add('in-view');
+      }
+
+      const sig = JSON.stringify([o, cardMap[o.id] || null, _riderPhoneById[String(o.assigned_rider)] || '']);
+      const busy = _kPending.has(id) || (_kPressEl && el.contains(_kPressEl));
+      if (el.dataset.sig !== sig && !busy) {
+        el.dataset.sig = sig;
+        el.className = 'kitchen-card status-' + o.status.toLowerCase();
+        el._late = el._warn = undefined;
+        el.dataset.status = o.status;
+        el.dataset.limit = o.status === 'DELIVERING' ? 45 : 25;
+        el.innerHTML = kitchenCardHtml(o, cardMap);
+        el._timer = null;
+      }
+
+      const expected = prev ? prev.nextElementSibling : list.firstElementChild;
+      if (el !== expected) list.insertBefore(el, expected);
+      prev = el;
+    });
+    existing.forEach(el => { if (_kIO) _kIO.unobserve(el); el.remove(); });
+
+    const anyLate = tickKitchenTimers();
+    if (anyLate && Date.now() - _kLastSiren > 60000) { _kLastSiren = Date.now(); playClick('siren'); }
+    if (currentKitchenFilter === 'DELIVERY') renderAuditUI(orders);
+  } finally {
+    _kBusy = false;
+    if (_kAgain) { _kAgain = false; setTimeout(renderKitchenOrders, 0); }
+  }
+}
+
+// Instant visual response, then the server call happens behind it
+async function updateStatus(id, newStatus){
+  playClick('thud');
+  id = String(id);
+  _kPending.add(id);
+  const card = document.querySelector(`#kitchen-orders-list>.kitchen-card[data-id="${id}"]`);
+  if (card) {
+    card.dataset.status = newStatus; card.dataset.sig = '';
+    card.className = 'kitchen-card status-' + newStatus.toLowerCase();
+    card._late = card._warn = undefined;
+    const b = card.querySelector('.kitchen-badge');
+    if (b) { b.textContent = newStatus; b.className = 'kitchen-badge kb-' + newStatus.toLowerCase(); }
+    card.querySelectorAll('.next-btn').forEach(x => { x.disabled = true; x.style.opacity = '.5'; });
+    tickKitchenTimers();
+  }
+  try { await callAdminAction('updateStatus', { id, status: newStatus }); } catch (e) {}
+  finally { _kPending.delete(id); }
+  renderKitchenOrders();          // reconciles with the server (reverts if it failed)
+}
     // Customer receipt: name on the left, price on the right
 function renderReceiptItems(itemsText) {
     return String(itemsText || '').split('\n').map(line => {
@@ -10984,5 +11058,39 @@ header .logo{transition:font-size .35s var(--spring)}
   })();
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<style id="kitchen-perf">
+/* ═══ KITCHEN PERFORMANCE ═══ */
+#kitchen-panel-overlay,#kitchen-panel-overlay *{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#kitchen-panel-overlay{background:rgba(0,0,0,.72)!important}
+.kitchen-modal{background:#f6f1ea!important}
+
+#kitchen-orders-list>.kitchen-card{
+  position:relative;isolation:isolate;
+  content-visibility:auto;contain-intrinsic-size:auto 340px;
+  background:#fff!important;
+  box-shadow:0 1px 3px rgba(0,0,0,.12)!important;
+  transition:none!important;animation:none!important}
+
+#kitchen-orders-list>.kitchen-card.warning{
+  box-shadow:inset 0 0 0 3px #ffd700!important}
+
+/* LATE: the card itself never moves; only a background layer vibrates */
+#kitchen-orders-list>.kitchen-card.late{
+  background:transparent!important;box-shadow:none!important;
+  border-left-color:#f00!important}
+#kitchen-orders-list>.kitchen-card.late::before{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:#fff1f1;border:2px solid #f00;pointer-events:none}
+#kitchen-orders-list>.kitchen-card.late.in-view::before{
+  will-change:transform;animation:kShake .22s linear infinite}
+@keyframes kShake{
+  0%{transform:translate(2px,1px) rotate(.2deg)}
+  25%{transform:translate(-2px,-1px) rotate(-.2deg)}
+  50%{transform:translate(-1px,2px) rotate(.2deg)}
+  75%{transform:translate(2px,-2px) rotate(-.2deg)}
+  100%{transform:translate(2px,1px) rotate(.2deg)}}
+</style>
 </body>
 </html>
