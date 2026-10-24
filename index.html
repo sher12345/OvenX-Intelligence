@@ -8172,6 +8172,10 @@ async function openAdminPanel() {
   document.getElementById('admin-panel-overlay').classList.add('open');
   setScrollLock(true);
   admInitBranch(admActiveBranch);
+  // Force the partners list to load immediately when the panel opens
+  if (typeof window.ptRenderAdmin === 'function') {
+    window.ptRenderAdmin();
+  }
   admLoadState().then(() => {
     admRenderAvailability();
     admUpdateBadges();
@@ -11323,7 +11327,8 @@ window.ptPrint = function(id){
     ? '<img class="lg" src="'+escHtml(p.logo)+'">'
     : '<div class="lg ph">'+escHtml((p.name||'?').charAt(0).toUpperCase())+'</div>';
 
-  var big = p.offer_members || p.offer_customers || 'SPECIAL OFFER';
+  // SWAPPED: The partner's offer to OvenX customers is now the main headline
+  var big = p.offer_customers || p.offer_members || 'SPECIAL OFFER';
   var bigCls = big.length > 28 ? 'big s3' : big.length > 16 ? 'big s2' : 'big';
   var dates = escHtml(fmtD(p.valid_from)) + (p.valid_until ? ' - ' + escHtml(fmtD(p.valid_until)) : ' onwards');
 
@@ -11334,10 +11339,12 @@ window.ptPrint = function(id){
     +     '<div class="pn">'+escHtml(p.name)+'</div>'
     +   '</div>'
     +   '<div class="mid">'
-    +     '<div class="lbl">'+(p.offer_members ? 'YOUR OVEN X PERK' : 'PARTNER OFFER')+'</div>'
+    // SWAPPED: Label changes to Partner Offer
+    +     '<div class="lbl">'+(p.offer_customers ? 'PARTNER OFFER' : 'YOUR OVEN X PERK')+'</div>'
     +     '<div class="'+bigCls+'">'+escHtml(big)+'</div>'
+    // SWAPPED: The OvenX offer is now the smaller text below
     +     (p.offer_members && p.offer_customers
-            ? '<div class="alt">Also at '+escHtml(p.name)+': '+escHtml(p.offer_customers)+'</div>' : '')
+            ? '<div class="alt">Also at Oven X: '+escHtml(p.offer_members)+'</div>' : '')
     +   '</div>'
     +   '<div class="bot">'
     +     '<div><div class="lbl">VALID FROM</div><div class="dt">'+dates+'</div></div>'
@@ -11382,5 +11389,6 @@ window.ptPrint = function(id){
 };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
