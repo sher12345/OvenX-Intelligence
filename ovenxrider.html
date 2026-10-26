@@ -196,10 +196,23 @@ details.oc-items summary::-webkit-details-marker{display:none;}
 .rc-handover{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(41,128,185,.12);border:1px solid rgba(41,128,185,.35);}
 .rc-handover span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#5dade2;}
 .rc-handover b{font-size:20px;font-weight:900;color:#5dade2;}
+.slip{position:fixed;inset:0;z-index:20000;background:var(--bg);overflow-y:auto;padding:calc(16px + env(safe-area-inset-top)) 16px 30px;max-width:430px;margin:0 auto;}
+.slip-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;}
+.slip-title{text-align:center;font-size:22px;font-weight:900;}
+.slip-title span{color:var(--orange);}
+.slip-meta{text-align:center;font-size:12px;color:var(--text2);margin:4px 0 14px;line-height:1.6;}
+.slip-row{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.1);font-size:12px;}
+.slip-row small{display:block;color:var(--text3);font-size:11px;margin-top:2px;}
+.slip-row b{white-space:nowrap;font-size:13px;}
+.slip-box{border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;}
+.slip-box span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.slip-box b{font-size:24px;font-weight:900;}
+.slip-close{width:100%;margin-top:16px;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-weight:800;cursor:pointer;}
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<div id="slip" class="slip" style="display:none;"></div>
 
 <!-- SPLASH / LOGIN -->
 <div id="splash">
@@ -736,16 +749,22 @@ function renderCompleted(doneList) {
   el.style.display = completedVisible ? 'block' : 'none';
   if (!completedVisible) return;
 
-  const totalFees     = doneList.reduce((s,o) => s+(o.delivery_fee||0), 0);
+  _lastDone = doneList;
+const totalFees     = doneList.reduce((s,o) => s+(o.delivery_fee||0), 0);
 const totalShop     = doneList.reduce((s,o) => o.payment_method==='credited' ? s : s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
 const totalCash     = totalShop;
-const totalPending  = doneList.filter(o => !o.settled && o.payment_method !== 'credited')
-  .reduce((s,o) => s + (o.subtotal||0) + (o.tax||0) + (o.delivery_fee||0), 0);
+const NONCASH = ['jazzcash','card','bank','credited'];
+const totalPending  = doneList.filter(o => !o.settled && !NONCASH.includes(o.payment_method))
+  .reduce((s,o) => s + (o.subtotal||0) + (o.tax||0), 0);
+const totalPayRider = doneList.filter(o => !o.settled && NONCASH.includes(o.payment_method))
+  .reduce((s,o) => s + (o.delivery_fee||0), 0);
 const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((s,o) => s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0), 0);
 
   el.innerHTML = `
     <!-- SUMMARY HEADER -->
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#4a5568;margin-bottom:10px;">Completed Today</div>
+
+    <button onclick="showSlip()" style="width:100%;padding:15px;border-radius:14px;background:var(--blue);color:#fff;border:none;font-family:var(--font);font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;cursor:pointer;box-shadow:0 3px 0 #1a5276;">📸 Settlement Slip (for screenshot)</button>
 
     <!-- AUDIT SUMMARY CARD -->
     <div style="background:#141920;border:2px solid rgba(39,174,96,0.4);border-radius:16px;padding:16px;margin-bottom:14px;">
@@ -774,7 +793,13 @@ const totalCredited = doneList.filter(o=>o.payment_method==='credited').reduce((
       <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
         <div style="font-size:11px;color:#e67e22;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">💰 Hand Over to Manager</div>
         <div style="font-size:28px;font-weight:900;color:#e67e22;">Rs ${totalPending.toLocaleString()}</div>
-        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Everything collected, including delivery fees, goes back to the shop</div>
+        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Food bill + tax of cash orders only. You keep the delivery fees.</div>
+      </div>
+
+      <div style="background:rgba(41,128,185,0.1);border:1px solid rgba(41,128,185,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:11px;color:#5dade2;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">💵 Shop Pays You</div>
+        <div style="font-size:28px;font-weight:900;color:#5dade2;">Rs ${totalPayRider.toLocaleString()}</div>
+        <div style="font-size:11px;color:#8892a4;margin-top:3px;">Delivery fees for bank / JazzCash / card / credited orders</div>
       </div>
 
       <!-- MY EARNINGS -->
@@ -873,6 +898,13 @@ ${doneList.map((o, idx) => {
           <span style="font-size:12px;color:#8892a4;">Discount Applied</span>
           <span style="font-size:13px;font-weight:700;color:#c0392b;">−Rs ${o.discount}</span>
         </div>` : ''}
+        <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+          ${['jazzcash','card','bank','credited'].includes(o.payment_method)
+            ? `<span style="font-size:12px;color:#27ae60;font-weight:700;">💵 Pay to rider (delivery fee)</span>
+               <span style="font-size:13px;font-weight:800;color:#27ae60;">Rs ${delFee}</span>`
+            : `<span style="font-size:12px;color:#5dade2;font-weight:700;">Hand over to shop (food + tax)</span>
+               <span style="font-size:13px;font-weight:800;color:#5dade2;">Rs ${shopAmt + (o.tax||0)}</span>`}
+        </div>
         <div style="display:flex;justify-content:space-between;padding:10px 12px;background:${isCredited ? 'rgba(192,57,43,0.08)' : 'rgba(230,126,34,0.08)'};">
           <span style="font-size:13px;font-weight:700;color:#f0f2f5;">${isCredited ? 'Not Collected — Credited' : 'Collected from Customer'}</span>
           <span style="font-size:16px;font-weight:900;color:${isCredited ? '#c0392b' : '#e67e22'};">${isCredited ? 'Rs 0' : 'Rs ' + totalAmt}</span>
@@ -887,7 +919,8 @@ ${doneList.map((o, idx) => {
       <div style="font-size:12px;color:#c0392b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔴 End of Shift — Hand Over</div>
       <div style="font-size:32px;font-weight:900;color:#e67e22;">Rs ${totalPending.toLocaleString()}</div>
       <div style="font-size:12px;color:#8892a4;margin-top:5px;">to the manager or cashier</div>
-      <div style="font-size:11px;color:#4a5568;margin-top:8px;">Delivery fees included: <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
+      ${totalPayRider > 0 ? `<div style="font-size:13px;color:#5dade2;margin-top:10px;font-weight:700;">Shop pays you: Rs ${totalPayRider.toLocaleString()}</div>` : ''}
+      <div style="font-size:11px;color:#4a5568;margin-top:8px;">Your delivery fees (you keep): <span style="color:#27ae60;font-weight:700;">Rs ${totalFees}</span></div>
     </div>
   `;
 }
@@ -907,6 +940,55 @@ async function settleOrder(orderId, done) {
     showToast(done ? 'Hisab marked done' : 'Settlement undone', done ? 'success' : 'info');
     loadOrders();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+let _lastDone = [];
+
+function showSlip() {
+  const NONCASH = ['jazzcash','card','bank','credited'];
+  const LABEL = { cash:'Cash', jazzcash:'JazzCash/EasyPaisa', card:'Card', bank:'Bank Transfer', credited:'Credited' };
+  const fmt = n => 'Rs ' + Number(n || 0).toLocaleString();
+  const tm  = d => d ? new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+  let hand = 0, pay = 0, fees = 0;
+
+  const rows = _lastDone.slice().reverse().map((o, i) => {
+    const non  = NONCASH.includes(o.payment_method);
+    const food = (o.subtotal || 0) + (o.tax || 0);
+    const fee  = o.delivery_fee || 0;
+    fees += fee;
+    if (!o.settled) { if (non) pay += fee; else hand += food; }
+    const action = non
+      ? `<b style="color:#27ae60;">Shop pays ${fmt(fee)}</b>`
+      : `<b style="color:#5dade2;">Hand over ${fmt(food)}</b>`;
+    return `<div class="slip-row">
+      <div>#${i + 1} · ${esc(LABEL[o.payment_method] || '—')}${o.settled ? ' · ✅ settled' : ''}
+        <small>${esc(o.location || '')}<br>Delivered ${tm(o.completed_at)}</small></div>
+      ${action}
+    </div>`;
+  }).join('');
+
+  const net = hand - pay;
+  const netLine = net >= 0
+    ? `<div class="slip-box" style="background:rgba(230,126,34,.12);border:1px solid rgba(230,126,34,.4);"><span style="color:#e67e22;">Net: rider gives shop</span><b style="color:#e67e22;">${fmt(net)}</b></div>`
+    : `<div class="slip-box" style="background:rgba(39,174,96,.12);border:1px solid rgba(39,174,96,.4);"><span style="color:#27ae60;">Net: shop gives rider</span><b style="color:#27ae60;">${fmt(-net)}</b></div>`;
+
+  const now = new Date();
+  document.getElementById('slip').innerHTML = `
+    <div class="slip-card">
+      <div class="slip-title">OVEN <span>X</span> · Settlement</div>
+      <div class="slip-meta">
+        <b style="color:var(--text);font-size:14px;">${esc(riderName)}</b> · ${esc(riderPhone)} · ${esc(riderBranch)}<br>
+        ${now.toLocaleDateString('en-PK',{day:'numeric',month:'short',year:'numeric'})} · ${tm(now)}<br>
+        ${_lastDone.length} deliveries · Delivery fees earned ${fmt(fees)}
+      </div>
+      ${rows || '<div class="slip-row">No completed orders</div>'}
+      <div class="slip-box" style="background:rgba(41,128,185,.12);border:1px solid rgba(41,128,185,.4);"><span style="color:#5dade2;">Rider hands over</span><b style="color:#5dade2;">${fmt(hand)}</b></div>
+      <div class="slip-box" style="background:rgba(39,174,96,.12);border:1px solid rgba(39,174,96,.4);"><span style="color:#27ae60;">Shop pays rider</span><b style="color:#27ae60;">${fmt(pay)}</b></div>
+      ${netLine}
+    </div>
+    <button class="slip-close" onclick="document.getElementById('slip').style.display='none'">✕ Close</button>`;
+  document.getElementById('slip').style.display = 'block';
+  document.getElementById('slip').scrollTop = 0;
 }
 
 function toggleCompleted() {
