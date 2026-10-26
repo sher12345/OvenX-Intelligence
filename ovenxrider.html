@@ -193,6 +193,9 @@ details.oc-items summary::-webkit-details-marker{display:none;}
 .rc-actions{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px;}
 .quick-row{grid-template-columns:repeat(3,1fr);}
 .quick-row .sm-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:11px 4px;font-size:11px;}
+.rc-handover{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(41,128,185,.12);border:1px solid rgba(41,128,185,.35);}
+.rc-handover span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#5dade2;}
+.rc-handover b{font-size:20px;font-weight:900;color:#5dade2;}
 </style>
 </head>
 <body>
@@ -695,6 +698,10 @@ function renderOrders(activeList, doneList) {
           ${tax > 0 ? `<div class="rc-row"><span>Tax</span><b>Rs ${tax}</b></div>` : ''}
           <div class="rc-row"><span>Delivery fee</span><b style="color:var(--green);">Rs ${fee}</b></div>
           <div class="rc-total"><span>Collect from customer</span><span>Rs ${collect}</span></div>
+<div class="rc-handover">
+  <span>Hand over to shop (food + tax)</span>
+  <b>Rs ${shop + tax}</b>
+</div>
         </div>
 
         <div class="rc-actions">
@@ -1066,5 +1073,6 @@ async function cancelOrder(orderId) {
 }
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
