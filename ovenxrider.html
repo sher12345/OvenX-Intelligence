@@ -144,9 +144,43 @@ main{padding:calc(52px + var(--sat)) 16px calc(96px + var(--sab))}
 .toast.show{transform:translate(-50%,0)}.toast.error{color:var(--red)}.toast.success{color:var(--green)}
 .banner{position:fixed;top:calc(8px + var(--sat));left:50%;transform:translate(-50%,-150%);width:min(94vw,410px);z-index:450;background:linear-gradient(135deg,#f0902f,#d84a2c);color:#fff;border-radius:22px;padding:14px 16px;transition:transform .5s var(--sp);box-shadow:0 14px 36px rgba(0,0,0,.5)}
 .banner.show{transform:translate(-50%,0)}.banner b{display:block;font-size:16px}.banner span{font-size:13px;opacity:.92}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.kpi{background:var(--s1);border-radius:16px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.kpi span{font-size:12px;color:var(--t2)}
+.kpi small{position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px}
+.kpi.fast small{background:rgba(48,192,106,.16);color:var(--green)}
+.kpi.ok small{background:rgba(74,163,232,.16);color:var(--blue)}
+.kpi.warn small{background:rgba(240,144,47,.16);color:var(--orange)}
+.kpi.late small{background:rgba(255,93,77,.16);color:var(--red)}
+.kpi-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.07);margin-top:8px;overflow:hidden}
+.kpi-bar i{display:block;height:100%;border-radius:2px}
+.chart-card{background:var(--s1);border-radius:20px;padding:14px 14px 6px;margin-bottom:16px}
+.chart-card h3{font-size:14px;font-weight:700;margin:0 4px 10px;color:var(--t2)}
+.chart-card .cv{position:relative;height:200px}
+.chart-card .cv.tall{height:260px}
+.mini-kpis{display:flex;gap:10px;margin-bottom:14px}
+.mini-kpis .kpi{flex:1;padding:10px 12px}
+.mini-kpis .kpi b{font-size:20px}
+.seg.mini{height:34px;margin-bottom:12px;border-radius:10px}
+.seg.mini button{height:28px;font-size:13px;border-radius:8px}
+.rank{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.rank:first-child{border-top:0}
+.rank .pos{width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.rank .pos.g1{background:rgba(240,144,47,.2);color:var(--orange)}
+.rank .pos.g2{background:rgba(74,163,232,.2);color:var(--blue)}
+.rank .pos.g3{background:rgba(48,192,106,.2);color:var(--green)}
+.rank .who{flex:1;min-width:0}
+.rank .who b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank .who span{font-size:12px;color:var(--t2)}
+.rank .num-tag{text-align:right;flex-shrink:0}
+.rank .num-tag b{display:block;font-size:16px;font-weight:800;color:var(--green)}
+.rank .num-tag span{font-size:11px;color:var(--t3)}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation:none!important}#sheet{transition:opacity .2s}}
 @media (prefers-reduced-transparency:reduce){.nav.sc,.tabbar,#sheet,.toast{backdrop-filter:none;-webkit-backdrop-filter:none;background:#1c2330}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -177,9 +211,43 @@ main{padding:calc(52px + var(--sat)) 16px calc(96px + var(--sab))}
         <div class="stat"><b class="num" id="stat-completed">0</b><span>Done today</span></div>
         <div class="stat"><b class="num" id="stat-earnings">0</b><span>Delivery fees</span></div>
       </div>
+      <div id="kpi-quick"></div>
       <div id="orders-list"></div>
     </section>
     <section class="view" id="v1"><div class="lh"><h1 class="lt">History</h1><button class="rf" onclick="loadOrders();showToast('Refreshed','info')">↻ Refresh</button></div><div id="completed-list"></div></section>
+    <section class="view" id="v3">
+      <h1 class="lt">Performance</h1>
+      <div class="seg" style="margin-bottom:14px">
+        <button id="kp-today" class="on" onclick="setKpiPeriod('today')">Today</button>
+        <button id="kp-week" onclick="setKpiPeriod('week')">7 days</button>
+        <button id="kp-month" onclick="setKpiPeriod('month')">This month</button>
+      </div>
+      <div id="kpi-summary"></div>
+
+      <!-- Sub-tabs for charts to save vertical space -->
+      <div class="seg mini" style="margin-bottom:16px">
+        <button id="ct-speed" class="on" onclick="switchChart('speed')">Speed</button>
+        <button id="ct-daily" onclick="switchChart('daily')">Daily</button>
+        <button id="ct-earn" onclick="switchChart('earn')">Earnings</button>
+      </div>
+
+      <!-- Chart containers (only one shows at a time) -->
+      <div id="view-speed" class="chart-card">
+        <h3>⏱ Delivery time distribution</h3>
+        <div class="cv"><canvas id="ch-speed"></canvas></div>
+      </div>
+      <div id="view-daily" class="chart-card" style="display:none">
+        <h3>📈 Deliveries per day</h3>
+        <div class="cv"><canvas id="ch-daily"></canvas></div>
+      </div>
+      <div id="view-earn" class="chart-card" style="display:none">
+        <h3>💰 Earnings per day</h3>
+        <div class="cv"><canvas id="ch-earn"></canvas></div>
+      </div>
+
+      <!-- Leaderboard stays at the bottom -->
+      <div class="chart-card"><h3>🏆 Rider leaderboard (this month)</h3><div id="kpi-leaderboard"></div></div>
+    </section>
     <section class="view" id="v2">
       <h1 class="lt">Shift</h1>
       <div class="grp"><div class="gr"><span>Rider</span><b id="me-n"></b></div><div class="gr"><span>Phone</span><b id="me-p"></b></div><div class="gr"><span>Branch</span><b id="me-b"></b></div></div>
@@ -191,9 +259,10 @@ main{padding:calc(52px + var(--sat)) 16px calc(96px + var(--sab))}
     </section>
   </main>
   <nav class="tabbar">
-    <button class="tab on" onclick="tab(0)"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.5 12a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8L3 7zM8 7a4 4 0 0 1 8 0"/></svg>Orders<b id="tb-n"></b></button>
-    <button class="tab" onclick="tab(1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
-    <button class="tab" onclick="tab(2)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Shift</button>
+    <button class="tab on" data-t="0" onclick="tab(0)"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.5 12a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8L3 7zM8 7a4 4 0 0 1 8 0"/></svg>Orders<b id="tb-n"></b></button>
+    <button class="tab" data-t="1" onclick="tab(1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
+<button class="tab" data-t="3" onclick="tab(3)"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>KPI</button>
+<button class="tab" data-t="2" onclick="tab(2)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Shift</button>
   </nav>
 </div>
 
@@ -215,9 +284,13 @@ wa:'<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9
 map:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'};
 
 /* ── navigation ── */
-function tab(i){_cur=i;document.querySelectorAll('.view').forEach((v,k)=>v.classList.toggle('on',k===i));
-document.querySelectorAll('.tab').forEach((t,k)=>t.classList.toggle('on',k===i));
-$('nav-t').textContent=['Orders','History','Shift'][i];window.scrollTo(0,0);$('nav').classList.remove('sc')}
+function tab(i){_cur=i;
+const views=['v0','v1','v2','v3'];
+views.forEach(id=>$(id).classList.toggle('on',id==='v'+i));
+document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',Number(t.dataset.t)===i));
+$('nav-t').textContent=['Orders','History','Shift','KPI'][i];
+window.scrollTo(0,0);$('nav').classList.remove('sc');
+if(i===3)loadKpi()}
 addEventListener('scroll',()=>$('nav').classList.toggle('sc',scrollY>34),{passive:true});
 
 /* ── sheets (spring, draggable, interruptible) ── */
@@ -308,7 +381,18 @@ const act=assigned||[],done=completed||[];detectNewOrders(act);
 $('stat-assigned').textContent=act.length;$('stat-completed').textContent=done.length;
 $('stat-earnings').textContent=fmt([...act,...done].reduce((s,o)=>s+(o.delivery_fee||0),0));
 const n=$('tb-n');n.textContent=act.length;n.classList.toggle('show',act.length>0);
-renderOrders(act,done);renderCompleted(done)}
+renderOrders(act,done);renderCompleted(done);
+try{
+  const tot=done.length;
+  const fast=done.filter(o=>{
+    const st=o.delivery_started_at?new Date(o.delivery_started_at).getTime():null;
+    const ct=o.completed_at?new Date(o.completed_at).getTime():null;
+    const m=(st&&ct)?Math.round((ct-st)/60000):(o.created_at&&o.completed_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null);
+    return m!=null&&m<30;
+  }).length;
+  const q=$('kpi-quick');
+  if(q)q.innerHTML=tot?`<div class="hero h-b" style="margin-bottom:16px"><small>⚡ On-time today (≤30 min)</small><b class="num">${Math.round(fast/tot*100)}%</b><p>${fast} of ${tot} deliveries within 30 minutes</p></div>`:'';
+}catch(_){}}
 catch(e){console.error(e);$('orders-list').innerHTML=`<div class="empty"><b>Couldn't load orders</b>${esc(e.message)}<br>Check your connection and pull down to retry.</div>`}}
 function parseItems(text){const items=[];String(text||'').split('\n').forEach(raw=>{const l=raw.trim();if(!l)return;const m=l.match(/^(\d+)x\s+(.+?)\s+@\s+Rs\s+(\d+)\s*(?:\[(.*))?$/);
 if(m)items.push({qty:m[1],name:m[2],notes:m[4]?[m[4].replace(/\]$/,'').trim()]:[]});else if(items.length)items[items.length-1].notes.push(l.replace(/\]$/,'').trim());else items.push({qty:'•',name:l,notes:[]})});return items}
@@ -385,10 +469,46 @@ ${rows||'<div class="slip-r">No completed orders</div>'}
 $('slip').style.display='block';$('slip').scrollTop=0}
 
 /* ── order actions ── */
-async function startDelivery(id){try{await sb.from('kitchen_orders').update({status:'DELIVERING'}).eq('id',id);try{await sb.from('kitchen_orders').update({delivery_started_at:new Date().toISOString()}).eq('id',id)}catch(e){}showToast('Delivery started');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
-async function markComplete(id){if(!await ask({title:'Confirm delivery completed?',sub:'Next you will choose how it was paid.',opts:[{label:'Yes, delivered',val:1,cls:'grn'}]}))return;
-const m=await ask({title:'How was this order paid?',opts:[{label:'💵 Cash',val:'cash'},{label:'📱 JazzCash / EasyPaisa',val:'jazzcash'},{label:'💳 Card',val:'card'},{label:'🏦 Bank transfer',val:'bank'},{label:'📋 Credited',sub:'Not collected from customer',val:'credited'}]});
-if(!m)return;try{await sb.from('kitchen_orders').update({status:'COMPLETED',completed_at:new Date().toISOString(),payment_method:m}).eq('id',id);showToast('Delivered · '+PM[m][0].replace(/^\S+\s/,'')+' recorded');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
+async function startDelivery(id){
+  try{
+    const {error}=await sb.from('kitchen_orders').update({
+      status:'DELIVERING',
+      delivery_started_at:new Date().toISOString()
+    }).eq('id',id);
+    if(error)throw error;
+    showToast('Delivery started');
+    loadOrders();
+  }catch(e){showToast('Error: '+e.message,'error')}
+}
+async function markComplete(id){
+  if(!await ask({title:'Confirm delivery completed?',sub:'Next you will choose how it was paid.',opts:[{label:'Yes, delivered',val:1,cls:'grn'}]}))return;
+  const m=await ask({title:'How was this order paid?',opts:[
+    {label:'💵 Cash',val:'cash'},
+    {label:'📱 JazzCash / EasyPaisa',val:'jazzcash'},
+    {label:'💳 Card',val:'card'},
+    {label:'🏦 Bank transfer',val:'bank'},
+    {label:'📋 Credited',sub:'Not collected from customer',val:'credited'}
+  ]});
+  if(!m)return;
+  try{
+    // Backfill delivery_started_at if missing so KPI always has a valid start point.
+    const {data:cur}=await sb.from('kitchen_orders')
+      .select('delivery_started_at,created_at').eq('id',id).single();
+    const now=new Date().toISOString();
+    const patch={
+      status:'COMPLETED',
+      completed_at:now,
+      payment_method:m
+    };
+    if(cur && !cur.delivery_started_at){
+      patch.delivery_started_at=cur.created_at||now;
+    }
+    const {error}=await sb.from('kitchen_orders').update(patch).eq('id',id);
+    if(error)throw error;
+    showToast('Delivered · '+PM[m][0].replace(/^\S+\s/,'')+' recorded');
+    loadOrders();
+  }catch(e){showToast('Error: '+e.message,'error')}
+}
 async function cancelOrder(id){const r=await ask({title:'Why is this order being cancelled?',sub:'Tap a reason or type your own.',input:'text',ph:'Reason',
 opts:[...['Customer not available','Customer refused order','Wrong address','Customer called to cancel'].map(l=>({label:l,val:l,fill:true})),{label:'Continue',val:1,cls:'red'}]});
 if(!r||r===''||r==='1')return;
@@ -402,6 +522,137 @@ else{window.open(`https://maps.google.com/maps?q=${encodeURIComponent(decodeURIC
 
 function startPolling(){sb.channel('rider-orders-'+riderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_orders',filter:`assigned_rider=eq.${riderId}`},p=>{if(p.new.status==='ASSIGNED')alertNewOrder(p.new);loadOrders()}).subscribe();_poll=setInterval(loadOrders,20000)}
 
+/* ── KPI ── */
+let _kpiPeriod='today',_kpiCache=null,_charts={},_chartTab='speed';
+
+function switchChart(t){
+  _chartTab=t;
+  ['speed','daily','earn'].forEach(x=>{
+    $('ct-'+x).classList.toggle('on',x===t);
+    $('view-'+x).style.display = x===t ? 'block' : 'none';
+  });
+  // Optional: trigger a resize so Chart.js redraws correctly when un-hiding
+  setTimeout(()=>{ if(_charts[t]) _charts[t].resize(); }, 50);
+}
+function setKpiPeriod(p){_kpiPeriod=p;['today','week','month'].forEach(x=>$('kp-'+x).classList.toggle('on',x===p));loadKpi()}
+function kpiRange(p){
+  const start=new Date();
+  if(p==='today'){const s=bizDayStart();return{s,e:new Date(s.getTime()+86400000)}}
+  if(p==='week'){start.setDate(start.getDate()-6);start.setHours(0,0,0,0);return{s:start,e:new Date()}}
+  start.setDate(1);start.setHours(0,0,0,0);return{s:start,e:new Date()}
+}
+function bucket(min){if(min==null)return null;if(min<20)return'under20';if(min<30)return'under30';if(min<40)return'under40';return'late'}
+async function loadKpi(){
+  try{
+    const ids=await getMyIds();
+    const {s,e}=kpiRange(_kpiPeriod);
+    const {data:done}=await sb.from('kitchen_orders')
+      .select('*').in('assigned_rider',ids).eq('status','COMPLETED')
+      .gte('completed_at',s.toISOString()).lte('completed_at',e.toISOString());
+    const rows=(done||[]).map(o=>{
+      const st=o.delivery_started_at?new Date(o.delivery_started_at).getTime():null;
+      const ct=o.completed_at?new Date(o.completed_at).getTime():null;
+      const mins=(st&&ct)?Math.round((ct-st)/60000):(o.created_at&&o.completed_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null);
+      return {...o,mins,bucket:bucket(mins)};
+    });
+    _kpiCache={rows,s,e};
+    renderKpiSummary(rows);
+    renderSpeedChart(rows);
+    renderDailyCharts(rows,s,e);
+    loadLeaderboard(s,e);
+  }catch(err){console.error(err);$('kpi-summary').innerHTML='<div class="empty"><b>Could not load KPI</b>'+esc(err.message)+'</div>'}
+}
+function renderKpiSummary(rows){
+  const total=rows.length;
+  const valid=rows.filter(r=>r.mins!=null);
+  const c=b=>rows.filter(r=>r.bucket===b).length;
+  const avg=valid.length?Math.round(valid.reduce((a,r)=>a+r.mins,0)/valid.length):0;
+  const onTime=total?Math.round((c('under20')+c('under30')+c('under40'))/total*100):0;
+  const pct=n=>total?Math.round(n/total*100):0;
+  $('kpi-summary').innerHTML=`
+    <div class="mini-kpis">
+      <div class="kpi"><b class="num">${total}</b><span>Deliveries</span></div>
+      <div class="kpi"><b class="num" style="color:var(--green)">${avg}<small style="position:static;font-size:12px;font-weight:600;color:var(--t2)"> min</small></b><span>Average time</span></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi fast"><small>≤20m</small><b class="num">${c('under20')}</b><span>Fast deliveries</span><div class="kpi-bar"><i style="width:${pct(c('under20'))}%;background:var(--green)"></i></div></div>
+      <div class="kpi ok"><small>20-30m</small><b class="num">${c('under30')}</b><span>On time</span><div class="kpi-bar"><i style="width:${pct(c('under30'))}%;background:var(--blue)"></i></div></div>
+      <div class="kpi warn"><small>30-40m</small><b class="num">${c('under40')}</b><span>Slightly late</span><div class="kpi-bar"><i style="width:${pct(c('under40'))}%;background:var(--orange)"></i></div></div>
+      <div class="kpi late"><small>&gt;40m</small><b class="num">${c('late')}</b><span>Late</span><div class="kpi-bar"><i style="width:${pct(c('late'))}%;background:var(--red)"></i></div></div>
+    </div>
+    <div class="grp" style="margin-bottom:16px"><div class="gr">
+      <span>On-time rate (≤40 min)</span>
+      <b style="color:${onTime>=80?'var(--green)':'var(--red)'}">${onTime}%</b>
+    </div></div>`;
+}
+function chartDefaults(){Chart.defaults.color='#9aa3b2';Chart.defaults.font.family=getComputedStyle(document.body).fontFamily;Chart.defaults.font.size=11;Chart.defaults.borderColor='rgba(255,255,255,.06)'}
+function killChart(k){if(_charts[k]){_charts[k].destroy();delete _charts[k]}}
+function renderSpeedChart(rows){
+  chartDefaults();
+  const c={under20:0,under30:0,under40:0,late:0};
+  rows.forEach(r=>{if(r.bucket)c[r.bucket]++});
+  killChart('speed');
+  _charts.speed=new Chart($('ch-speed'),{
+    type:'doughnut',
+    data:{labels:['≤20 min','20-30 min','30-40 min','>40 min late'],
+      datasets:[{data:[c.under20,c.under30,c.under40,c.late],
+        backgroundColor:['#30c06a','#4aa3e8','#f0902f','#ff5d4d'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,boxHeight:10,padding:10}}}}
+  });
+}
+function renderDailyCharts(rows,s,e){
+  chartDefaults();
+  const days={};const d=new Date(s);d.setHours(0,0,0,0);
+  while(d<=e){const k=d.toISOString().slice(0,10);days[k]={count:0,fees:0};d.setDate(d.getDate()+1)}
+  rows.forEach(r=>{const k=(r.completed_at||r.created_at||'').slice(0,10);if(days[k]){days[k].count++;days[k].fees+=r.delivery_fee||0}});
+  const labels=Object.keys(days).map(k=>new Date(k+'T00:00:00').toLocaleDateString('en-PK',{day:'numeric',month:'short'}));
+  killChart('daily');
+  _charts.daily=new Chart($('ch-daily'),{
+    type:'bar',
+    data:{labels,datasets:[{data:Object.values(days).map(x=>x.count),backgroundColor:'#30c06a',borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false}}}}
+  });
+  killChart('earn');
+  _charts.earn=new Chart($('ch-earn'),{
+    type:'line',
+    data:{labels,datasets:[{data:Object.values(days).map(x=>x.fees),borderColor:'#f0902f',
+      backgroundColor:'rgba(240,144,47,.18)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#f0902f'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>'Rs '+v}},x:{grid:{display:false}}}}
+  });
+}
+async function loadLeaderboard(s,e){
+  const el=$('kpi-leaderboard');
+  try{
+    const {data}=await sb.from('kitchen_orders')
+      .select('assigned_rider,delivery_fee,delivery_started_at,completed_at,created_at')
+      .eq('status','COMPLETED').gte('completed_at',s.toISOString()).lte('completed_at',e.toISOString());
+    const {data:riders}=await sb.from('rider_attendance').select('id,name,phone,branch');
+    const rmap={};(riders||[]).forEach(r=>rmap[String(r.id)]=r);
+    const agg={};
+    (data||[]).forEach(o=>{
+      const id=String(o.assigned_rider);if(!agg[id])agg[id]={count:0,fees:0,totalMins:0,valid:0};
+      agg[id].count++;agg[id].fees+=o.delivery_fee||0;
+      const st=o.delivery_started_at?new Date(o.delivery_started_at).getTime():null;
+      const ct=o.completed_at?new Date(o.completed_at).getTime():null;
+      const m=(st&&ct)?Math.round((ct-st)/60000):(o.created_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null);
+      if(m!=null){agg[id].totalMins+=m;agg[id].valid++}
+    });
+    const list=Object.entries(agg).map(([id,a])=>({
+      id,name:(rmap[id]&&rmap[id].name)||('Rider '+id.slice(-4)),phone:(rmap[id]&&rmap[id].phone)||'',
+      count:a.count,fees:a.fees,avg:a.valid?Math.round(a.totalMins/a.valid):null
+    })).sort((a,b)=>b.count-a.count).slice(0,15);
+    if(!list.length){el.innerHTML='<div class="empty" style="padding:24px 12px"><b>No deliveries yet</b>Leaderboard fills up as riders complete orders.</div>';return}
+    el.innerHTML=list.map((r,i)=>`<div class="rank">
+      <div class="pos ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i+1}</div>
+      <div class="who"><b>${esc(r.name)}${String(r.id)===String(riderId)?' <span style="color:var(--green);font-size:11px">· you</span>':''}</b>
+      <span>${r.count} deliveries${r.avg!=null?' · avg '+r.avg+' min':''}</span></div>
+      <div class="num-tag"><b class="num">${fmt(r.fees)}</b><span>fees</span></div></div>`).join('');
+  }catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24px">Could not load leaderboard</div>'}
+}
+
 /* pull to refresh */
 (function(){let y0=0,on=false;document.addEventListener('touchstart',e=>{on=scrollY<=0&&_cur===0&&!$('sheet').classList.contains('on');y0=e.touches[0].clientY},{passive:true});
 document.addEventListener('touchend',e=>{if(on&&e.changedTouches[0].clientY-y0>90){loadOrders();showToast('Refreshed','info')}on=false},{passive:true})})();
@@ -411,5 +662,6 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
