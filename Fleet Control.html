@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OvenX Fleet Control</title>
+<meta name="theme-color" content="#0a0d12">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0d12;--s1:#141920;--s2:#1c2330;--line:rgba(255,255,255,.08);--t1:#f2f4f7;--t2:#9aa3b2;--t3:#5b6575;--green:#30c06a;--orange:#f0902f;--red:#ff5d4d;--blue:#4aa3e8;
+--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--t1);font:400 14px/1.4 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.logo{font-weight:800;letter-spacing:-.03em}.logo span{color:var(--orange)}
+#gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:360px;margin:0 auto;padding:24px}
+#gate .logo{font-size:38px}#gate p{color:var(--t2);margin:6px 0 24px}
+.inp{width:100%;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;outline:none}
+.inp:focus{border-color:var(--green)}
+.cta{width:100%;height:48px;border-radius:12px;background:var(--green);color:#04130a;font-weight:700;margin-top:10px}
+#err{color:var(--red);margin-top:10px;min-height:18px;text-align:center}
+#app{display:none;max-width:1240px;margin:0 auto;padding:16px}#app.on{display:block}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.top h1{font-size:22px;margin-right:auto}.top h1 small{display:block;font-size:12px;font-weight:500;color:var(--t2);letter-spacing:0}
+.seg{display:flex;background:var(--s2);border-radius:10px;padding:3px}
+.seg button{height:32px;padding:0 14px;border-radius:8px;font-weight:600;color:var(--t2)}.seg button.on{background:#2c3648;color:var(--t1)}
+select.inp{width:auto;padding:8px 12px;font-size:14px}
+.btn{height:38px;padding:0 14px;border-radius:10px;background:var(--s1);border:1px solid var(--line);color:var(--t2);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.k{background:var(--s1);border-radius:14px;padding:12px 14px}.k b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}.k span{font-size:12px;color:var(--t2)}
+.panel{background:var(--s1);border-radius:16px;padding:14px;margin-bottom:16px}
+.panel h2{font-size:14px;color:var(--t2);font-weight:700;margin-bottom:10px}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.cv{position:relative;height:230px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th{text-align:left;font-size:12px;color:var(--t2);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+td{padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--s2)}
+td.r,th.r{text-align:right}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.on-duty{background:var(--green)}.on-break{background:var(--orange)}.off-duty{background:var(--t3)}
+.sub{display:block;font-size:12px;color:var(--t2)}
+.g{color:var(--green)}.o{color:var(--orange)}.b{color:var(--blue)}.rd{color:var(--red)}
+.live{display:flex;flex-direction:column;gap:8px}
+.lv{background:var(--s2);border-radius:12px;padding:10px 12px;font-size:13px}.lv b{display:block}.lv span{color:var(--t2)}
+#dr-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;z-index:100}#dr-bd.on{opacity:1;pointer-events:auto}
+#dr{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:#10151c;z-index:110;transform:translateX(105%);transition:transform .3s cubic-bezier(.32,.72,0,1);overflow-y:auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
+#dr.on{transform:none}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}.dh h2{font-size:22px}.dh p{color:var(--t2)}
+.x{width:34px;height:34px;border-radius:50%;background:var(--s2);font-size:16px;flex-shrink:0}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.g3 div{background:var(--s1);border-radius:12px;padding:10px;text-align:center}.g3 b{display:block;font-size:18px;font-weight:800}.g3 span{font-size:11px;color:var(--t2)}
+.oc{background:var(--s1);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.oc h4{font-size:14px}.oc p{font-size:12px;color:var(--t2);margin-top:2px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--s2);margin:6px 6px 0 0}
+.st{width:100%;height:36px;border-radius:10px;margin-top:10px;font-weight:700;background:rgba(240,144,47,.14);color:var(--orange)}.st.ok{background:rgba(48,192,106,.14);color:var(--green)}
+.empty{text-align:center;color:var(--t2);padding:28px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,150%);background:var(--s2);padding:10px 18px;border-radius:20px;font-weight:600;z-index:200;transition:transform .35s}.toast.show{transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="logo">OVEN <span>X</span> Fleet Control</div>
+  <p>Admin access only. Enter your PIN.</p>
+  <input class="inp" id="pin" type="password" inputmode="numeric" placeholder="Admin PIN" aria-label="Admin PIN">
+  <button class="cta" onclick="unlock()">Open dashboard</button>
+  <div id="err"></div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <h1 class="logo">OVEN <span>X</span> Fleet Control<small id="upd">Loading…</small></h1>
+    <div class="seg" id="per"><button data-p="today" class="on">Today</button><button data-p="week">7 days</button><button data-p="month">This month</button></div>
+    <select class="inp" id="br" aria-label="Branch"><option value="">All branches</option><option value="MULTAN">Multan</option><option value="BWP">Bahawalpur</option></select>
+    <button class="btn" onclick="load()">↻ Refresh</button>
+    <button class="btn" onclick="exportCsv()">Export CSV</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="cols">
+    <div class="panel"><h2>Deliveries and fees by rider</h2><div class="cv"><canvas id="ch"></canvas></div></div>
+    <div class="panel"><h2>Live right now</h2><div class="live" id="live"></div></div>
+  </div>
+
+  <div class="panel"><h2>Riders (tap a row for full details)</h2>
+    <div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
+  </div>
+</div>
+
+<div id="dr-bd" onclick="closeDr()"></div>
+<aside id="dr" aria-label="Rider details"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
+const ADMIN_PIN='9999'; // CHANGE THIS
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>'Rs '+Number(n||0).toLocaleString();
+const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—';
+const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short'}):'—';
+const NONCASH=['jazzcash','card','bank','credited'];
+const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',credited:'Credited'};
+const normPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d};
+function bizDayStart(){const d=new Date();if(d.getHours()<6)d.setDate(d.getDate()-1);d.setHours(6,0,0,0);return d}
+function range(p){const n=new Date();if(p==='today'){return bizDayStart()}if(p==='week'){n.setDate(n.getDate()-6);n.setHours(0,0,0,0);return n}n.setDate(1);n.setHours(0,0,0,0);return n}
+function minsOf(o){const c=o.completed_at&&new Date(o.completed_at).getTime();const s=o.delivery_started_at?new Date(o.delivery_started_at).getTime():(o.created_at?new Date(o.created_at).getTime():null);return c&&s?Math.max(0,Math.round((c-s)/60000)):null}
+function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
+
+let period='today',branch='',riders=[],active=[],sortKey='count',sortDir=-1,chart=null,timer=null;
+
+function unlock(){if($('pin').value===ADMIN_PIN){try{sessionStorage.setItem('ovenx_admin','1')}catch(e){}start()}else{$('err').textContent='Wrong PIN';setTimeout(()=>$('err').textContent='',2500)}}
+$('pin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+function start(){$('gate').style.display='none';$('app').classList.add('on');load();timer=setInterval(load,30000)}
+try{if(sessionStorage.getItem('ovenx_admin')==='1')start()}catch(e){}
+
+$('per').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...$('per').children].forEach(x=>x.classList.toggle('on',x===b));load()});
+$('br').addEventListener('change',e=>{branch=e.target.value;load()});
+
+async function load(){
+  try{
+    const s=range(period),iso=s.toISOString(),since=new Date(s.getTime()-2*864e5).toISOString();
+    const [att,ord,act]=await Promise.all([
+      sb.from('rider_attendance').select('*').gte('punched_in',since).order('punched_in',{ascending:false}).limit(3000),
+      sb.from('kitchen_orders').select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).limit(5000),
+      sb.from('kitchen_orders').select('*').in('status',['ASSIGNED','DELIVERING']).order('created_at',{ascending:true})
+    ]);
+    if(att.error)throw att.error;if(ord.error)throw ord.error;
+    build(att.data||[],ord.data||[],act.data||[],s);
+    $('upd').textContent='Updated '+tm(new Date())+' · auto-refresh every 30s';
+  }catch(e){console.error(e);$('upd').textContent='Load failed: '+e.message}
+}
+
+function build(att,ord,act,s){
+  const idKey={},R={};
+  const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0});
+  att.forEach(a=>{const k=normPhone(a.phone)||('id'+a.id);idKey[String(a.id)]=k;if(a.punched_in&&new Date(a.punched_in)>=s||(a.punched_out&&new Date(a.punched_out)>=s)||!a.punched_out){}
+    const r=get(k,a);
+    if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=a.branch||r.branch}
+    const end=a.punched_out?new Date(a.punched_out):new Date();
+    if(end>=s){r.shifts.push(a);r.ms+=Math.max(0,end-Math.max(new Date(a.punched_in),s))}});
+  const keyOf=o=>idKey[String(o.assigned_rider)]||get('id'+o.assigned_rider,{name:'Rider '+String(o.assigned_rider).slice(-4)}).key;
+  ord.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];
+    if(o.status==='COMPLETED'&&o.completed_at&&new Date(o.completed_at)>=s){
+      const m=minsOf(o);o.mins=m;r.orders.push(o);r.count++;r.fees+=o.delivery_fee||0;
+      if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
+      const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0,pm=o.payment_method;
+      if(pm==='credited')r.cred+=food+fee;else r.collected+=food+fee;
+      if(o.settled)r.settled++;else{r.unsettled++;if(NONCASH.includes(pm))r.owed+=fee;else r.cash+=food}
+    }else if(o.status==='CANCELLED')r.cancelled.push(o)});
+  act.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];r.active.push(o)});
+  riders=Object.values(R).filter(r=>(!branch||r.branch===branch)).filter(r=>r.count||r.cancelled.length||r.active.length||r.ms>0);
+  active=riders.flatMap(r=>r.active.map(o=>({o,r})));
+  renderKpis();renderLive();renderChart();renderTable();
+  if(openKey)openDr(openKey,true);
+}
+
+function renderKpis(){
+  const T=k=>riders.reduce((a,r)=>a+(r[k]||0),0),n=T('count'),valid=T('valid');
+  const on=riders.filter(r=>r.status==='on-duty').length,brk=riders.filter(r=>r.status==='on-break').length;
+  const items=[
+    [n,'Deliveries','g'],[riders.filter(r=>r.status!=='off-duty').length+' / '+riders.length,'Riders working',''],[on+' · '+brk,'On duty · on break',''],
+    [valid?Math.round(T('mins')/valid)+' min':'—','Average delivery',''],[valid?Math.round(T('ontime')/valid*100)+'%':'—','On time (≤40 min)',''],
+    [fmt(T('fees')),'Delivery fees earned','o'],[fmt(T('collected')),'Collected','b'],[fmt(T('cash')),'Cash with riders (unsettled)','o'],
+    [fmt(T('owed')),'Shop owes riders','g'],[fmt(T('cred')),'Credited (uncollected)','rd'],[T('unsettled'),'Orders awaiting hisab',''],[riders.reduce((a,r)=>a+r.cancelled.length,0),'Cancelled','rd']];
+  $('kpis').innerHTML=items.map(i=>`<div class="k"><b class="num ${i[2]}">${esc(i[0])}</b><span>${i[1]}</span></div>`).join('');
+}
+function renderLive(){
+  $('live').innerHTML=active.length?active.map(({o,r})=>{const m=Math.floor((Date.now()-new Date(o.created_at))/60000);
+    return `<div class="lv"><b>${esc(r.name)} · <span class="${o.status==='DELIVERING'?'b':'o'}">${o.status==='DELIVERING'?'On the way':'Assigned'}</span></b><span>${esc(o.location||'No address')} · <span class="${m>45?'rd':''}">${m} min</span></span></div>`}).join('')
+    :'<div class="empty">No active deliveries.</div>';
+}
+function renderChart(){
+  const top=[...riders].sort((a,b)=>b.count-a.count).slice(0,12);
+  Chart.defaults.color='#9aa3b2';Chart.defaults.borderColor='rgba(255,255,255,.06)';
+  if(chart)chart.destroy();
+  chart=new Chart($('ch'),{type:'bar',data:{labels:top.map(r=>r.name.split(' ')[0]),datasets:[
+    {label:'Deliveries',data:top.map(r=>r.count),backgroundColor:'#30c06a',borderRadius:5,yAxisID:'y'},
+    {label:'Fees (Rs)',data:top.map(r=>r.fees),type:'line',borderColor:'#f0902f',backgroundColor:'#f0902f',tension:.3,yAxisID:'y1'}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{position:'right',beginAtZero:true,grid:{display:false}},x:{grid:{display:false}}}}});
+}
+const COLS=[['name','Rider'],['status','Status'],['ms','Hours',1],['count','Deliveries',1],['avg','Avg min',1],['ontimePct','On time',1],['fees','Fees',1],['cash','Cash to hand over',1],['owed','Shop owes',1],['cred','Credited',1],['cx','Cancelled',1]];
+function val(r,k){if(k==='avg')return r.valid?r.mins/r.valid:9999;if(k==='ontimePct')return r.valid?r.ontime/r.valid:-1;if(k==='cx')return r.cancelled.length;return r[k]}
+function renderTable(){
+  $('thead').innerHTML=COLS.map(c=>`<th class="${c[2]?'r':''}" onclick="sortBy('${c[0]}')">${c[1]}${sortKey===c[0]?(sortDir<0?' ↓':' ↑'):''}</th>`).join('');
+  const rows=[...riders].sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return (x>y?1:x<y?-1:0)*sortDir});
+  $('tbody').innerHTML=rows.length?rows.map(r=>{const avg=r.valid?Math.round(r.mins/r.valid):null,ot=r.valid?Math.round(r.ontime/r.valid*100):null;
+    return `<tr tabindex="0" onclick="openDr('${esc(r.key)}')" onkeydown="if(event.key==='Enter')openDr('${esc(r.key)}')">
+    <td><b>${esc(r.name)}</b><span class="sub">${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'}</span></td>
+    <td><i class="dot ${r.status}"></i>${r.status==='on-duty'?'On duty':r.status==='on-break'?'On break':'Off duty'}<span class="sub">In ${tm(r.lastIn)}${r.lastOut?' · Out '+tm(r.lastOut):''}</span></td>
+    <td class="r num">${(r.ms/36e5).toFixed(1)}</td><td class="r num"><b>${r.count}</b>${r.active.length?`<span class="sub b">${r.active.length} active</span>`:''}</td>
+    <td class="r num">${avg??'—'}</td><td class="r num ${ot==null?'':ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</td>
+    <td class="r num g">${fmt(r.fees)}</td><td class="r num o">${fmt(r.cash)}</td><td class="r num g">${fmt(r.owed)}</td>
+    <td class="r num ${r.cred?'rd':''}">${fmt(r.cred)}</td><td class="r num ${r.cancelled.length?'rd':''}">${r.cancelled.length}</td></tr>`}).join(''):`<tr><td colspan="11" class="empty">No rider activity in this period.</td></tr>`;
+}
+function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'||k==='avg'?1:-1}renderTable()}
+
+/* drawer */
+let openKey=null;
+function items(t){return String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>esc(x)).join('<br>')}
+function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)closeDr();return}openKey=key;
+  const avg=r.valid?Math.round(r.mins/r.valid):null,ot=r.valid?Math.round(r.ontime/r.valid*100):null;
+  const orders=[...r.orders].sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at));
+  $('dr').innerHTML=`<div class="dh"><div><h2>${esc(r.name)}</h2><p>${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'} · <i class="dot ${r.status}"></i>${r.status}</p></div><button class="x" onclick="closeDr()" aria-label="Close">✕</button></div>
+  <div class="g3"><div><b class="g">${r.count}</b><span>Deliveries</span></div><div><b>${avg??'—'} min</b><span>Avg time</span></div><div><b class="${ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</b><span>On time</span></div>
+  <div><b class="g">${fmt(r.fees)}</b><span>Fees earned</span></div><div><b class="o">${fmt(r.cash)}</b><span>Cash to hand over</span></div><div><b class="g">${fmt(r.owed)}</b><span>Shop owes rider</span></div>
+  <div><b>${(r.ms/36e5).toFixed(1)} h</b><span>Hours worked</span></div><div><b class="rd">${fmt(r.cred)}</b><span>Credited</span></div><div><b class="rd">${r.cancelled.length}</b><span>Cancelled</span></div></div>
+  <div class="panel"><h2>Shifts</h2>${r.shifts.length?r.shifts.map(a=>`<div class="oc" style="margin:0 0 6px"><h4>${dt(a.punched_in)} · In ${tm(a.punched_in)} → ${a.punched_out?'Out '+tm(a.punched_out):'still on'}</h4></div>`).join(''):'<div class="empty">No shifts.</div>'}</div>
+  ${r.active.length?`<h2 class="sub" style="margin:0 0 8px">Active orders</h2>${r.active.map(o=>`<div class="oc"><h4>📍 ${esc(o.location||'')}</h4><p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${o.status}</p></div>`).join('')}`:''}
+  <h2 class="sub" style="margin:10px 0 8px">Completed orders (${orders.length})</h2>
+  ${orders.map(o=>{const food=(o.subtotal||0)+(o.tax||0),non=NONCASH.includes(o.payment_method);return `<div class="oc"><h4>📍 ${esc(o.location||'No address')}</h4>
+  <p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${o.branch||''}</p><p style="margin-top:6px">${items(o.items)}</p>
+  <span class="tag">${PMN[o.payment_method]||'—'}</span><span class="tag">⏱ ${o.mins??'—'} min</span><span class="tag">Received ${tm(o.created_at)}</span><span class="tag">Started ${tm(o.delivery_started_at)}</span><span class="tag">Delivered ${tm(o.completed_at)}</span>
+  <p style="margin-top:6px">Food+tax ${fmt(food)} · Fee ${fmt(o.delivery_fee)}${o.discount?' · Discount −'+fmt(o.discount):''} · <b>${o.payment_method==='credited'?'Not collected':non?'Shop pays rider '+fmt(o.delivery_fee):'Rider hands over '+fmt(food)}</b></p>
+  <button class="st ${o.settled?'ok':''}" onclick="settle('${esc(o.id)}',${!o.settled})">${o.settled?'✅ Hisab done '+tm(o.settled_at)+' (tap to undo)':'Mark hisab done'}</button></div>`}).join('')||'<div class="empty">No completed orders.</div>'}
+  ${r.cancelled.length?`<h2 class="sub" style="margin:14px 0 8px">Cancelled by rider</h2>${r.cancelled.map(o=>`<div class="oc" style="box-shadow:inset 0 0 0 1px rgba(255,93,77,.35)"><h4>📍 ${esc(o.location||'')}</h4><p class="rd">${esc(o.cancel_reason||'No reason')} · ${tm(o.cancelled_at)}</p></div>`).join('')}`:''}`;
+  $('dr-bd').classList.add('on');$('dr').classList.add('on')}
+function closeDr(){openKey=null;$('dr-bd').classList.remove('on');$('dr').classList.remove('on')}
+async function settle(id,done){const {error}=await sb.from('kitchen_orders').update({settled:done,settled_at:done?new Date().toISOString():null}).eq('id',id);
+  if(error){toast('Error: '+error.message);return}toast(done?'Marked settled':'Settlement undone');load()}
+
+function exportCsv(){const h=['Rider','Phone','Branch','Status','Hours','Deliveries','Avg min','On time %','Fees','Cash to hand over','Shop owes rider','Credited','Cancelled'];
+  const rows=riders.map(r=>[r.name,r.phone,r.branch,r.status,(r.ms/36e5).toFixed(1),r.count,r.valid?Math.round(r.mins/r.valid):'',r.valid?Math.round(r.ontime/r.valid*100):'',r.fees,r.cash,r.owed,r.cred,r.cancelled.length]);
+  const csv=[h,...rows].map(l=>l.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ovenx-riders-'+period+'.csv';a.click()}
+</script>
+</body>
+</html>
