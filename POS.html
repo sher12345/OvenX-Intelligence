@@ -870,7 +870,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
           <span style="font-size:13px;color:var(--text2);font-weight:600;white-space:nowrap;">Discount:</span>
           <input class="disc-input" type="number" id="disc-amount" value="0" min="0"
             style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--green);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;"
-            oninput="renderOrderTotals()" onchange="confirmDiscountReason()">
+            oninput="renderOrderTotals(); if(this.value > 0 && !currentOrder.discReason) confirmDiscountReason();" onchange="confirmDiscountReason()">
           <button class="disc-type-btn active" id="disc-flat-btn" onclick="setDiscType('flat')">Rs</button>
           <button class="disc-type-btn" id="disc-pct-btn" onclick="setDiscType('pct')">%</button>
           <div style="margin-left:auto;display:flex;gap:4px;">
@@ -1372,6 +1372,38 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 
 <script>
 // ══════════════════════════════════
+// ELECTRON-SAFE INPUT HELPER
+// Browser prompt()/alert()/confirm() are suppressed or auto-cancelled
+// inside Electron (file:// origin). This replaces them with an in-app
+// HTML dialog so the POS behaves identically in browser and Electron.
+// ══════════════════════════════════
+function askText(message, def) {
+  return new Promise(resolve => {
+    const o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    o.innerHTML = `
+      <div style="background:#1c1f27;color:#f0f0f0;padding:22px;border-radius:16px;width:min(520px,100%);font-family:'Outfit',sans-serif;border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.6);">
+        <div class="ask-msg" style="font-size:14px;font-weight:600;line-height:1.7;margin-bottom:16px;white-space:pre-wrap;"></div>
+        <input class="ask-in" style="width:100%;padding:12px;font-size:15px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#242830;color:#f0f0f0;outline:none;font-family:inherit;">
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+          <button class="ask-cancel" style="padding:10px 16px;border:0;border-radius:8px;background:#2e3340;color:#9aa0b0;cursor:pointer;font-family:inherit;font-weight:700;">Cancel</button>
+          <button class="ask-ok" style="padding:10px 18px;background:#c0392b;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">OK</button>
+        </div>
+      </div>`;
+    o.querySelector('.ask-msg').textContent = message;
+    const inp = o.querySelector('.ask-in');
+    inp.value = def || '';
+    const done = v => { o.remove(); resolve(v); };
+    o.querySelector('.ask-ok').onclick = () => done(inp.value);
+    o.querySelector('.ask-cancel').onclick = () => done(null);
+    inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+    o.addEventListener('click', e => { if (e.target === o) done(null); });
+    document.body.appendChild(o);
+    inp.focus();
+  });
+}
+
+// ══════════════════════════════════
 // CONFIG & CONSTANTS
 // ══════════════════════════════════
 const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
@@ -1683,7 +1715,12 @@ function _applySharedRangeOrDefault(fromId, toId) {
   }
 }
 function genId() {
-  return (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2));
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (e) { /* fall through */ }
+  return Date.now() + '-' + Math.random().toString(36).slice(2) + '-' + Math.random().toString(36).slice(2);
 }
 let DEVICE_CODE = localStorage.getItem('ovenx_device_code') || null;
 function ensureDeviceCode() {
@@ -1916,14 +1953,14 @@ function _dtLocalToISO(val) {
   if (!val) return null;
   return new Date(val + ':00+05:00').toISOString(); // datetime-local has no TZ — treat as Pakistan time
 }
-function promptPaymentMethod(title) {
+async function promptPaymentMethod(title) {
   const methodMap = { '1':'cash','2':'jazzcash','3':'card','4':'foodpanda','5':'bank' };
   while (true) {
-    const mc = prompt(title + '\n1. Cash\n2. JazzCash\n3. Card\n4. FoodPanda\n5. Bank Transfer\n\nEnter number (1-5):');
+    const mc = await askText(title + '\n1. Cash\n2. JazzCash\n3. Card\n4. FoodPanda\n5. Bank Transfer\n\nEnter number (1-5):');
     if (mc === null) return null; // cancelled
     const trimmed = (mc || '').trim();
     if (methodMap[trimmed]) return methodMap[trimmed];
-    alert('Invalid entry — please type a number from 1 to 5. Nothing was recorded.');
+    showToast('Invalid entry — please type a number from 1 to 5.', 'error');
   }
 }
 function _obCacheKey(branch) { return 'ovenx_openingbal_cache_' + branch; }
@@ -3354,13 +3391,17 @@ async function confirmDiscountReason() {
   const val = parseFloat(document.getElementById('disc-amount').value) || 0;
   if (val <= 0) { currentOrder.discReason = ''; _lastApprovedDiscAmt = 0; saveTableOrder(); return; }
   if (val === _lastApprovedDiscAmt && currentOrder.discReason) return;
-  const pin = prompt('Enter Admin PIN to apply discount:');
+  
+  const pin = await askText('Enter Admin PIN to apply discount:');
+  if (pin === null) { document.getElementById('disc-amount').value = 0; renderOrderTotals(); return; }
+  
   if (pin !== '7530' && pin !== '1234') {
     showToast('Wrong PIN — discount removed', 'error');
     document.getElementById('disc-amount').value = 0;
     renderOrderTotals(); return;
   }
-  const reason = prompt('Reason for discount (Rs ' + val + (discType==='pct'?'%':'') + ')?');
+  
+  const reason = await askText('Reason for discount (Rs ' + val + (discType==='pct'?'%':'') + ')?');
   if (!reason || !reason.trim()) {
     showToast('Reason required — discount removed', 'error');
     document.getElementById('disc-amount').value = 0;
@@ -3954,18 +3995,38 @@ function normalizeTableInput(raw) {
   return null;
 }
 
+// Normalizes "a3", "A 3", "table a-3", "tk1", "TK 1", "del2", "DEL 2", "A03"
+// → the exact ID used in ALL_TABLE_IDS (e.g. "A-3", "TK-1", "DEL-2").
+// Returns null if nothing matches.
+function normalizeTableInput(raw) {
+  if (!raw) return null;
+  let s = String(raw).trim().toUpperCase();
+  s = s.replace(/^(TABLE|TBL)\s*/, '');
+  s = s.replace(/[\s_.]+/g, '-');
+  s = s.replace(/-+/g, '-');
+  const shorthand = { 'D-': 'DEL-', 'DL-': 'DEL-', 'T-': 'TK-', 'TAK-': 'TK-' };
+  for (const [from, to] of Object.entries(shorthand)) {
+    if (s.startsWith(from)) { s = to + s.slice(from.length); break; }
+  }
+  s = s.replace(/-0*(\d+)$/, (m, n) => '-' + parseInt(n, 10));
+  if (ALL_TABLE_IDS.includes(s)) return s;
+  const m = s.match(/^([A-Z]+)(\d+)$/);
+  if (m) {
+    const candidate = m[1] + '-' + parseInt(m[2], 10);
+    if (ALL_TABLE_IDS.includes(candidate)) return candidate;
+  }
+  return null;
+}
+
 async function changeTablePrompt() {
-  const raw = prompt('Move to table (e.g. A-3, B-1, TK-2, DEL-1):');
-  if (raw === null) return;                             // user pressed Cancel
+  const raw = await askText('Move to table (e.g. A-3, B-1, TK-2, DEL-1):');
+  if (raw === null) return;
   const newTable = normalizeTableInput(raw);
   if (!newTable) {
-    // Help the operator see the real, valid IDs for this branch
     const grouped = Object.entries(TABLES).map(([floor, ids]) =>
       floor + ': ' + ids.slice(0, 4).join(', ') + (ids.length > 4 ? ', …' : '')
     ).join('\n');
     showToast('Invalid table ID — "' + raw + '" is not one of this branch\'s tables', 'error');
-    alert('Invalid table ID: "' + raw + '"\n\nValid formats:\n' + grouped +
-          '\n\nExamples that work: A-3, a3, A 3, TK-1, tk1, DEL-2, del 2');
     return;
   }
   if (tableOrders[newTable] && newTable !== currentOrder.table) { showToast('That table is already occupied', 'error'); return; }
@@ -3973,13 +4034,12 @@ async function changeTablePrompt() {
   if (oldTable) delete tableOrders[oldTable];
   if (oldTable) await _saveActiveTable(oldTable, null);
   currentOrder.table = newTable;
-  
-  // Detect target floor and update order type + SC accordingly
+
   const newFloor = getFloorForTable(newTable);
   const newType = newFloor === 'Delivery' ? 'Delivery' : newFloor === 'Takeaway' ? 'Takeaway' : 'Dine-In';
   currentOrder.type = newType;
-  scEnabled = (newType === 'Dine-In'); // Enable SC only for Dine-In
-  
+  scEnabled = (newType === 'Dine-In');
+
   const newLocation = newTable.replace('-', ' ');
   saveTableOrder();
   document.getElementById('order-table-name').textContent = newLocation;
@@ -4007,9 +4067,11 @@ async function returnItem(idx) {
     }
   }
 
-  const adminPin = prompt('Enter Admin PIN to return this item:');
+  const adminPin = await askText('Enter Admin PIN to return this item:');
+  if (adminPin === null) return;
   if (adminPin !== '7530' && adminPin !== '2314') { showToast('Wrong Admin PIN — return cancelled', 'error'); return; }
-  const reason = prompt('Return reason for "' + item.name + '"?\n(e.g. Wrong item, Customer changed mind, Quality issue)');
+  
+  const reason = await askText('Return reason for "' + item.name + '"?\n(e.g. Wrong item, Customer changed mind, Quality issue)');
   if (reason === null) return;
   if (!reason.trim()) { showToast('Return reason is required', 'error'); return; }
 
@@ -4140,13 +4202,14 @@ function renderOrderTotals() {
 async function voidCurrentOrder() {
   if (!currentOrder.items.length) { switchView('tables'); return; }
   
-  // Require admin PIN
-  const adminPin = prompt('Enter Admin PIN to void order:');
+  // Require admin PIN (Electron safe)
+  const adminPin = await askText('Enter Admin PIN to void order:');
+  if (adminPin === null) return;
   if (adminPin !== '7530' && adminPin !== '2314') { 
     showToast('Wrong Admin PIN — void cancelled', 'error'); return; 
   }
   
-  const reason = prompt('Void reason? (required)');
+  const reason = await askText('Void reason? (required)');
   if (reason === null) return;
   if (!reason.trim()) { showToast('Void reason is required', 'error'); return; }
   
@@ -4211,9 +4274,11 @@ async function returnWholeOrder() {
     const ok = confirm('This order was sent to kitchen.\n\nOnly Return it if it was NOT prepared yet.\nIf it was already prepared, press Cancel and use Void instead.\n\nContinue with Return?');
     if (!ok) return;
   }
-  const adminPin = prompt('Enter Admin PIN to return this order:');
+  const adminPin = await askText('Enter Admin PIN to return this order:');
+  if (adminPin === null) return;
   if (adminPin !== '7530' && adminPin !== '2314') { showToast('Wrong Admin PIN — return cancelled', 'error'); return; }
-  const reason = prompt('Reason for returning the whole order? (required)');
+  
+  const reason = await askText('Reason for returning the whole order? (required)');
   if (!reason || !reason.trim()) { showToast('Reason is required', 'error'); return; }
 
   const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
@@ -5550,9 +5615,11 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
 }
 
 async function deleteDelivery(orderId) {
-  const adminPin = prompt('Enter Admin PIN to delete this delivery order:');
+  const adminPin = await askText('Enter Admin PIN to delete this delivery order:');
+  if (adminPin === null) return;
   if (adminPin !== '7530' && adminPin !== '2314') { showToast('Wrong PIN — cancelled', 'error'); return; }
-  const reason = prompt('Reason for deleting this delivery order? (required)');
+  
+  const reason = await askText('Reason for deleting this delivery order? (required)');
   if (!reason || !reason.trim()) { showToast('Reason is required', 'error'); return; }
 
   let snap = null;
@@ -5643,9 +5710,14 @@ cashInHand = computeCashInHand(completedOrders, openingBalance);
 }
 
 async function addCashIn() {
-  const amt = parseFloat(prompt('Cash In amount (Rs):')) || 0;
+  const amtStr = await askText('Cash In amount (Rs):');
+  if (amtStr === null) return;
+  const amt = parseFloat(amtStr) || 0;
   if (!amt) return;
-  const reason = prompt('Reason:') || 'Cash In';
+  
+  const reasonStr = await askText('Reason:');
+  if (reasonStr === null) return;
+  const reason = reasonStr.trim() || 'Cash In';
   const _ciId = genId();
   const _ciWriteRes = await sbWrite('shift_transactions', 'insert', [{
     id: _ciId, branch: activeBranch, date: todayKey(),
@@ -5665,11 +5737,16 @@ async function addCashIn() {
 let _creditData = [];
 
 async function openIssueCreditModal() {
-  const name = prompt('Customer Name:');
+  const name = await askText('Customer Name:');
+  if (name === null) return;
   if (!name || !name.trim()) { showToast('Name required', 'error'); return; }
-  const phone = prompt('Phone Number:') || '';
-  const itemsText = prompt('Items taken (e.g. 2x Zinger Burger, 1x Fries):') || '';
-  const amt = parseFloat(prompt('Amount owed (Rs):')) || 0;
+  
+  const phone = await askText('Phone Number:') || '';
+  const itemsText = await askText('Items taken (e.g. 2x Zinger Burger, 1x Fries):') || '';
+  
+  const amtStr = await askText('Amount owed (Rs):');
+  if (amtStr === null) return;
+  const amt = parseFloat(amtStr) || 0;
   if (!amt || amt <= 0) { showToast('Valid amount required', 'error'); return; }
 
   // Repeat customers add to one open account instead of a new row each visit
@@ -5684,7 +5761,7 @@ async function openIssueCreditModal() {
   }
 
   if (existing) {
-    const addToExisting = confirm(
+    const addToExisting = window.confirm( // Or use a custom UI toggle if you want to fully avoid confirm()
       existing.customer_name + ' already has an open credit account (Rs ' +
       Math.max(0, existing.amount - (existing.paid_amount||0)) + ' owed).\n\n' +
       'OK = Add this new amount to their existing balance\n' +
@@ -5703,7 +5780,8 @@ async function openIssueCreditModal() {
     }
   }
 
-  const dueDate = prompt('Due date (YYYY-MM-DD) — optional, leave blank to skip:') || null;
+  const dueDateStr = await askText('Due date (YYYY-MM-DD) — optional, leave blank to skip:');
+  const dueDate = dueDateStr ? dueDateStr.trim() : null;
   const res = await sbWrite('credit_accounts', 'insert', [{
     id: genId(), branch: activeBranch, customer_name: name.trim(), phone: phone.trim(),
     items_text: itemsText.trim(), amount: amt, paid_amount: 0, status: 'unpaid',
@@ -5820,21 +5898,23 @@ async function recordCreditPayment(creditId, balanceDue) {
 }
 
 async function addExpense() {
-  const kind = prompt('Expense type?\n\n1 = Slip expense (paid from till)\n2 = Finance expense (paid by owner from bank)\n\nType 1 or 2:');
+  const kind = await askText('Expense type?\n\n1 = Slip expense (paid from till)\n2 = Finance expense (paid by owner from bank)\n\nType 1 or 2:');
   if (kind === null) return;
   if (kind.trim() !== '1' && kind.trim() !== '2') { showToast('Please enter 1 or 2', 'error'); return; }
   const isFinance = kind.trim() === '2';
 
-const _pick = prompt('Which expense?\n\n' + EXPENSE_PRESETS.map((p,i) => (i+1) + ' = ' + p).join('\n') + '\n' + (EXPENSE_PRESETS.length+1) + ' = Other (type it)\n\nEnter number:');
-if (_pick === null) return;
-const _n = parseInt(_pick, 10);
-let rawDesc = '';
-if (_n >= 1 && _n <= EXPENSE_PRESETS.length) rawDesc = EXPENSE_PRESETS[_n-1];
-else if (_n === EXPENSE_PRESETS.length + 1) rawDesc = prompt('Type the expense description:') || '';
-if (!rawDesc.trim()) { showToast('Please pick an expense', 'error'); return; }
+  const _pick = await askText('Which expense?\n\n' + EXPENSE_PRESETS.map((p,i) => (i+1) + ' = ' + p).join('\n') + '\n' + (EXPENSE_PRESETS.length+1) + ' = Other (type it)\n\nEnter number:');
+  if (_pick === null) return;
+  const _n = parseInt(_pick, 10);
+  let rawDesc = '';
+  if (_n >= 1 && _n <= EXPENSE_PRESETS.length) rawDesc = EXPENSE_PRESETS[_n-1];
+  else if (_n === EXPENSE_PRESETS.length + 1) rawDesc = await askText('Type the expense description:') || '';
+  if (!rawDesc.trim()) { showToast('Please pick an expense', 'error'); return; }
   const desc = (isFinance ? '[FINANCE] ' : '') + rawDesc.trim();
 
-  const amt = parseFloat(prompt('Expense amount (Rs):')) || 0;
+  const amtStr = await askText('Expense amount (Rs):');
+  if (amtStr === null) return;
+  const amt = parseFloat(amtStr) || 0;
   if (!amt || amt <= 0) { showToast('Valid amount required', 'error'); return; }
 
   if (!isFinance && amt > cashInHand) {
@@ -6003,9 +6083,14 @@ async function exportExpensesExcel() {
 }
 
 async function addCashOut() {
-  const amt = parseFloat(prompt('Cash Out amount (Rs):')) || 0;
+  const amtStr = await askText('Cash Out amount (Rs):');
+  if (amtStr === null) return;
+  const amt = parseFloat(amtStr) || 0;
   if (!amt) return;
-  const reason = prompt('Reason:') || 'Cash Out';
+  
+  const reasonStr = await askText('Reason:');
+  if (reasonStr === null) return;
+  const reason = reasonStr.trim() || 'Cash Out';
   const _coId = genId();
   const _coWriteRes = await sbWrite('shift_transactions', 'insert', [{
     id: _coId, branch: activeBranch, date: todayKey(),
@@ -7267,20 +7352,8 @@ function openXcEdit(id) {
 async function saveXcEdit() {
   if (currentStaffRole !== 'Admin' || !_xceId) return;
   if (!isOnline) { showToast('No internet connection', 'error'); return; }
-  const cashV = document.getElementById('xce-cash').value, onlineV = document.getElementById('xce-online').value;
-  if ([cashV, onlineV].some(v => v === '' || isNaN(Number(v)) || Number(v) < 0)) { showToast('Enter cash and online amounts (use 0 if none)', 'error'); return; }
-  const expItems = [];
-  let bad = false;
-  document.querySelectorAll('.xce-row').forEach(row => {
-    const desc = expGetDesc(row, 'xce-exp');
-    const amtV = row.querySelector('.xce-amt').value;
-    if (!desc && amtV === '') return;
-    if (!desc || amtV === '' || isNaN(Number(amtV)) || Number(amtV) <= 0) { bad = true; return; }
-    expItems.push({ desc: desc, amount: Number(amtV), type: row.querySelector('.xce-type').value });
-  });
-  if (bad) { showToast('Each expense needs a description and an amount above 0', 'error'); return; }
-  const exp = expItems.filter(i => i.type !== 'finance').reduce((s, i) => s + i.amount, 0);
-  if (!confirm('Save these figures?\n\nCash: Rs ' + Number(cashV) + '\nOnline: Rs ' + Number(onlineV) + '\nExpenses: Rs ' + exp)) return;
+  // The modal itself handles the input, so we can bypass the prompt.
+  if (!window.confirm('Save these figures?\n\nCash: Rs ' + Number(cashV) + '\nOnline: Rs ' + Number(onlineV) + '\nExpenses: Rs ' + exp)) return;
 
   const btn = document.getElementById('xce-save-btn');
   btn.disabled = true;
@@ -7528,7 +7601,8 @@ async function closeAllShifts() {
   }
   if (!confirm('⚠️ WARNING: This will FINALIZE all sales and CLEAR all data.\n\nOnly use this after 2AM when ALL shifts are done.\n\nContinue?')) return;
   
-  const adminPin = prompt('Enter Admin PIN to authorize:');
+  const adminPin = await askText('Enter Admin PIN to authorize:');
+  if (adminPin === null) return;
   if (adminPin !== '7530' && adminPin !== '1234') {
     showToast('Wrong PIN — operation cancelled', 'error');
     return;
@@ -7866,10 +7940,12 @@ async function adminClearActiveTables() {
     showToast('All active tables cleared ✅', 'success');
   } catch(e) { showToast('Clear failed', 'error'); console.error(e); }
 }
-function openAdminPanel() {
-  const pin = prompt('Enter Admin PIN:');
+async function openAdminPanel() {
+  const pin = await askText('Enter Admin PIN:');
+  if (pin === null) return;
   if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN', 'error'); return; }
-  const choice = prompt(
+  
+  const choice = await askText(
     'Admin Tools:\n' +
     '1. Clear all active tables (cloud)\n' +
     '2. Delete today\'s data\n' +
