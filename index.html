@@ -5691,7 +5691,7 @@ async function loadDeliveryHistory() {
         document.body.removeChild(link);
     }
 
-    function openManualOrderModal() {
+    async function openManualOrderModal() {
         manCart = [];
         manPaymentMethod = "Cash";
         document.getElementById('man-loc').value = "";
@@ -5701,12 +5701,12 @@ async function loadDeliveryHistory() {
         document.getElementById('man-fee').value = "";
         document.getElementById('man-item-search').value = "";
         document.getElementById('man-branch-tag').innerText = (activeBranch || BRANCH_CONFIG.MULTAN).name.toUpperCase();
-        renderManItemPicker('');
         renderManCart();
         renderManPaymentButtons();
         renderManSummary();
         document.getElementById('manual-order-overlay').style.display = 'flex';
         setScrollLock(true);
+        await renderManItemPicker('');
     }
 
     function closeManualOrderModal() {
@@ -5714,11 +5714,60 @@ async function loadDeliveryHistory() {
         setScrollLock(false);
     }
 
-    function renderManItemPicker(filterText) {
+    async function renderManItemPicker(filterText) {
         const container = document.getElementById('man-item-picker');
         const search = (filterText || '').toLowerCase();
         const isBWP = (activeBranch || BRANCH_CONFIG.MULTAN).id === 'BWP';
         _manPickerFlat = [];
+
+        // ── Ensure ALL custom deals for this branch are merged into dealsData
+        // before rendering. This is what fixes the "only 6 deals" issue.
+        if (sb) {
+            try {
+                const brId = (activeBranch || BRANCH_CONFIG.MULTAN).id;
+                const { data: cds, error: cdsErr } = await sb.from('custom_deals')
+                    .select('*')
+                    .eq('branch', brId)
+                    .eq('available', true);
+                if (!cdsErr && cds) {
+                    cds.forEach(deal => {
+                        if (!dealsData.find(d => d.name === deal.name)) {
+                            const flavorMap = {
+                                'Solo Inferno':  { flavorsNeeded: [{label: 'Pizza Flavor', cat: 'Pan Pizza 🍕'}], fixedItems: ['1x Buddy Drink', '2x Wings'] },
+                                'The Roll Out':  { flavorsNeeded: [{label: 'Roll 1', cat: 'Rolls 🌯'}, {label: 'Roll 2', cat: 'Rolls 🌯'}], fixedItems: ['2x Buddy Drink'] },
+                                'Double Crunch': { fixedItems: ['2x Crunch Wrap', '2x Buddy Drink'] },
+                                'Flame & Fame':  { fixedItems: ['2x CM Grilled Burger', '2x Buddy Drink'] },
+                                'The X Bite':    { fixedItems: ['1x Zinger Burger', '1x Buddy Drink', '2x Wings', '1x Regular Fries'] },
+                                'Triple Blaze':  { fixedItems: ['3x Zinger Burger', '1L Drink'] },
+                                'Zinger Rush':   { fixedItems: ['1x Zinger Burger', '1x Coke Buddy'] },
+                                'The Duo Hit':   { fixedItems: ['2x Zinger Burger', '1x Reg Fries', '2x Buddy Drink'] },
+                                'The Mega Crunch': { fixedItems: ['4x Zinger Burgers', '2x Regular Fries', '1L Drink', '6x Wings'] },
+                            };
+                            const extra = flavorMap[deal.name] || {};
+                            dealsData.push({
+                                name: deal.name,
+                                price: deal.price,
+                                badge: deal.badge || 'NEW',
+                                image: deal.image,
+                                desc: deal.deal_desc,
+                                _custom: true,
+                                _customId: deal.id,
+                                ...extra
+                            });
+                        } else {
+                            // Already present — keep price/image in sync with DB
+                            const existing = dealsData.find(d => d.name === deal.name);
+                            if (existing) {
+                                existing.price = deal.price;
+                                if (deal.image) existing.image = deal.image;
+                                if (deal.deal_desc) existing.desc = deal.deal_desc;
+                            }
+                        }
+                    });
+                }
+            } catch(e) { console.error('renderManItemPicker: custom deals load failed', e); }
+        }
+
         let html = '';
 
         for (let cat in menuData) {
@@ -11389,6 +11438,7 @@ window.ptPrint = function(id){
 };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
