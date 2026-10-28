@@ -2162,11 +2162,12 @@ function startLiveReload() {
     // 2) Completed sales — cash drawer, closing report, per-staff totals
     sb.channel('shift-tx-changes')
       .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'shift_transactions',
+        event: 'INSERT', schema: 'public', table: 'shift_transactions',
         filter: `branch=eq.${activeBranch}`
       }, (payload) => handleShiftTxRealtime(payload))
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'shift_transactions'
+      }, (payload) => handleShiftTxDeleted(payload))
       .subscribe();
 
         // 3) Delivery orders — status changes, rider assignment
@@ -2186,37 +2187,25 @@ function startLiveReload() {
           setTimeout(pollWebOrders, 500);
         }
 
-        // ── Auto-recover deleted or settled orders ──
+                // ── STRICT KITCHEN PANEL LEADER: No auto-inserts in POS ──
         if (payload.eventType === 'DELETE') {
+          // Kitchen Panel deleted it. Just remove it from the POS screen.
           const old = payload.old;
-          // If it was a delivery order that had items, it was likely paid/removed by COMS
-          if (old && old.type === 'Delivery' && old.items && old.items.trim().length > 0) {
-             const inHistory = completedOrders.find(o => o.kitchenOrderId === old.id || o.id === old.id);
-             if (!inHistory) {
-               const _recId = genId();
-               const saleTotal = (old.subtotal || 0) + (old.delivery_fee || 0);
-               await sbWrite('shift_transactions', 'insert', [{
-                  id: _recId, branch: activeBranch, date: todayKey(),
-                  bill_no: 'AUTO-' + old.id.slice(0,6).toUpperCase(),
-                  type: 'Delivery', table_loc: old.location || '',
-                  items_text: old.items, subtotal: old.subtotal || 0,
-                  delivery_charge: old.delivery_fee || 0, total: saleTotal,
-                  method: 'cash', staff: 'Kitchen Panel',
-                  kitchen_order_id: old.id
-               }]);
-               completedOrders.push({
-                 id: _recId, billNo: 'AUTO', table: old.location, type: 'Delivery',
-                 items: [], itemsText: old.items, total: saleTotal, method: 'cash',
-                 time: new Date(), staff: 'Kitchen Panel', branch: activeBranch,
-                 deliveryCharge: old.delivery_fee || 0, kitchenOrderId: old.id
-               });
-               showToast('Recovered deleted delivery order (Rs ' + saleTotal + ')', 'success');
-             }
+          for (const tname in tableOrders) {
+            if (tableOrders[tname].id === old.id || tableOrders[tname].webOrderId === old.id) {
+              delete tableOrders[tname];
+              await _saveActiveTable(tname, null);
+              if (currentOrder.table === tname) {
+                 currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+                 switchView('tables');
+              }
+              renderTableMap();
+            }
           }
         } else if (payload.eventType === 'UPDATE') {
           const n = payload.new;
           
-          // ✅ NEW: Sync rider assignment from Kitchen Panel to POS
+          // Sync rider assignment from Kitchen Panel to POS
           if (n.rider) {
             for (const tname in tableOrders) {
               if (tableOrders[tname].id === n.id || tableOrders[tname].webOrderId === n.id) {
@@ -2235,36 +2224,26 @@ function startLiveReload() {
             }
           }
 
-          // If Kitchen marked it PAID or OUT, we must record it if we haven't already
-          if (n.type === 'Delivery' && (n.status === 'OUT' || n.status === 'PAID')) {
-             const inHistory = completedOrders.find(o => o.kitchenOrderId === n.id || o.id === n.id);
-             if (!inHistory && n.items && n.items.trim().length > 0) {
-               const _recId = genId();
-               const saleTotal = (n.subtotal || 0) + (n.delivery_fee || 0) - (n.discount || 0);
-               await sbWrite('shift_transactions', 'insert', [{
-                  id: _recId, branch: activeBranch, date: todayKey(),
-                  bill_no: 'AUTO-' + n.id.slice(0,6).toUpperCase(),
-                  type: 'Delivery', table_loc: n.location || '',
-                  items_text: n.items, subtotal: n.subtotal || 0,
-                  delivery_charge: n.delivery_fee || 0, total: saleTotal,
-                  method: 'cash', staff: 'Kitchen Panel',
-                  kitchen_order_id: n.id
-               }]);
-               completedOrders.push({
-                 id: _recId, billNo: 'AUTO', table: n.location, type: 'Delivery',
-                 items: [], itemsText: n.items, total: saleTotal, method: 'cash',
-                 time: new Date(), staff: 'Kitchen Panel', branch: activeBranch,
-                 deliveryCharge: n.delivery_fee || 0, kitchenOrderId: n.id
-               });
-               // Remove it from the active tables view
-               for (const tname in tableOrders) {
-                 if (tableOrders[tname].id === n.id || tableOrders[tname].webOrderId === n.id) {
-                   delete tableOrders[tname];
-                   _saveActiveTable(tname, null);
-                 }
-               }
-               showToast('Auto-logged settled delivery order (Rs ' + saleTotal + ')', 'success');
-             }
+          // If Kitchen marked it PAID, OUT, or VOIDED, remove it from the POS screen.
+          // Do NOT create a shift_transaction. The Kitchen Panel handles the cash entry!
+          if (['OUT','PAID','VOIDED','RETURNED','CANCELLED','CLOSED'].includes(n.status)) {
+            for (const tname in tableOrders) {
+              if (tableOrders[tname].id === n.id || tableOrders[tname].webOrderId === n.id) {
+                
+                // If it's voided, add it to the ignore list so it never gets auto-recovered
+                if (n.status === 'VOIDED') {
+                  voidedOrderIds.add(n.id);
+                }
+
+                delete tableOrders[tname];
+                await _saveActiveTable(tname, null);
+                if (currentOrder.table === tname) {
+                   currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
+                   switchView('tables');
+                }
+                renderTableMap();
+              }
+            }
           }
         }
 
@@ -2342,9 +2321,27 @@ function handleActiveTableRealtime(payload) {
 // Mirrors a sale/void/expense recorded on another screen into this
 // screen's cash drawer + closing report, live — and keeps billCounter
 // from colliding with a number another till just issued.
+function handleShiftTxDeleted(payload) {
+  const id = payload.old && payload.old.id;
+  if (!id) return;
+  const before = completedOrders.length;
+  completedOrders = completedOrders.filter(o => o.id !== id);
+  if (completedOrders.length === before) return;   // not one of ours
+  cashInHand = computeCashInHand(completedOrders, openingBalance);
+  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+  if (document.getElementById('view-cash').classList.contains('active'))
+    loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
+  if (document.getElementById('view-closing').classList.contains('active')) renderClosingReport();
+}
 function handleShiftTxRealtime(payload) {
   const t = payload.new;
   if (!t || t.date !== todayKey()) return;
+
+  // ✅ NEW: Ignore automated ghost entries from the Kitchen Panel
+  if (t.bill_no && String(t.bill_no).startsWith('AUTO-')) {
+    console.warn('Ignored AUTO- transaction from Kitchen Panel:', t.bill_no);
+    return; 
+  }
 
   const alreadyHave = completedOrders.some(o => o.id && o.id === t.id);
   if (alreadyHave) return;
@@ -2859,7 +2856,7 @@ async function pollWebOrders() {
   if (!sb || !isOnline) return;
   try {
     const { data, error } = await sb.from('kitchen_orders')
-      .select('id, type, location, status, subtotal, delivery_fee, created_at, customer_name, phone, source, tax')
+      .select('id, type, location, status, subtotal, delivery_fee, created_at, customer_name, phone, source, tax, discount')
       .eq('branch', activeBranch)
       .in('status', ['WAITING','PREPARING','READY'])
       .order('created_at', { ascending: false })
@@ -2962,6 +2959,8 @@ async function pollWebOrders() {
         webTax: Number(order.tax) || 0,
         // ✅ NEW: Auto-detect tax from web order
         taxEnabled: (Number(order.tax) || 0) > 0,
+        discAmount: Number(order.discount) || 0, discType: 'flat',
+        discReason: (Number(order.discount) || 0) > 0 ? 'Applied on web/kitchen order' : '',
         taxPercent: (Number(order.tax) || 0) > 0 ? 16 : 0, 
         customerName: order.customer_name || '', customerPhone: order.phone || '',
         scEnabled: orderType === 'Dine-In', scPct: 7, sentToKitchen: true, staff: 'Web'
@@ -3999,15 +3998,15 @@ function saveTableOrder() {
     const isDelivery = currentOrder.type === 'Delivery';
     const addr      = isDelivery ? (document.getElementById('delivery-address')?.value || currentOrder.deliveryAddress || '') : '';
     const delCharge = isDelivery ? (parseFloat(document.getElementById('delivery-charge')?.value) || currentOrder.deliveryCharge || 0) : 0;
-    const itemsText = currentOrder.items
-      .map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
+    const itemsText = currentOrder.items.filter(i => !i.returned)
+      .map(i => `${i.qty}x ${i.name} @ Rs ${i.price * i.qty}${i.note ? ' [' + i.note + ']' : ''}`).join('\n');
       
     sbWrite('kitchen_orders', 'update', {
       items: itemsText,
       // ✅ FIX: Keep the actual address. Do NOT overwrite with "DEL 1"
       location: isDelivery ? (addr || currentOrder.table) : currentOrder.table, 
       delivery_fee: delCharge,
-      subtotal: currentOrder.items.reduce((s,i) => s + (i.returned ? 0 : i.price * i.qty), 0),
+      subtotal: (() => { const t = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, getSCPct(), parseFloat(document.getElementById('disc-amount').value) || 0, discType, 0); return t.grand - (t.tax || 0); })(),
       customer_name: document.getElementById('order-customer-name')?.value || null,
       phone: document.getElementById('order-customer-phone')?.value || null
     }, { eq: [['id', currentOrder.id]] });
@@ -4942,9 +4941,9 @@ async function sendToKitchen() {
   if (!orderSnap.items.length) { showToast('No items to send','error'); return; }
   const pct = getSCPct();
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const {food, sc, grand: _grandWithTax, disc, tax} = getOrderTotal(orderSnap.items, orderSnap.type, scEnabled, pct, discAmt, discType);
-  const grand = _grandWithTax - (tax || 0); // kitchen_orders keeps tax in its own column
-  const itemsText = orderSnap.items.map(i => `${i.qty}x ${i.name}${i.note?' ['+i.note+']':''}`).join('\n');
+  const {food, sc, grand: _grandWithTax, disc, tax, delCharge: _gotDel} = getOrderTotal(orderSnap.items, orderSnap.type, scEnabled, pct, discAmt, discType);
+  const grand = _grandWithTax - (tax || 0) - (_gotDel || 0); // tax and delivery have their own columns
+  const itemsText = orderSnap.items.filter(i => !i.returned).map(i => `${i.qty}x ${i.name} @ Rs ${i.price * i.qty}${i.note?' ['+i.note+']':''}`).join('\n');
   const custName = document.getElementById('order-customer-name').value;
   const custPhone = document.getElementById('order-customer-phone').value;
   orderSnap.customerName = custName; orderSnap.customerPhone = custPhone;
@@ -5076,7 +5075,7 @@ async function _markTakeawayPaidInner() {
   if (!orderSnap.items.length) { showToast('No items in order', 'error'); return; }
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const { grand, disc, tax } = getOrderTotal(orderSnap.items, orderSnap.type, false, 0, discAmt, discType, 0);
-  const payM = promptPaymentMethod('Payment method?');
+  const payM = await promptPaymentMethod('Payment method?');
   if (payM === null) { showToast('Payment cancelled — order kept open', 'error'); return; }
   if (!orderSnap.id && !orderSnap.sentToKitchen) await sendToKitchenFor(orderSnap);
   const _twSaleId = genId();
@@ -5715,7 +5714,7 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
     // ✅ FIX 1: Ask payment method when marking delivered
     let paymentMethod = 'cash';
     if (status === 'OUT') {
-      paymentMethod = promptPaymentMethod('How did customer pay?');
+      paymentMethod = await promptPaymentMethod('How did customer pay?');
       if (paymentMethod === null) { showToast('Cancelled — order not marked delivered', 'error'); return; }
     }
 
@@ -6062,7 +6061,7 @@ async function recordCreditPayment(creditId, balanceDue) {
   if (!amt || amt <= 0) { showToast('Valid amount required', 'error'); return; }
   if (amt > balanceDue && !confirm('Amount exceeds balance due. Continue anyway?')) return;
 
-  const method = promptPaymentMethod('Payment received via?');
+  const method = await promptPaymentMethod('Payment received via?');
   if (method === null) { showToast('Cancelled', 'error'); return; }
 
   const credit = _creditData.find(c => c.id === creditId);
@@ -6441,6 +6440,7 @@ async function printCashDrawerReport() {
   const cashOuts = orders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
   const expenses = orders.filter(o=>o.method==='expense').reduce((s,o)=>s+Math.abs(o.total),0);
   const expected = computeCashInHand(orders, opening);
+    const billsCount = orders.filter(o=>!['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length;
   
 
   const fromLabel = fromVal.replace('T',' ');
@@ -6857,54 +6857,7 @@ async function loadTodaySales() {
     document.getElementById('bar-billno').textContent = String(billCounter).padStart(3,'0');
     saveTodaySales();
 
-    // ── Recover missing delivery orders (COMS / Kitchen Panel deletions) ──
-    try {
-      const { data: kOrders } = await sb.from('kitchen_orders')
-        .select('id, type, location, items, subtotal, delivery_fee, customer_name, phone, status, created_at')
-        .eq('branch', activeBranch)
-        .eq('type', 'Delivery')
-        .gte('created_at', todayK + 'T00:00:00+05:00');
-      
-      if (kOrders) {
-        for (const ko of kOrders) {
-          // If this order is NOT in the POS completedOrders, it might have been 
-          // closed by the Kitchen Panel or COMS. We need to log it.
-          const inHistory = completedOrders.find(o => o.kitchenOrderId === ko.id || o.id === ko.id);
-          
-          if (!inHistory && ko.status !== 'VOIDED') {
-             // Only auto-recover if it has items (meaning it was sent to kitchen)
-             if (ko.items && ko.items.trim().length > 0) {
-               const _recId = genId();
-               const saleTotal = (ko.subtotal || 0) + (ko.delivery_fee || 0);
-               
-               await sbWrite('shift_transactions', 'insert', [{
-                  id: _recId, branch: activeBranch, date: todayK,
-                  bill_no: 'AUTO-' + ko.id.slice(0,6).toUpperCase(),
-                  type: 'Delivery', table_loc: ko.location || '',
-                  items_text: ko.items, subtotal: ko.subtotal || 0,
-                  delivery_charge: ko.delivery_fee || 0, total: saleTotal,
-                  method: 'cash', staff: currentStaff,
-                  customer_name: ko.customer_name || '', customer_phone: ko.phone || '',
-                  kitchen_order_id: ko.id
-               }]);
-               
-               // Add to local memory so it shows in the current session
-               completedOrders.push({
-                 id: _recId, billNo: 'AUTO', table: ko.location, type: 'Delivery',
-                 items: [], itemsText: ko.items, total: saleTotal, method: 'cash',
-                 time: new Date(ko.created_at), staff: currentStaff, branch: activeBranch,
-                 customerName: ko.customer_name, customerPhone: ko.phone,
-                 deliveryCharge: ko.delivery_fee || 0, kitchenOrderId: ko.id
-               });
-             }
-          }
-        }
-        cashInHand = computeCashInHand(completedOrders, openingBalance);
-        document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
-      }
-    } catch(e) {
-      console.warn('Failed to recover missing delivery orders:', e);
-    }
+    // ✅ DISABLED: Kitchen Panel is the leader. It handles its own cash entries.
 
     // ── Restore open tables (survives refresh) ────────────────────
     await _loadActiveTables();
