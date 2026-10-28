@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2808,7 +2810,7 @@ function parseItemsFromText(text, knownSubtotal, isDineIn) {
     let name = m[2].trim();
     const note = m[3] || '';
     let price = 0;
-   const pm = name.match(/\s*@\s*Rs\s*([\d,]+)\s*$/i);   // price the kitchen already shows
+   const pm = name.match(/\s*@\s*Rs\s*([\d,]+)/i);   // price the kitchen already shows
 if (pm) { 
     let totalPrice = parseInt(pm[1].replace(/,/g, '')); 
     price = totalPrice / qty; // Divide by quantity to get the correct single unit price
@@ -3960,25 +3962,56 @@ async function returnItem(idx) {
 }
 const DISCOUNT_EXCLUDED = ['Coke Buddy','Sprite Buddy','Coke 1 Liter','Next Cola 1 Liter','Coke 1.5L','Sprite 1.5L','Water Small','Water Large'];
 
-function getOrderTotal(items, type, _scEnabled, _scPct, _discAmount, _discType, _delCharge) {
-  const food = items.reduce((s,i) => s + (i.returned ? 0 : i.price*i.qty), 0);
-  const discountableFood = items.reduce((s,i) => {
-    if (i.returned) return s;
-    const isDrink = DISCOUNT_EXCLUDED.some(d => i.name.includes(d));
-    return s + (isDrink ? 0 : i.price*i.qty);
-  }, 0);
-  const usesSC = (_scEnabled !== undefined ? _scEnabled : scEnabled) && type==='Dine-In';
-  const pct = (_scPct !== undefined ? _scPct : getSCPct());
-  const sc = usesSC ? Math.round(food * pct / 100) : 0;
+function getOrderTotal(items, type, _scEnabled, _scPct, _discAmount, _discType, _delCharge, _payMethod = 'cash') {
+  // 1. Calculate Raw Totals & Split Food vs Drinks
+  let rawTotal = 0, drinksTotal = 0, dipTotal = 0;
+  const DRINK_KEYWORDS = ["coke", "sprite", "cola", "1 liter", "1.5l", "1.5 l", "water", "margarita", "lemonade", "pina colada", "red rose", "fresh lime", "blue lagoon", "mint", "next cola"];
+  
+  items.forEach(i => {
+    if (i.returned) return;
+    const itemTotal = i.price * i.qty;
+    rawTotal += itemTotal;
+    const lowerName = i.name.toLowerCase();
+    if (DRINK_KEYWORDS.some(kw => lowerName.includes(kw))) drinksTotal += itemTotal;
+    if (lowerName.includes("dip")) dipTotal += itemTotal;
+  });
+
+  const foodTotal = Math.max(0, rawTotal - drinksTotal);
+
+  // 2. Calculate Discount (Food only)
   const da = _discAmount !== undefined ? _discAmount : (parseFloat(document.getElementById('disc-amount')?.value) || 0);
   const dt = _discType || discType;
-  const disc = dt==='pct' ? Math.round(discountableFood * da / 100) : Math.min(da, food);
+  const disc = dt === 'pct' ? Math.round(foodTotal * da / 100) : Math.min(da, foodTotal);
+  const foodAfterDiscount = Math.max(0, foodTotal - disc);
+  const newBillTotal = foodAfterDiscount + drinksTotal;
+
+  // 3. Calculate Tax (Matches Edge Function Rules)
+  let taxRate = 0;
+  // Fallback to currentOrder.payMethod or webTax if this is an ongoing order
+  const pm = _payMethod.toLowerCase();
+  if (pm === 'card' || pm === 'bank' || pm === 'jazzcash' || pm === 'foodpanda') {
+    taxRate = 0.08; // 8% for Card/Online
+  } else if (pm === 'cash' && type === 'Dine-In') {
+    taxRate = 0.16; // 16% for Cash Dine-In
+  }
+  
+  const taxableForTax = Math.max(0, foodAfterDiscount - dipTotal);
+  // If the web app already sent a tax amount, use that (for web orders). Otherwise calculate it.
+  let tax = (items === currentOrder.items && currentOrder.fromWeb && currentOrder.webTax) 
+    ? Number(currentOrder.webTax) 
+    : Math.round(taxableForTax * taxRate);
+
+  // 4. Calculate Service Charge (7% applied AFTER tax and discount)
+  const usesSC = (_scEnabled !== undefined ? _scEnabled : scEnabled) && type === 'Dine-In';
+  const pct = (_scPct !== undefined ? _scPct : getSCPct());
+  const preSCTotal = foodAfterDiscount + tax + drinksTotal;
+  const sc = usesSC ? Math.round(preSCTotal * pct / 100) : 0;
+
+  // 5. Calculate Grand Total
   const delCharge = _delCharge !== undefined ? _delCharge : getDelCharge();
-  // Tax chosen by the customer on the web order (separate from food and service charge).
-  // Only applies to the order that is open on screen.
-  const tax = (items === currentOrder.items) ? (Number(currentOrder.webTax) || 0) : 0;
-  const grand = Math.max(0, food + sc - disc + delCharge + tax);
-  return { food, sc, grand, pct, disc, delCharge, tax };
+  const grand = Math.max(0, newBillTotal + sc + delCharge + tax);
+
+  return { food: rawTotal, sc, grand, pct, disc, delCharge, tax };
 }
 
 function renderOrderTotals() {
@@ -4842,7 +4875,7 @@ async function completePayment() {
     const scOn     = currentOrder.type === 'Dine-In' ? scEnabled : false;
     const discAmt  = parseFloat(document.getElementById('disc-amount').value) || 0;
     const delCharge = getDelCharge();
-    let { sc, disc, tax } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+    let { sc, disc, tax } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge, payMethod);
     if (currentOrder.fromWeb && currentOrder.type === 'Dine-In') {
       const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
       sc = grand - food - delCharge - (tax || 0) + (disc || 0);
