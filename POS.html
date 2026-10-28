@@ -2982,20 +2982,39 @@ async function pollWebOrders() {
 function parseItemsFromText(text, knownSubtotal, isDineIn) {
   if (!text) return [];
   let priceFromText = true;
-  const items = text.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+  const lines = text.split('\n').map(l => l.trim());
+  const items = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    
+    // Match the item line: "1x Family Feast @ Rs 2499"
     const m = line.match(/^(\d+)x\s+(.+?)(?:\s+\[([^\]]*)\])?$/);
-    if (!m) return null;
+    if (!m) continue; // If it's a flavor line (e.g., "Category 1: [Pan] Pizza"), we'll catch it below
+    
     const qty = parseInt(m[1]);
     let name = m[2].trim();
-    const note = m[3] || '';
+    let note = m[3] || '';
     let price = 0;
-   const pm = name.match(/\s*@\s*Rs\s*([\d,]+)/i);   // price the kitchen already shows
-if (pm) { 
-    let totalPrice = parseInt(pm[1].replace(/,/g, '')); 
-    price = totalPrice / qty; // Divide by quantity to get the correct single unit price
-    name = name.slice(0, pm.index).trim(); 
-}
-    else {
+    
+    // ✅ NEW: Check the next line for flavors
+    if (i + 1 < lines.length) {
+      const nextLine = lines[i + 1];
+      // If the next line doesn't start with a quantity (like "1x"), it's a flavor/note
+      if (nextLine && !/^\d+x\s+/.test(nextLine) && !nextLine.match(/^@Rs/)) {
+        note = note ? note + ' | ' + nextLine : nextLine;
+        i++; // Skip the next line so it doesn't duplicate
+      }
+    }
+    
+    // Extract price
+    const pm = name.match(/\s*@\s*Rs\s*([\d,]+)/i);
+    if (pm) { 
+      let totalPrice = parseInt(pm[1].replace(/,/g, '')); 
+      price = totalPrice / qty; // Divide by quantity to get the correct single unit price
+      name = name.slice(0, pm.index).trim(); 
+    } else {
       priceFromText = false;
       for (let cat in menuData) {
         const item = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
@@ -3004,8 +3023,8 @@ if (pm) {
       const deal = dealsData.find(d => name.includes(d.n));
       if (deal) price = deal.p;
     }
-    return { name, price, qty, note };
-  }).filter(Boolean);
+    items.push({ name, price, qty, note });
+  }
 
   if (!priceFromText && knownSubtotal && items.length) {   // old rescale only as a fallback
     const rawSubtotal = isDineIn ? Math.round(knownSubtotal / 1.07) : knownSubtotal;
@@ -5406,7 +5425,7 @@ async function printKitchenTicket() {
     return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #ccc;">
       <div style="flex:1;">
         ${qtyLine}
-        ${i.note ? `<div style="font-size:13px;font-weight:700;color:#333;margin-top:3px;padding-left:18px;">↳ ${i.note}</div>` : ''}
+        ${i.note ? `<div style="font-size:14px;font-weight:800;color:#000;margin-top:4px;padding-left:18px;background:#f0f0f0;padding:4px 8px;border-radius:4px;">↳ ${i.note.replace(/\|/g, '<br>↳ ')}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -5527,7 +5546,7 @@ function printReceipt(sale, isSplit=false) {
         <span style="font-size:15px;font-weight:700;">${i.qty}x ${i.name}</span>
         <span style="font-size:15px;font-weight:700;white-space:nowrap;">Rs ${i.price * i.qty}</span>
       </div>
-      ${i.note ? `<div style="font-size:12px;font-weight:600;margin-top:2px;padding-left:14px;">↳ ${i.note}</div>` : ''}
+      ${i.note ? `<div style="font-size:13px;font-weight:700;margin-top:4px;padding-left:14px;color:#000;">↳ ${i.note.replace(/\|/g, '<br>↳ ')}</div>` : ''}
     </div>
   `).join('');
   const methodLabel = {
