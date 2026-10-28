@@ -3862,9 +3862,63 @@ function applyItemAdjustment(idx, action, qtyDelta) {
   }
   saveTableOrder(); renderOrderItems();
 }
+// Normalizes "a3", "A 3", "table a-3", "tk1", "TK 1", "del2", "DEL 2", "A03"
+// → the exact ID used in ALL_TABLE_IDS (e.g. "A-3", "TK-1", "DEL-2").
+// Returns null if nothing matches.
+function normalizeTableInput(raw) {
+  if (!raw) return null;
+  let s = String(raw).trim().toUpperCase();
+
+  // strip a leading word like "TABLE", "TBL", "TK" only when it's followed by a number
+  s = s.replace(/^(TABLE|TBL)\s*/,'');
+
+  // allow spaces / underscores / dots where a hyphen is expected
+  s = s.replace(/[\s_.]+/g, '-');
+
+  // collapse multiple hyphens
+  s = s.replace(/-+/g, '-');
+
+  // common shorthand that the operator may type
+  const shorthand = {
+    'D-':  'DEL-',
+    'DL-': 'DEL-',
+    'T-':  'TK-',
+    'TAK-':'TK-',
+  };
+  for (const [from, to] of Object.entries(shorthand)) {
+    if (s.startsWith(from)) { s = to + s.slice(from.length); break; }
+  }
+
+  // pad single-digit numeric suffix → A-3 becomes A-3, but A-03 becomes A-3
+  s = s.replace(/-0*(\d+)$/, (m, n) => '-' + parseInt(n, 10));
+
+  // exact match?
+  if (ALL_TABLE_IDS.includes(s)) return s;
+
+  // Try inserting a hyphen where the operator forgot one (e.g. "A3", "TK1", "DEL2")
+  const m = s.match(/^([A-Z]+)(\d+)$/);
+  if (m) {
+    const candidate = m[1] + '-' + parseInt(m[2], 10);
+    if (ALL_TABLE_IDS.includes(candidate)) return candidate;
+  }
+
+  return null;
+}
+
 async function changeTablePrompt() {
-  const newTable = prompt('Move to table (e.g. A-3, B-1, TK-2):');
-  if (!newTable || !ALL_TABLE_IDS.includes(newTable)) { showToast('Invalid table ID', 'error'); return; }
+  const raw = prompt('Move to table (e.g. A-3, B-1, TK-2, DEL-1):');
+  if (raw === null) return;                             // user pressed Cancel
+  const newTable = normalizeTableInput(raw);
+  if (!newTable) {
+    // Help the operator see the real, valid IDs for this branch
+    const grouped = Object.entries(TABLES).map(([floor, ids]) =>
+      floor + ': ' + ids.slice(0, 4).join(', ') + (ids.length > 4 ? ', …' : '')
+    ).join('\n');
+    showToast('Invalid table ID — "' + raw + '" is not one of this branch\'s tables', 'error');
+    alert('Invalid table ID: "' + raw + '"\n\nValid formats:\n' + grouped +
+          '\n\nExamples that work: A-3, a3, A 3, TK-1, tk1, DEL-2, del 2');
+    return;
+  }
   if (tableOrders[newTable] && newTable !== currentOrder.table) { showToast('That table is already occupied', 'error'); return; }
     const oldTable = currentOrder.table;
   if (oldTable) delete tableOrders[oldTable];
@@ -8922,6 +8976,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
