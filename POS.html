@@ -927,6 +927,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <div id="rider-audit-btns" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;"></div>
         <div id="rider-audit-result" style="display:none;"></div>
       </div>
+      <div id="delivery-overflow-banner" style="display:none;background:rgba(192,57,43,0.15);border:2px solid var(--red);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--red);font-weight:700;"></div>
       <div class="delivery-orders-grid" id="delivery-orders-grid">
         <div style="color:var(--text3);padding:28px;text-align:center;font-size:12px;">Loading…</div>
       </div>
@@ -2132,7 +2133,12 @@ function startLiveReload() {
         if (document.getElementById('view-delivery').classList.contains('active')) {
           renderDeliveryView();
         }
-        setTimeout(pollWebOrders, 500);
+        // New Delivery web order just arrived — let the auto-assignment do its job now
+        if (payload.eventType === 'INSERT' && payload.new?.type === 'Delivery') {
+          pollWebOrders();
+        } else {
+          setTimeout(pollWebOrders, 500);
+        }
       })
       .subscribe();
   }
@@ -2764,6 +2770,30 @@ async function pollWebOrders() {
         return tNorm === locNorm;
       });
 
+      // ── Delivery web orders → auto-place on the first free DEL-N slot ──
+      if (!tableId && (orderType === 'Delivery' || loc.toLowerCase() === 'delivery')) {
+        if (order.status === 'READY') continue;
+        // Prefer a free slot; if all 8 are taken, keep the order as pending
+        // and let the cashier resolve it (don't silently drop it).
+        tableId = TABLES['Delivery'].find(t => !tableOrders[t]);
+        if (!tableId) {
+          // All delivery slots full — surface as a pending order so it doesn't vanish
+          if (window._deliveryOverflowNotified !== order.id) {
+            window._deliveryOverflowNotified = order.id;
+            showToast('⚠️ All 8 delivery slots are full — new order #' +
+                      String(order.id).slice(0,6).toUpperCase() + ' is waiting. Free a DEL slot.', 'error');
+          }
+          pendingWebOrders.push({
+            id: order.id, type: 'Delivery', tableId: null,
+            location: order.location || '', subtotal: order.subtotal || 0,
+            delivery_fee: order.delivery_fee || 0, items: '',
+            overflow: true
+          });
+          continue;
+        }
+      }
+
+      // ── Takeaway web orders → auto-place on first free TK-N slot ──
       if (!tableId && (orderType === 'Takeaway' || loc.toLowerCase() === 'takeaway' || /^car[\s-]?dine/i.test(loc))) {
         if (order.status === 'READY') continue;
         tableId = TABLES['Takeaway'].find(t => !tableOrders[t]);
@@ -2803,10 +2833,15 @@ async function pollWebOrders() {
       if (order.status === 'WAITING') newPending.push({ ...order, tableId });
     }
 
-    pendingWebOrders = newPending;
+    // Preserve overflow orders (Delivery slots full) alongside normal pending ones
+    const overflow = pendingWebOrders.filter(p => p.overflow);
+    pendingWebOrders = [...overflow, ...newPending];
     updatePendingBadges();
-    newPending.filter(p => !prevIds.has(p.id)).forEach(p => showToast('🔔 New web order → ' + p.tableId, 'success'));
+    newPending.filter(p => !prevIds.has(p.id) && p.tableId)
+      .forEach(p => showToast('🔔 New web order → ' + p.tableId, 'success'));
     renderTableMap();
+    // If the cashier is currently looking at Delivery view, refresh it too
+    if (document.getElementById('view-delivery')?.classList.contains('active')) renderDeliveryView();
   } catch (e) {
     console.error('pollWebOrders:', e);
   }
@@ -5314,6 +5349,20 @@ async function renderDeliveryView() {
   const grid = document.getElementById('delivery-orders-grid');
   const riderBtns = document.getElementById('rider-audit-btns');
   grid.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;font-size:12px;">Loading…</div>';
+
+  // Show a warning if all DEL slots are full — this is the "start generating" pressure point
+  const overflow = (pendingWebOrders || []).filter(p => p && p.overflow);
+  const banner = document.getElementById('delivery-overflow-banner');
+  if (banner) {
+    if (overflow.length) {
+      banner.style.display = 'block';
+      banner.innerHTML = '⚠️ All 8 delivery slots (DEL-1 … DEL-8) are occupied. ' +
+        overflow.length + ' new online delivery order(s) are waiting. ' +
+        'Free a DEL slot on the Table Map to auto-place the next one.';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
   let orders = [];
   if (sb) {
     try {
@@ -8990,6 +9039,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
