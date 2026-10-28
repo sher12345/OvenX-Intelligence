@@ -2204,6 +2204,10 @@ function startLiveReload() {
           }
         } else if (payload.eventType === 'UPDATE') {
           const n = payload.new;
+          if (n.type === 'Delivery' && n.source !== 'POS') {
+  if (n.settled === true && n.status === 'COMPLETED') settleDeliveryToCash(n);
+  else if (n.settled === false) undoDeliveryCash(n);
+}
           
           // Sync rider assignment from Kitchen Panel to POS
           if (n.rider) {
@@ -2332,6 +2336,48 @@ function handleShiftTxDeleted(payload) {
   if (document.getElementById('view-cash').classList.contains('active'))
     loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
   if (document.getElementById('view-closing').classList.contains('active')) renderClosingReport();
+}
+async function settleDeliveryToCash(n) {
+  if (!sb || !isOnline) return;
+  const food = (Number(n.subtotal) || 0) + (Number(n.tax) || 0);
+  const fee  = Number(n.delivery_fee) || 0;
+  const pm   = String(n.payment_method || 'cash').toLowerCase();
+  if (pm === 'credited') return;
+  const NONCASH = { jazzcash:'jazzcash', card:'card', bank:'bank', online:'bank' };
+  const method = NONCASH[pm] || 'cash';
+  const riderTag = n.rider ? ' [Rider: ' + n.rider + ']' : '';
+  const row = {
+    id: n.id, branch: activeBranch, date: todayKey(),
+    bill_no: 'DLV-' + String(n.id).slice(0,8).toUpperCase(),
+    type: 'Delivery', table_loc: n.location || '',
+    items_text: (n.items || '') + riderTag,
+    subtotal: n.subtotal || 0, sc: 0, sc_pct: 0, tax: n.tax || 0,
+    discount: n.discount || 0, delivery_charge: fee,
+    total: food + fee, method: method,
+    cash_received: 0, split_cash: 0, split_card: 0,
+    staff: 'OvenX Fleet',
+    customer_name: n.customer_name || '', customer_phone: n.phone || '',
+    delivery_address: n.location || '', kitchen_order_id: n.id
+  };
+  const res = await sbWrite('shift_transactions', 'insert', [row]);
+  if (res && res.error && !res.isDupe) { showToast('Could not save delivery to Cash tab', 'error'); return; }
+  const i = completedOrders.findIndex(o => o.id === n.id);
+  if (i > -1) {
+    completedOrders[i].method = method;
+    completedOrders[i].total = food + fee;
+    cashInHand = computeCashInHand(completedOrders, openingBalance);
+    document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+    if (document.getElementById('view-cash')?.classList.contains('active')) renderCashView();
+  }
+}
+
+async function undoDeliveryCash(n) {
+  if (!sb || !isOnline) return;
+  await sbWrite('shift_transactions', 'delete', null, { eq: [['id', n.id]] });
+  completedOrders = completedOrders.filter(o => o.id !== n.id);
+  cashInHand = computeCashInHand(completedOrders, openingBalance);
+  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
+  if (document.getElementById('view-cash')?.classList.contains('active')) renderCashView();
 }
 function handleShiftTxRealtime(payload) {
   const t = payload.new;
@@ -2894,6 +2940,7 @@ async function pollWebOrders() {
 
       const loc = (order.location || '').trim();
       const orderType = order.type || 'Dine-In';
+      if (orderType === 'Delivery') continue;   // deliveries live in Kitchen Panel + Fleet only
 
       let tableId = ALL_TABLE_IDS.find(t => {
         const tNorm = t.toLowerCase().replace(/-/g, '');
@@ -9343,6 +9390,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
