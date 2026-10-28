@@ -450,61 +450,75 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   position:sticky;bottom:-24px;background:var(--surface);
   padding:14px 0 0;margin-top:10px;border-top:1px solid var(--border);
 }
-@media print{
-  body>*:not(#print-area){display:none!important;}
-  #print-area{
-    display:block!important;
-    width:72mm;
-    font-family:'Courier New',monospace;
-    font-size:15px;
-    color:#000;
-  }
-  #print-area *{
-    font-weight:700 !important;
-    color:#000 !important;
-    background:transparent !important;
-    background-color:transparent !important;
-  }
 
-  /* Dashed dividers -> solid, thicker (fixes dotted look) */
-  #print-area [style*="dashed"]{
-    border-style:solid !important;
-    border-width:2px !important;
-  }
-
-  /* Give the header bars a solid black border instead of a black fill,
-     so "DINE-IN · KOT #001" and the table number still stand out */
-  #print-area [style*="background:#000"],
-  #print-area [style*="background:#1a5c80"],
-  #print-area [style*="background:#922b21"]{
-    border:2px solid #000 !important;
-    border-radius:6px !important;
-    padding:6px 10px !important;
-  }
-
-  @page{size:72mm auto;margin:0;}
-}
 #print-area{display:none;}
+
 @media print {
+  /* Match the physical paper exactly: 80mm-wide roll, single column,
+     72mm printable head. Nothing wider, nothing narrower. */
+  @page {
+    size: 80mm auto;      /* auto = height follows content, no blank tail */
+    margin: 0;
+  }
+
   html, body {
     width: 80mm !important;
+    max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: #fff !important;
   }
+
   body > *:not(#print-area) { display: none !important; }
+
   #print-area {
     display: block !important;
-    width: 76mm !important;
-    margin: 0 auto !important;
+    width: 80mm !important;      /* full paper width */
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;              /* base size for the slip */
+    line-height: 1.35;
+    color: #000 !important;
+    box-sizing: border-box;
   }
+
+  /* Inner 72mm wrapper that every print function writes: keep it
+     but stop it from being centered inside a wider box — left-align it */
+  #print-area > div {
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Kill background colours on print (thermal printers can't render them,
+     and they use extra toner/heat and often make text unreadable) */
   #print-area * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #000 !important;
     box-sizing: border-box;
   }
-  @page {
-    size: 80mm 3000mm;
-    margin: 0;
+
+  /* Dashed dividers → solid, thicker (already handled inline but be safe) */
+  #print-area [style*="dashed"] {
+    border-style: solid !important;
+    border-width: 2px !important;
+  }
+
+  /* Solid bordered header bars (was a filled black block → unreadable
+     on a thermal printer, which can't print white-on-black reliably) */
+  #print-area [style*="background:#000"],
+  #print-area [style*="background:#1a5c80"],
+  #print-area [style*="background:#922b21"]{
+    border: 2px solid #000 !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
   }
 }
 </style>
