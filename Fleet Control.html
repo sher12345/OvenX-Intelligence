@@ -262,12 +262,16 @@ function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)clo
  <p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${esc(o.branch||'')}</p><p style="margin-top:6px">${items(o.items)}</p>
  <span class="tag">${PMN[o.payment_method]||'—'}</span><span class="tag">⏱ ${o.mins??'—'} min</span><span class="tag">Received ${tm(o.created_at)}</span><span class="tag">Started ${tm(o.delivery_started_at)}</span><span class="tag">Delivered ${tm(o.completed_at)}</span>
  <p style="margin-top:6px">Food+tax ${fmt(food)} · Fee ${fmt(o.delivery_fee)}${o.discount?' · Discount −'+fmt(o.discount):''} · <b>${o.payment_method==='credited'?'Not collected':non?'Shop pays rider '+fmt(o.delivery_fee):'Rider hands over '+fmt(food)}</b></p>
- <button class="st ${o.settled?'ok':''}" onclick="settle('${esc(o.id)}',${!o.settled})">${o.settled?'✅ Hisab done '+tm(o.settled_at)+' (tap to undo)':'Mark hisab done'}</button></div>`}).join('')||'<div class="empty">No completed orders.</div>'}
+ <select class="inp" style="width:100%;margin-top:8px;border-radius:12px" onchange="setMethod('${esc(o.id)}',this.value)">${Object.keys(PMN).map(k=>`<option value="${k}" ${o.payment_method===k?'selected':''}>Paid by: ${PMN[k]}</option>`).join('')}</select>
+<button class="st ${o.settled?'ok':''}" onclick="settle('${esc(o.id)}',${!o.settled})">${o.settled?'✅ Hisab done '+tm(o.settled_at)+' (tap to undo)':'Mark hisab done'}</button></div>`}).join('')||'<div class="empty">No completed orders.</div>'}
  ${r.cancelled.length?`<h2 class="sub" style="margin:14px 0 8px">Cancelled by rider</h2>${r.cancelled.map(o=>`<div class="oc" style="border-color:rgba(255,107,122,.4)"><h4>📍 ${esc(o.location||'')}</h4><p class="rd">${esc(o.cancel_reason||'No reason')} · ${tm(o.cancelled_at)}</p></div>`).join('')}`:''}`;
  $('dr-bd').classList.add('on');$('dr').classList.add('on')}
 function closeDr(){openKey=null;$('dr-bd').classList.remove('on');$('dr').classList.remove('on')}
 async function settle(id,done){const {error}=await sb.from('kitchen_orders').update({settled:done,settled_at:done?new Date().toISOString():null}).eq('id',id);
  if(error){toast('Error: '+error.message);return}toast(done?'Marked settled':'Settlement undone');load()}
+async function setMethod(id,m){
+ const {error}=await sb.from('kitchen_orders').update({payment_method:m}).eq('id',id);
+ if(error){toast('Error: '+error.message);return}toast('Payment method changed to '+(PMN[m]||m));load()}
 async function settleAll(key){const r=riders.find(x=>x.key===key);if(!r)return;const ids=r.orders.filter(o=>!o.settled).map(o=>o.id);
  if(!ids.length||!confirm(`Mark ${ids.length} orders as settled for ${r.name}?\nHe hands over ${fmt(r.cash)}, shop pays ${fmt(r.owed)}.`))return;
  const {error}=await sb.from('kitchen_orders').update({settled:true,settled_at:new Date().toISOString()}).in('id',ids);
@@ -281,5 +285,6 @@ function exportCsv(){const h=['Rider','Phone','Branch','Status','Hours','Deliver
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ovenx-riders-'+period+'.csv';a.click()}
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
