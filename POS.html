@@ -2179,7 +2179,14 @@ function startLiveReload() {
       }, async (payload) => {
         console.log('Realtime kitchen_orders:', payload.eventType);
         
-        // ── NEW: Auto-recover deleted or settled orders ──
+        // ── NEW: Instantly pull in manual Kitchen Panel orders ──
+        if (payload.eventType === 'INSERT') {
+          console.log('New kitchen order inserted:', payload.new.id);
+          // Small delay to ensure the DB transaction is fully complete
+          setTimeout(pollWebOrders, 500);
+        }
+
+        // ── Auto-recover deleted or settled orders ──
         if (payload.eventType === 'DELETE') {
           const old = payload.old;
           // If it was a delivery order that had items, it was likely paid/removed by COMS
