@@ -1436,7 +1436,7 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
       <li><a href="#menu">Menu</a></li>
       <li><a href="#deals">Deals</a></li>
       <li><a href="#club">Oven X Club</a></li>
-<li><a href="#partners">Partners</a></li>
+<li style="display:none"><a href="#partners">Partners</a></li>
       <li><a href="#branches">Branches</a></li>
     </ul>
     <button class="nbtn nbtn-primary" data-order="">Order now</button>
@@ -11274,6 +11274,8 @@ header .logo{transition:font-size .35s var(--spring)}
     if(!sec||!box) return;
     sec.style.display = list.length ? '' : 'none';
     box.innerHTML = list.map(cardHtml).join('');
+    var navLink = document.querySelector('#landing-page .nav a[href="#partners"]');
+    if (navLink) navLink.parentElement.style.display = list.length ? '' : 'none';
   }
 
   window.openPartners = async function(){
@@ -11284,6 +11286,9 @@ header .logo{transition:font-size .35s var(--spring)}
     document.getElementById('partners-overlay').style.display='flex'; setScrollLock(true);
   };
   window.closePartners = function(){ document.getElementById('partners-overlay').style.display='none'; setScrollLock(false); };
+
+  // load partners as soon as the page opens so the landing section + nav link appear
+  load();
 
   /* ───────── ADMIN ───────── */
   window.ptLogoPick = function(inp){
