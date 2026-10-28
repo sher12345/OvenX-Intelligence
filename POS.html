@@ -1577,8 +1577,7 @@ async function loadRecipeCache() {
 const TABLES = {
   'A Floor': ['A-1','A-2','A-3','A-4','A-5','A-6','A-7','A-8','A-9','A-10','A-11','A-12','A-13','A-14','A-15','A-16','A-17','A-18'],
   'B Floor': ['B-1','B-2','B-3','B-4','B-5','B-6'],
-  'Takeaway': ['TK-1','TK-2','TK-3','TK-4','TK-5','TK-6','TK-7','TK-8','TK-9','TK-10'],
-  'Delivery': ['DEL-1','DEL-2','DEL-3','DEL-4','DEL-5','DEL-6','DEL-7','DEL-8']
+  'Takeaway': ['TK-1','TK-2','TK-3','TK-4','TK-5','TK-6','TK-7','TK-8','TK-9','TK-10']
 };
 
 // All table IDs flat — for QR matching
@@ -2753,6 +2752,7 @@ async function _loadActiveTables() {
       const tname = row.table_name;
       const order = row.order_data;
       if (!tname || !order) { staleRows.push(tname); continue; }
+      if (tname.startsWith('DEL-')) { staleRows.push(tname); continue; }   // delivery is handled by Kitchen Panel + Fleet
 
       // We also check if the order exists in kitchen_orders and has a closing status (OUT, PAID, etc.)
       const isClosed = order.id && (closedStatusIds.has(order.id) || closedTxIds.has(order.id));
@@ -2940,7 +2940,7 @@ async function pollWebOrders() {
 
       const loc = (order.location || '').trim();
       const orderType = order.type || 'Dine-In';
-      if (orderType === 'Delivery') continue;   // deliveries live in Kitchen Panel + Fleet only
+      if (/deliver/i.test(orderType) || /^deliver/i.test(loc)) continue;   // deliveries live in Kitchen Panel + Fleet only
 
       let tableId = ALL_TABLE_IDS.find(t => {
         const tNorm = t.toLowerCase().replace(/-/g, '');
@@ -2948,28 +2948,7 @@ async function pollWebOrders() {
         return tNorm === locNorm;
       });
 
-      // ── Delivery web orders → auto-place on the first free DEL-N slot ──
-      if (!tableId && (orderType === 'Delivery' || loc.toLowerCase() === 'delivery')) {
-        if (order.status === 'READY') continue;
-        // Prefer a free slot; if all 8 are taken, keep the order as pending
-        // and let the cashier resolve it (don't silently drop it).
-        tableId = TABLES['Delivery'].find(t => !tableOrders[t]);
-        if (!tableId) {
-          // All delivery slots full — surface as a pending order so it doesn't vanish
-          if (window._deliveryOverflowNotified !== order.id) {
-            window._deliveryOverflowNotified = order.id;
-            showToast('⚠️ All 8 delivery slots are full — new order #' +
-                      String(order.id).slice(0,6).toUpperCase() + ' is waiting. Free a DEL slot.', 'error');
-          }
-          pendingWebOrders.push({
-            id: order.id, type: 'Delivery', tableId: null,
-            location: order.location || '', subtotal: order.subtotal || 0,
-            delivery_fee: order.delivery_fee || 0, items: '',
-            overflow: true
-          });
-          continue;
-        }
-      }
+
 
       // ── Takeaway web orders → auto-place on first free TK-N slot ──
       if (!tableId && (orderType === 'Takeaway' || loc.toLowerCase() === 'takeaway' || /^car[\s-]?dine/i.test(loc))) {
@@ -4232,7 +4211,7 @@ function normalizeTableInput(raw) {
 }
 
 async function changeTablePrompt() {
-  const raw = await askText('Move to table (e.g. A-3, B-1, TK-2, DEL-1):');
+  const raw = await askText('Move to table (e.g. A-3, B-1, TK-2):');
   if (raw === null) return;
   const newTable = normalizeTableInput(raw);
   if (!newTable) {
