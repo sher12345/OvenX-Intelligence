@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -47,6 +45,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .pos-logo{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:white;white-space:nowrap;}
 .pos-logo span{color:var(--orange);}
 .pos-topbar-center{display:flex;gap:5px;flex-shrink:0;}
+.pos-topbar{overflow:visible;}
+.pos-topbar-center{min-width:0;flex-wrap:nowrap;}
+.pos-topbar-right{min-width:0;}
 .nav-btn{padding:6px 14px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:.15s;text-transform:uppercase;white-space:nowrap;position:relative;}
 .nav-btn.active{background:var(--red);color:white;}
 .nav-btn:hover:not(.active){background:var(--surface3);color:var(--text);}
@@ -57,6 +58,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .topbar-info span{color:var(--orange);}
 
 .logout-btn{padding:5px 12px;border-radius:8px;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:var(--red);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+
+/* ── NAV DROPDOWNS ── */
+.nav-dd{position:relative;flex-shrink:0;}
+.nav-dd-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:8500;box-shadow:0 16px 40px rgba(0,0,0,.6);flex-direction:column;gap:4px;}
+.nav-dd.right .nav-dd-menu{left:auto;right:0;}
+.nav-dd.open .nav-dd-menu{display:flex;}
+.nav-dd-menu .nav-btn,
+.nav-dd-menu .print-report-btn,
+.nav-dd-menu .logout-btn{width:100%;text-align:left;padding:10px 12px;display:block;}
 
 /* ── VIEWS ── */
 .pos-view{display:none;flex:1;overflow:hidden;}
@@ -540,34 +550,41 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 <div id="pos-app">
   <div class="pos-topbar">
     <div class="pos-logo">OVEN <span>X</span> &nbsp;<span style="font-size:12px;color:var(--text3);font-weight:500;" id="bar-branch"></span></div>
-    <div class="pos-topbar-center">
+        <div class="pos-topbar-center">
       <button class="nav-btn active" id="nav-tables" onclick="switchView('tables')">🪑 Tables
-  <span class="nav-badge" id="badge-tables"></span>
-</button>
-<button class="nav-btn" id="nav-delivery" style="display:none" onclick="switchView('delivery')">🚚 Delivery
-  <span class="nav-badge" id="badge-delivery"></span>
-</button>
-<button class="nav-btn" id="nav-cash" onclick="switchView('cash')">💵 Cash</button>
-<button class="nav-btn" id="nav-credit" onclick="switchView('credit')">💳 Credit</button>
-<button class="nav-btn" id="nav-expense-standalone" onclick="addExpense()" style="background:rgba(230,126,34,0.15);color:var(--orange);">🧾 Expense</button>
-<button class="nav-btn" id="nav-closing" onclick="switchView('closing')">📊 Closing</button>
-<button class="nav-btn" id="nav-history" onclick="switchView('history')">📅 History</button>
-<button class="nav-btn" id="nav-totals" onclick="switchView('totals')">📈 Totals</button>
-<button class="nav-btn" id="nav-crosscheck" onclick="switchView('crosscheck')" style="background:rgba(212,175,55,0.15);color:var(--gold);">🔍 Cross-Check</button>
-<button class="print-report-btn" id="nav-closeshifts" onclick="closeAllShifts()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">
-  🔒 CLOSE ALL SHIFTS & RESET
-</button>
+        <span class="nav-badge" id="badge-tables"></span>
+      </button>
+      <button class="nav-btn" id="nav-delivery" style="display:none" onclick="switchView('delivery')">🚚 Delivery
+        <span class="nav-badge" id="badge-delivery"></span>
+      </button>
+      <button class="nav-btn" id="nav-cash" onclick="switchView('cash')">💵 Cash</button>
+      <button class="nav-btn" id="nav-expense-standalone" onclick="addExpense()" style="background:rgba(230,126,34,0.15);color:var(--orange);">🧾 Expense</button>
+      <button class="nav-btn" id="nav-closing" onclick="switchView('closing')">📊 Closing</button>
+      <div class="nav-dd" id="dd-more">
+        <button class="nav-btn" onclick="toggleNavDD('dd-more',event)">⋯ More ▾</button>
+        <div class="nav-dd-menu">
+          <button class="nav-btn" id="nav-credit" onclick="switchView('credit')">💳 Credit</button>
+          <button class="nav-btn" id="nav-history" onclick="switchView('history')">📅 History</button>
+          <button class="nav-btn" id="nav-totals" onclick="switchView('totals')">📈 Totals</button>
+          <button class="nav-btn" id="nav-crosscheck" onclick="switchView('crosscheck')" style="background:rgba(212,175,55,0.15);color:var(--gold);">🔍 Cross-Check</button>
+          <button class="print-report-btn" id="nav-closeshifts" onclick="closeAllShifts()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">🔒 CLOSE ALL SHIFTS & RESET</button>
+        </div>
+      </div>
     </div>
-    <div class="pos-topbar-right">
-  <div class="topbar-info" id="offline-badge" style="display:none;padding:4px 10px;border-radius:8px;font-weight:800;font-size:11px;letter-spacing:1px;"></div>
-  <div class="topbar-info">Staff: <span id="bar-staff">—</span></div>
+        <div class="pos-topbar-right">
+      <div class="topbar-info" id="offline-badge" style="display:none;padding:4px 10px;border-radius:8px;font-weight:800;font-size:11px;letter-spacing:1px;"></div>
+      <div class="topbar-info">Staff: <span id="bar-staff">—</span></div>
       <div class="topbar-info" id="bar-time">—</div>
       <div class="topbar-info" id="bar-cash-wrap">Cash: <span id="bar-cash" style="color:var(--green)">Rs 0</span></div>
       <div class="topbar-info">Bill# <span id="bar-billno" style="color:var(--text3)">001</span></div>
-      <button class="logout-btn" id="btn-manage-staff" style="display:none;background:rgba(142,68,173,0.15);border-color:rgba(142,68,173,0.4);color:#bb77ff;" onclick="openStaffManager()">👥 Manage Users</button>
-<button class="logout-btn" id="nav-analytics-1" onclick="window.open('ovenx-analytics.html','_blank')" style="background:rgba(230,126,34,0.15);border-color:rgba(230,126,34,0.4);color:var(--orange);">≡ Analytics</button>
-<button class="logout-btn" id="nav-analytics-2" onclick="toggleAnalyticsPanel()" style="background:rgba(230,126,34,0.15);border-color:rgba(230,126,34,0.4);color:var(--orange);font-size:18px;padding:5px 14px;">☰</button>
-<button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+      <div class="nav-dd right" id="dd-admin">
+        <button class="logout-btn" style="background:rgba(142,68,173,0.15);border-color:rgba(142,68,173,0.4);color:#bb77ff;" onclick="toggleNavDD('dd-admin',event)">⚙ Admin ▾</button>
+        <div class="nav-dd-menu">
+          <button class="logout-btn" id="btn-manage-staff" style="background:rgba(142,68,173,0.15);border-color:rgba(142,68,173,0.4);color:#bb77ff;" onclick="openStaffManager()">👥 Manage Users</button>
+          <button class="logout-btn" id="nav-analytics-2" onclick="toggleAnalyticsPanel()" style="background:rgba(230,126,34,0.15);border-color:rgba(230,126,34,0.4);color:var(--orange);">☰ Analytics Panel</button>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
     </div>
   </div>
   <!-- ANALYTICS PANEL -->
@@ -1459,7 +1476,8 @@ async function sbWrite(table, op, payload, match) {
   } catch (e) {
     console.error('sbWrite failed:', table, op, e.message);
     const isDupe = e.code === '23505' || (e.message||'').toLowerCase().includes('duplicate key');
-    if (!isDupe) showOfflineBlock(); // a dupe isn't a connectivity problem — don't trigger the offline screen for it
+    const isSchema = ['42703','PGRST204'].includes(e.code); // missing column, not a connection problem
+    if (!isDupe && !isSchema) showOfflineBlock();
     return { error: e.message || 'write-failed', errorCode: e.code || '', isDupe };
   }
 }
@@ -2318,6 +2336,7 @@ function applyPOSPermissions() {
   gate('nav-analytics-1', isAdmin || perms.analytics === true);
   gate('nav-analytics-2', isAdmin || perms.analytics === true);
   gate('btn-manage-staff', isAdmin || perms.admin_tools === true);
+  gate('dd-admin', isAdmin || perms.admin_tools === true || perms.analytics === true);
   gate('cash-expense-btn', isAdmin || perms.expense !== false);
   gate('nav-expense-standalone', isAdmin || perms.expense !== false);
 
@@ -2686,7 +2705,7 @@ async function pollWebOrders() {
   if (!sb || !isOnline) return;
   try {
     const { data, error } = await sb.from('kitchen_orders')
-      .select('id, type, location, status, subtotal, delivery_fee, created_at, customer_name, phone, source')
+      .select('id, type, location, status, subtotal, delivery_fee, created_at, customer_name, phone, source, tax')
       .eq('branch', activeBranch)
       .in('status', ['WAITING','PREPARING','READY'])
       .order('created_at', { ascending: false })
@@ -2711,7 +2730,16 @@ async function pollWebOrders() {
       if (order.source === 'POS') continue;                       // POS handles its own orders
       if (voidedOrderIds.has(order.id) || paidOrderIds.has(order.id)) continue;
       // already sitting on some table? (prevents duplicates, e.g. takeaway moved to TK-3)
-      if (Object.values(tableOrders).some(o => o.webOrderId === order.id || o.id === order.id)) continue;
+    const mine = Object.values(tableOrders).find(o => o.webOrderId === order.id || o.id === order.id);
+  if (mine) {
+    const newTax = Number(order.tax) || 0;
+    if (mine.fromWeb && mine.webTax !== newTax) {
+      mine.webTax = newTax;
+      if (currentOrder.id === order.id) { currentOrder.webTax = newTax; renderOrderTotals(); }
+      _saveActiveTable(mine.table, mine);
+    }
+    continue;
+  }
 
       const loc = (order.location || '').trim();
       const orderType = order.type || 'Dine-In';
@@ -2738,7 +2766,7 @@ async function pollWebOrders() {
           showTableConflictModal(tableId, {
             table: tableId, type: orderType, items: [], startTime: parsedTime,
             id: order.id, webOrderId: order.id, fromWeb: true,
-            confirmed: order.status !== 'WAITING', subtotal: order.subtotal,
+            confirmed: order.status !== 'WAITING', subtotal: order.subtotal, webTax: Number(order.tax) || 0,
             customerName: order.customer_name || '', customerPhone: order.phone || '',
             scEnabled: orderType === 'Dine-In', scPct: 7, sentToKitchen: true, staff: 'Web'
           }, existing);
@@ -2751,6 +2779,7 @@ async function pollWebOrders() {
         startTime: parsedTime, id: order.id, webOrderId: order.id, fromWeb: true,
         confirmed: order.status === 'PREPARING' || order.status === 'READY',
         subtotal: order.subtotal,
+        webTax: Number(order.tax) || 0,
         customerName: order.customer_name || '', customerPhone: order.phone || '',
         scEnabled: orderType === 'Dine-In', scPct: 7, sentToKitchen: true, staff: 'Web'
       };
@@ -2771,28 +2800,33 @@ async function pollWebOrders() {
 
 function parseItemsFromText(text, knownSubtotal, isDineIn) {
   if (!text) return [];
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const items = lines.map(line => {
+  let priceFromText = true;
+  const items = text.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
     const m = line.match(/^(\d+)x\s+(.+?)(?:\s+\[([^\]]*)\])?$/);
     if (!m) return null;
     const qty = parseInt(m[1]);
-    const name = m[2].trim();
+    let name = m[2].trim();
     const note = m[3] || '';
     let price = 0;
-    for (let cat in menuData) {
-      const item = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
-      if (item) {
-        if (typeof item.p === 'object') price = Object.values(item.p)[0];
-        else price = item.p;
-        break;
+   const pm = name.match(/\s*@\s*Rs\s*([\d,]+)\s*$/i);   // price the kitchen already shows
+if (pm) { 
+    let totalPrice = parseInt(pm[1].replace(/,/g, '')); 
+    price = totalPrice / qty; // Divide by quantity to get the correct single unit price
+    name = name.slice(0, pm.index).trim(); 
+}
+    else {
+      priceFromText = false;
+      for (let cat in menuData) {
+        const item = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
+        if (item) { price = typeof item.p === 'object' ? Object.values(item.p)[0] : item.p; break; }
       }
+      const deal = dealsData.find(d => name.includes(d.n));
+      if (deal) price = deal.p;
     }
-    const deal = dealsData.find(d => name.includes(d.n));
-    if (deal) price = deal.p;
     return { name, price, qty, note };
   }).filter(Boolean);
 
-  if (knownSubtotal && items.length) {
+  if (!priceFromText && knownSubtotal && items.length) {   // old rescale only as a fallback
     const rawSubtotal = isDineIn ? Math.round(knownSubtotal / 1.07) : knownSubtotal;
     const calcTotal = items.reduce((s, i) => s + i.price * i.qty, 0);
     if (calcTotal > 0 && calcTotal !== rawSubtotal) {
@@ -2875,6 +2909,15 @@ async function confirmAndPrintSlip() {
 // ══════════════════════════════════
 // VIEW SWITCHING
 // ══════════════════════════════════
+function toggleNavDD(id, ev) {
+  if (ev) ev.stopPropagation();
+  document.querySelectorAll('.nav-dd').forEach(d => { if (d.id !== id) d.classList.remove('open'); });
+  document.getElementById(id).classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.nav-dd.open').forEach(d => d.classList.remove('open'));
+});
+
 function switchView(v) {
   const isAdmin = currentStaffRole === 'Admin' || currentStaffRole === 'Manager';
   const perms = currentStaffPermissions || {};
@@ -3018,7 +3061,7 @@ function renderTableMap() {
         timer = fmtSeconds(elapsed);
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
-const food = order ? (order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) : 0;
+const food = order ? ((order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) + (Number(order.webTax) || 0)) : 0;
       const delFee = order ? (order.deliveryCharge || 0) : 0;
       const grand = food; // shop amount only, delivery fee shown separately
       const delLabel = (order && order.type === 'Delivery' && order.deliveryAddress)
@@ -3931,15 +3974,18 @@ function getOrderTotal(items, type, _scEnabled, _scPct, _discAmount, _discType, 
   const dt = _discType || discType;
   const disc = dt==='pct' ? Math.round(discountableFood * da / 100) : Math.min(da, food);
   const delCharge = _delCharge !== undefined ? _delCharge : getDelCharge();
-  const grand = Math.max(0, food + sc - disc + delCharge);
-  return { food, sc, grand, pct, disc, delCharge };
+  // Tax chosen by the customer on the web order (separate from food and service charge).
+  // Only applies to the order that is open on screen.
+  const tax = (items === currentOrder.items) ? (Number(currentOrder.webTax) || 0) : 0;
+  const grand = Math.max(0, food + sc - disc + delCharge + tax);
+  return { food, sc, grand, pct, disc, delCharge, tax };
 }
 
 function renderOrderTotals() {
   const pct = getSCPct();
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const delCharge = getDelCharge();
-  const {food, sc, grand, disc} = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType, delCharge);
+  const {food, sc, grand, disc, tax} = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, pct, discAmt, discType, delCharge);
   const el = document.getElementById('order-totals');
   const scAmt = document.getElementById('sc-amount-preview');
   if (scAmt) scAmt.textContent = scEnabled && sc>0 ? `Rs ${sc}` : 'Off';
@@ -3947,6 +3993,7 @@ function renderOrderTotals() {
     <div class="total-row"><span>Food Subtotal</span><span>Rs ${food}</span></div>
     ${sc>0?`<div class="total-row" style="color:var(--text3)"><span>Service Charge (${pct}%)</span><span>Rs ${sc}</span></div>`:''}
     ${delCharge>0?`<div class="total-row" style="color:var(--orange)"><span>Delivery Charge</span><span>Rs ${delCharge}</span></div>`:''}
+    ${tax>0?`<div class="total-row" style="color:var(--gold)"><span>Tax</span><span>Rs ${tax}</span></div>`:''}
     ${disc>0?`<div class="total-row disc-line"><span>Discount</span><span>−Rs ${disc}</span></div>`:''}
     <div class="total-row grand"><span>GRAND TOTAL</span><span>Rs ${grand}</span></div>
   `;
@@ -4301,7 +4348,8 @@ async function applySplitByItems() {
   var discRatio = totalDiscountable > 0 ? selectedDiscountable / totalDiscountable : foodRatio;
   var splitSC   = Math.round(fullTotals.sc * foodRatio);
   var splitDisc = Math.round(fullTotals.disc * discRatio);
-  var splitTotal = Math.max(0, selectedFood + splitSC - splitDisc);
+  var splitTax = Math.round((fullTotals.tax || 0) * foodRatio);
+  var splitTotal = Math.max(0, selectedFood + splitSC - splitDisc + splitTax);
   var _splitItemsSaleId = genId();
   var splitBillNo = currentOrder.kotNo || (await _assignKotNumber());
   var splitSale = {
@@ -4312,7 +4360,7 @@ async function applySplitByItems() {
     customerName: currentOrder.customerName || '',
     customerPhone: currentOrder.customerPhone || '',
     deliveryAddress: '', deliveryCharge: 0,
-    sc: splitSC, disc: splitDisc, scPct: pct, discType: discType, discAmount: discAmt,
+    sc: splitSC, disc: splitDisc, scPct: pct, discType: discType, discAmount: discAmt, tax: splitTax,
     kitchenOrderId: currentOrder.id || null,
     splitCash: 0, splitCard: 0
   };
@@ -4322,7 +4370,7 @@ async function applySplitByItems() {
     table_loc: currentOrder.table || '',
     order_started_at: currentOrder.startTime ? new Date(currentOrder.startTime).toISOString() : null,
     items_text: selected.map(function(i){return i.qty+'x '+i.name;}).join(', '),
-    subtotal: selectedFood, sc: splitSC, sc_pct: pct,
+    subtotal: selectedFood, sc: splitSC, sc_pct: pct, tax: splitTax,
     discount: splitDisc, delivery_charge: 0,
     total: splitTotal, method: splitItemMethod,
     cash_received: 0, split_cash: 0, split_card: 0,
@@ -4346,6 +4394,7 @@ async function applySplitByItems() {
 
   printReceipt(splitSale);
   currentOrder.items = remaining;
+  currentOrder.webTax = Math.max(0, (Number(currentOrder.webTax) || 0) - splitTax);
 
   var leftoverDisc = Math.max(0, fullTotals.disc - splitDisc);
   document.getElementById('disc-amount').value = leftoverDisc;
@@ -4505,7 +4554,8 @@ async function sendToKitchen() {
   if (!orderSnap.items.length) { showToast('No items to send','error'); return; }
   const pct = getSCPct();
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const {food, sc, grand, disc} = getOrderTotal(orderSnap.items, orderSnap.type, scEnabled, pct, discAmt, discType);
+  const {food, sc, grand: _grandWithTax, disc, tax} = getOrderTotal(orderSnap.items, orderSnap.type, scEnabled, pct, discAmt, discType);
+  const grand = _grandWithTax - (tax || 0); // kitchen_orders keeps tax in its own column
   const itemsText = orderSnap.items.map(i => `${i.qty}x ${i.name}${i.note?' ['+i.note+']':''}`).join('\n');
   const custName = document.getElementById('order-customer-name').value;
   const custPhone = document.getElementById('order-customer-phone').value;
@@ -4547,7 +4597,7 @@ function printBillOnly() {
   const scOn = currentOrder.type === 'Dine-In' ? scEnabled : false;
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
   const delCharge = getDelCharge();
-  const { food, sc, grand, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+  const { food, sc, grand, disc, tax } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
   const bill = {
     billNo: currentOrder.kotNo || (DEVICE_CODE + '-' + String(billCounter).padStart(3,'0')),
     table: currentOrder.table,
@@ -4562,7 +4612,7 @@ function printBillOnly() {
     customerPhone: currentOrder.customerPhone || '',
     deliveryAddress: currentOrder.type === 'Delivery' ? (document.getElementById('delivery-address').value || '') : '',
     deliveryCharge: delCharge,
-    sc, disc, scPct: pct, discType, discAmount: discAmt,
+    sc, disc, scPct: pct, discType, discAmount: discAmt, tax: tax || 0,
     splitCash: 0, splitCard: 0
   };
   printReceipt(bill);
@@ -4608,6 +4658,7 @@ function printTakeawaySlip(sale) {
       '<div style="border-top:1px dashed #000;margin:6px 0;"></div>' +
       '<div style="text-align:right;font-size:12px;line-height:1.8;">' +
         '<div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs ' + food + '</span></div>' +
+        (sale.tax > 0 ? '<div style="display:flex;justify-content:space-between;"><span>Tax:</span><span>Rs ' + sale.tax + '</span></div>' : '') +
         (sale.disc > 0 ? '<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs ' + sale.disc + '</span></div>' : '') +
         '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid #000;padding-top:3px;">' +
           '<span>TOTAL:</span><span>Rs ' + sale.total + '</span>' +
@@ -4636,7 +4687,7 @@ async function _markTakeawayPaidInner() {
   const orderSnap = currentOrder; // lock onto THIS order before any await
   if (!orderSnap.items.length) { showToast('No items in order', 'error'); return; }
   const discAmt = parseFloat(document.getElementById('disc-amount').value) || 0;
-  const { grand, disc } = getOrderTotal(orderSnap.items, orderSnap.type, false, 0, discAmt, discType, 0);
+  const { grand, disc, tax } = getOrderTotal(orderSnap.items, orderSnap.type, false, 0, discAmt, discType, 0);
   const payM = promptPaymentMethod('Payment method?');
   if (payM === null) { showToast('Payment cancelled — order kept open', 'error'); return; }
   if (!orderSnap.id && !orderSnap.sentToKitchen) await sendToKitchenFor(orderSnap);
@@ -4647,7 +4698,7 @@ async function _markTakeawayPaidInner() {
     time: orderSnap.startTime ? new Date(orderSnap.startTime) : new Date(), staff: currentStaff, branch: activeBranch,
     customerName: orderSnap.customerName || '', customerPhone: orderSnap.customerPhone || '',
     kitchenOrderId: orderSnap.id || null, deliveryAddress: '', deliveryCharge: 0,
-    sc: 0, disc, scPct: 0, discType, discAmount: discAmt,
+    sc: 0, disc, scPct: 0, discType, discAmount: discAmt, tax: tax || 0,
     cashReceived: 0, splitCash: 0, splitCard: 0
   };
   const { res: _twWriteRes, billNo: _twBillNo } = await _insertShiftTxWithRetry(orderSnap, (billNo) => ({
@@ -4656,7 +4707,7 @@ async function _markTakeawayPaidInner() {
     order_started_at: orderSnap.startTime ? new Date(orderSnap.startTime).toISOString() : null,
     items: sale.items,
     items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', '),
-    subtotal: grand, sc: 0, sc_pct: 0, discount: sale.disc || 0, delivery_charge: 0,
+    subtotal: grand, sc: 0, sc_pct: 0, discount: sale.disc || 0, delivery_charge: 0, tax: tax || 0,
     total: sale.total, method: sale.method, cash_received: 0, split_cash: 0, split_card: 0,
     staff: currentStaff, customer_name: sale.customerName || '', customer_phone: sale.customerPhone || '',
     delivery_address: '', kitchen_order_id: orderSnap.id || null
@@ -4791,10 +4842,10 @@ async function completePayment() {
     const scOn     = currentOrder.type === 'Dine-In' ? scEnabled : false;
     const discAmt  = parseFloat(document.getElementById('disc-amount').value) || 0;
     const delCharge = getDelCharge();
-    let { sc, disc } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
+    let { sc, disc, tax } = getOrderTotal(currentOrder.items, currentOrder.type, scOn, pct, discAmt, discType, delCharge);
     if (currentOrder.fromWeb && currentOrder.type === 'Dine-In') {
       const food = currentOrder.items.reduce((s,i) => s + i.price * i.qty, 0);
-      sc = grand - food - delCharge + (disc || 0);
+      sc = grand - food - delCharge - (tax || 0) + (disc || 0);
       if (sc < 0) sc = 0;
     }
  
@@ -4812,6 +4863,7 @@ async function completePayment() {
       deliveryAddress: currentOrder.type === 'Delivery'
         ? (document.getElementById('delivery-address').value || '') : '',
       deliveryCharge: delCharge, sc, disc, scPct: pct, discType, discAmount: discAmt,
+      tax: tax || 0,
       discReason: currentOrder.discReason || '',
       cashReceived: payMethod === 'cash'
         ? (parseFloat(document.getElementById('cash-received').value) || 0) : 0,
@@ -4834,6 +4886,7 @@ async function completePayment() {
       subtotal: sale.items.reduce((s,i) => s + i.price * i.qty, 0),
       sc: sale.sc, sc_pct: sale.scPct, discount: sale.disc || 0,
       delivery_charge: sale.deliveryCharge || 0,
+      tax: sale.tax || 0,
       return_reason: sale.discReason || '',
       total: sale.total, method: sale.method,
       cash_received: sale.cashReceived || 0,
@@ -5132,6 +5185,7 @@ function printReceipt(sale, isSplit=false) {
         <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>Rs ${food}</span></div>
         ${sale.sc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Service Charge (${sale.scPct}%)</span><span>Rs ${sale.sc}</span></div>` : ''}
         ${(sale.deliveryCharge||0)>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Charge</span><span>Rs ${sale.deliveryCharge}</span></div>` : ''}
+        ${(sale.tax||0)>0 ? `<div style="display:flex;justify-content:space-between;"><span>Tax</span><span>Rs ${sale.tax}</span></div>` : ''}
         ${sale.disc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Discount Applied</span><span>-Rs ${sale.disc}</span></div>` : ''}
       </div>
 
