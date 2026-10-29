@@ -1880,7 +1880,7 @@ function showLoginErr(msg) {
 async function saveShiftReport() {
   if (!sb || !currentStaff) return;
   const now = new Date();
-  const sales = completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method));
+  const sales = completedOrders.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const total = sales.reduce((s,o) => s+o.total, 0);
   const cash = sales.filter(o => o.method==='cash').reduce((s,o) => s+o.total, 0);
   const card = sales.filter(o => o.method==='card').reduce((s,o) => s+o.total, 0);
@@ -1896,7 +1896,7 @@ async function saveShiftReport() {
   const returnTotal = returns.reduce((s,o) => s+Math.abs(o.total), 0);
   const cashOuts = completedOrders.filter(o => o.method==='cash-out').reduce((s,o) => s+Math.abs(o.total), 0);
   const expensesTotal = completedOrders.filter(o => o.method==='expense').reduce((s,o) => s+Math.abs(o.total), 0);
-  const expected = openingBalance + totalCash - cashOuts - expensesTotal;
+  const expected = computeCashInHand(completedOrders, openingBalance);
 
   await sbWrite('shift_reports', 'insert', [{
     branch: activeBranch,
@@ -2363,7 +2363,7 @@ async function settleDeliveryToCash(n) {
     bill_no: 'DLV-' + String(n.id).slice(0,8).toUpperCase(),
     type: 'Delivery', table_loc: n.location || '',
     items_text: (n.items || '') + riderTag,
-    subtotal: n.subtotal || 0, sc: 0, sc_pct: 0, tax: n.tax || 0,
+    subtotal: (Number(n.subtotal) || 0) + (Number(n.discount) || 0), sc: 0, sc_pct: 0, tax: n.tax || 0,
     discount: n.discount || 0, delivery_charge: fee,
     total: food + fee, method: method,
     cash_received: 0, split_cash: 0, split_card: 0,
@@ -3306,11 +3306,11 @@ function renderTableMap() {
         timer = fmtSeconds(elapsed);
       }
       const icon = floor==='Delivery'?'🚚':floor==='Takeaway'?'🥡':'🪑';
-const food = order ? ((order.subtotal || getOrderTotal(order.items, order.type, false, 0).grand) + (Number(order.webTax) || 0)) : 0;
+const food = order ? ((order.subtotal || getOrderTotal(order.items, order.type, false, 0, order.discAmount || 0, order.discType || 'flat', 0).grand) + (Number(order.webTax) || 0)) : 0;
       const delFee = order ? (order.deliveryCharge || 0) : 0;
       const grand = food; // shop amount only, delivery fee shown separately
       const delLabel = (order && order.type === 'Delivery' && order.deliveryAddress)
-        ? `<div style="font-size:9px;color:var(--text3);margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${order.deliveryAddress}</div>`
+        ? `<div style="font-size:9px;color:var(--text3);margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${_xcEsc(order.deliveryAddress)}</div>`
         : '';
       const riderLabel = (order && order.type === 'Delivery' && order.rider)
         ? `<div style="font-size:9px;color:var(--gold);margin-top:1px;font-weight:700;">🏍️ ${order.rider}</div>`
@@ -4346,7 +4346,7 @@ function getOrderTotal(items, type, _scEnabled, _scPct, _discAmount, _discType, 
   // 2. Calculate Discount (Food only)
   const da = _discAmount !== undefined ? _discAmount : (parseFloat(document.getElementById('disc-amount')?.value) || 0);
   const dt = _discType || discType;
-  const disc = dt === 'pct' ? Math.round(foodTotal * da / 100) : Math.min(da, foodTotal);
+  const disc = dt === 'pct' ? Math.min(Math.round(foodTotal * da / 100), foodTotal) : Math.min(da, foodTotal);
   const foodAfterDiscount = Math.max(0, foodTotal - disc);
   const newBillTotal = foodAfterDiscount + drinksTotal;
 
@@ -4862,7 +4862,7 @@ async function applySplitByAmount() {
       bill_no: billNo, type: currentOrder.type,
       table_loc: currentOrder.table || '',
       order_started_at: currentOrder.startTime ? new Date(currentOrder.startTime).toISOString() : null,
-      items_text: currentOrder.items.map(function(it){return it.qty+'x '+it.name;}).join(', ') + ' [split ' + (i+1) + '/' + n + ']',
+      items_text: (i === 0 ? currentOrder.items.map(function(it){return it.qty+'x '+it.name;}).join(', ') + ' ' : '') + '[split ' + (i+1) + '/' + n + ']',
       subtotal: row.amt, sc: 0, sc_pct: 0, discount: 0, delivery_charge: 0,
       total: row.amt, method: row.method,
       cash_received: 0, split_cash: 0, split_card: 0,
@@ -4886,6 +4886,7 @@ async function applySplitByAmount() {
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
   saveTodaySales();
 
+  deductInventoryForSale({ billNo: currentOrder.kotNo || null, items: currentOrder.items, type: currentOrder.type });
   const orderIdToUpdate = currentOrder.id;
   const _splitTable = currentOrder.table;
   let clearOk = true;
@@ -5780,7 +5781,7 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
       if (sb && isOnline) {
         try {
           const { data } = await sb.from('kitchen_orders')
-            .select('id, subtotal, delivery_fee, location, items, customer_name, phone, discount, kot_no, rider, created_at').eq('id', orderId).single();
+            .select('id, subtotal, tax, delivery_fee, location, items, customer_name, phone, discount, kot_no, rider, created_at').eq('id', orderId).single();
           ko = data;
         } catch(e) { console.warn('Live fetch failed, using cached order:', e.message); }
       }
@@ -5795,7 +5796,8 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
       const delFee = ko.delivery_fee || 0;
       const discount = ko.discount || 0;
       // The Grand Total is Subtotal + Delivery - Discount
-      const grandTotal = Math.max(0, subtotal + delFee - discount);
+      const taxAmt = Number(ko.tax) || 0;
+      const grandTotal = Math.max(0, subtotal + taxAmt + delFee);
       
       const alreadySaved = completedOrders.find(o => o.kitchenOrderId === orderId);
 
@@ -5829,7 +5831,8 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
           table_loc: ko.location || '',
           order_started_at: ko.created_at || null,
           items_text: (ko.items || '') + riderTag, // ✅ Added Rider to the text
-          subtotal: subtotal,
+          subtotal: subtotal + discount,
+          tax: taxAmt,
           sc: 0, sc_pct: 0,
           discount: discount,
           delivery_charge: delFee,
@@ -6422,7 +6425,7 @@ function renderCashView(txList, openingBal, isRange) {
     <tr>
       <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--orange);">${o.billNo||'—'}</td>
       <td>${new Date(o.time).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true})}</td>
-<td>${(o.deliveryAddress || o.delivery_address || (o.table||o.type||'').replace('-',' '))} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
+<td>${_xcEsc(o.deliveryAddress || o.delivery_address || (o.table||o.type||'').replace('-',' '))} <span style="color:var(--text3);font-size:12px;">(${o.type})</span></td>
 <td style="color:var(--text2);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(() => {
   if (o.method === 'return') return '↩ ' + (o.returnReason || 'Return');
   if (o.items && o.items.length && o.items[0].name) return o.items.map(i => i.qty + 'x ' + i.name).join(', ');
@@ -6442,7 +6445,7 @@ function renderCashView(txList, openingBal, isRange) {
         ${o.billNo && !/^(CI|CO|VOID|RTN|ADJ|DISC|DELDEL|EXP|CRPAY)(-X|$)/.test(o.billNo) && !o.billNo.startsWith('SPL') ? 
           `<button onclick="reprintReceipt('${o.billNo}')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;" title="Reprint">🖨️</button>` : 
           '<span style="color:var(--text3);font-size:11px;"></span>'}
-        ${currentStaffRole === 'Admin' && o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' ? `<button onclick="openAdminTxModal('${o.billNo}',true,'${todayKey()}','${activeBranch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;" title="Admin Edit">⚙️</button>` : ''}
+        ${currentStaffRole === 'Admin' && o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' ? `<button onclick="openAdminTxModal('${o.billNo}',${(o.date||todayKey())===todayKey()},'${o.date||todayKey()}','${activeBranch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;" title="Admin Edit">⚙️</button>` : ''}
         </div>
       </td>
     </tr>
@@ -6463,17 +6466,14 @@ async function loadCashForRange(fromVal, toVal) {
   const fromDate = fromVal.slice(0,10);
   let txs = [];
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch)
-      .gte('created_at', _dtLocalToISO(fromVal)).lte('created_at', _dtLocalToISO(toVal))
-      .order('created_at', { ascending: true });
-    txs = data || [];
+    txs = await _xcFetchAll(_dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   } catch(e) { txs = []; }
   txs = mergeInPendingTx(txs, activeBranch, _dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   const pendingCount = txs.filter(t => t._pending).length;
   if (pendingCount) showToast(pendingCount + ' sale(s) not yet synced — included from local queue', 'error');
 
   const mapped = txs.map(t => ({
+    id: t.id, date: t.date,
     billNo: t.bill_no, table: t.table_loc, type: t.type,
     items: [], itemsText: t.items_text || '',
     total: t.total, method: t.method, time: new Date(t.created_at),
@@ -6511,7 +6511,8 @@ async function printCashDrawerReport() {
   const splitCash = orders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0);
   const splitCard = orders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCard||0),0);
   const totalCash = cashSales + splitCash;
-  const totalCard = orders.filter(o=>['card','bank','jazzcash','foodpanda'].includes(o.method)).reduce((s,o)=>s+o.total,0) + splitCard;
+  const totalCard = orders.filter(o=>['card','bank','jazzcash'].includes(o.method)).reduce((s,o)=>s+o.total,0) + splitCard;
+  const totalPanda = orders.filter(o=>o.method==='foodpanda').reduce((s,o)=>s+o.total,0);
   const totalDelFees = orders.filter(o=>o.type==='Delivery' && !['void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o)=>s+(o.deliveryCharge||0),0);
   const cashOuts = orders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
   const expenses = orders.filter(o=>o.method==='expense').reduce((s,o)=>s+Math.abs(o.total),0);
@@ -6533,6 +6534,7 @@ async function printCashDrawerReport() {
         <div style="display:flex;justify-content:space-between;"><span>Opening Balance:</span><span>Rs ${opening}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Sales:</span><span>Rs ${totalCash}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Card Sales:</span><span>Rs ${totalCard}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>FoodPanda:</span><span>Rs ${totalPanda}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Delivery Fees:</span><span>Rs ${totalDelFees}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Outs:</span><span>Rs ${cashOuts}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Expenses:</span><span>Rs ${expenses}</span></div>
@@ -6570,11 +6572,7 @@ async function renderClosingReport() {
 
   let txs = [];
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch)
-      .gte('created_at', _dtLocalToISO(fromEl.value)).lte('created_at', _dtLocalToISO(toEl.value))
-      .order('created_at', { ascending: true });
-    txs = data || [];
+    txs = await _xcFetchAll(_dtLocalToISO(fromEl.value), _dtLocalToISO(toEl.value));
   } catch(e) { txs = []; } // don't bail — offline queue may still have today's sales
   txs = mergeInPendingTx(txs, activeBranch, _dtLocalToISO(fromEl.value), _dtLocalToISO(toEl.value));
   const pendingCount = txs.filter(t => t._pending).length;
@@ -6704,7 +6702,7 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Finance Expenses (not taken from drawer)</span><span class="cb-row-val">Rs ${financeExp}</span></div>
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Expected in Drawer</span>
-        <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${opening+totalCash-cashOuts-expenses}</span>
+        <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${computeCashInHand(txs, opening)}</span>
       </div>
     </div>
     <div class="cb-section" style="grid-column:1/-1;">
@@ -6721,11 +6719,7 @@ async function printClosingReport() {
 
   let txs = [];
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch)
-      .gte('created_at', _dtLocalToISO(fromVal)).lte('created_at', _dtLocalToISO(toVal))
-      .order('created_at', { ascending: true });
-    txs = data || [];
+    txs = await _xcFetchAll(_dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   } catch(e) { txs = []; }
   txs = mergeInPendingTx(txs, activeBranch, _dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   const pendingCount = txs.filter(t => t._pending).length;
@@ -6736,8 +6730,9 @@ async function printClosingReport() {
   const total = billsOnly.reduce((s,t) => s + t.total, 0);
   const cash  = billsOnly.filter(t=>t.method==='cash').reduce((s,t)=>s+t.total,0)
     + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_cash||0),0);
-  const card  = billsOnly.filter(t=>['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t)=>s+t.total,0)
+  const card  = billsOnly.filter(t=>['card','bank','jazzcash'].includes(t.method)).reduce((s,t)=>s+t.total,0)
     + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_card||0),0);
+  const panda = billsOnly.filter(t=>t.method==='foodpanda').reduce((s,t)=>s+t.total,0);
   const scColl = billsOnly.reduce((s,t)=>s+(t.sc||0),0);
   const discGiven = billsOnly.reduce((s,t)=>s+(t.discount||0),0);
   const cashOuts = txs.filter(t=>t.method==='cash-out').reduce((s,t)=>s+Math.abs(t.total),0);
@@ -6761,6 +6756,7 @@ async function printClosingReport() {
         <div style="display:flex;justify-content:space-between;"><span>Total Sales:</span><span><b>Rs ${total}</b></span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Sales:</span><span>Rs ${cash}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Card Sales:</span><span>Rs ${card}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>FoodPanda:</span><span>Rs ${panda}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>SC Collected:</span><span>Rs ${scColl}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Discounts:</span><span>Rs ${discGiven}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Outs:</span><span>Rs ${cashOuts}</span></div>
@@ -6782,11 +6778,7 @@ async function exportClosingExcel() {
 
   let txs = [];
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch)
-      .gte('created_at', _dtLocalToISO(fromVal)).lte('created_at', _dtLocalToISO(toVal))
-      .order('created_at', { ascending: true });
-    txs = data || [];
+    txs = await _xcFetchAll(_dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   } catch(e) { txs = []; }
   txs = mergeInPendingTx(txs, activeBranch, _dtLocalToISO(fromVal), _dtLocalToISO(toVal));
   const pendingCount = txs.filter(t => t._pending).length;
@@ -6807,8 +6799,9 @@ async function exportClosingExcel() {
   const total = billsOnly.reduce((s,t) => s + t.total, 0);
   const cash  = billsOnly.filter(t=>t.method==='cash').reduce((s,t)=>s+t.total,0)
     + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_cash||0),0);
-  const card  = billsOnly.filter(t=>['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t)=>s+t.total,0)
+  const card  = billsOnly.filter(t=>['card','bank','jazzcash'].includes(t.method)).reduce((s,t)=>s+t.total,0)
     + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_card||0),0);
+  const panda = billsOnly.filter(t=>t.method==='foodpanda').reduce((s,t)=>s+t.total,0);
   const scCollected = billsOnly.reduce((s,t)=>s+(t.sc||0),0);
   const discGiven = billsOnly.reduce((s,t)=>s+(t.discount||0),0);
   const cashOuts = txs.filter(t=>t.method==='cash-out').reduce((s,t)=>s+Math.abs(t.total),0);
@@ -6829,6 +6822,7 @@ async function exportClosingExcel() {
   lines.push(`Bills Issued,${billsOnly.length}`);
   lines.push(`Cash Collected,Rs ${cash}`);
   lines.push(`Card Collected,Rs ${card}`);
+  lines.push(`FoodPanda Collected,Rs ${panda}`);
   lines.push(`SC Collected,Rs ${scCollected}`);
   lines.push(`Discounts Given,Rs ${discGiven}`);
   lines.push(`Returns,Rs ${returnTotal}`);
@@ -7210,11 +7204,19 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
   content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);">Loading...</div>';
 
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('bill_no, type, table_loc, items_text, total, method, created_at, staff, date, split_cash, split_card, sc, discount, delivery_charge, subtotal, tax')
-.eq('branch', branch)
-      .gte('created_at', _dtLocalToISO(fromDateTime)).lte('created_at', _dtLocalToISO(toDateTime))
-      .order('created_at', { ascending: true });
+    let data = [];
+    for (let from = 0; ; ) {
+      const { data: page, error: pErr } = await sb.from('shift_transactions')
+        .select('id, bill_no, type, table_loc, items_text, total, method, created_at, staff, date, split_cash, split_card, sc, discount, delivery_charge, subtotal, tax')
+        .eq('branch', branch)
+        .gte('created_at', _dtLocalToISO(fromDateTime)).lte('created_at', _dtLocalToISO(toDateTime))
+        .order('created_at', { ascending: true }).order('id', { ascending: true })
+        .range(from, from + 999);
+      if (pErr) throw pErr;
+      if (!page || !page.length) break;
+      data = data.concat(page);
+      from += page.length;
+    }
     let txs = mergeInPendingTx(data || [], branch, _dtLocalToISO(fromDateTime), _dtLocalToISO(toDateTime));
     const pendingCount = txs.filter(t => t._pending).length;
     if (pendingCount) showToast(pendingCount + ' sale(s) not yet synced — included from local queue', 'error');
@@ -7979,14 +7981,14 @@ async function closeAllShifts() {
   const _closeGotQueued = !!(_closureResult && _closureResult.error);
 
   // Capture totals BEFORE clearing
-  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
+  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
   const totalCard = allSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
   const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
-  const finalHandOver = openingBalance + totalCash - cashOuts;
+  const finalHandOver = computeCashInHand(completedOrders, openingBalance);
   const savedOpeningBalance = openingBalance;
   const savedBranch = activeBranch;
 
@@ -8117,12 +8119,12 @@ async function closeAllShiftsAndArchive() {
   const _archiveGotQueued = !!(_archiveResult && _archiveResult.error);
 
   // Capture totals BEFORE clearing
-  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void'].includes(o.method));
+  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
     + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
   const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
-  const finalHandOver = openingBalance + totalCash - cashOuts;
+  const finalHandOver = computeCashInHand(completedOrders, openingBalance);
   const savedBranch = activeBranch;
 
   document.getElementById('print-area').innerHTML = `
@@ -8344,6 +8346,7 @@ async function _fetchAndOpenAdminTxModal(billNo) {
       .select('*')
       .eq('branch', _adminTxBranch)
       .eq('bill_no', billNo)
+      .eq('date', _adminTxDate)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -8517,6 +8520,7 @@ async function adminTxDelete() {
 
     closeModal('admin-tx-modal');
     showToast('Transaction deleted ✅', 'success');
+    if (document.getElementById('view-cash').classList.contains('active')) loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
 
     // Refresh whichever view triggered this
     if (!_adminTxIsToday) loadHistoryForDate(_adminTxDate);
@@ -8600,6 +8604,7 @@ async function adminTxSave() {
 
     closeModal('admin-tx-modal');
     showToast('Transaction updated ✅', 'success');
+    if (document.getElementById('view-cash').classList.contains('active')) loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
 
     if (!_adminTxIsToday) loadHistoryForDate(_adminTxDate);
 
@@ -8682,13 +8687,10 @@ async function aLoadTransactions() {
   }
 
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('*').eq('branch', activeBranch)
-      .gte('created_at', _dtLocalToISO(from)).lte('created_at', _dtLocalToISO(to))
-      .not('method','in','("cash-in","cash-out","void")')
-      .order('created_at', {ascending:true});
+    const data = await _xcFetchAll(_dtLocalToISO(from), _dtLocalToISO(to));
     _aTxData = mergeInPendingTx(data || [], activeBranch, _dtLocalToISO(from), _dtLocalToISO(to))
-      .filter(t => !['cash-in','cash-out','void'].includes(t.method));
+      .filter(t => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
+    _aTxData.forEach(t => { t.items_text = aCleanItemsText(t.items_text); });
     const pendingCount = _aTxData.filter(t => t._pending).length;
     if (pendingCount) showToast(pendingCount + ' sale(s) not yet synced — included from local queue', 'error');
     try { localStorage.setItem(ANALYTICS_CACHE_KEY + '_' + activeBranch, JSON.stringify({ data: _aTxData, savedAt: Date.now() })); } catch(e) {}
@@ -8727,7 +8729,7 @@ function aParseItems(txList) {
       let price = 0;
       for (let c in menuData) {
         const itm = menuData[c].find(i => name.includes(i.n));
-        if (itm) { price = typeof itm.p==='object'?Object.values(itm.p)[0]:itm.p; break; }
+        if (itm) { if (typeof itm.p==='object') { const sm = name.match(/\(([^)]+)\)\s*$/); price = (sm && itm.p[sm[1]] !== undefined) ? itm.p[sm[1]] : Object.values(itm.p)[0]; } else price = itm.p; break; }
       }
       const deal = dealsData.find(d => name.toLowerCase().includes(d.n.toLowerCase()));
       if (deal) price = deal.p;
@@ -8738,6 +8740,12 @@ function aParseItems(txList) {
   return Object.values(map).map(i=>({...i,days:i.days.size})).sort((a,b)=>b.qty-a.qty);
 }
 
+function aCleanItemsText(text) {
+  if (!text) return '';
+  return String(text).split(/\n|,/).map(l => l.trim()).filter(l => /^\d+x\s+/.test(l))
+    .map(l => l.replace(/\s*@\s*Rs\s*[\d,]+.*$/i, '').replace(/\s*\[.*$/, '').trim())
+    .join(', ');
+}
 function aDestroyChart(id) {
   if (_aCharts[id]) { _aCharts[id].destroy(); delete _aCharts[id]; }
 }
@@ -8861,7 +8869,7 @@ function aSearchItem() {
       itemMap[name].qty+=qty;
       itemMap[name].days.add(date);
       let price=0;
-      for (let c in menuData){const itm=menuData[c].find(i=>name.includes(i.n));if(itm){price=typeof itm.p==='object'?Object.values(itm.p)[0]:itm.p;break;}}
+      for (let c in menuData){const itm=menuData[c].find(i=>name.includes(i.n));if(itm){if(typeof itm.p==='object'){const sm=name.match(/\(([^)]+)\)\s*$/);price=(sm&&itm.p[sm[1]]!==undefined)?itm.p[sm[1]]:Object.values(itm.p)[0];}else price=itm.p;break;}}
       const deal=dealsData.find(d=>name.toLowerCase().includes(d.n.toLowerCase()));if(deal)price=deal.p;
       itemMap[name].revenue+=price*qty;
       if(!dailyMap[date])dailyMap[date]={};
@@ -8901,11 +8909,19 @@ async function aLoadMonthlyHistory() {
   const grid = document.getElementById('a-monthly-grid');
   grid.innerHTML = '<div style="color:#555d70;font-size:12px;padding:12px;">Loading...</div>';
   try {
-    const { data } = await sb.from('shift_transactions')
-      .select('date,total,method,type,items_text,sc,discount,split_cash,split_card,delivery_charge')
-      .eq('branch', activeBranch)
-      .not('method', 'in', '("cash-in","cash-out","void")')
-      .order('date', { ascending: false });
+    let data = [];
+    for (let from = 0; ; ) {
+      const { data: page, error: pErr } = await sb.from('shift_transactions')
+        .select('id,date,total,method,type,items_text,sc,discount,split_cash,split_card,delivery_charge')
+        .eq('branch', activeBranch)
+        .not('method', 'in', '("cash-in","cash-out","void","return","expense","discarded","deleted-delivery","item-void")')
+        .order('date', { ascending: false }).order('id', { ascending: true })
+        .range(from, from + 999);
+      if (pErr) throw pErr;
+      if (!page || !page.length) break;
+      data = data.concat(page);
+      from += page.length;
+    }
  
     if (!data || !data.length) {
       grid.innerHTML = '<div style="color:#555d70;font-size:12px;padding:12px;">No history found</div>';
@@ -8916,6 +8932,7 @@ async function aLoadMonthlyHistory() {
     _aMonthlyMap = {};
     data.forEach(t => {
       if (!t.date) return;
+      t.items_text = aCleanItemsText(t.items_text);
       const mk = t.date.slice(0, 7);
       if (!_aMonthlyMap[mk]) _aMonthlyMap[mk] = { total: 0, bills: 0, txs: [] };
       _aMonthlyMap[mk].total += t.total || 0;
