@@ -6346,28 +6346,46 @@ async function addCashOut() {
 function renderCashView(txList, openingBal, isRange) {
   const orders = txList || completedOrders;
   const opening = openingBal !== undefined ? openingBal : openingBalance;
-  const cashSales = orders.filter(o=>o.method==='cash').reduce((s,o)=>s+o.total,0);
-  const cardSales = orders.filter(o=>o.method==='card').reduce((s,o)=>s+o.total,0);
-  const splitCash = orders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCash||0),0);
-  const splitCard = orders.filter(o=>o.method==='split').reduce((s,o)=>s+(o.splitCard||0),0);
-  const totalCash = cashSales + splitCash;
-  const totalCard = orders.filter(o=>['card','bank','jazzcash','foodpanda'].includes(o.method)).reduce((s,o)=>s+o.total,0) + splitCard;
-const totalSales = orders.filter(o=>!['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o)=>s+o.total,0);
-  const totalDelFees = orders.filter(o=>o.type==='Delivery' && !['void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o)=>s+(o.deliveryCharge||0),0);
-  const shopSales = totalSales;  const cashOuts = orders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
-  const expenses = orders.filter(o=>o.method==='expense').reduce((s,o)=>s+Math.abs(o.total),0);
+  const NON_BILL = ['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'];
+  const bills = orders.filter(o => !NON_BILL.includes(o.method));
+  const pm = sumByMethod(bills);
+  const grandTotal = bills.reduce((s,o) => s + (o.total||0), 0);
+  const grossSale = bills.reduce((s,o) => s + (o.subtotal ? o.subtotal :
+        Math.max(0,(o.total||0)-(o.sc||0)-(o.deliveryCharge||0)-(o.tax||0)+(o.disc||0))), 0);
+  const discGiven = bills.reduce((s,o) => s + (o.disc||0), 0);
+  const netSale = grossSale - discGiven;
+  const scCollected = bills.reduce((s,o) => s + (o.sc||0), 0);
+  const taxTotal = bills.reduce((s,o) => s + (o.tax||0), 0);
+  const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.deliveryCharge||0), 0);
+  const avg = bills.length ? Math.round(grandTotal / bills.length) : 0;
+  const returnTotal = orders.filter(o => o.method==='return').reduce((s,o) => s + Math.abs(o.total), 0);
+  const expAll = orders.filter(o => o.method==='expense');
+  const finExp = expAll.filter(_isFinanceExpense).reduce((s,o) => s + Math.abs(o.total), 0);
+  const tillExp = expAll.reduce((s,o) => s + Math.abs(o.total), 0) - finExp;
   const expected = computeCashInHand(orders, opening);
-const billsCount = orders.filter(o=>!['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length;
 
-  document.getElementById('cash-cards').innerHTML = `
-    <div class="cash-card"><div class="cash-card-label">Opening Balance</div><div class="cash-card-value">Rs ${opening}</div></div>
-<div class="cash-card"><div class="cash-card-label">Cash Sales</div><div class="cash-card-value green">Rs ${totalCash}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Delivery Fees (incl. in sales)</div><div class="cash-card-value" style="color:var(--orange);">Rs ${totalDelFees}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Card Sales</div><div class="cash-card-value">Rs ${totalCard}</div></div>
-    <div class="cash-card"><div class="cash-card-label">Shop Sales</div><div class="cash-card-value orange">Rs ${shopSales}</div></div>
-<div class="cash-card"><div class="cash-card-label">Expected in Drawer</div><div class="cash-card-value green">Rs ${expected}</div></div>
-<div class="cash-card"><div class="cash-card-label">Bills${isRange?'':' Today'}</div><div class="cash-card-value">${billsCount}</div></div>
-<div class="cash-card"><div class="cash-card-label">Expenses</div><div class="cash-card-value red">Rs ${orders.filter(o=>o.method==='expense').reduce((s,o)=>s+Math.abs(o.total),0)}</div></div>
+  const cardsEl = document.getElementById('cash-cards');
+  cardsEl.className = 'closing-stats';
+  cardsEl.innerHTML = `
+    <div class="cs-card blue"><div class="cs-val">Rs ${opening}</div><div class="cs-lbl">Opening Balance</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${grossSale}</div><div class="cs-lbl">Gross Sale</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${discGiven}</div><div class="cs-lbl">Total Discount</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${delFees}</div><div class="cs-lbl">Del Fees (incl.)</div></div>
+    <div class="cs-card orange"><div class="cs-val">${bills.length}</div><div class="cs-lbl">Bills</div></div>
+    <div class="cs-card red"><div class="cs-val">Rs ${pm.cash}</div><div class="cs-lbl">Cash Collected</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.jazzcash}</div><div class="cs-lbl">JazzCash</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.bank}</div><div class="cs-lbl">Bank</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.foodpanda}</div><div class="cs-lbl">FoodPanda</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${returnTotal}</div><div class="cs-lbl">Returns</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${tillExp}</div><div class="cs-lbl">Till Expenses</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${finExp}</div><div class="cs-lbl">Finance Expenses</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${expected}</div><div class="cs-lbl">Expected in Drawer</div></div>
+    <div class="cs-card orange"><div class="cs-val" style="color:#fff;">Rs ${grandTotal}</div><div class="cs-lbl">Grand Total</div></div>
   `;
 
   document.getElementById('tx-tbody').innerHTML = orders.slice().reverse().map(o => `
@@ -6432,6 +6450,7 @@ async function loadCashForRange(fromVal, toVal) {
     staff: t.staff, deliveryAddress: t.delivery_address || '',
     deliveryCharge: t.delivery_charge || 0,
     splitCash: t.split_cash || 0, splitCard: t.split_card || 0,
+    subtotal: t.subtotal || 0, sc: t.sc || 0, disc: t.discount || 0, tax: t.tax || 0,
     kitchenOrderId: t.kitchen_order_id || null
   }));
 
@@ -6500,6 +6519,15 @@ async function printCashDrawerReport() {
 // ══════════════════════════════════
 // CLOSING REPORT
 // ══════════════════════════════════
+function sumByMethod(list) {
+  const r = { cash:0, card:0, bank:0, jazzcash:0, foodpanda:0 };
+  (list || []).forEach(t => {
+    const sc = t.split_cash ?? t.splitCash ?? 0, sk = t.split_card ?? t.splitCard ?? 0;
+    if (t.method === 'split') { r.cash += sc; r.card += sk; }
+    else if (t.method in r) r[t.method] += t.total || 0;
+  });
+  return r;
+}
 async function renderClosingReport() {
   const fromEl = document.getElementById('closing-date-from');
   const toEl = document.getElementById('closing-date-to');
@@ -6551,6 +6579,10 @@ async function renderClosingReport() {
   const financeExp = sales.filter(t => t.method === 'expense' && /^\s*\[FINANCE\]/i.test(t.items_text || '')).reduce((s,t) => s + Math.abs(t.total), 0);
   const totalDelCharges = deliveryFeesOnly;
   const avg = billsOnly.length > 0 ? Math.round(shopTotal/billsOnly.length) : 0;
+    const pm = sumByMethod(billsOnly);
+  const grossSale = billsOnly.reduce((s,t) => s + (t.subtotal||0), 0);
+  const netSale = grossSale - discGiven;
+  const taxTotal = billsOnly.reduce((s,t) => s + (t.tax||0), 0);
 
   const _obResult = await fetchOpeningBalance(activeBranch, fromDate);
   let opening = _obResult.amount;
@@ -6569,15 +6601,26 @@ async function renderClosingReport() {
     adminBtn.onclick = () => adminDeleteFullDay(fromDate, activeBranch);
     document.querySelector('.closing-header div:last-child').appendChild(adminBtn);
   }
-  document.getElementById('closing-stats').innerHTML = `
-<div class="cs-card green"><div class="cs-val">Rs ${shopTotal}</div><div class="cs-lbl">Shop Sales</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Del Fees (incl.)</div></div>    <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
-<div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
-<div class="cs-card blue"><div class="cs-val">Rs ${totalCard}</div><div class="cs-lbl">Card Collected</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${computeCashInHand(txs, opening)}</div><div class="cs-lbl">Expected in Drawer</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${expenses}</div><div class="cs-lbl">Till Expenses</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${financeExp}</div><div class="cs-lbl">Finance Expenses</div></div>
+    document.getElementById('closing-stats').innerHTML = `
+    <div class="cs-card blue"><div class="cs-val">Rs ${opening}</div><div class="cs-lbl">Opening Balance</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${grossSale}</div><div class="cs-lbl">Gross Sale</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${discGiven}</div><div class="cs-lbl">Total Discount</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Del Fees (incl.)</div></div>
+    <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
+    <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.jazzcash}</div><div class="cs-lbl">JazzCash</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.bank}</div><div class="cs-lbl">Bank</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.foodpanda}</div><div class="cs-lbl">FoodPanda</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill Value</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${returnTotal}</div><div class="cs-lbl">Returns</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${expenses}</div><div class="cs-lbl">Till Expenses</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${financeExp}</div><div class="cs-lbl">Finance Expenses</div></div>
+    <div class="cs-card green"><div class="cs-val">Rs ${computeCashInHand(txs, opening)}</div><div class="cs-lbl">Expected in Drawer</div></div>
+    <div class="cs-card orange"><div class="cs-val" style="color:#fff;">Rs ${total}</div><div class="cs-lbl">Grand Total</div></div>
   `;
 
   const staffNames = [...new Set(txs.map(t => t.staff).filter(Boolean))];
@@ -6594,7 +6637,10 @@ async function renderClosingReport() {
       <div class="cb-row"><span style="font-weight:700;color:white;">👤 ${name}</span><span class="cb-row-val">${staffSales.length} bills</span></div>
 <div class="cb-row"><span style="padding-left:12px;">Total Sales</span><span class="cb-row-val">Rs ${staffShopTotal}</span></div>
       <div class="cb-row"><span style="padding-left:12px;">Del Fees</span><span class="cb-row-val" style="color:var(--orange);">Rs ${staffDelFees}</span></div>      <div class="cb-row"><span style="padding-left:12px;">Cash</span><span class="cb-row-val">Rs ${staffCash}</span></div>
-      <div class="cb-row"><span style="padding-left:12px;">Card</span><span class="cb-row-val">Rs ${staffCard}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Card</span><span class="cb-row-val">Rs ${sumByMethod(staffSales).card}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">Bank</span><span class="cb-row-val">Rs ${sumByMethod(staffSales).bank}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">JazzCash</span><span class="cb-row-val">Rs ${sumByMethod(staffSales).jazzcash}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">FoodPanda</span><span class="cb-row-val">Rs ${sumByMethod(staffSales).foodpanda}</span></div>
       <div class="cb-row"><span style="padding-left:12px;">Discounts</span><span class="cb-row-val" style="color:var(--red);">Rs ${staffDisc}</span></div>
       <div class="cb-row" style="margin-bottom:8px;"><span style="padding-left:12px;">Voids</span><span class="cb-row-val" style="color:var(--red);">${staffVoids}</span></div>
     `;
@@ -6619,7 +6665,10 @@ async function renderClosingReport() {
       <div class="cb-head">Cash Reconciliation</div>
       <div class="cb-row"><span>Opening Balance</span><span class="cb-row-val">Rs ${opening}</span></div>
 <div class="cb-row"><span>Cash Sales</span><span class="cb-row-val">Rs ${totalCash}</span></div>
-      <div class="cb-row"><span>Card Sales</span><span class="cb-row-val">Rs ${totalCard}</span></div>
+      <div class="cb-row"><span>Card Sales</span><span class="cb-row-val">Rs ${pm.card}</span></div>
+      <div class="cb-row"><span>Bank Sales</span><span class="cb-row-val">Rs ${pm.bank}</span></div>
+      <div class="cb-row"><span>JazzCash Sales</span><span class="cb-row-val">Rs ${pm.jazzcash}</span></div>
+      <div class="cb-row"><span>FoodPanda Sales</span><span class="cb-row-val">Rs ${pm.foodpanda}</span></div>
       <div class="cb-row"><span>Cash Outs</span><span class="cb-row-val" style="color:var(--red);">-Rs ${cashOuts}</span></div>
       <div class="cb-row"><span>Till Expenses</span><span class="cb-row-val" style="color:var(--red);">-Rs ${expenses}</span></div>
       <div class="cb-row"><span>Finance Expenses (not taken from drawer)</span><span class="cb-row-val">Rs ${financeExp}</span></div>
@@ -7132,8 +7181,8 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
 
   try {
     const { data } = await sb.from('shift_transactions')
-      .select('bill_no, type, table_loc, items_text, total, method, created_at, staff, date')
-      .eq('branch', branch)
+      .select('bill_no, type, table_loc, items_text, total, method, created_at, staff, date, split_cash, split_card, sc, discount, delivery_charge, subtotal, tax')
+.eq('branch', branch)
       .gte('created_at', _dtLocalToISO(fromDateTime)).lte('created_at', _dtLocalToISO(toDateTime))
       .order('created_at', { ascending: true });
     let txs = mergeInPendingTx(data || [], branch, _dtLocalToISO(fromDateTime), _dtLocalToISO(toDateTime));
@@ -7149,13 +7198,14 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
     // does NOT depend on shift_reports, which only gets written when a
     // staff member formally closes their shift and can be missing/stale.
     const rangeSales = (txs||[]).filter(t => !['cash-in','cash-out'].includes(t.method));
-    const rangeBillsOnly = rangeSales.filter(t => !['void','return','expense'].includes(t.method));
+    const rangeBillsOnly = rangeSales.filter(t => !['void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
     const rangeTotalSales = rangeBillsOnly.reduce((s,t) => s + t.total, 0);
     const rangeCash = rangeSales.filter(t => t.method === 'cash').reduce((s,t) => s + t.total, 0)
       + rangeSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_cash||0), 0);
     const rangeCard = rangeSales.filter(t => ['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t) => s + t.total, 0)
       + rangeSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_card||0), 0);
     const rangeSC = rangeSales.reduce((s,t) => s + (t.sc||0), 0);
+    const rangePm = sumByMethod(rangeBillsOnly);
     const rangeDisc = rangeSales.reduce((s,t) => s + (t.discount||0), 0);
     const rangeVoids = (txs||[]).filter(t => t.method === 'void');
     const rangeVoidTotal = rangeVoids.reduce((s,t) => s + Math.abs(t.total), 0);
@@ -7172,7 +7222,7 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Total Sales</div><div style="font-size:20px;font-weight:900;color:var(--green);">Rs ${rangeTotalSales}</div></div>
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Bills</div><div style="font-size:20px;font-weight:900;color:var(--orange);">${rangeBillsOnly.length}</div></div>
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Cash</div><div style="font-size:20px;font-weight:900;color:var(--green);">Rs ${rangeCash}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Card</div><div style="font-size:20px;font-weight:900;color:var(--blue);">Rs ${rangeCard}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Card</div><div style="font-size:20px;font-weight:900;color:var(--blue);">Rs ${rangePm.card}</div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;">🏦 Bank ${rangePm.bank}<br>📱 JazzCash ${rangePm.jazzcash}<br>🐼 Panda ${rangePm.foodpanda}</div></div>
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">SC Collected</div><div style="font-size:20px;font-weight:900;color:var(--orange);">Rs ${rangeSC}</div></div>
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Discounts</div><div style="font-size:20px;font-weight:900;color:var(--red);">Rs ${rangeDisc}</div></div>
           <div><div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Voids</div><div style="font-size:20px;font-weight:900;color:var(--red);">${rangeVoids.length} (Rs ${rangeVoidTotal})</div></div>
@@ -7208,13 +7258,14 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
     const perStaffHTML = staffNamesInRange.map(staffName => {
       const sTxs = txs.filter(t => t.staff === staffName);
       const sSales = sTxs.filter(t => !['cash-in','cash-out'].includes(t.method));
-      const sBillsOnly = sSales.filter(t => !['void','return','expense'].includes(t.method));
+      const sBillsOnly = sSales.filter(t => !['void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
       const sTotal = sBillsOnly.reduce((s,t) => s + t.total, 0);
       const sCash = sSales.filter(t => t.method === 'cash').reduce((s,t) => s + t.total, 0)
         + sSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_cash||0), 0);
       const sCard = sSales.filter(t => ['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t) => s + t.total, 0)
         + sSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_card||0), 0);
       const sSC = sSales.reduce((s,t) => s + (t.sc||0), 0);
+      const sPm = sumByMethod(sBillsOnly);
       const sDisc = sSales.reduce((s,t) => s + (t.discount||0), 0);
       const sVoids = sTxs.filter(t => t.method === 'void');
       const sVoidTotal = sVoids.reduce((s,t) => s + Math.abs(t.total), 0);
@@ -7249,7 +7300,7 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
             </div>
             <div style="background:var(--surface2);border-radius:10px;padding:12px;">
               <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Card</div>
-              <div style="font-size:22px;font-weight:900;color:var(--blue);">Rs ${sCard}</div>
+              <div style="font-size:22px;font-weight:900;color:var(--blue);">Rs ${sPm.card}</div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;">🏦 Bank ${sPm.bank}<br>📱 JazzCash ${sPm.jazzcash}<br>🐼 Panda ${sPm.foodpanda}</div>
             </div>
             <div style="background:var(--surface2);border-radius:10px;padding:12px;">
               <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">SC Collected</div>
@@ -9370,6 +9421,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
