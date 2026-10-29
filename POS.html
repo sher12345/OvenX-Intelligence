@@ -4033,6 +4033,7 @@ function saveTableOrder() {
       location: isDelivery ? (addr || currentOrder.table) : currentOrder.table, 
       delivery_fee: delCharge,
       subtotal: (() => { const t = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, getSCPct(), parseFloat(document.getElementById('disc-amount').value) || 0, discType, 0); return t.grand - (t.tax || 0); })(),
+tax: (() => { const t = getOrderTotal(currentOrder.items, currentOrder.type, scEnabled, getSCPct(), parseFloat(document.getElementById('disc-amount').value) || 0, discType, 0); return t.tax || 0; })(),
       customer_name: document.getElementById('order-customer-name')?.value || null,
       phone: document.getElementById('order-customer-phone')?.value || null
     }, { eq: [['id', currentOrder.id]] });
@@ -4984,7 +4985,7 @@ async function sendToKitchen() {
       const updDelAddr = orderSnap.type==='Delivery'?(document.getElementById('delivery-address').value||orderSnap.deliveryAddress||''):'';
       const updDelCharge = orderSnap.type==='Delivery'?(parseFloat(document.getElementById('delivery-charge').value)||orderSnap.deliveryCharge||0):0;
       await sbWrite('kitchen_orders', 'update',
-        { items:itemsText, subtotal:grand, delivery_fee:updDelCharge, location:updDelAddr||orderSnap.table||orderSnap.type, customer_name:custName||null, phone:custPhone||null, source:'POS' },
+        { items:itemsText, subtotal:grand, tax:(tax||0), delivery_fee:updDelCharge, location:updDelAddr||orderSnap.table||orderSnap.type, customer_name:custName||null, phone:custPhone||null, source:'POS' },
         { eq:[['id', orderSnap.id]] });
       await finish(); showToast('Kitchen updated! 🔥','success'); return;
     } catch(e) {}
@@ -4995,7 +4996,7 @@ async function sendToKitchen() {
   const location = orderSnap.type==='Delivery' ? (delAddr || orderSnap.table||'Delivery') : (orderSnap.table?orderSnap.table.replace('-',' '):orderSnap.type);
 
   const clientId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2));
-  const obj = { id: clientId, type:orderSnap.type, location:location, items:itemsText, status:'WAITING', subtotal:grand, delivery_fee:delCharge, branch:activeBranch, customer_name:custName||null, phone:custPhone||null, source:'POS' };
+  const obj = { id: clientId, type:orderSnap.type, location:location, items:itemsText, status:'WAITING', subtotal:grand, tax:(tax||0), delivery_fee:delCharge, branch:activeBranch, customer_name:custName||null, phone:custPhone||null, source:'POS' };
   orderSnap.id = clientId;
   try {
     await sbWrite('kitchen_orders', 'insert', [obj]);
@@ -9369,6 +9370,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
