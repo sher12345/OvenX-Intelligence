@@ -201,10 +201,15 @@ function renderAlerts(){
  $('alerts').innerHTML=a.slice(0,5).map(x=>`<div class="al ${x[0]}">${x[1]}</div>`).join('');
 }
 function renderHero(){
- const n=T('count'),valid=T('valid'),on=riders.filter(r=>r.status==='on-duty').length,brk=riders.filter(r=>r.status==='on-break').length,ot=valid?T('ontime')/valid*100:0,avg=valid?T('mins')/valid:0;
+ const n=T('count'), valid=T('valid'), on=riders.filter(r=>r.status==='on-duty').length, brk=riders.filter(r=>r.status==='on-break').length, ot=valid?T('ontime')/valid*100:0, avg=valid?T('mins')/valid:0;
+ const activeCount = active.length;
+ const totalDeliveries = n + activeCount;
  const mx=Math.max(1,...hours),pts=hours.map((h,i)=>`${i*(300/23)},${56-h/mx*46}`);
  $('hero').innerHTML=`
- <div class="c s4 up" style="min-height:190px"><h2>Deliveries <i>${period==='today'?'business day':period==='week'?'last 7 days':'this month'}</i></h2><div class="big g num" data-id="n" data-to="${n}" data-f="n">0</div><div class="lab">${riders.filter(r=>r.status!=='off-duty').length} of ${riders.length} riders working</div>
+ <div class="c s4 up" style="min-height:190px"><h2>Deliveries <i>${period==='today'?'business day':period==='week'?'last 7 days':'this month'}</i></h2><div class="big num" style="display:flex; align-items:baseline; gap:8px;">
+  <span class="g" data-id="n" data-to="${n}" data-f="n">0</span>
+  <span class="rd" data-id="active-n" data-to="${activeCount}" data-f="n" style="font-size:24px; opacity:${activeCount > 0 ? 1 : 0};">0</span>
+</div><div class="lab">${n} completed ${activeCount > 0 ? `· <span class="rd">${activeCount} active</span>` : ''} · ${riders.filter(r=>r.status!=='off-duty').length} of ${riders.length} riders working</div>
  <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#34e0a1" stop-opacity=".4"/><stop offset="1" stop-color="#34e0a1" stop-opacity="0"/></linearGradient></defs><path d="M0,56 L${pts.join(' L')} L300,56Z" fill="url(#sg)"/><path d="M${pts.join(' L')}" fill="none" stroke="#34e0a1" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
  <div class="c s4 up" style="animation-delay:.08s"><h2>Cash with riders <i>unsettled</i></h2><div class="big o num" data-id="cash" data-to="${T('cash')}" data-f="rs">0</div><div class="lab">to hand over</div>
  <div class="mini"><div><b class="g num">${fmt(T('owed'))}</b><span>Shop owes riders</span></div><div><b class="num">${fmt(T('cash')-T('owed'))}</b><span>Net to collect</span></div><div><b class="rd num">${fmt(T('cred'))}</b><span>Credited</span></div><div><b class="num">${T('unsettled')}</b><span>Awaiting hisab</span></div></div></div>
@@ -285,6 +290,7 @@ function exportCsv(){const h=['Rider','Phone','Branch','Status','Hours','Deliver
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ovenx-riders-'+period+'.csv';a.click()}
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
