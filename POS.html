@@ -8344,7 +8344,6 @@ async function _fetchAndOpenAdminTxModal(billNo) {
       .select('*')
       .eq('branch', _adminTxBranch)
       .eq('bill_no', billNo)
-      .eq('date', _adminTxDate)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -8361,6 +8360,7 @@ async function _fetchAndOpenAdminTxModal(billNo) {
       return;
     }
     const t = data[0];
+    _adminTxDate = t.date || _adminTxDate; // use the row's real date (delivery rows may be previous business day)
     const tx = {
       billNo: t.bill_no, table: t.table_loc, type: t.type,
       items: [], itemsText: t.items_text || '',
@@ -8490,15 +8490,19 @@ async function adminTxDelete() {
   try {
     await restoreInventoryForBill(_adminTxCurrent.billNo, _adminTxBranch, _adminTxDate);
 
-    // Delete ONLY the exact row — if a duplicate bill_no exists, this still
-    // won't touch the other order's row.
-    let delQuery = sb.from('shift_transactions')
-      .delete()
-      .eq('branch', _adminTxBranch)
-      .eq('bill_no', _adminTxCurrent.billNo)
-      .eq('date', _adminTxDate);
-    if (_adminTxCurrent._dbId) delQuery = delQuery.eq('id', _adminTxCurrent._dbId);
-    await delQuery;
+    // Delete ONLY the exact row. We use the _dbId (the actual UUID) 
+    // to guarantee we delete the right row, ignoring the date mismatch.
+    let delQuery = sb.from('shift_transactions').delete();
+    if (_adminTxCurrent._dbId) {
+      delQuery = delQuery.eq('id', _adminTxCurrent._dbId);
+    } else {
+      // Fallback if _dbId is somehow missing
+      delQuery = delQuery.eq('branch', _adminTxBranch)
+                         .eq('bill_no', _adminTxCurrent.billNo)
+                         .eq('date', _adminTxDate);
+    }
+    const { error } = await delQuery;
+    if (error) throw error;
 
     // If it's today, remove from memory too
     if (_adminTxIsToday) {
@@ -8553,13 +8557,18 @@ async function adminTxSave() {
   try {
     await restoreInventoryForBill(_adminTxCurrent.billNo, _adminTxBranch, _adminTxDate);
 
-    let updQuery = sb.from('shift_transactions')
-      .update(updatePayload)
-      .eq('branch', _adminTxBranch)
-      .eq('bill_no', _adminTxCurrent.billNo)
-      .eq('date', _adminTxDate);
-    if (_adminTxCurrent._dbId) updQuery = updQuery.eq('id', _adminTxCurrent._dbId);
-    await updQuery;
+    let updQuery = sb.from('shift_transactions').update(updatePayload);
+    if (_adminTxCurrent._dbId) {
+      // Exact row — the only filter we need. Works regardless of date / bill_no duplicates.
+      updQuery = updQuery.eq('id', _adminTxCurrent._dbId);
+    } else {
+      updQuery = updQuery
+        .eq('branch', _adminTxBranch)
+        .eq('bill_no', _adminTxCurrent.billNo)
+        .eq('date', _adminTxDate);
+    }
+    const { error: updErr } = await updQuery;
+    if (updErr) throw updErr;
 
     if (itemsForDB.length) {
       await deductInventoryForSale({ billNo: _adminTxCurrent.billNo, items: itemsForDB }, _adminTxDate);
@@ -9451,6 +9460,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
