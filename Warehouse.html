@@ -273,6 +273,8 @@ function itemDoc(){
 function locDoc(){doc({title:'New location',nl:1,head:[{k:'name',l:'Name'},{k:'t',l:'Type',t:'select',o:[['warehouse','Warehouse'],['outlet','Outlet'],['kitchen','Kitchen / counter']]}],save:async h=>{if(!h.name.trim())throw 0;await ins('loc',[{id:uid(),name:h.name.trim(),type:h.t}])}})}
 function editItem(id) {
   const i = ingOf(id);
+  const c = central();
+  const currentQty = qty(c, id); // Gets current warehouse stock
   
   doc({
     title: 'Edit Item',
@@ -281,11 +283,14 @@ function editItem(id) {
       { k: 'name', l: 'Name', v: i.name },
       { k: 'unit', l: 'Unit', t: 'select', o: ['kg','g','l','ml','pcs','pkt','box','bottle'].map(x=>[x,x]), v: i.unit },
       { k: 'cat', l: 'Category', v: i.category || 'general' },
+      { k: 'stock', l: 'In Stock (Current Qty)', t: 'number', v: currentQty }, // ✅ NEW FIELD
       { k: 'p', l: 'Price per unit (Rs)', t: 'number', v: i.costperunit || 0 },
       { k: 'min', l: 'Alert me below', t: 'number', v: i.minlevel || 0 }
     ],
     save: async h => {
       if (!h.name.trim()) { toast('Name required', 1); throw 0; }
+      
+      // 1. Update basic details
       await upd('ing', id, {
         name: h.name.trim(),
         category: h.cat || 'general',
@@ -293,6 +298,25 @@ function editItem(id) {
         costperunit: n(h.p),
         minlevel: n(h.min)
       });
+
+      // 2. Adjust stock if changed
+      const newQty = n(h.stock);
+      const diff = newQty - currentQty;
+      
+      if (diff !== 0) {
+        // Create a stock movement to record the manual adjustment
+        await move({
+          type: 'opening', // Treats manual corrections as an opening/adjustment
+          ing: id,
+          to: c,
+          qty: diff > 0 ? diff : -diff, // pass positive qty
+          from: diff < 0 ? c : null,    // if reducing, take from warehouse
+          to: diff > 0 ? c : null,      // if increasing, add to warehouse
+          note: 'Manual stock adjustment via item edit',
+          date: today()
+        });
+      }
+      
       render();
     }
   });
