@@ -2982,10 +2982,26 @@ async function pollWebOrders() {
       // already sitting on some table? (prevents duplicates, e.g. takeaway moved to TK-3)
     const mine = Object.values(tableOrders).find(o => o.webOrderId === order.id || o.id === order.id);
   if (mine) {
-    const newTax = Number(order.tax) || 0;
-    if (mine.fromWeb && mine.webTax !== newTax) {
+    const newTax  = Number(order.tax) || 0;
+    const newDisc = Number(order.discount) || 0;
+    const newSub  = Math.round(Number(order.subtotal) || 0);
+    if (mine.fromWeb && (mine.webTax !== newTax || (mine.discAmount || 0) !== newDisc)) {
       mine.webTax = newTax;
-      if (currentOrder.id === order.id) { currentOrder.webTax = newTax; renderOrderTotals(); }
+      mine.discAmount = newDisc;
+      mine.discType = 'flat';
+      mine.discReason = newDisc > 0 ? 'Applied on web/kitchen order' : '';
+      if (mine.items && mine.items.length) _captureWebLock(mine, newSub);   // re-lock to the Kitchen panel's numbers
+      if (currentOrder.id === order.id) {
+        Object.assign(currentOrder, {
+          webTax: mine.webTax, discAmount: mine.discAmount, discType: 'flat', discReason: mine.discReason,
+          webLocked: mine.webLocked, webSubtotal: mine.webSubtotal, webFood: mine.webFood, webDisc: mine.webDisc,
+          webSc: mine.webSc, webScPct: mine.webScPct, webSig: mine.webSig,
+          taxPercent: mine.taxPercent, taxEnabled: mine.taxEnabled
+        });
+        document.getElementById('disc-amount').value = newDisc;
+        if (mine.taxPercent !== undefined) document.getElementById('tax-pct').value = mine.taxPercent;
+        renderOrderTotals();
+      }
       _saveActiveTable(mine.table, mine);
     }
     continue;
