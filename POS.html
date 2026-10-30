@@ -3084,52 +3084,52 @@ async function pollWebOrders() {
 
 function parseItemsFromText(text, knownSubtotal, isDineIn) {
   if (!text) return [];
+  const lines = String(text).split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Group each "Nx item" line with all its continuation lines (flavours, includes, notes)
+  const blocks = [];
+  lines.forEach(line => {
+    if (/^\d+x\s+/.test(line)) blocks.push([line]);
+    else if (blocks.length) blocks[blocks.length - 1].push(line);
+  });
+
   let priceFromText = true;
-  const lines = text.split('\n').map(l => l.trim());
   const items = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    
-    // Match the item line: "1x Family Feast @ Rs 2499"
-    const m = line.match(/^(\d+)x\s+(.+?)(?:\s+\[([^\]]*)\])?$/);
-    if (!m) continue; // If it's a flavor line (e.g., "Category 1: [Pan] Pizza"), we'll catch it below
-    
-    const qty = parseInt(m[1]);
-    let name = m[2].trim();
-    let note = m[3] || '';
-    let price = 0;
-    
-    // ✅ NEW: Check the next line for flavors
-    if (i + 1 < lines.length) {
-      const nextLine = lines[i + 1];
-      // If the next line doesn't start with a quantity (like "1x"), it's a flavor/note
-      if (nextLine && !/^\d+x\s+/.test(nextLine) && !nextLine.match(/^@Rs/)) {
-        note = note ? note + ' | ' + nextLine : nextLine;
-        i++; // Skip the next line so it doesn't duplicate
-      }
-    }
-    
-    // Extract price
-    const pm = name.match(/\s*@\s*Rs\s*([\d,]+)/i);
-    if (pm) { 
-      let totalPrice = parseInt(pm[1].replace(/,/g, '')); 
-      price = totalPrice / qty; // Divide by quantity to get the correct single unit price
-      name = name.slice(0, pm.index).trim(); 
+
+  blocks.forEach(block => {
+    const first = block[0].match(/^(\d+)x\s+(.*)$/);
+    if (!first) return;
+    const qty = parseInt(first[1]);
+    const head = first[2];
+    let name = head, tail = '', price = 0;
+
+    const pm = head.match(/\s*@\s*Rs\s*([\d,]+)/i);
+    if (pm) {
+      price = parseInt(pm[1].replace(/,/g, '')) / qty;
+      name = head.slice(0, pm.index).trim();
+      tail = head.slice(pm.index + pm[0].length).trim();   // keeps "[Crispy Extreme"
     } else {
       priceFromText = false;
+      const br = head.match(/^(.*?)\s*(\[.*)$/);
+      if (br) { name = br[1].trim(); tail = br[2]; }
       for (let cat in menuData) {
-        const item = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
-        if (item) { price = typeof item.p === 'object' ? Object.values(item.p)[0] : item.p; break; }
+        const it = menuData[cat].find(i => i.n === name || name.startsWith(i.n));
+        if (it) { price = typeof it.p === 'object' ? Object.values(it.p)[0] : it.p; break; }
       }
       const deal = dealsData.find(d => name.includes(d.n));
       if (deal) price = deal.p;
     }
-    items.push({ name, price, qty, note });
-  }
 
-  if (!priceFromText && knownSubtotal && items.length) {   // old rescale only as a fallback
+    // Flavours + every extra line → one clean note ("|" becomes separate ↳ lines on prints)
+    const note = [tail, ...block.slice(1)]
+      .map(s => String(s).replace(/[\[\]]/g, '').trim())
+      .filter(Boolean)
+      .join(' | ');
+
+    items.push({ name, price, qty, note });
+  });
+
+  if (!priceFromText && knownSubtotal && items.length) {
     const rawSubtotal = isDineIn ? Math.round(knownSubtotal / 1.07) : knownSubtotal;
     const calcTotal = items.reduce((s, i) => s + i.price * i.qty, 0);
     if (calcTotal > 0 && calcTotal !== rawSubtotal) {
@@ -5297,7 +5297,7 @@ function printTakeawaySlip(sale) {
   const food = sale.items.reduce((s,i) => s + (i.returned ? 0 : i.price * i.qty), 0);
   const itemsText = sale.items.map(i => i.returned
     ? '[RETURNED - NOT CHARGED]\n' + i.qty + 'x ' + i.name + '   (Rs ' + (i.price * i.qty) + ' removed)'
-    : i.qty + 'x ' + i.name + (i.note ? '\n   > ' + i.note : '') + '   Rs ' + (i.price * i.qty)
+    : i.qty + 'x ' + i.name + (getDealDesc(i.name) ? '\n   (' + getDealDesc(i.name) + ')' : '') + (i.note ? '\n   > ' + i.note.replace(/\s*\|\s*/g, '\n   > ') : '') + '   Rs ' + (i.price * i.qty)
   ).join('\n');
 
   document.getElementById('print-area').innerHTML =
@@ -5558,7 +5558,7 @@ async function completePayment() {
       table_loc: sale.table || '',
       order_started_at: currentOrder.startTime ? new Date(currentOrder.startTime).toISOString() : null,
       items: sale.items,
-      items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', ') + sale.riderTag,
+      items_text: sale.items.map(i => `${i.qty}x ${i.name}${i.note ? ' [' + i.note + ']' : ''}`).join(', ') + sale.riderTag,
       subtotal: sale.items.filter(i => !i.returned).reduce((s,i) => s + i.price * i.qty, 0),
       sc: sale.sc, sc_pct: sale.scPct, discount: sale.disc || 0,
       delivery_charge: sale.deliveryCharge || 0,
@@ -5842,7 +5842,8 @@ function printReceipt(sale, isSplit=false, isReprint=false) {
         <span style="font-size:15px;font-weight:700;">${i.qty}x ${i.name}</span>
         <span style="font-size:15px;font-weight:700;white-space:nowrap;">Rs ${i.price * i.qty}</span>
       </div>
-      ${i.note ? `<div style="font-size:13px;font-weight:700;margin-top:4px;padding-left:14px;color:#000;">↳ ${i.note.replace(/\|/g, '<br>↳ ')}</div>` : ''}
+      ${(i.desc || getDealDesc(i.name)) ? `<div style="font-size:12px;font-weight:600;margin-top:2px;padding-left:14px;color:#000;">(${i.desc || getDealDesc(i.name)})</div>` : ''}
+      ${i.note ? `<div style="font-size:13px;font-weight:700;margin-top:4px;padding-left:14px;color:#000;">↳ ${i.note.replace(/\s*\|\s*/g, '<br>↳ ')}</div>` : ''}
     </div>
   `).join('');
   const methodLabel = {
@@ -10279,6 +10280,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
