@@ -1663,6 +1663,7 @@ const dealsData=[
 // ══════════════════════════════════
 // DEAL FLAVOR MAP (matches web app)
 // ══════════════════════════════════
+const isFpOnly = d => !!d.fp || /^combo\b/i.test(d.n || '');
 const dealFlavorMap = {
   'Family Feast':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza','BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
   'Extreme Buddy':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
@@ -3737,7 +3738,7 @@ function renderMenu(filter='') {
   if (activeCategory === '__deals__') {
     const dg = document.createElement('div'); dg.className = 'deals-section';
     const dGrid = document.createElement('div'); dGrid.className = 'deals-grid';
-dealsData.filter(d => !d._unavailable && (!filter || d.n.toLowerCase().includes(filter.toLowerCase()))).forEach(deal => {
+dealsData.filter(d => !d._unavailable && !isFpOnly(d) && (!filter || d.n.toLowerCase().includes(filter.toLowerCase()))).forEach(deal => {
   const card = document.createElement('div'); card.className = 'deal-card-pos';
       card.innerHTML = `<div class="dcp-name">${deal.n}</div><div class="dcp-desc">${deal.d}</div><div class="dcp-price">Rs ${deal.p}</div>`;
 card.onclick = () => {
@@ -3785,7 +3786,7 @@ menuData[cat].filter(i => !i._unavailable && i.n.toLowerCase().includes(filter) 
       ig.appendChild(card); found++;
     });
   }
-dealsData.filter(d => !d._unavailable && d.n.toLowerCase().includes(filter)).forEach(d => {    const card = document.createElement('div'); card.className = 'deal-card-pos';
+dealsData.filter(d => !d._unavailable && !isFpOnly(d) && d.n.toLowerCase().includes(filter)).forEach(d => {    const card = document.createElement('div'); card.className = 'deal-card-pos';
     card.innerHTML = `<div class="dcp-name">${d.n}</div><div class="dcp-desc">${d.d}</div><div class="dcp-price">Rs ${d.p}</div>`;
 card.onclick = () => {
       if (dealFlavorMap[d.n]) {
@@ -4666,7 +4667,7 @@ function recallSearch(val) {
     });
   }
   dealsData.forEach(d => {
-    if (d.n.toLowerCase().includes(val.toLowerCase())) {
+    if (!isFpOnly(d) && d.n.toLowerCase().includes(val.toLowerCase())) {
       matches.push({ name: d.n, price: d.p, cat: 'Deals' });
     }
   });
@@ -5696,6 +5697,29 @@ function getDealDesc(name) {
   return deal && deal.d ? deal.d : '';
 }
 
+function buildPosKitchenSlip(o){
+  const E=_xcEsc;
+  const list=o.recall?o.items.filter(i=>i.returned||(i.addedAfterKOT||0)>0):o.items;
+  const rows=list.map(i=>{
+    if(i.returned) return `<div style="border:2px solid #000;text-align:center;padding:4px;margin-bottom:8px;"><div style="font-size:17px;font-weight:bold;text-decoration:line-through;">${i.qty}x ${E(i.name)}</div><div style="font-size:14px;font-weight:bold;">RETURNED - DO NOT PREPARE</div></div>`;
+    const qty=o.recall?i.addedAfterKOT:i.qty, notes=[];
+    const d=i.desc||getDealDesc(i.name); if(d) notes.push('Includes: '+d);
+    String(i.note||'').split(/\s*\|\s*/).filter(Boolean).forEach(n=>notes.push(n));
+    return `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:9px;"><div style="font-size:24px;font-weight:700;min-width:34px;line-height:1.1;">${qty}x</div><div style="flex:1;text-align:left;"><div style="font-size:19px;font-weight:bold;line-height:1.2;">${E(i.name)}</div>${notes.map(n=>`<div style="font-size:14px;margin:2px 0 0 26px;line-height:1.3;">- ${E(n)}</div>`).join('')}</div></div>`;
+  }).join('');
+  const big=o.type==='Dine-In'?'TABLE '+E(o.table):(o.type==='Takeaway'?'#'+E(o.token):'');
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#000;text-align:center;padding:4px 2px;width:70mm;">
+    <div style="font-size:13px;font-weight:bold;letter-spacing:3px;">KITCHEN ORDER</div>
+    <div style="border-top:3px solid #000;margin:5px 0 8px;"></div>
+    ${o.recall?'<div style="border:3px solid #000;padding:5px;font-size:18px;font-weight:900;margin-bottom:6px;">ADD-ON ONLY - DO NOT REMAKE FULL ORDER</div>':''}
+    <div style="border:3px solid #000;padding:6px 0;font-size:28px;font-weight:700;letter-spacing:2px;">${E(o.type.toUpperCase())}</div>
+    ${big?`<div style="font-size:30px;font-weight:700;margin:8px 0 2px;line-height:1.1;">${big}</div>`:''}
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:bold;margin-top:8px;"><span>#${E(o.kot)}</span><span>${E(o.time)}</span></div>
+    <div style="border-top:2px dashed #000;margin:8px 0 10px;"></div>
+    <div style="text-align:left;">${rows}</div>
+    <div style="border-top:3px solid #000;margin:8px 0 4px;"></div>
+    <div style="font-size:12px;font-weight:bold;">*** END OF ORDER ***</div></div>`;
+}
 async function printKitchenTicket() {
   if (!currentOrder.items.length) { showToast('No items to print', 'error'); return; }
 
@@ -5852,6 +5876,7 @@ async function printKitchenTicket() {
     </div>`;
 
   setTimeout(() => {
+    document.getElementById('print-area').innerHTML = buildPosKitchenSlip({type, table, token: tokenNum, kot: kotNum, time, recall: isRecallPrint, items: currentOrder.items});
     window.print();
     document.getElementById('print-area').innerHTML = '';
     // Ticket printed — clear the "added after KOT" markers now that kitchen has seen them
@@ -5892,7 +5917,7 @@ function printReceipt(sale, isSplit=false, isReprint=false) {
   }[sale.method] || sale.method.toUpperCase();
 
   document.getElementById('print-area').innerHTML = `
-    <div style="font-family:'Segoe UI', Arial, Helvetica, sans-serif;color:#000;padding:12px 6px;width:72mm;line-height:1.5;">
+    <div style="font-family:'Courier New',Courier,monospace;color:#000;padding:12px 6px;width:72mm;line-height:1.5;">
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-size:26px;font-weight:900;letter-spacing:2px;">OvenX</div>
         ${isReprint ? '<div style="background:#000;color:#fff;font-size:12px;font-weight:900;padding:3px 6px;letter-spacing:2px;margin:4px 0;">*** REPRINT ***</div>' : ''}
@@ -5915,7 +5940,7 @@ function printReceipt(sale, isSplit=false, isReprint=false) {
 
       <div style="border-bottom:2px solid #000;margin:12px 0;"></div>
 
-      <div>${itemsHTML}</div>
+      <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;border-bottom:1px solid #000;margin-bottom:6px;"><span>Item Description</span><span>Price</span></div><div>${itemsHTML}</div>
 
       <div style="border-bottom:2px solid #000;margin:12px 0;"></div>
 
@@ -10519,6 +10544,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
