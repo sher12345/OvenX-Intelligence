@@ -42,11 +42,12 @@ th{text-align:left;font-size:12px;color:var(--t2);font-weight:600;letter-spacing
 td{padding:12px;border-bottom:1px solid var(--hair);white-space:nowrap}
 /* Stock table specific layout to fix the gaps without breaking other tables */
 .tbl-stock table{table-layout:fixed}
-.tbl-stock th:nth-child(1),.tbl-stock td:nth-child(1){width:40%}
-.tbl-stock th:nth-child(2),.tbl-stock td:nth-child(2){width:15%}
-.tbl-stock th:nth-child(3),.tbl-stock td:nth-child(3){width:20%}
+.tbl-stock th:nth-child(1),.tbl-stock td:nth-child(1){width:30%}
+.tbl-stock th:nth-child(2),.tbl-stock td:nth-child(2){width:12%}
+.tbl-stock th:nth-child(3),.tbl-stock td:nth-child(3){width:15%}
 .tbl-stock th:nth-child(4),.tbl-stock td:nth-child(4){width:15%}
-.tbl-stock th:nth-child(5),.tbl-stock td:nth-child(5){width:10%;text-align:right}
+.tbl-stock th:nth-child(5),.tbl-stock td:nth-child(5){width:13%}
+.tbl-stock th:nth-child(6),.tbl-stock td:nth-child(6){width:15%; text-align:right;}
 
 input,select{font:inherit;color:var(--t);background:var(--in);border:1px solid var(--hair);border-radius:10px;padding:9px 11px;width:100%;outline:0;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
 input:focus,select:focus{outline:0;border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
@@ -95,15 +96,118 @@ async function upd(k,id,p){const{error}=await SB.from(T[k]).update(p).eq('id',id
 async function load(k){let all=[],p=0;for(;;){const{data,error}=await SB.from(T[k]).select('*').range(p*1000,p*1000+999);if(error)throw error;all.push(...data);if(data.length<1000)break;p++}S[k]=all}
 async function boot(){try{await Promise.all(Object.keys(T).map(load));
  if(!S.loc.length)await ins('loc',[{id:uid(),name:'Central Warehouse',type:'warehouse'},{id:uid(),name:'Main Outlet',type:'outlet'},{id:uid(),name:'Main Kitchen',type:'kitchen'}]);
+ 
+ // NEW: Seed the items from Excel into Supabase automatically
+ await seedItems();
+ await load('ing'); // reload in case we just added new ones
+
  $('sync').textContent='Connected · '+S.ing.length+' items';$('sync').className='pill ok';render()}catch(e){$('sync').textContent='Not connected';$('sync').className='pill bad';$('main').innerHTML='<div class="card"><h3>Tables are missing or unreachable</h3><p class="sub">Open the SQL setup, run it once in Supabase, then refresh.</p><p class="mut">'+esc(e.message)+'</p><br><button class="b" onclick="sqlM()">Show SQL setup</button></div>'}}
+
+async function seedItems() {
+  const newItems = [
+    // Meat
+    { name: 'Fajita', cat: 'Meat', unit: 'pkt' }, { name: 'Tikka', cat: 'Meat', unit: 'pkt' }, { name: 'Mughlai', cat: 'Meat', unit: 'pkt' }, { name: 'Malai', cat: 'Meat', unit: 'pkt' },
+    { name: 'Zinger', cat: 'Meat', unit: 'pkt' }, { name: 'Wings', cat: 'Meat', unit: 'pkt' }, { name: 'Chiken petty', cat: 'Meat', unit: 'pkt' }, { name: 'Nuggets', cat: 'Meat', unit: 'pkt' },
+    { name: 'Chapli petty', cat: 'Meat', unit: 'pkt' }, { name: 'Kabab', cat: 'Meat', unit: 'pkt' }, { name: 'Popers', cat: 'Meat', unit: 'pkt' }, { name: 'Sausages', cat: 'Meat', unit: 'pkt' },
+    { name: 'Burger fillit', cat: 'Meat', unit: 'kg' }, { name: 'Hot short', cat: 'Meat', unit: 'kg' }, { name: 'Stake fillit', cat: 'Meat', unit: 'kg' },
+    // Dairy & Frozen
+    { name: 'Cheez set', cat: 'Dairy', unit: 'pkt' }, { name: 'Cheez sclice', cat: 'Dairy', unit: 'pkt' }, { name: 'Butter fresh', cat: 'Dairy', unit: 'pkt' }, { name: 'Oppa fries', cat: 'Frozen', unit: 'pkt' },
+    { name: 'Eggs', cat: 'Dairy', unit: 'pcs' }, { name: 'Olper Milk', cat: 'Dairy', unit: 'pcs' }, { name: 'Milk pack cream', cat: 'Dairy', unit: 'pcs' }, { name: 'Every day Milk', cat: 'Dairy', unit: 'pcs' },
+    // Packaging
+    { name: 'Butter pepper (s)', cat: 'Packaging', unit: 'pkt' }, { name: 'Butter pepper (L)', cat: 'Packaging', unit: 'pkt' }, { name: 'Take away bag (s)', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Take away bag (L)', cat: 'Packaging', unit: 'pkt' }, { name: 'Pizza box (s)', cat: 'Packaging', unit: 'pkt' }, { name: 'Pizza box (M)', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Pizza box (L)', cat: 'Packaging', unit: 'pkt' }, { name: 'Printer Roll (S)', cat: 'Packaging', unit: 'pkt' }, { name: 'Printer Roll (L)', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Dip Box', cat: 'Packaging', unit: 'pkt' }, { name: 'Fork', cat: 'Packaging', unit: 'pkt' }, { name: 'Spoon', cat: 'Packaging', unit: 'pkt' },
+    { name: 'F 1 Box', cat: 'Packaging', unit: 'pkt' }, { name: 'F1 Lid', cat: 'Packaging', unit: 'pkt' }, { name: 'F 2 Box', cat: 'Packaging', unit: 'pkt' }, { name: 'F 2 Lid', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Domlit glass', cat: 'Packaging', unit: 'pkt' }, { name: 'Domlit glass Lid', cat: 'Packaging', unit: 'pkt' }, { name: 'Take away glass bag', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Packing straw', cat: 'Packaging', unit: 'pkt' }, { name: 'Colour straw', cat: 'Packaging', unit: 'pkt' }, { name: 'Head wizar', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Butter pepper Local', cat: 'Packaging', unit: 'pkt' }, { name: 'Pizza Table', cat: 'Packaging', unit: 'pkt' }, { name: 'Towel Tissue', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Napkin Tissue', cat: 'Packaging', unit: 'pkt' }, { name: 'Tissue Roll', cat: 'Packaging', unit: 'pkt' }, { name: 'M. R. D. Tag', cat: 'Packaging', unit: 'pkt' },
+    { name: 'Surgical Gloves', cat: 'Packaging', unit: 'pkt' }, { name: 'Shaper Gloves', cat: 'Packaging', unit: 'pkt' }, { name: 'Ziper', cat: 'Packaging', unit: 'kg' },
+    { name: 'Solution Tape', cat: 'Packaging', unit: 'pkt' }, { name: 'Stepler pin', cat: 'Packaging', unit: 'pkt' }, { name: 'Ball pan', cat: 'Packaging', unit: 'pcs' },
+    { name: 'Match Box', cat: 'Packaging', unit: 'pkt' }, { name: 'Bambo stick', cat: 'Packaging', unit: 'pkt' }, { name: 'Plastic bag', cat: 'Packaging', unit: 'kg' },
+    { name: 'Printer rim', cat: 'Packaging', unit: 'pcs' }, { name: 'Cling Filing', cat: 'Packaging', unit: 'pcs' }, { name: 'Face Mask', cat: 'Packaging', unit: 'pkt' },
+    // Vegetables
+    { name: 'Jalpeno', cat: 'Vegetables', unit: 'pcs' }, { name: 'Black olive', cat: 'Vegetables', unit: 'pcs' }, { name: 'Mashroom', cat: 'Vegetables', unit: 'pcs' },
+    { name: 'Lui paste', cat: 'Vegetables', unit: 'pcs' }, { name: 'Bread crum', cat: 'Vegetables', unit: 'pcs' }, { name: 'Pickle Cuccumber', cat: 'Vegetables', unit: 'pcs' },
+    { name: 'Potato fresh', cat: 'Vegetables', unit: 'kg' }, { name: 'Onoin fresh', cat: 'Vegetables', unit: 'kg' }, { name: 'Lemon fresh', cat: 'Vegetables', unit: 'kg' },
+    { name: 'Mint fresh', cat: 'Vegetables', unit: 'kg' }, { name: 'Tomato fresh', cat: 'Vegetables', unit: 'kg' }, { name: 'Ice brug fresh', cat: 'Vegetables', unit: 'kg' },
+    { name: 'Cuccumber fresh', cat: 'Vegetables', unit: 'kg' }, { name: 'Capsicum', cat: 'Vegetables', unit: 'kg' }, { name: 'Carrot', cat: 'Vegetables', unit: 'kg' },
+    { name: 'Parcely', cat: 'Vegetables', unit: 'kg' }, { name: 'Zakoni', cat: 'Vegetables', unit: 'kg' }, { name: 'Fresh Been', cat: 'Vegetables', unit: 'kg' },
+    { name: 'Brockly', cat: 'Vegetables', unit: 'kg' }, { name: 'Garlic Cloves', cat: 'Vegetables', unit: 'kg' },
+    // Sauces & Spices
+    { name: 'Alfarado pasta', cat: 'Pasta', unit: 'pcs' }, { name: 'Macroni Elbo', cat: 'Pasta', unit: 'pcs' }, { name: 'Real Mayo', cat: 'Sauces', unit: 'pcs' },
+    { name: 'Dough Blend', cat: 'Bakery', unit: 'pcs' }, { name: 'Red spice', cat: 'Spices', unit: 'pcs' }, { name: 'Till', cat: 'Spices', unit: 'kg' },
+    { name: 'Maida', cat: 'Bakery', unit: 'pcs' }, { name: 'Symbolic sauce', cat: 'Sauces', unit: 'pcs' }, { name: 'Tabasco sauce', cat: 'Sauces', unit: 'pcs' },
+    { name: 'Oil Tin', cat: 'Oil', unit: 'pcs' }, { name: 'salt', cat: 'Spices', unit: 'pcs' }, { name: 'Chilli Crush', cat: 'Spices', unit: 'kg' },
+    { name: 'White pepper', cat: 'Spices', unit: 'kg' }, { name: 'Black pepper', cat: 'Spices', unit: 'kg' }, { name: 'Oregeno leave', cat: 'Spices', unit: 'kg' },
+    { name: 'Chiken powder', cat: 'Spices', unit: 'kg' }, { name: 'Suger', cat: 'Spices', unit: 'kg' }, { name: 'Lemon powder', cat: 'Spices', unit: 'kg' },
+    { name: 'Black salt', cat: 'Spices', unit: 'kg' }, { name: 'Newes pepper', cat: 'Spices', unit: 'kg' }, { name: 'Peprika powder', cat: 'Spices', unit: 'pcs' },
+    { name: 'Garlic powder', cat: 'Spices', unit: 'pcs' }, { name: 'Chilli Mayo Sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Chipotle Sauce', cat: 'Sauces', unit: 'kg' },
+    { name: 'BBQ Sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Peri peri burger sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Special Sauce', cat: 'Sauces', unit: 'kg' },
+    { name: 'Creamy sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Bone Fire sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Peri peri pizza Sauce', cat: 'Sauces', unit: 'kg' },
+    { name: 'Maxican steak sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Maxican Burger sauce', cat: 'Sauces', unit: 'kg' }, { name: 'Oil simple', cat: 'Oil', unit: 'pcs' },
+    { name: 'Chipotle sauce Dipitt', cat: 'Sauces', unit: 'pcs' }, { name: 'Hot sauce Dipitt', cat: 'Sauces', unit: 'pcs' }, { name: 'Chilli sauce Key', cat: 'Sauces', unit: 'pcs' },
+    { name: 'BBQ sauce salman', cat: 'Sauces', unit: 'pcs' }, { name: 'Mama sita sasuce', cat: 'Sauces', unit: 'pcs' }, { name: 'venigar', cat: 'Sauces', unit: 'pcs' },
+    { name: 'soya sauce', cat: 'Sauces', unit: 'pcs' }, { name: 'Lemon Juice', cat: 'Sauces', unit: 'pcs' }, { name: 'BBQ sauce A/G', cat: 'Sauces', unit: 'pcs' },
+    { name: 'Hot sauce A/G', cat: 'Sauces', unit: 'pcs' }, { name: 'French Mustred paste', cat: 'Sauces', unit: 'pcs' }, { name: 'Siracha sauce', cat: 'Sauces', unit: 'pcs' },
+    { name: 'Peri peri Nandos', cat: 'Sauces', unit: 'pcs' }, { name: 'Tomato 4kg', cat: 'Sauces', unit: 'pcs' }, { name: 'chilli Garlic 4kg', cat: 'Sauces', unit: 'pcs' },
+    { name: 'Tomato sahshay', cat: 'Sauces', unit: 'pkt' }, { name: 'chilli Garlic sahsay', cat: 'Sauces', unit: 'pkt' },
+    // Bakery
+    { name: 'Potato Bun', cat: 'Bakery', unit: 'pcs' }, { name: 'Black seed Bun', cat: 'Bakery', unit: 'pcs' }, { name: 'Sendwitch Bread', cat: 'Bakery', unit: 'pcs' },
+    { name: 'Tortilla Bread', cat: 'Bakery', unit: 'pcs' }, { name: 'Dawn Pratha', cat: 'Bakery', unit: 'pcs' }, { name: 'Easte', cat: 'Bakery', unit: 'pcs' },
+    { name: 'Eka 300', cat: 'Bakery', unit: 'pcs' }, { name: 'Icing Sugar', cat: 'Bakery', unit: 'pcs' },
+    // Cleaning
+    { name: 'Dustar', cat: 'Cleaning', unit: 'pcs' }, { name: 'Bin liner', cat: 'Cleaning', unit: 'kg' }, { name: 'Air Freshner', cat: 'Cleaning', unit: 'pcs' },
+    { name: 'Gril brush', cat: 'Cleaning', unit: 'pcs' }, { name: 'Subi Jali', cat: 'Cleaning', unit: 'pcs' }, { name: 'Scotch Brite', cat: 'Cleaning', unit: 'pcs' },
+    { name: 'Lemon Max Bar', cat: 'Cleaning', unit: 'pcs' }, { name: 'Lemon Max Liquid', cat: 'Cleaning', unit: 'pcs' }, { name: 'Wiyper', cat: 'Cleaning', unit: 'pcs' },
+    { name: 'Wiyper Towel', cat: 'Cleaning', unit: 'pcs' }, { name: 'Dry Mob', cat: 'Cleaning', unit: 'pcs' }, { name: 'Dry Mob Towel', cat: 'Cleaning', unit: 'pcs' },
+    { name: 'Mand Wash', cat: 'Cleaning', unit: 'pcs' }, { name: 'Phnyle', cat: 'Cleaning', unit: 'pcs' }, { name: 'Glint', cat: 'Cleaning', unit: 'pcs' },
+    { name: 'Harpic Blu', cat: 'Cleaning', unit: 'pcs' }, { name: 'Harpic Red', cat: 'Cleaning', unit: 'pcs' }, { name: 'Surf', cat: 'Cleaning', unit: 'pkt' },
+    // Beverages & Syrups
+    { name: 'Salman strawberry', cat: 'Syrups', unit: 'pcs' }, { name: 'Salman bluberry', cat: 'Syrups', unit: 'pcs' }, { name: 'Lemon sqash', cat: 'Syrups', unit: 'pcs' },
+    { name: 'Honey', cat: 'Syrups', unit: 'pcs' }, { name: 'Coke Ltr', cat: 'Beverages', unit: 'pcs' }, { name: 'Coke Buddy', cat: 'Beverages', unit: 'pcs' },
+    { name: 'Sprite Ltr', cat: 'Beverages', unit: 'pcs' }, { name: 'Sprite Buddy', cat: 'Beverages', unit: 'pcs' }, { name: 'Coke Tin', cat: 'Beverages', unit: 'pcs' },
+    { name: 'Coke Tin Diet', cat: 'Beverages', unit: 'pcs' }, { name: 'Sprite Tin', cat: 'Beverages', unit: 'pcs' }, { name: 'Sprite Tin Diet', cat: 'Beverages', unit: 'pcs' },
+    { name: 'Water Small', cat: 'Beverages', unit: 'pcs' }, { name: 'Water Large', cat: 'Beverages', unit: 'pcs' }, { name: 'Pepsi Ltr', cat: 'Beverages', unit: 'pcs' },
+    { name: 'Pepsi Buddy', cat: 'Beverages', unit: 'pcs' }, { name: 'Aqwa fina water Small', cat: 'Beverages', unit: 'pcs' }, { name: 'Aqwa Fina water large', cat: 'Beverages', unit: 'pcs' }
+  ];
+
+  const existingNames = S.ing.map(i => i.name.toLowerCase());
+  const toInsert = [];
+
+  for (const item of newItems) {
+    if (!existingNames.includes(item.name.toLowerCase())) {
+      toInsert.push({
+        name: item.name,
+        category: item.cat,
+        unit: item.unit
+      });
+    }
+  }
+
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += 50) {
+      const chunk = toInsert.slice(i, i + 50);
+      const { error } = await SB.from('ingredients').insert(chunk);
+      if (error) {
+        console.error('Failed to seed items:', error);
+        toast('Error uploading some items', 1);
+      }
+    }
+  }
+}
+
 // stock core
 const ings=()=>S.ing.filter(i=>i.is_active!==false),locName=id=>S.loc.find(l=>l.id==id)?.name||'—',ingOf=id=>S.ing.find(i=>i.id==id)||{name:'?',unit:''};
 const qty=(l,i)=>n(S.lv.find(x=>x.location_id==l&&x.ingredient_id==i)?.qty),total=i=>S.lv.filter(x=>x.ingredient_id==i).reduce((s,x)=>s+n(x.qty),0);
 const central=()=>S.loc.find(l=>l.type=='warehouse')?.id;
 async function bump(l,i,d){let r=S.lv.find(x=>x.location_id==l&&x.ingredient_id==i);if(!r){r={id:l+'_'+i,location_id:l,ingredient_id:i,qty:0};S.lv.push(r)}r.qty=n(r.qty)+d;await SB.from('stock_levels').upsert(r)}
 async function move(m){const r={id:uid(),type:m.type,ingredient_id:m.ing,from_loc:m.from||null,to_loc:m.to||null,qty:m.qty,unitcost:m.cost||ingOf(m.ing).costperunit||0,ref:m.ref||'',note:m.note||'',at:m.date+'T12:00:00+05:00'};
- await ins('mv',[r]);if(m.from)await bump(m.from,m.ing,-m.qty);if(m.to)await bump(m.to,m.ing,m.qty);
- const t=total(m.ing);await SB.from('ingredients').update({currentstock:t}).eq('id',m.ing);ingOf(m.ing).currentstock=t}
+ await ins('mv',[r]);
+ if(m.from) await bump(m.from,m.ing,-m.qty);
+ if(m.to) await bump(m.to,m.ing,m.qty);
+}
 // ledger core
 const bal=p=>n(p.opening)+S.led.filter(l=>l.party_id==p.id).reduce((s,l)=>s+n(l.amount),0);
 const led=(party,kind,amount,date,ref,note)=>ins('led',[{id:uid(),party_id:party,bizday:date,kind,amount,ref:ref||'',note:note||''}]);
@@ -144,10 +248,74 @@ function partyDoc(){doc({title:'New account',nl:1,head:[{k:'name',l:'Name'},{k:'
 function payDoc(id,mode){const p=S.par.find(x=>x.id==id),v=p.type=='vendor',m={pay:v?'Pay vendor':'Receive payment',credit:'Give on credit'}[mode];
  doc({title:m+' · '+p.name,nl:1,head:[{k:'a',l:'Amount (Rs)',t:'number'},{k:'d',l:'Date',t:'date',v:today()},{k:'m',l:'Method',t:'select',o:[['Cash','Cash'],['Bank','Bank transfer'],['Cheque','Cheque']]},{k:'note',l:'Note / reference'}],
  save:async h=>{const a=n(h.a);if(a<=0){toast('Enter an amount',1);throw 0}await led(id,mode=='credit'?'credit':v?'payment':'receipt',mode=='credit'?a:-a,h.d,h.m,h.note)}})}
-function itemDoc(){doc({title:'New item',nl:1,head:[{k:'name',l:'Name'},{k:'unit',l:'Unit',t:'select',o:['kg','g','l','ml','pcs','pkt','box','bottle'].map(x=>[x,x])},{k:'cat',l:'Category (e.g. Dairy, Veg, Packaging)',v:'general'},{k:'p',l:'Price per unit (Rs)',t:'number'},{k:'min',l:'Alert me below (warehouse)',t:'number',v:0}],
- save:async h=>{if(!h.name.trim()){toast('Name required',1);throw 0}const{data,error}=await SB.from('ingredients').insert([{name:h.name.trim(),category:h.cat||'general',unit:h.unit,currentstock:0,openingstock:0,minlevel:n(h.min),costperunit:n(h.p),supplier:'',location:''}]).select();if(error){toast(error.message,1);throw error}S.ing.push(...data);S.ing.sort((a,b)=>a.name.localeCompare(b.name))}})}
+function itemDoc(){
+  doc({title:'New item',nl:1,head:[
+    {k:'name',l:'Name'},
+    {k:'unit',l:'Unit',t:'select',o:['kg','g','l','ml','pcs','pkt','box','bottle'].map(x=>[x,x])},
+    {k:'cat',l:'Category (e.g. Dairy, Veg, Packaging)',v:'general'},
+    {k:'p',l:'Price per unit (Rs)',t:'number'},
+    {k:'min',l:'Alert me below (warehouse)',t:'number',v:0}
+  ],
+  save:async h=>{
+    if(!h.name.trim()){toast('Name required',1);throw 0}
+    const{data,error}=await SB.from('ingredients').insert([{
+      name:h.name.trim(),
+      category:h.cat||'general',
+      unit:h.unit,
+      costperunit:n(h.p),
+      minlevel:n(h.min)
+    }]).select();
+    if(error){toast(error.message,1);throw error}
+    S.ing.push(...data);
+    S.ing.sort((a,b)=>a.name.localeCompare(b.name));
+  }})
+}
 function locDoc(){doc({title:'New location',nl:1,head:[{k:'name',l:'Name'},{k:'t',l:'Type',t:'select',o:[['warehouse','Warehouse'],['outlet','Outlet'],['kitchen','Kitchen / counter']]}],save:async h=>{if(!h.name.trim())throw 0;await ins('loc',[{id:uid(),name:h.name.trim(),type:h.t}])}})}
-async function setPrice(id){const i=ingOf(id),v=prompt(`New price per ${i.unit} for ${i.name} (Rs):`,i.costperunit);if(v===null||n(v)<0)return;await upd('ing',id,{costperunit:n(v)});render();toast('Price updated')}
+function editItem(id) {
+  const i = ingOf(id);
+  
+  doc({
+    title: 'Edit Item',
+    nl: 1,
+    head: [
+      { k: 'name', l: 'Name', v: i.name },
+      { k: 'unit', l: 'Unit', t: 'select', o: ['kg','g','l','ml','pcs','pkt','box','bottle'].map(x=>[x,x]), v: i.unit },
+      { k: 'cat', l: 'Category', v: i.category || 'general' },
+      { k: 'p', l: 'Price per unit (Rs)', t: 'number', v: i.costperunit || 0 },
+      { k: 'min', l: 'Alert me below', t: 'number', v: i.minlevel || 0 }
+    ],
+    save: async h => {
+      if (!h.name.trim()) { toast('Name required', 1); throw 0; }
+      await upd('ing', id, {
+        name: h.name.trim(),
+        category: h.cat || 'general',
+        unit: h.unit,
+        costperunit: n(h.p),
+        minlevel: n(h.min)
+      });
+      render();
+    }
+  });
+}
+async function deleteItem(id, name) {
+  if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will remove it from inventory permanently.`)) return;
+  
+  try {
+    // 1. Delete stock levels first to prevent foreign key errors
+    await SB.from('stock_levels').delete().eq('ingredient_id', id);
+    
+    // 2. Delete the ingredient
+    const { error } = await SB.from('ingredients').delete().eq('id', id);
+    if (error) throw error;
+    
+    // 3. Remove from local memory and refresh screen
+    S.ing = S.ing.filter(x => x.id != id);
+    render();
+    toast('Item deleted successfully');
+  } catch(e) {
+    toast('Failed to delete: ' + e.message, 1);
+  }
+}
 async function delParty(id){const p=S.par.find(x=>x.id==id),used=S.led.some(l=>l.party_id==id)||S.po.some(o=>o.party_id==id);
  if(!confirm(used?`${p.name} has transactions, so the account will be archived (hidden) instead of deleted. Its history stays in your records. Continue?`:`Delete ${p.name}? This cannot be undone.`))return;
  if(used)await upd('par',id,{active:false});else{const{error}=await SB.from('parties').delete().eq('id',id);if(error)return toast(error.message,1);S.par=S.par.filter(x=>x.id!=id)}
@@ -172,9 +340,43 @@ dash(){const val=S.lv.reduce((s,x)=>s+n(x.qty)*n(ingOf(x.ingredient_id).costperu
  <div class="card"><h3>Quick actions</h3><p class="sub">The most common jobs, one tap away.</p><div class="qa"><button onclick="newPO()">🧾 New purchase order<small>Order from a vendor</small></button><button onclick="mvDoc('transfer')">🚚 Send to outlet<small>Warehouse → Outlet</small></button><button onclick="mvDoc('issue')">🍕 Issue to kitchen<small>Outlet → Kitchen</small></button><button onclick="mvDoc('waste')">🗑️ Record wastage<small>Spoiled or damaged</small></button></div></div>
  <div class="card"><h3>Needs attention</h3><p class="sub">Low stock, orders to receive and bills to pay.</p>${todo.join('')||'<span class="ok">All clear. Nothing needs action right now.</span>'}</div>
  <div class="card has-table"><h3>Latest movements</h3><p class="sub">The 8 most recent stock changes.</p>${mvTable(S.mv.slice().sort((a,b)=>b.at.localeCompare(a.at)).slice(0,8))}</div>`},
-stock(){const f=window._loc||'',s=(window._q||'').toLowerCase(),L=ings().filter(i=>i.name.toLowerCase().includes(s)),g={};L.forEach(i=>(g[i.category||'general']=g[i.category||'general']||[]).push(i));
- const rows=Object.keys(g).sort().map(k=>`<tr class="grp"><td colspan=6><span class="cat-name">${esc(k)}</span><span class="cat-count">${g[k].length} item${g[k].length>1?'s':''}</span></tr>`+g[k].map(i=>{const q=f?qty(f,i.id):total(i.id);const isLow=n(i.minlevel)>0&&S.lv.filter(x=>x.ingredient_id==i.id).some(x=>n(x.qty)<=n(i.minlevel)&&n(x.qty)>0);return `<tr><td style="font-weight:500">${esc(i.name)}<td class="r ${q<=0?'bad':''}" style="font-size:15px"><b>${q3(q)}</b> <span class="mut" style="font-size:12px">${i.unit}</span><td class=r><a style="cursor:pointer;color:var(--ac);font-weight:700;font-size:15px;text-decoration:none" onclick="setPrice('${i.id}')">${money(i.costperunit)}</a><td class=r style="font-weight:600">${money(q*n(i.costperunit))}<td>${q<=0?'<span class="pill bad">Out of stock</span>':isLow?'<span class="pill warn">⚠️ Running low</span>':'<span class="pill ok">In stock</span>'}</tr>`}).join('')).join('');
- return ph('Stock','What you have right now, grouped by category.',`<button class="b2" onclick="locDoc()">+ Location</button><button class="b" onclick="itemDoc()">+ New item</button>`)+`<div class="card has-table"><div class="row" style="margin-bottom:16px"><select style="width:auto;flex:1;min-width:150px" onchange="_loc=this.value;render()"><option value="">All locations</option>${S.loc.map(l=>`<option value="${l.id}" ${f==l.id?'selected':''}>${esc(l.name)} (${l.type})</option>`).join('')}</select><input style="flex:1;min-width:150px" placeholder="Search items" value="${esc(window._q||'')}" onchange="_q=this.value;render()"></div><div class="tw tbl-stock"><table><tr><th>Item</th><th class=r>In stock</th><th class=r>Price / unit</th><th class=r>Total Value</th><th class=r>Status</th></tr>${rows||'<tr><td colspan=5 class=mut style="text-align:center;padding:20px">No items found.</td></tr>'}</table></div></div>`},
+stock(){
+  const f=window._loc||'',s=(window._q||'').toLowerCase(),L=ings().filter(i=>i.name.toLowerCase().includes(s)),g={};
+  L.forEach(i=>(g[i.category||'general']=g[i.category||'general']||[]).push(i));
+  
+  const rows=Object.keys(g).sort().map(k=>`
+    <tr class="grp"><td colspan="6"><span class="cat-name">${esc(k)}</span><span class="cat-count">${g[k].length} item${g[k].length>1?'s':''}</span></tr>
+    `+g[k].map(i=>{
+      const q=f?qty(f,i.id):total(i.id);
+      const isLow=n(i.minlevel)>0&&S.lv.filter(x=>x.ingredient_id==i.id).some(x=>n(x.qty)<=n(i.minlevel)&&n(x.qty)>0);
+      
+      return `
+      <tr style="cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='var(--in)'" onmouseout="this.style.background='transparent'" onclick="editItem('${i.id}')">
+        <td style="font-weight:500;">${esc(i.name)}</td>
+        <td class="r ${q<=0?'bad':''}" style="font-size:15px"><b>${q3(q)}</b> <span class="mut" style="font-size:12px">${i.unit}</span></td>
+        <td class="r"><span style="font-weight:700; color:var(--ac);">${money(i.costperunit)}</span></td>
+        <td class="r" style="font-weight:600">${money(q*n(i.costperunit))}</td>
+        <td>${q<=0?'<span class="pill bad">Out of stock</span>':isLow?'<span class="pill warn">⚠️ Running low</span>':'<span class="pill ok">In stock</span>'}</td>
+        <td style="text-align:right; vertical-align:middle; padding-top:8px; padding-bottom:8px;">
+          <button class="b2 sm bad" style="padding:6px 14px; white-space:nowrap;" onclick="event.stopPropagation(); deleteItem('${i.id}','${esc(i.name)}')">Delete</button>
+        </td>
+      </tr>`
+    }).join('')).join('');
+
+  return ph('Stock','What you have right now, grouped by category.',`<button class="b2" onclick="locDoc()">+ Location</button><button class="b" onclick="itemDoc()">+ New item</button>`)+
+  `<div class="card has-table">
+    <div class="row" style="margin-bottom:16px">
+      <select style="width:auto;flex:1;min-width:150px" onchange="_loc=this.value;render()"><option value="">All locations</option>${S.loc.map(l=>`<option value="${l.id}" ${f==l.id?'selected':''}>${esc(l.name)} (${l.type})</option>`).join('')}</select>
+      <input style="flex:1;min-width:150px" placeholder="Search items" value="${esc(window._q||'')}" onchange="_q=this.value;render()">
+    </div>
+    <div class="tw tbl-stock">
+      <table>
+        <tr><th>Item</th><th class=r>In stock</th><th class=r>Price / unit</th><th class=r>Total Value</th><th class=r>Status</th><th class=r>Action</th></tr>
+        ${rows||'<tr><td colspan="6" class=mut style="text-align:center;padding:20px">No items found.</td></tr>'}
+      </table>
+    </div>
+  </div>`
+},
 buy(){const ps=S.po.slice().sort((a,b)=>b.bizday.localeCompare(a.bizday)),st={received:'ok',open:'warn',cancelled:'bad'};
  return ph('Buying','Order from vendors, then receive the goods when they arrive.',`<button class="b2" onclick="retDoc()">Return to vendor</button><button class="b" onclick="newPO()">+ New order</button>`)+`<div class="card"><div class="flow"><i>1 Create order</i><span>→</span><i>2 Goods arrive</i><span>→</span><i>3 Tap Receive</i><span>= stock + vendor bill</span></div></div><div class="card"><div class="tw"><table><tr><th>Order<th>Date<th>Vendor<th>Deliver to<th class=r>Total<th>Status<th></tr>${ps.map(p=>`<tr><td><b>${p.no}</b><td>${p.bizday}<td>${esc(S.par.find(x=>x.id==p.party_id)?.name)}<td>${esc(locName(p.loc_id))}<td class=r>${money(p.total)}<td><span class="pill ${st[p.status]||''}">${p.status=='open'?'Waiting':p.status}</span><td>${p.status=='open'?`<button class="b sm" onclick="receivePO('${p.id}')">Receive</button> <button class="b2 sm" onclick="cancelPO('${p.id}')">Cancel</button>`:''}</tr>`).join('')||'<tr><td colspan=7 class=mut>No orders yet. Tap “New order” to start.'}</table></div></div>`},
 move(){const ty=window._mt||'',m=S.mv.filter(x=>!ty||x.type==ty).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,80);
