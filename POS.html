@@ -1332,10 +1332,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal('xc-edit-modal')">Cancel</button>
       <button class="modal-confirm" id="xce-save-btn" onclick="saveXcEdit()">Save Changes</button>
+        </div>
+  </div>
+</div>
+<!-- FOODPANDA FLAVOUR MODAL -->
+<div class="modal-backdrop" id="fp-flavor-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="fp-flavor-title">Select Flavours</div>
+    <div class="modal-sub" id="fp-flavor-sub">Choose the flavours for this combo</div>
+    <div class="size-options" id="fp-flavor-options" style="grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px;"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('fp-flavor-modal')">Cancel</button>
+      <button class="modal-confirm" id="fp-flavor-confirm">Add to FoodPanda</button>
     </div>
   </div>
 </div>
-
 <!-- RECALL MODAL -->
 <div class="modal-backdrop" id="recall-modal">
   <div class="modal-box" style="max-width:420px;">
@@ -1663,6 +1674,7 @@ const dealFlavorMap = {
   'Solo Inferno':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
   'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
   'Double Crunch':   ['Crunch Wrap','Chipotle Wrap','BBQ Wrap','Peri Peri Wrap'],
+  'Combo 3':         ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
 };
 
 // ══════════════════════════════════
@@ -8130,21 +8142,176 @@ function fpAllItems() {
   dealsData.forEach(d => { if (!d._unavailable) out.push({ name: d.n, price: d.p, cat: 'Deals' }); });
   return out;
 }
+
 function fpSearch(v) {
   const box = document.getElementById('fp-results');
   v = (v || '').toLowerCase().trim();
   if (v.length < 2) { box.innerHTML = ''; return; }
   const m = fpAllItems().filter(i => i.name.toLowerCase().includes(v)).slice(0, 30);
   window._fpMatches = m;
+  
   box.innerHTML = m.length ? m.map((i,k) =>
-    `<div onclick="fpAdd(${k})" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;background:var(--surface2);cursor:pointer;display:flex;justify-content:space-between;">
-      <span style="font-weight:700;">${i.name} <span style="font-size:11px;color:var(--text3);">${i.cat}</span></span>
-      <span style="color:var(--orange);font-weight:800;">Rs ${i.price}</span></div>`).join('')
+    `<div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;background:var(--surface2);display:flex;justify-content:space-between;align-items:center;">
+      <div onclick="fpAdd(${k})" style="flex:1;cursor:pointer;">
+        <span style="font-weight:700;">${i.name} <span style="font-size:11px;color:var(--text3);">${i.cat}</span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--orange);font-weight:800;">Rs ${i.price}</span>
+        <button onclick="fpEditPrice(${k})" style="padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:11px;cursor:pointer;" title="Change Price">✏️</button>
+      </div>
+    </div>`).join('')
     : '<div style="padding:12px;color:var(--text3);font-size:13px;">Not found — use "+ New item / deal"</div>';
 }
+async function fpEditPrice(k) {
+  const item = window._fpMatches[k];
+  if (!item) return;
+
+  const newPriceStr = await askText(`Update price for "${item.name}" (Rs):`, item.price);
+  if (newPriceStr === null) return; // cancelled
+  
+  const newPrice = parseFloat(newPriceStr);
+  if (isNaN(newPrice) || newPrice <= 0) { showToast('Invalid price', 'error'); return; }
+
+  // 1. Update in local memory
+  item.price = newPrice;
+  const isCombo = /combo/i.test(item.name);
+  
+  if (isCombo) {
+    const deal = dealsData.find(d => d.n === item.name);
+    if (deal) deal.p = newPrice;
+  } else {
+    // (Optional) Update normal menu items locally
+    for(let c in menuData) {
+      const mItem = menuData[c].find(i => i.n === item.name);
+      if (mItem) {
+        if (typeof mItem.p === 'object') {
+           // If it's a pizza with sizes, this might not catch it, but it's safe
+        } else {
+           mItem.p = newPrice;
+        }
+      }
+    }
+  }
+
+  // 2. Save to Supabase so it stays updated
+  if (isCombo) {
+    // Save to custom_deals table
+    const res = await sbWrite('custom_deals', 'upsert', 
+      [{ branch: activeBranch, name: item.name, price: newPrice, available: true }], 
+      { onConflict: 'branch,name' }); // Using upsert so it updates if exists, or inserts if new
+
+    if (res && res.error) {
+      showToast('⚠️ Price changed on screen, but failed to save to cloud', 'error');
+    } else {
+      showToast(`Price updated to Rs ${newPrice}`, 'success');
+    }
+  } else {
+    // Save to menu_overrides table for normal items
+    const res = await sbWrite('menu_overrides', 'upsert', 
+      [{ branch: activeBranch, item_name: item.name, prices: { _flat: newPrice } }], 
+      { onConflict: 'branch,item_name' });
+    
+    if (res && res.error) {
+      showToast('⚠️ Price changed on screen, but failed to save to cloud', 'error');
+    } else {
+      showToast(`Price updated to Rs ${newPrice}`, 'success');
+    }
+  }
+
+  // 3. Refresh the search results so the cashier sees the new price
+  fpSearch(document.getElementById('fp-search').value);
+}
+let _fpSelectedFlavors = [];
+let _fpCurrentItem = null;
+
 function fpAdd(k) {
-  const i = window._fpMatches[k]; if (!i) return;
+  const i = window._fpMatches[k]; 
+  if (!i) return;
+  
+  // ONLY trigger the flavour menu for Combo 3
+  const needsFlavors = i.name.trim().toLowerCase() === 'combo 3';
+  
+  if (needsFlavors) {
+    _fpCurrentItem = i;
+    _fpSelectedFlavors = [];
+    
+    // Hardcode the flavours for the modal to avoid any map conflicts
+    const flavors = ['Chicken Tikka', 'Chicken Fajita', 'Chicken Supreme', 'Cheese Lover', 'Veg Lover', 'Sicilian Pizza'];
+    
+    document.getElementById('fp-flavor-title').textContent = i.name;
+    document.getElementById('fp-flavor-sub').textContent = 'Select flavours for this combo (max 2):';
+    
+    const optsContainer = document.getElementById('fp-flavor-options');
+    optsContainer.innerHTML = flavors.map(fl => `
+      <div class="size-opt" onclick="toggleFpFlavor('${fl}', this)" style="padding:10px 4px;">
+        <div class="size-opt-name" style="font-size:12px;">${fl}</div>
+      </div>
+    `).join('');
+    
+    document.getElementById('fp-flavor-confirm').onclick = () => {
+      if (_fpSelectedFlavors.length === 0) {
+        showToast('Please select at least one flavour', 'error');
+        return;
+      }
+      const finalName = `${i.name} (${_fpSelectedFlavors.join(' + ')})`;
+      fpPush(finalName, i.price);
+      closeModal('fp-flavor-modal');
+    };
+    
+    document.getElementById('fp-flavor-modal').classList.add('open');
+    return;
+  }
+  
   fpPush(i.name, i.price);
+}
+
+function toggleFpFlavor(flavor, btnElement) {
+  const maxFlavors = 2;
+  const idx = _fpSelectedFlavors.indexOf(flavor);
+  
+  if (idx > -1) {
+    _fpSelectedFlavors.splice(idx, 1);
+    btnElement.classList.remove('selected');
+  } else {
+    if (_fpSelectedFlavors.length >= maxFlavors) {
+      showToast(`Max ${maxFlavors} flavours allowed`, 'error');
+      return;
+    }
+    _fpSelectedFlavors.push(flavor);
+    btnElement.classList.add('selected');
+  }
+}
+
+async function fpEditPrice(k) {
+  const item = window._fpMatches[k];
+  if (!item) return;
+
+  const newPriceStr = await askText(`Update price for "${item.name}" (Rs):`, item.price);
+  if (newPriceStr === null) return;
+  
+  const newPrice = parseFloat(newPriceStr);
+  if (isNaN(newPrice) || newPrice <= 0) { showToast('Invalid price', 'error'); return; }
+
+  item.price = newPrice;
+  const isCombo = /combo/i.test(item.name);
+  
+  if (isCombo) {
+    const deal = dealsData.find(d => d.n === item.name);
+    if (deal) deal.p = newPrice;
+    const res = await sbWrite('custom_deals', 'upsert', 
+      [{ branch: activeBranch, name: item.name, price: newPrice, available: true }], 
+      { onConflict: 'branch,name' });
+    if (res && res.error) showToast('⚠️ Price changed on screen, but failed to save to cloud', 'error');
+    else showToast(`Price updated to Rs ${newPrice}`, 'success');
+  } else {
+    const res = await sbWrite('menu_overrides', 'upsert', 
+      [{ branch: activeBranch, item_name: item.name, prices: { _flat: newPrice } }], 
+      { onConflict: 'branch,item_name' });
+    if (res && res.error) showToast('⚠️ Price changed on screen, but failed to save to cloud', 'error');
+    else showToast(`Price updated to Rs ${newPrice}`, 'success');
+  }
+
+  fpSearch(document.getElementById('fp-search').value);
 }
 function fpPush(name, price) {
   const ex = fpLines.find(l => l.name === name);
@@ -8177,22 +8344,36 @@ async function fpAddNew() {
   const kind = await askText('What do you want to add?\n1 = Menu item\n2 = Deal');
   if (kind === null) return;
   if (kind.trim() !== '1' && kind.trim() !== '2') { showToast('Enter 1 or 2', 'error'); return; }
-  const name = (await askText('Name:') || '').trim();
+  
+  let name = (await askText('Name (e.g., Combo 4):') || '').trim();
   if (!name) return;
+  
+  let finalName = name;
+  
+  if (kind.trim() === '2') {
+    const flavors = await askText('Which flavours?\n(e.g., Chicken Tikka + Fajita)');
+    if (flavors && flavors.trim()) finalName = `${name} (${flavors.trim()})`;
+  }
+
   const price = parseFloat(await askText('Price (Rs):')) || 0;
   if (price <= 0) { showToast('Valid price required', 'error'); return; }
-  let res;
+
   if (kind.trim() === '1') {
-    res = await sbWrite('custom_menu_items', 'insert', [{ branch: activeBranch, category: 'Add-ons', name, price: String(price), available: true }]);
-    if (!res.error) { if (!menuData['Add-ons']) menuData['Add-ons'] = []; menuData['Add-ons'].push({ n: name, p: price, _custom: true }); }
+    const res = await sbWrite('custom_menu_items', 'insert', [{ branch: activeBranch, category: 'Add-ons', name: finalName, price: String(price), available: true }]);
+    if (!res.error) { 
+      if (!menuData['Add-ons']) menuData['Add-ons'] = []; 
+      menuData['Add-ons'].push({ n: finalName, p: price, _custom: true }); 
+    }
   } else {
     const desc = (await askText('Deal description (optional):') || '').trim();
-    res = await sbWrite('custom_deals', 'insert', [{ branch: activeBranch, name, deal_desc: desc, price, available: true }]);
-    if (!res.error) dealsData.push({ n: name, d: desc, p: price, _custom: true });
+    const res = await sbWrite('custom_deals', 'insert', [{ branch: activeBranch, name: finalName, deal_desc: desc, price, available: true }]);
+    if (!res.error) { dealsData.push({ n: finalName, d: desc, p: price, _custom: true }); }
   }
+  
   if (res && res.error) { showToast('Could not save to menu — added to this list only', 'error'); }
-  else showToast('Saved to menu ✅ — set its recipe in Analytics → Ingredients', 'success');
-  fpPush(name, price);
+  else showToast('Saved to menu ✅', 'success');
+  
+  fpPush(finalName, price);
 }
 
 async function fpSave() {
@@ -10280,6 +10461,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
