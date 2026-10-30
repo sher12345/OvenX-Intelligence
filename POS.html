@@ -4889,80 +4889,252 @@ async function applySplitByItems() {
   showToast('Split: Rs '+splitTotal+' (SC Rs '+splitSC+', Disc Rs '+splitDisc+')', 'success');
 }
 
+
 async function applySplitByAmount() {
-  var total = parseInt(document.getElementById('split-order-total').textContent.replace('Rs ','')) || 0;
-  var assigned = splitRows.reduce(function(s, r){ return s + (r.amt || 0); }, 0);
-  if (assigned !== total) { showToast('Amounts must add up to Rs ' + total, 'error'); return; }
-  if (splitRows.some(function(r){ return !(r.amt > 0); })) { showToast('Every person needs an amount above 0', 'error'); return; }
+  const total = Number(
+    document.getElementById('split-order-total').textContent.replace('Rs ', '')
+  ) || 0;
 
-  var n = splitRows.length;
-  for (var i = 0; i < n; i++) {
-    var row = splitRows[i];
-    currentOrder.kotNo = null; // each person needs a fresh bill number
-    var billNo = await _assignKotNumber();
-    var saleId = genId();
-    var splitSale = {
-      id: saleId, billNo: billNo,
-      table: currentOrder.table, type: currentOrder.type,
-      items: [{ name: 'Split bill share ' + (i+1) + '/' + n, price: row.amt, qty: 1, note: '' }],
-      total: row.amt, method: row.method,
-      time: currentOrder.startTime ? new Date(currentOrder.startTime) : new Date(),
-      staff: currentStaff, branch: activeBranch,
-      customerName: currentOrder.customerName || '',
-      customerPhone: currentOrder.customerPhone || '',
-      deliveryAddress: '', deliveryCharge: 0,
-      sc: 0, disc: 0, scPct: 0, discType: 'flat', discAmount: 0,
-      kitchenOrderId: currentOrder.id || null,
-      splitCash: 0, splitCard: 0
-    };
+  const methods = ['cash', 'card', 'bank', 'jazzcash', 'foodpanda'];
+  const assigned = splitRows.reduce((s, r) => s + (Number(r.amt) || 0), 0);
 
-    const wr = await sbWrite('shift_transactions', 'insert', [{
-      id: saleId, branch: activeBranch, date: todayKey(),
-      bill_no: billNo, type: currentOrder.type,
-      table_loc: currentOrder.table || '',
-      order_started_at: currentOrder.startTime ? new Date(currentOrder.startTime).toISOString() : null,
-      items_text: (i === 0 ? currentOrder.items.map(function(it){return it.qty+'x '+it.name;}).join(', ') + ' ' : '') + '[split ' + (i+1) + '/' + n + ']',
-      subtotal: row.amt, sc: 0, sc_pct: 0, discount: 0, delivery_charge: 0,
-      total: row.amt, method: row.method,
-      cash_received: 0, split_cash: 0, split_card: 0,
-      staff: currentStaff,
-      customer_name: currentOrder.customerName || '',
-      customer_phone: currentOrder.customerPhone || '',
-      delivery_address: '', kitchen_order_id: currentOrder.id || null
-    }]);
+  if (assigned !== total) {
+    showToast('Amounts must add up to Rs ' + total, 'error');
+    return;
+  }
+
+  if (!splitRows.length || splitRows.some(r =>
+    !(Number(r.amt) > 0) || !methods.includes(String(r.method).toLowerCase())
+  )) {
+    showToast('Check every amount and payment method', 'error');
+    return;
+  }
+
+  if (!sb || !isOnline) {
+    showToast('Internet connection required. No payments were saved.', 'error');
+    return;
+  }
+
+  // Keep an untouched snapshot of the original table order.
+  const order = {
+    ...currentOrder,
+    items: currentOrder.items.map(it => ({ ...it }))
+  };
+
+  const n = splitRows.length;
+  const now = new Date();
+  const saleRows = [];
+  const dbRows = [];
+
+  // Get the latest bill number before creating all shares.
+  try {
+    const { data: txData, error: txError } = await sb
+      .from('shift_transactions')
+      .select('bill_no')
+      .eq('branch', activeBranch)
+      .eq('date', todayKey());
+
+    if (txError) throw txError;
+
+    const { data: koData, error: koError } = await sb
+      .from('kitchen_orders')
+      .select('kot_no')
+      .eq('branch', activeBranch)
+      .gte(
+        'created_at',
+        todayKey() + 'T' +
+        String(BIZ_DAY_START_HOUR).padStart(2, '0') +
+        ':00:00+05:00'
+      );
+
+    if (koError) throw koError;
+
+    const allNums = [
+      ...(txData || []).map(t => t.bill_no),
+      ...(koData || []).map(k => k.kot_no)
+    ]
+      .filter(b => b && !String(b).startsWith('DLV-'))
+      .map(b => String(b).match(/-(\d{1,6})$/))
+      .filter(Boolean)
+      .map(m => parseInt(m[1], 10));
+
+    const firstNum = Math.max(
+      Number(billCounter) || 1,
+      allNums.length ? Math.max(...allNums) + 1 : 1
+    );
+
+    // Prepare every share before saving anything.
+    splitRows.forEach((row, i) => {
+      const amount = Number(row.amt);
+      const method = String(row.method).toLowerCase();
+      const billNo = DEVICE_CODE + '-' +
+        String(firstNum + i).padStart(3, '0');
+      const saleId = genId();
+
+      // Get the actual food items to show on the receipt
+      const originalItemsText = order.items.map(it => it.qty + 'x ' + it.name).join(', ');
+
+      const sale = {
+        id: saleId,
+        billNo,
+        table: order.table,
+        type: order.type,
+        items: [{
+          name: 'Split Payment (' + (i + 1) + '/' + n + ')',
+          price: amount,
+          qty: 1,
+          note: 'Items: ' + originalItemsText
+        }],
+        total: amount,
+        originalTotal: total, // ✅ Passes the grand total to the receipt
+        method,
+        time: now,
+        staff: currentStaff,
+        branch: activeBranch,
+        customerName: order.customerName || '',
+        customerPhone: order.customerPhone || '',
+        deliveryAddress: '',
+        deliveryCharge: 0,
+        sc: 0,
+        disc: 0,
+        kitchenOrderId: order.id || null,
+        splitCash: 0,
+        splitCard: 0
+      };
+
+      saleRows.push(sale);
+
+      dbRows.push({
+        id: saleId,
+        branch: activeBranch,
+        date: todayKey(),
+        bill_no: billNo,
+        type: order.type,
+        table_loc: order.table || '',
+        order_started_at: order.startTime
+          ? new Date(order.startTime).toISOString()
+          : null,
+        items_text: 'Split Payment (' + (i + 1) + '/' + n + '): ' + originalItemsText,
+        subtotal: amount,
+        sc: 0,
+        sc_pct: 0,
+        discount: 0,
+        delivery_charge: 0,
+        total: amount,
+        method: method,
+        cash_received: 0,
+        split_cash: 0,
+        split_card: 0,
+        staff: currentStaff,
+        customer_name: order.customerName || '',
+        customer_phone: order.customerPhone || '',
+        delivery_address: '',
+        kitchen_order_id: order.id || null
+      });
+    });
+
+    // One database write for ALL shares.
+    // If any share fails, none should be committed.
+    const wr = await sbWrite('shift_transactions', 'insert', dbRows);
+
     if (wr && wr.error) {
-      showToast('⚠️ Could not save payment ' + (i+1) + ' of ' + n + ' — stopped. Check internet; earlier ones are already recorded.', 'error');
+      console.error('Split payment batch failed:', wr);
+      showToast(
+        'Split payment NOT saved: ' + wr.error +
+        '. Original table order is still open.',
+        'error'
+      );
       return;
     }
-    completedOrders.push(splitSale);
-    if (row.method === 'cash') cashInHand += row.amt;
-    salesTotal += row.amt;
-    billCounter++;
-    (function(sale, k) { setTimeout(function(){ printReceipt(sale); }, k * 800); })(splitSale, i);
+
+    // Update local records only after the complete batch succeeds.
+    completedOrders.push(...saleRows);
+
+    const cashAdded = saleRows
+      .filter(s => s.method === 'cash')
+      .reduce((sum, s) => sum + s.total, 0);
+
+    cashInHand += cashAdded;
+    salesTotal += total;
+    billCounter = Math.max(billCounter, firstNum + n);
+
+    document.getElementById('bar-cash').textContent =
+      'Rs ' + cashInHand;
+
+    document.getElementById('bar-billno').textContent =
+      String(billCounter).padStart(3, '0');
+
+    saveTodaySales();
+
+    // Print all receipts only after all shares are saved.
+    saleRows.forEach((sale, i) => {
+      setTimeout(() => printReceipt(sale), i * 800);
+    });
+
+    // Deduct original order inventory once, not once per share.
+    deductInventoryForSale({
+      billNo: order.kotNo || null,
+      items: order.items,
+      type: order.type
+    });
+
+    // Clear original table only after successful payment saving.
+    let clearOk = true;
+
+    if (order.table) {
+      clearOk = await _saveActiveTable(order.table, null);
+    }
+
+    if (order.id) {
+      const updateResult = await sbWrite(
+        'kitchen_orders',
+        'update',
+        {
+          status: 'PAID',
+          paid_at: new Date().toISOString()
+        },
+        { eq: [['id', order.id]] }
+      );
+
+      if (updateResult && updateResult.error) {
+        console.error('Kitchen order update failed:', updateResult);
+      }
+    }
+
+    currentOrder = {
+      table: null,
+      type: 'Dine-In',
+      items: [],
+      id: null
+    };
+
+    switchView('tables');
+    renderTableMap();
+    closeModal('split-modal');
+
+    if (!clearOk) {
+      showToast(
+        'Payments saved, but table could not be cleared. Clear it manually.',
+        'error'
+      );
+      return;
+    }
+
+    showToast(
+      'All ' + n + ' split payments saved successfully!',
+      'success'
+    );
+
+  } catch (e) {
+    console.error('Split bill error:', e);
+    showToast(
+      'Split failed: ' + (e.message || 'Unknown error') +
+      '. Check transactions before retrying.',
+      'error'
+    );
   }
-
-  document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
-  document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
-  saveTodaySales();
-
-  deductInventoryForSale({ billNo: currentOrder.kotNo || null, items: currentOrder.items, type: currentOrder.type });
-  const orderIdToUpdate = currentOrder.id;
-  const _splitTable = currentOrder.table;
-  let clearOk = true;
-  if (_splitTable) clearOk = await _saveActiveTable(_splitTable, null);
-  if (orderIdToUpdate) {
-    await sbWrite('kitchen_orders', 'update',
-      { status: 'PAID', paid_at: new Date().toISOString() },
-      { eq: [['id', orderIdToUpdate]] });
-  }
-  if (!clearOk) showToast('⚠️ Bills recorded, but could not clear the table — clear it manually.', 'error');
-
-  currentOrder = { table: null, type: 'Dine-In', items: [], id: null };
-  switchView('tables');
-  renderTableMap();
-  closeModal('split-modal');
-  showToast('Split into ' + n + ' bills — recorded ✅', 'success');
 }
+
 
 // ══════════════════════════════════
 // SEND TO KITCHEN
@@ -5652,7 +5824,7 @@ async function printKitchenTicket() {
   }, 300);
 }
 
-function printReceipt(sale, isSplit=false) {
+function printReceipt(sale, isSplit=false, isReprint=false) {
   const br = BRANCHES[activeBranch];
   const food = sale.items.reduce((s,i) => s + (i.returned ? 0 : i.price * i.qty), 0);
   const itemsHTML = sale.items.map(i => i.returned ? `
@@ -5683,6 +5855,7 @@ function printReceipt(sale, isSplit=false) {
     <div style="font-family:'Segoe UI', Arial, Helvetica, sans-serif;color:#000;padding:12px 6px;width:72mm;line-height:1.5;">
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-size:26px;font-weight:900;letter-spacing:2px;">OvenX</div>
+        ${isReprint ? '<div style="background:#000;color:#fff;font-size:12px;font-weight:900;padding:3px 6px;letter-spacing:2px;margin:4px 0;">*** REPRINT ***</div>' : ''}
         <div style="font-size:12px;font-weight:700;border-top:2px solid #000;border-bottom:2px solid #000;padding:5px 0;margin:8px 0;">${br.name.toUpperCase()} BRANCH</div>
         <div style="font-size:11px;font-weight:600;line-height:1.4;">${br.address}</div>
       </div>
@@ -5707,6 +5880,7 @@ function printReceipt(sale, isSplit=false) {
       <div style="border-bottom:2px solid #000;margin:12px 0;"></div>
 
       <div style="font-size:14px;font-weight:700;line-height:1.9;">
+        ${sale.originalTotal ? `<div style="display:flex;justify-content:space-between;color:#555;margin-bottom:4px;"><span>Original Bill Total</span><span>Rs ${sale.originalTotal}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>Rs ${food}</span></div>
         ${sale.sc>0 ? `<div style="display:flex;justify-content:space-between;"><span>Service Charge (${sale.scPct}%)</span><span>Rs ${sale.sc}</span></div>` : ''}
         ${(sale.deliveryCharge||0)>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Charge</span><span>Rs ${sale.deliveryCharge}</span></div>` : ''}
@@ -5715,7 +5889,7 @@ function printReceipt(sale, isSplit=false) {
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:22px;font-weight:900;border-top:3px solid #000;border-bottom:3px solid #000;padding:9px 0;margin:10px 0;">
-        <span>TOTAL</span><span>Rs ${sale.total}</span>
+        <span>${sale.originalTotal ? 'YOUR SHARE' : 'TOTAL'}</span><span>Rs ${sale.total}</span>
       </div>
 
       <div style="font-size:13px;font-weight:700;line-height:1.9;">
@@ -7306,11 +7480,15 @@ async function exportClosingExcel() {
   const sales = txs.filter(t => !['cash-in','cash-out'].includes(t.method));
   const billsOnly = sales.filter(t => !['void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
   const total = billsOnly.reduce((s,t) => s + t.total, 0);
-  const cash  = billsOnly.filter(t=>t.method==='cash').reduce((s,t)=>s+t.total,0)
-    + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_cash||0),0);
-  const card  = billsOnly.filter(t=>['card','bank','jazzcash'].includes(t.method)).reduce((s,t)=>s+t.total,0)
-    + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_card||0),0);
-  const panda = billsOnly.filter(t=>t.method==='foodpanda').reduce((s,t)=>s+t.total,0);
+
+const pm = sumByMethod(billsOnly);
+
+const cash = pm.cash;
+const card = pm.card;
+const bank = pm.bank;
+const jazzcash = pm.jazzcash;
+const panda = pm.foodpanda;
+
   const scCollected = billsOnly.reduce((s,t)=>s+(t.sc||0),0);
   const discGiven = billsOnly.reduce((s,t)=>s+(t.discount||0),0);
   const cashOuts = txs.filter(t=>t.method==='cash-out').reduce((s,t)=>s+Math.abs(t.total),0);
@@ -7330,8 +7508,12 @@ async function exportClosingExcel() {
   lines.push(`Total Sales,Rs ${total}`);
   lines.push(`Bills Issued,${billsOnly.length}`);
   lines.push(`Cash Collected,Rs ${cash}`);
-  lines.push(`Card Collected,Rs ${card}`);
-  lines.push(`FoodPanda Collected,Rs ${panda}`);
+
+lines.push(`Card Collected,Rs ${card}`);
+lines.push(`Bank Collected,Rs ${bank}`);
+lines.push(`JazzCash Collected,Rs ${jazzcash}`);
+lines.push(`FoodPanda Collected,Rs ${panda}`);
+
   lines.push(`SC Collected,Rs ${scCollected}`);
   lines.push(`Discounts Given,Rs ${discGiven}`);
   lines.push(`Returns,Rs ${returnTotal}`);
@@ -7505,8 +7687,8 @@ async function loadTodaySales() {
 // TOAST
 // ══════════════════════════════════
 async function reprintReceipt(billNo, rowId) {
-  // ✅ FIX 3: Reprint any past bill from memory or Supabase
   let sale = completedOrders.find(o => rowId ? o.id === rowId : o.billNo === billNo);
+  
   if (!sale && sb) {
     try {
       const { data } = await sb.from('shift_transactions')
@@ -7525,59 +7707,20 @@ async function reprintReceipt(billNo, rowId) {
       }
     } catch(e) { showToast('Could not fetch bill', 'error'); return; }
   }
+  
   if (!sale) { showToast('Bill #'+billNo+' not found', 'error'); return; }
+  
+  // If items weren't saved as an array, parse them from the text string
   if ((!sale.items||!sale.items.length) && sale.itemsText) {
     sale.items = sale.itemsText.split(',').map(s => {
       const m = s.trim().match(/^(\d+)x\s+(.+)/);
       return m ? { qty:parseInt(m[1]), name:m[2].trim(), price:0, note:'' } : null;
     }).filter(Boolean);
   }
-  const br = BRANCHES[activeBranch];
-  const itemsText = (sale.items&&sale.items.length&&sale.items[0].price>0)
-    ? sale.items.map(i=>`${i.qty}x ${i.name}${i.note?'\n   > '+i.note:''}   Rs ${i.price*i.qty}`).join('\n')
-    : (sale.itemsText ? sale.itemsText.split(',').map(s=>s.trim()).join('\n') : (sale.items||[]).map(i=>`${i.qty}x ${i.name}`).join('\n'));
-  const food = (sale.items&&sale.items.length&&sale.items[0].price>0)
-    ? sale.items.reduce((s,i)=>s+i.price*i.qty,0)
-    : Math.max(0, sale.total-(sale.sc||0)-(sale.deliveryCharge||0)+(sale.disc||0));
-  const ml={cash:'CASH',card:'CARD',bank:'BANK TRANSFER',jazzcash:'JAZZCASH',foodpanda:'FOODPANDA',split:'SPLIT'};
-  const methodLabel = ml[sale.method]||(sale.method||'').toUpperCase();
-  document.getElementById('print-area').innerHTML = `
-    <div style="font-family:'Courier New',monospace;color:black;padding:5px;width:72mm;">
-      <div style="text-align:center;">
-        <h1 style="margin:0;font-size:22px;font-weight:900;letter-spacing:3px;">OvenX</h1>
-        <div style="font-size:9px;font-weight:bold;border-top:1px solid #000;border-bottom:1px solid #000;padding:2px;margin:3px 0;">${br.name.toUpperCase()} BRANCH</div>
-        <div style="background:#000;color:#fff;font-size:13px;font-weight:900;padding:4px 8px;letter-spacing:3px;margin:5px 0;">*** REPRINT ***</div>
-      </div>
-      <div style="border-bottom:1px dashed #000;margin:4px 0;"></div>
-      <div style="font-size:11px;line-height:1.6;">
-        <b>Bill#  :</b> ${sale.billNo||'—'}<br>
-        <b>Date   :</b> ${new Date(sale.time).toLocaleString('en-PK')}<br>
-        <b>Table  :</b> ${(sale.table||'').replace(/-/g,' ')}<br>
-        <b>Type   :</b> ${sale.type||'—'}<br>
-        <b>Staff  :</b> ${sale.staff||'—'}
-        ${sale.customerName?'<br><b>Name   :</b> '+sale.customerName:''}
-        ${sale.customerPhone?'<br><b>Phone  :</b> '+sale.customerPhone:''}
-        ${sale.deliveryAddress?'<br><b>Addr   :</b> '+sale.deliveryAddress:''}
-      </div>
-      <div style="border-bottom:1px solid #000;margin:5px 0;"></div>
-      <div style="font-size:12px;font-weight:bold;white-space:pre-wrap;line-height:1.8;">${itemsText||'Items not available'}</div>
-      <div style="border-bottom:1px dashed #000;margin:5px 0;"></div>
-      <div style="font-size:12px;line-height:1.8;">
-        ${food>0?'<div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs '+food+'</span></div>':''}
-        ${(sale.sc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>SC ('+sale.scPct+'%):</span><span>Rs '+sale.sc+'</span></div>':''}
-        ${(sale.deliveryCharge||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Delivery:</span><span>Rs '+sale.deliveryCharge+'</span></div>':''}
-        ${(sale.tax||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Tax:</span><span>Rs '+sale.tax+'</span></div>':''}
-        ${(sale.disc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs '+sale.disc+'</span></div>':''}
-        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid #000;padding-top:3px;margin-top:3px;">
-          <span>TOTAL:</span><span>Rs ${sale.total}</span>
-        </div>
-        <div style="font-size:11px;margin-top:2px;">Paid via: ${methodLabel}</div>
-      </div>
-      <div style="border-top:1px dashed #000;margin-top:6px;padding-top:5px;text-align:center;font-size:10px;">
-        Thank you for dining with us! 🙏<br>theovenx.com
-      </div>
-    </div>`;
-  setTimeout(()=>{ window.print(); document.getElementById('print-area').innerHTML=''; },300);
+
+  // Call the main printReceipt function, but pass a flag so it prints "*** REPRINT ***"
+  printReceipt(sale, false, true);
+  
   showToast('Reprinting bill #'+billNo+' 🖨️','success');
 }
 function exportDeliveryExcel() {
