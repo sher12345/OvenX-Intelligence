@@ -1021,6 +1021,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   <button class="refresh-btn" onclick="renderClosingReport()">↻ Load</button>
   <button class="print-report-btn" onclick="printClosingReport()">🖨️ Print Report</button>
   <button class="print-report-btn" onclick="exportClosingExcel()" style="color:var(--green);border-color:var(--green);">📊 Export Excel</button>
+  <button class="print-report-btn" onclick="exportClosingStatement()" style="color:#bb77ff;border-color:#bb77ff;">🧾 Closing Statement</button>
   <button class="print-report-btn" onclick="closeAllShiftsAndArchive()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">
     🔒 CLOSE SHIFTS & START FRESH
   </button>
@@ -6849,6 +6850,433 @@ async function printClosingReport() {
     setTimeout(() => { document.getElementById('print-area').innerHTML=''; }, 3000);
   }, 500);
 }
+async function exportClosingStatement() {
+  if (typeof ExcelJS === 'undefined') { showToast('Excel library not loaded — refresh the page', 'error'); return; }
+  if (!sb || !isOnline) { showToast('No internet connection', 'error'); return; }
+  const fromVal = document.getElementById('closing-date-from').value || bizDayFrom();
+  const toVal   = document.getElementById('closing-date-to').value   || bizDayTo();
+  const fromISO = _dtLocalToISO(fromVal), toISO = _dtLocalToISO(toVal);
+  showToast('Building closing statement…', 'success');
+
+  let txs;
+  try { txs = await _xcFetchAll(fromISO, toISO); }
+  catch (e) { showToast('Could not load data: ' + e.message, 'error'); return; }
+  const opening = (await fetchOpeningBalance(activeBranch, fromVal.slice(0, 10))).amount;
+  let decls = [];
+  try {
+    const { data } = await sb.from('cashier_declarations').select('*').eq('branch', activeBranch)
+      .gte('shift_end', fromISO).lte('shift_end', toISO).order('shift_end', { ascending: true });
+    decls = data || [];
+  } catch (e) {}
+  let creditIssued = 0, creditCollected = 0;
+  try {
+    const { data: ci } = await sb.from('credit_accounts').select('amount').eq('branch', activeBranch).gte('issued_at', fromISO).lte('issued_at', toISO);
+    creditIssued = (ci || []).reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    const { data: cp } = await sb.from('credit_payments').select('amount').eq('branch', activeBranch).gte('paid_at', fromISO).lte('paid_at', toISO);
+    creditCollected = (cp || []).reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  } catch (e) {}
+
+  const sum = (a, f) => a.reduce((s, t) => s + (Number(f(t)) || 0), 0);
+  const bills = txs.filter(t => !_XC_NON_BILL.includes(t.method));
+  const by = m => txs.filter(t => t.method === m);
+  const pm = sumByMethod(bills);
+  const dine = bills.filter(t => t.type === 'Dine-In');
+  const take = bills.filter(t => t.type === 'Takeaway');
+  const deliv = bills.filter(t => t.type === 'Delivery');
+  const totalSale = sum(bills, t => t.total);
+  const gross = sum(bills, _grossOf);
+  const disc = sum(bills, t => t.discount);
+  const isFin = t => /^\s*\[FINANCE\]/i.test(t.items_text || '');
+  const tillExp = by('expense').filter(t => !isFin(t));
+  const finExp = by('expense').filter(isFin);
+  const cashInHand = computeCashInHand(txs, opening);
+  const sessions = {};
+  decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
+  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]);
+  const hasDecl = finals.length > 0;
+  const submitted = sum(finals, d => d.cash_amount);
+  const difference = Math.round(submitted - (cashInHand - opening));
+  const cnt = m => bills.filter(t => t.method === m).length;
+
+  // ---------- styling ----------
+  const C = { bg:'FF0B1020', glass:'FF18213D', glass2:'FF1F2A4D', edge:'FF3D4C7A', dot:'FF2B3760',
+    text:'FFEAF0FF', mute:'FF8FA0C8', teal:'FF4FD1C5', orange:'FFFFA94D', red:'FFFF6B81',
+    green:'FF5BE49B', violet:'FFA99BFF', blue:'FF5AA9FF' };
+  const solid = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const grad = (a, b) => ({ type: 'gradient', gradient: 'angle', degree: 0,
+    stops: [{ position: 0, color: { argb: a } }, { position: 1, color: { argb: b } }] });
+  const FONT = 'Segoe UI';
+  const tz = { timeZone: 'Asia/Karachi' };
+  const edge = { style: 'thin', color: { argb: C.edge } };
+  const dot  = { style: 'hair', color: { argb: C.dot } };
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Closing Statement', { views: [{ showGridLines: false }] });
+  // A | P1: B C D | E | P2: F G H | I | P3: J K L | M
+  ws.columns = [{width:2},{width:34},{width:8},{width:15},{width:2},{width:34},{width:8},{width:15},{width:2},{width:34},{width:8},{width:15},{width:2}];
+  for (let rr = 1; rr <= 45; rr++) for (let cc = 1; cc <= 30; cc++) ws.getCell(rr, cc).fill = solid(C.bg);
+
+  const P = [2, 6, 10];                 // first column of each panel
+  const START = 6;
+  const cur = [START, START, START];
+  const alt = [false, false, false];
+  const hMax = {};
+  const setH = (row, h) => { hMax[row] = Math.max(hMax[row] || 0, h); ws.getRow(row).height = hMax[row]; };
+
+  // header
+  const band = (row, text, fill, size, color, h) => {
+    ws.mergeCells(row, 2, row, 12);
+    const c = ws.getCell(row, 2);
+    c.value = text; c.fill = fill;
+    c.font = { name: FONT, bold: true, size, color: { argb: color } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(row).height = h;
+  };
+  band(2, 'OvenX — ' + activeBranch.toUpperCase() + ' BRANCH', grad('FF5B4BDB', 'FF14A39A'), 22, 'FFFFFFFF', 40);
+  band(3, 'DAY CLOSING STATEMENT', solid('FF141B34'), 12, C.violet, 24);
+  band(4, fromVal.replace('T', ' ') + '   →   ' + toVal.replace('T', ' '), solid('FF141B34'), 10, C.mute, 20);
+  ws.getRow(5).height = 10;
+
+  const section = (pi, title, accent, countLbl) => {
+    const row = cur[pi]++, c0 = P[pi];
+    setH(row, 24);
+    [0, 1, 2].forEach(k => {
+      const c = ws.getCell(row, c0 + k);
+      c.fill = grad('FF2A3768', 'FF18213D');
+      c.border = { top: edge, bottom: { style: 'medium', color: { argb: accent } },
+        ...(k === 0 ? { left: { style: 'thick', color: { argb: accent } } } : {}),
+        ...(k === 2 ? { right: edge } : {}) };
+    });
+    const a = ws.getCell(row, c0);
+    a.value = title.toUpperCase();
+    a.font = { name: FONT, bold: true, size: 11, color: { argb: accent } };
+    a.alignment = { vertical: 'middle', indent: 1 };
+    const b = ws.getCell(row, c0 + 1);
+    b.value = countLbl || '';
+    b.font = { name: FONT, bold: true, size: 8, color: { argb: C.mute } };
+    b.alignment = { horizontal: 'center', vertical: 'middle' };
+    const d = ws.getCell(row, c0 + 2);
+    d.value = 'AMOUNT (Rs)';
+    d.font = { name: FONT, bold: true, size: 8, color: { argb: C.mute } };
+    d.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    alt[pi] = false;
+  };
+  const line = (pi, label, count, amount, o = {}) => {
+    const row = cur[pi]++, c0 = P[pi];
+    alt[pi] = !alt[pi];
+    const bg = o.fill || solid(alt[pi] ? C.glass : C.glass2);
+    setH(row, o.h || 22);
+    [0, 1, 2].forEach(k => {
+      const c = ws.getCell(row, c0 + k);
+      c.fill = bg;
+      c.border = { bottom: o.fill ? edge : dot, ...(k === 0 ? { left: edge } : {}), ...(k === 2 ? { right: edge } : {}) };
+    });
+    const a = ws.getCell(row, c0);
+    a.value = label;
+    a.font = { name: FONT, bold: !!o.bold, size: o.size || 11, color: { argb: o.label || C.text } };
+    a.alignment = { vertical: 'middle', indent: 1 };
+    const b = ws.getCell(row, c0 + 1);
+    b.value = (count === '' || count === undefined) ? null : count;
+    b.font = { name: FONT, size: 10, color: { argb: C.mute } };
+    b.alignment = { horizontal: 'center', vertical: 'middle' };
+    const d = ws.getCell(row, c0 + 2);
+    d.value = amount; d.numFmt = '#,##0';
+    d.font = { name: FONT, bold: !!o.bold, size: o.size || 11, color: { argb: o.color || C.text } };
+    d.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+  };
+
+  // ---------- PANEL 1: Sales + Analysis ----------
+  section(0, 'Sales', C.teal, 'BILLS');
+  line(0, 'Opening Balance', '', opening, { color: C.blue });
+  line(0, 'Dine In Sale', dine.length, sum(dine, t => t.total));
+  line(0, 'Take Away Sale', take.length, sum(take, t => t.total));
+  line(0, 'Delivery', deliv.length, sum(deliv, t => t.total));
+  line(0, 'TOTAL SALE', bills.length, totalSale, { fill: grad('FF1D7F7A', 'FF2B4C9B'), bold: true, size: 13, h: 30, color: 'FFFFFFFF' });
+  section(0, 'Sale Analysis', C.violet);
+  line(0, 'Gross Sale', '', gross);
+  line(0, 'Discount', '', disc, { color: C.red });
+  line(0, 'Net Sale', '', gross - disc, { bold: true, color: C.green });
+  line(0, 'Tax', '', sum(bills, t => t.tax), { color: C.orange });
+  line(0, 'Service Charges', '', sum(bills, t => t.sc), { color: C.orange });
+  line(0, 'Rider Fees (not ours)', '', sum(deliv, t => t.rider_fee), { color: C.mute });
+
+  // ---------- PANEL 2: Payments + Cash reconciliation ----------
+  section(1, 'Payment Methods', C.blue, 'BILLS');
+  line(1, 'Cash Sale', cnt('cash') + cnt('split'), pm.cash, { color: C.green });
+  line(1, 'Credit Card Sale', cnt('card'), pm.card);
+  line(1, 'Jazz Cash', cnt('jazzcash'), pm.jazzcash);
+  line(1, 'Bank Account Payment', cnt('bank'), pm.bank);
+  line(1, 'Food Panda Sale', cnt('foodpanda'), pm.foodpanda);
+  line(1, 'Credit Issued (Udhaar)', '', creditIssued, { color: C.orange });
+  line(1, 'Credit Collected', '', creditCollected, { color: C.green });
+  section(1, 'Cash Reconciliation', C.orange);
+  line(1, 'CASH IN HAND', '', cashInHand, { fill: grad('FF8A4B12', 'FF5B2D7A'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
+  line(1, 'SUBMITTED CASH', hasDecl ? finals.length : '', hasDecl ? submitted : '—', { fill: grad('FF1D5FA8', 'FF3B3FA8'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
+  const ok = hasDecl && difference === 0;
+  line(1, 'DIFFERENCE', '', hasDecl ? difference : '—',
+    { fill: hasDecl ? (ok ? grad('FF1B7F4C', 'FF14A39A') : grad('FFA8324A', 'FF6B1F5A')) : solid(C.glass2), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
+
+  // ---------- PANEL 3: Expenses & adjustments ----------
+  section(2, 'Expenses & Adjustments', C.red, 'COUNT');
+  line(2, 'Expense (paid from till)', tillExp.length, sum(tillExp, t => Math.abs(t.total)), { color: C.red });
+  line(2, 'Finance Expense (owner/bank)', finExp.length, sum(finExp, t => Math.abs(t.total)), { color: C.mute });
+  line(2, 'Cash Out', by('cash-out').length, sum(by('cash-out'), t => Math.abs(t.total)), { color: C.red });
+  line(2, 'Cash In', by('cash-in').length, sum(by('cash-in'), t => t.total), { color: C.green });
+  line(2, 'Return Sale', by('return').length, sum(by('return'), t => Math.abs(t.total)), { color: C.red });
+  line(2, 'Voids', by('void').length, sum(by('void'), t => Math.abs(t.total)), { color: C.red });
+  line(2, 'Items Removed After KOT', by('item-void').length, sum(by('item-void'), t => Math.abs(t.total)), { color: C.red });
+  line(2, 'Discarded Orders', by('discarded').length, sum(by('discarded'), t => Math.abs(t.total)), { color: C.red });
+
+  // ---------- footer ----------
+  const last = Math.max(...cur) + 1;
+  ws.getRow(last - 1).height = Math.max(ws.getRow(last - 1).height || 0, 22);
+  ws.mergeCells(last, 2, last, 12);
+  const f = ws.getCell(last, 2);
+  f.value = 'Printed by ' + currentStaff + ' — ' + new Date().toLocaleString('en-PK', tz) + '   |   ' + bills.length + ' bills   |   Difference = Submitted Cash − (Cash In Hand − Opening Balance)';
+  f.font = { name: FONT, size: 9, color: { argb: C.mute } };
+  f.alignment = { horizontal: 'center', vertical: 'middle' };
+  ws.getRow(last).height = 20;
+
+  ws.pageSetup = {
+    paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+    horizontalCentered: true, verticalCentered: true, printArea: 'A1:M' + (last + 1),
+    margins: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0, footer: 0 }
+  };
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ovenx_' + activeBranch + '_ClosingStatement_' + fromVal.slice(0, 10) + (fromVal.slice(0, 10) === toVal.slice(0, 10) ? '' : '_to_' + toVal.slice(0, 10)) + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Closing statement exported ✅', 'success');
+}
+
+async function _exportClosingStatementOld() {
+  if (typeof ExcelJS === 'undefined') { showToast('Excel library not loaded — refresh the page', 'error'); return; }
+  if (!sb || !isOnline) { showToast('No internet connection', 'error'); return; }
+  const fromVal = document.getElementById('closing-date-from').value || bizDayFrom();
+  const toVal   = document.getElementById('closing-date-to').value   || bizDayTo();
+  const fromISO = _dtLocalToISO(fromVal), toISO = _dtLocalToISO(toVal);
+  showToast('Building closing statement…', 'success');
+
+  // ---------- data ----------
+  let txs;
+  try { txs = await _xcFetchAll(fromISO, toISO); }
+  catch (e) { showToast('Could not load data: ' + e.message, 'error'); return; }
+  const opening = (await fetchOpeningBalance(activeBranch, fromVal.slice(0, 10))).amount;
+
+  let decls = [];
+  try {
+    const { data } = await sb.from('cashier_declarations').select('*').eq('branch', activeBranch)
+      .gte('shift_end', fromISO).lte('shift_end', toISO).order('shift_end', { ascending: true });
+    decls = data || [];
+  } catch (e) {}
+  let creditIssued = 0, creditCollected = 0;
+  try {
+    const { data: ci } = await sb.from('credit_accounts').select('amount').eq('branch', activeBranch)
+      .gte('issued_at', fromISO).lte('issued_at', toISO);
+    creditIssued = (ci || []).reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    const { data: cp } = await sb.from('credit_payments').select('amount').eq('branch', activeBranch)
+      .gte('paid_at', fromISO).lte('paid_at', toISO);
+    creditCollected = (cp || []).reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  } catch (e) {}
+
+  const sum = (a, f) => a.reduce((s, t) => s + (Number(f(t)) || 0), 0);
+  const bills = txs.filter(t => !_XC_NON_BILL.includes(t.method));
+  const by = m => txs.filter(t => t.method === m);
+  const pm = sumByMethod(bills);
+  const dine = bills.filter(t => t.type === 'Dine-In');
+  const take = bills.filter(t => t.type === 'Takeaway');
+  const deliv = bills.filter(t => t.type === 'Delivery');
+  const totalSale = sum(bills, t => t.total);
+  const gross = sum(bills, _grossOf);
+  const disc = sum(bills, t => t.discount);
+  const tax = sum(bills, t => t.tax);
+  const scTotal = sum(bills, t => t.sc);
+  const riderFees = sum(deliv, t => t.rider_fee);
+  const expAll = by('expense');
+  const isFin = t => /^\s*\[FINANCE\]/i.test(t.items_text || '');
+  const tillExp = expAll.filter(t => !isFin(t));
+  const finExp = expAll.filter(isFin);
+  const cashInHand = computeCashInHand(txs, opening);
+
+  // Submitted cash = final attempt of each cashier's end-of-shift report
+  const sessions = {};
+  decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
+  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]);
+  const hasDecl = finals.length > 0;
+  const submitted = sum(finals, d => d.cash_amount);
+  const expectedComparable = cashInHand - opening;   // declared cash excludes the opening float
+  const difference = submitted - expectedComparable;
+
+  // ---------- styling ----------
+  const C = { bg:'FF0B1020', glass:'FF18213D', glass2:'FF1F2A4D', edge:'FF3D4C7A', dot:'FF2B3760',
+    text:'FFEAF0FF', mute:'FF8FA0C8', teal:'FF4FD1C5', orange:'FFFFA94D', red:'FFFF6B81',
+    green:'FF5BE49B', violet:'FFA99BFF', blue:'FF5AA9FF' };
+  const solid = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const grad = (a, b, deg = 0) => ({ type: 'gradient', gradient: 'angle', degree: deg,
+    stops: [{ position: 0, color: { argb: a } }, { position: 1, color: { argb: b } }] });
+  const FONT = 'Segoe UI';
+  const tz = { timeZone: 'Asia/Karachi' };
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Closing Statement', { views: [{ showGridLines: false }] });
+  ws.columns = [{ width: 3 }, { width: 42 }, { width: 11 }, { width: 22 }, { width: 3 }];
+  for (let rr = 1; rr <= 70; rr++) for (let cc = 1; cc <= 5; cc++) ws.getCell(rr, cc).fill = solid(C.bg);
+
+  let r = 2, alt = false;
+  const edge = { style: 'thin', color: { argb: C.edge } };
+  const dot  = { style: 'hair', color: { argb: C.dot } };
+
+  const band = (text, fill, size, color, h) => {
+    ws.mergeCells(r, 2, r, 4);
+    const c = ws.getCell(r, 2);
+    c.value = text; c.fill = fill;
+    c.font = { name: FONT, bold: true, size, color: { argb: color } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(r).height = h; r++;
+  };
+  const gap = () => { ws.getRow(r).height = 9; r++; };
+  const section = (title, accent, countLbl) => {
+    gap();
+    ws.getRow(r).height = 24;
+    [2, 3, 4].forEach(ci => {
+      const c = ws.getCell(r, ci);
+      c.fill = grad('FF2A3768', 'FF18213D', 0);
+      c.border = { top: edge, bottom: { style: 'medium', color: { argb: accent } },
+        ...(ci === 2 ? { left: { style: 'thick', color: { argb: accent } } } : {}),
+        ...(ci === 4 ? { right: edge } : {}) };
+    });
+    ws.getCell(r, 2).value = title.toUpperCase();
+    ws.getCell(r, 2).font = { name: FONT, bold: true, size: 11, color: { argb: accent } };
+    ws.getCell(r, 2).alignment = { vertical: 'middle', indent: 1 };
+    ws.getCell(r, 3).value = countLbl || '';
+    ws.getCell(r, 3).font = { name: FONT, bold: true, size: 9, color: { argb: C.mute } };
+    ws.getCell(r, 3).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(r, 4).value = 'AMOUNT (Rs)';
+    ws.getCell(r, 4).font = { name: FONT, bold: true, size: 9, color: { argb: C.mute } };
+    ws.getCell(r, 4).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    r++; alt = false;
+  };
+  const line = (label, count, amount, o = {}) => {
+    alt = !alt;
+    const bg = o.fill || solid(alt ? C.glass : C.glass2);
+    ws.getRow(r).height = o.h || 21;
+    [2, 3, 4].forEach(ci => {
+      const c = ws.getCell(r, ci);
+      c.fill = bg;
+      c.border = { bottom: o.fill ? edge : dot,
+        ...(ci === 2 ? { left: edge } : {}), ...(ci === 4 ? { right: edge } : {}) };
+    });
+    const b = ws.getCell(r, 2);
+    b.value = label;
+    b.font = { name: FONT, bold: !!o.bold, size: o.size || 11, color: { argb: o.label || C.text } };
+    b.alignment = { vertical: 'middle', indent: 1 };
+    const cn = ws.getCell(r, 3);
+    cn.value = (count === '' || count === undefined) ? null : count;
+    cn.font = { name: FONT, size: 10, color: { argb: C.mute } };
+    cn.alignment = { horizontal: 'center', vertical: 'middle' };
+    const d = ws.getCell(r, 4);
+    d.value = amount;
+    d.numFmt = '#,##0';
+    d.font = { name: FONT, bold: !!o.bold, size: o.size || 11, color: { argb: o.color || C.text } };
+    d.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    r++;
+  };
+
+  // ---------- header ----------
+  band('OvenX — ' + activeBranch.toUpperCase() + ' BRANCH', grad('FF5B4BDB', 'FF14A39A', 0), 20, 'FFFFFFFF', 42);
+  band('DAY CLOSING STATEMENT', solid('FF141B34'), 12, C.violet, 24);
+  band(fromVal.replace('T', ' ') + '   →   ' + toVal.replace('T', ' '), solid('FF141B34'), 10, C.mute, 20);
+
+  // ---------- sales ----------
+  section('Sales', C.teal, 'BILLS');
+  line('Opening Balance', '', opening, { color: C.blue });
+  line('Dine In Sale', dine.length, sum(dine, t => t.total));
+  line('Take Away Sale', take.length, sum(take, t => t.total));
+  line('Delivery', deliv.length, sum(deliv, t => t.total));
+  line('TOTAL SALE', bills.length, totalSale,
+    { fill: grad('FF1D7F7A', 'FF2B4C9B', 0), bold: true, size: 13, h: 28, color: 'FFFFFFFF' });
+
+  // ---------- analysis ----------
+  section('Sale Analysis', C.violet);
+  line('Gross Sale', '', gross);
+  line('Discount', '', disc, { color: C.red });
+  line('Net Sale', '', gross - disc, { bold: true, color: C.green });
+  line('Tax', '', tax, { color: C.orange });
+  line('Service Charges', '', scTotal, { color: C.orange });
+  line('Rider Fees (kept by riders, not ours)', '', riderFees, { color: C.mute });
+
+  // ---------- payments ----------
+  section('Payment Methods', C.blue, 'BILLS');
+  const cnt = m => bills.filter(t => t.method === m).length;
+  line('Cash Sale', cnt('cash') + cnt('split'), pm.cash, { color: C.green });
+  line('Credit Card Sale', cnt('card'), pm.card);
+  line('Jazz Cash', cnt('jazzcash'), pm.jazzcash);
+  line('Bank Account Payment', cnt('bank'), pm.bank);
+  line('Food Panda Sale', cnt('foodpanda'), pm.foodpanda);
+  line('Credit Issued (Udhaar)', '', creditIssued, { color: C.orange });
+  line('Credit Collected', '', creditCollected, { color: C.green });
+
+  // ---------- deductions ----------
+  section('Expenses & Adjustments', C.red, 'COUNT');
+  line('Expense (paid from till)', tillExp.length, sum(tillExp, t => Math.abs(t.total)), { color: C.red });
+  line('Finance Expense (owner / bank)', finExp.length, sum(finExp, t => Math.abs(t.total)), { color: C.mute });
+  line('Cash Out', by('cash-out').length, sum(by('cash-out'), t => Math.abs(t.total)), { color: C.red });
+  line('Cash In', by('cash-in').length, sum(by('cash-in'), t => t.total), { color: C.green });
+  line('Return Sale', by('return').length, sum(by('return'), t => Math.abs(t.total)), { color: C.red });
+  line('Voids', by('void').length, sum(by('void'), t => Math.abs(t.total)), { color: C.red });
+  line('Items Removed After KOT', by('item-void').length, sum(by('item-void'), t => Math.abs(t.total)), { color: C.red });
+  line('Discarded Orders', by('discarded').length, sum(by('discarded'), t => Math.abs(t.total)), { color: C.red });
+
+  // ---------- cash reconciliation ----------
+  section('Cash Reconciliation', C.orange);
+  line('CASH IN HAND  (expected)', '', cashInHand,
+    { fill: grad('FF8A4B12', 'FF5B2D7A', 0), bold: true, size: 14, h: 34, color: 'FFFFFFFF' });
+  line('SUBMITTED CASH  (cashier reports)', hasDecl ? finals.length : '', hasDecl ? submitted : '—',
+    { fill: grad('FF1D5FA8', 'FF3B3FA8', 0), bold: true, size: 14, h: 34, color: 'FFFFFFFF' });
+  const ok = hasDecl && Math.round(difference) === 0;
+  line('DIFFERENCE', '', hasDecl ? Math.round(difference) : '—',
+    { fill: hasDecl ? (ok ? grad('FF1B7F4C', 'FF14A39A', 0) : grad('FFA8324A', 'FF6B1F5A', 0)) : solid(C.glass2),
+      bold: true, size: 14, h: 34, color: 'FFFFFFFF' });
+
+  // ---------- footer ----------
+  gap();
+  ws.mergeCells(r, 2, r, 4);
+  const f = ws.getCell(r, 2);
+  f.value = 'Printed by ' + currentStaff + ' — ' + new Date().toLocaleString('en-PK', tz) + '   |   ' + bills.length + ' bills';
+  f.font = { name: FONT, size: 9, color: { argb: C.mute } };
+  f.alignment = { horizontal: 'center' };
+  r++;
+  ws.mergeCells(r, 2, r, 4);
+  const n = ws.getCell(r, 2);
+  n.value = 'Difference = Submitted Cash − (Cash In Hand − Opening Balance). Submitted Cash is the final end-of-shift figure of each cashier.';
+  n.font = { name: FONT, size: 8, italic: true, color: { argb: C.mute } };
+  n.alignment = { horizontal: 'center', wrapText: true };
+  ws.getRow(r).height = 24;
+  const lastRow = r + 1;
+
+  // ---------- print setup: one A4 page, backgrounds included ----------
+  ws.pageSetup = {
+    paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+    horizontalCentered: true, printArea: 'A1:E' + lastRow,
+    margins: { left: 0.25, right: 0.25, top: 0.25, bottom: 0.25, header: 0, footer: 0 }
+  };
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ovenx_' + activeBranch + '_ClosingStatement_' + fromVal.slice(0, 10) + (fromVal.slice(0, 10) === toVal.slice(0, 10) ? '' : '_to_' + toVal.slice(0, 10)) + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Closing statement exported ✅', 'success');
+}
+
 async function exportClosingExcel() {
   const fromVal = document.getElementById('closing-date-from').value || (bizDayFrom());
   const toVal   = document.getElementById('closing-date-to').value   || (bizDayTo());
