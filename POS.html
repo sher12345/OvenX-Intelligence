@@ -1707,8 +1707,8 @@ function _deliveryFeeHeldByRider(o) {
   // is the reliable signal for "rider collected this fee, not us."
   if (o._feeStripped || o.type !== 'Delivery') return 0;
   const fee = Number(o.deliveryCharge ?? o.delivery_charge) || 0;
-  if (o.method === 'cash') return fee;
   if (o.method === 'split') return Math.min(fee, o.splitCash || o.split_cash || 0);
+  if (['cash','card','bank','jazzcash'].includes(o.method)) return fee;
   return 0;
 }
 function _stripRiderFee(t) {
@@ -1716,6 +1716,7 @@ function _stripRiderFee(t) {
   if (!['cash','card','bank','jazzcash','foodpanda','split'].includes(t.method)) return t;
   const fee = Number(t.delivery_charge) || 0;
   t.rider_fee = fee;
+  if (!['cash','split'].includes(t.method)) return t; // non-cash: full amount stays in Bank/Card/JazzCash
   t.total = (t.total || 0) - fee;
   t.delivery_charge = 0;
   if (t.method === 'split') t.split_cash = Math.max(0, (t.split_cash || 0) - fee);
@@ -5259,6 +5260,7 @@ function openPayModal() {
 }
 
 function selectPayMethod(m) {
+  if (m === 'split') { closeModal('pay-modal'); openSplitModal(); setSplitMode('amount'); return; }
   payMethod = m;
   ['cash','card','bank','jazzcash','foodpanda','split'].forEach(id => {
     document.getElementById('pm-'+id).classList.toggle('selected', id === m);
@@ -6463,7 +6465,7 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${delFees}</div><div class="cs-lbl">Rider Fees (not ours)</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${delFees}</div><div class="cs-lbl">Rider Payouts (Cash)</div></div>
     <div class="cs-card orange"><div class="cs-val">${bills.length}</div><div class="cs-lbl">Bills</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${pm.cash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -6715,7 +6717,7 @@ async function renderClosingReport() {
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Fees (not ours)</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Payouts (Cash)</div></div>
     <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -6760,7 +6762,8 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Takeaway (${takeaway.length} bills)</span><span class="cb-row-val">Rs ${takeaway.reduce((s,t)=>s+t.total,0)}</span></div>
       <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,t)=>s+t.total,0)}</span></div>
       <div class="cb-row"><span>SC Collected</span><span class="cb-row-val">Rs ${scCollected}</span></div>
-      <div class="cb-row"><span>📦 Delivery Fees</span><span class="cb-row-val" style="color:var(--orange);">Rs ${totalDelCharges}</span></div>
+      <div class="cb-row"><span>📦 Delivery Fees Collected</span><span class="cb-row-val" style="color:var(--green);">Rs ${totalDelCharges}</span></div>
+      <div class="cb-row"><span>🏍️ Rider Payouts (From Cash)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${totalDelCharges}</span></div>
       <div class="cb-row"><span>Discounts Given</span><span class="cb-row-val" style="color:var(--red);">Rs ${discGiven}</span></div>
       <div class="cb-row"><span>Returns (${returns.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${returnTotal}</span></div>
       <div class="cb-row"><span>Voids (${voids.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${voidTotal}</span></div>
@@ -10133,6 +10136,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
