@@ -1871,6 +1871,8 @@ async function doLogin() {
     return;
   }
 
+  await resolveOpenBizDay();
+
   let staffRecord = null;
   try {
     const { data } = await sb.from('staff').select('*').eq('name', name).eq('pin', pin).eq('active', true).single();
@@ -2018,11 +2020,32 @@ async function doLogout() {
 // Business day runs BIZ_DAY_START_HOUR (PKT) → same hour next morning.
 // 3 AM on Oct 30 still belongs to business day Oct 29.
 const BIZ_DAY_START_HOUR = 10;
-function todayKey() {
+let _openDay = null;
+
+function _clockDay() {
   return new Date(Date.now() + (5 - BIZ_DAY_START_HOUR) * 3600000).toISOString().slice(0, 10);
 }
+
+// Open day = day after the last closure (falls back to the clock if no recent closure)
+async function resolveOpenBizDay() {
+  _openDay = _clockDay();
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('shift_closures').select('date')
+      .eq('branch', activeBranch).order('date', { ascending: false }).limit(1).maybeSingle();
+    if (data && data.date) {
+      const next = new Date(new Date(data.date + 'T00:00:00Z').getTime() + 86400000)
+        .toISOString().slice(0, 10);
+      const gap = (new Date(_clockDay()) - new Date(next)) / 86400000;
+      if (gap >= -1 && gap <= 2) _openDay = next;   // stays on the open day until closed
+    }
+  } catch (e) { console.warn('resolveOpenBizDay failed, using clock:', e.message); }
+}
+
+function todayKey() { return _openDay || _clockDay(); }
+
 function bizDayEndKey() {
-  return new Date(Date.now() + (5 - BIZ_DAY_START_HOUR) * 3600000 + 86400000).toISOString().slice(0, 10);
+  return new Date(new Date(todayKey() + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
 }
 function bizDayFrom() { return todayKey() + 'T' + String(BIZ_DAY_START_HOUR).padStart(2,'0') + ':00'; }
 function bizDayTo()   { return bizDayEndKey() + 'T' + String(BIZ_DAY_START_HOUR - 1).padStart(2,'0') + ':59'; }
@@ -2189,7 +2212,7 @@ function startDateRolloverWatcher() {
   _lastKnownDate = todayKey();
   setInterval(async () => {
     const nowDate = todayKey();
-    if (nowDate !== _lastKnownDate) {
+    if (false && nowDate !== _lastKnownDate) {
       console.log('📅 New business day detected:', _lastKnownDate, '→', nowDate);
       _lastKnownDate = nowDate; _sharedDateRange = null;
       billCounter = 1;
@@ -8879,6 +8902,7 @@ const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n =>
 }
 
 async function closeAllShifts() {
+  if (currentStaffRole !== 'Admin') { showToast('Only Admin can close shifts', 'error'); return; }
   if (sb) {
     try {
       const { data: existingClose } = await sb.from('shift_closures')
@@ -9024,6 +9048,7 @@ async function closeAllShifts() {
 }
 
 async function closeAllShiftsAndArchive() {
+  if (currentStaffRole !== 'Admin') { showToast('Only Admin can close shifts', 'error'); return; }
   if (sb) {
     try {
       const { data: existingClose } = await sb.from('shift_closures')
@@ -10423,7 +10448,8 @@ async function clearAnalyticsAndSupabase() {
 
     // Clear UI
     document.getElementById('bar-cash').textContent = 'Rs 0';
-    document.getElementById('bar-billno').textContent = '001';
+    document.getElementById('bar-billno').textContent = '001';let _openDay = null;
+
     document.getElementById('opening-bal-input').value = '';
 
     // Destroy charts
@@ -10461,6 +10487,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
