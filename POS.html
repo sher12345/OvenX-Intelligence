@@ -594,6 +594,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
           <button class="nav-btn" id="nav-credit" onclick="switchView('credit')">💳 Credit</button>
           <button class="nav-btn" id="nav-history" onclick="switchView('history')">📅 History</button>
           <button class="nav-btn" id="nav-totals" onclick="switchView('totals')">📈 Totals</button>
+          <button class="nav-btn" id="nav-foodpanda" onclick="switchView('foodpanda')" style="background:rgba(230,126,34,0.15);color:var(--orange);">🐼 FoodPanda</button>
           <button class="nav-btn" id="nav-crosscheck" onclick="switchView('crosscheck')" style="background:rgba(212,175,55,0.15);color:var(--gold);">🔍 Cross-Check</button>
           <button class="print-report-btn" id="nav-closeshifts" onclick="closeAllShifts()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">🔒 CLOSE ALL SHIFTS & RESET</button>
         </div>
@@ -1078,6 +1079,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Each cashier's end-of-shift report is compared against what the POS recorded for that same person and shift window. Differences show in red.</div>
     <div id="xc-content">
       <div style="text-align:center;padding:48px;color:var(--text3);">Pick a range and click Load</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOODPANDA VIEW -->
+<div class="pos-view" id="view-foodpanda">
+  <div style="width:100%;padding:18px;overflow-y:auto;height:100%;">
+    <div class="section-header">
+      <div class="section-title-bar">🐼 FoodPanda Orders</div>
+      <div style="display:flex;gap:7px;">
+        <button class="refresh-btn" onclick="fpAddNew()" style="color:var(--green);border-color:var(--green);">+ New item / deal</button>
+        <button class="refresh-btn" onclick="fpClear()">Clear</button>
+      </div>
+    </div>
+    <input class="menu-search" id="fp-search" placeholder="🔍 Search menu item or deal..." oninput="fpSearch(this.value)" style="width:100%;margin-bottom:8px;padding:12px;font-size:14px;" autocomplete="off">
+    <div id="fp-results" style="max-height:260px;overflow-y:auto;margin-bottom:14px;"></div>
+    <div id="fp-lines" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:12px;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--orange);">Total: <span id="fp-total">Rs 0</span></div>
+      <button class="pay-complete-btn" style="width:auto;padding:14px 28px;" onclick="fpSave()">✅ SAVE FOODPANDA SALE</button>
     </div>
   </div>
 </div>
@@ -1683,7 +1704,22 @@ function _deliveryFeeHeldByRider(o) {
   // "Out" button (updateDeliveryStatus) — that's the only path that ever
   // creates a kitchen_orders row for a Delivery order, so kitchen_order_id
   // is the reliable signal for "rider collected this fee, not us."
-  return 0; // riders return the delivery fee to the shop, so nothing is held back
+  if (o._feeStripped || o.type !== 'Delivery') return 0;
+  const fee = Number(o.deliveryCharge ?? o.delivery_charge) || 0;
+  if (o.method === 'cash') return fee;
+  if (o.method === 'split') return Math.min(fee, o.splitCash || o.split_cash || 0);
+  return 0;
+}
+function _stripRiderFee(t) {
+  if (t._feeStripped || t.type !== 'Delivery') return t;
+  if (!['cash','card','bank','jazzcash','foodpanda','split'].includes(t.method)) return t;
+  const fee = Number(t.delivery_charge) || 0;
+  t.rider_fee = fee;
+  t.total = (t.total || 0) - fee;
+  t.delivery_charge = 0;
+  if (t.method === 'split') t.split_cash = Math.max(0, (t.split_cash || 0) - fee);
+  t._feeStripped = true;
+  return t;
 }
 function sumDeliveryFeesHeldByRider(orders) {
   return (orders || []).reduce((s,o) => s + _deliveryFeeHeldByRider(o), 0);
@@ -1712,14 +1748,15 @@ let _sharedDateRange = null; // {from, to}
 function _loadSharedDateRange() {
   try {
     const raw = localStorage.getItem('ovenx_shared_daterange_' + activeBranch);
-    if (raw) _sharedDateRange = JSON.parse(raw);
+    const _r = raw ? JSON.parse(raw) : null;
+    _sharedDateRange = (_r && _r.day === todayKey()) ? _r : null;   // yesterday's saved range is discarded
   } catch(e) { _sharedDateRange = null; }
 }
 function syncDateRangeFromInputs(fromId, toId) {
   const fromEl = document.getElementById(fromId);
   const toEl = document.getElementById(toId);
   if (!fromEl || !toEl) return;
-  _sharedDateRange = { from: fromEl.value, to: toEl.value };
+  _sharedDateRange = { from: fromEl.value, to: toEl.value, day: todayKey() };
   try {
     localStorage.setItem('ovenx_shared_daterange_' + activeBranch, JSON.stringify(_sharedDateRange));
   } catch(e) {}
@@ -1731,10 +1768,9 @@ function _applySharedRangeOrDefault(fromId, toId) {
   if (_sharedDateRange && _sharedDateRange.from && _sharedDateRange.to) {
     fromEl.value = _sharedDateRange.from;
     toEl.value = _sharedDateRange.to;
-  } else if (!fromEl.value || !toEl.value) {
-    const today = todayKey();
-    fromEl.value = fromEl.value || (today + 'T00:00');
-    toEl.value = toEl.value || (today + 'T23:59');
+  } else {
+    fromEl.value = bizDayFrom();
+    toEl.value = bizDayTo();
   }
 }
 function genId() {
@@ -1798,8 +1834,8 @@ async function checkLoginGate() {
     const pk = new Date(Date.now() + 5 * 60 * 60 * 1000);
     const hourPK = parseInt(pk.toISOString().slice(11, 13), 10);
 
-    if (hourPK < 15) { // before 3:00 PM
-      return { blocked: true, reopenTime: '3:00 PM' };
+    if (hourPK < 10) { // before 10:00 AM
+      return { blocked: true, reopenTime: '10:00 AM' };
     }
     return { blocked: false };
   } catch (e) {
@@ -1965,13 +2001,17 @@ async function doLogout() {
   // ✅ No localStorage.clear() — data stays, next login restores everything from Supabase
 }
 
+// Business day runs BIZ_DAY_START_HOUR (PKT) → same hour next morning.
+// 3 AM on Oct 30 still belongs to business day Oct 29.
+const BIZ_DAY_START_HOUR = 10;
 function todayKey() {
-  // Use Pakistan timezone (UTC+5) consistently
-  const now = new Date();
-  // Format as YYYY-MM-DD in Pakistan time
-  const pkTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
-  return pkTime.toISOString().slice(0, 10);
+  return new Date(Date.now() + (5 - BIZ_DAY_START_HOUR) * 3600000).toISOString().slice(0, 10);
 }
+function bizDayEndKey() {
+  return new Date(Date.now() + (5 - BIZ_DAY_START_HOUR) * 3600000 + 86400000).toISOString().slice(0, 10);
+}
+function bizDayFrom() { return todayKey() + 'T' + String(BIZ_DAY_START_HOUR).padStart(2,'0') + ':00'; }
+function bizDayTo()   { return bizDayEndKey() + 'T' + String(BIZ_DAY_START_HOUR - 1).padStart(2,'0') + ':59'; }
 function _dtLocalToISO(val) {
   if (!val) return null;
   return new Date(val + ':00+05:00').toISOString(); // datetime-local has no TZ — treat as Pakistan time
@@ -2000,7 +2040,7 @@ function _saveObCache(branch, dateStr, amount) {
 async function fetchOpeningBalance(branch, dateStr) {
   // Today, this branch: the live in-memory value is always freshest —
   // never fall back to a stale/zero cloud read for today.
-  if (branch === activeBranch && dateStr === todayKey()) {
+  if (branch === activeBranch && dateStr === todayKey() && openingBalance) {
     _saveObCache(branch, dateStr, openingBalance);
     return { amount: openingBalance, ok: true };
   }
@@ -2137,7 +2177,7 @@ function startDateRolloverWatcher() {
     const nowDate = todayKey();
     if (nowDate !== _lastKnownDate) {
       console.log('📅 New business day detected:', _lastKnownDate, '→', nowDate);
-      _lastKnownDate = nowDate;
+      _lastKnownDate = nowDate; _sharedDateRange = null;
       billCounter = 1;
       completedOrders = [];
       openingBalance = 0;
@@ -2411,7 +2451,7 @@ function handleShiftTxRealtime(payload) {
     staff: t.staff, branch: t.branch || activeBranch,
     customerName: t.customer_name || '', customerPhone: t.customer_phone || '',
     deliveryAddress: t.delivery_address || '', deliveryCharge: t.delivery_charge || 0,
-    sc: t.sc || 0, scPct: t.sc_pct || 0, disc: t.discount || 0,
+    sc: t.sc || 0, scPct: t.sc_pct || 0, disc: t.discount || 0, tax: t.tax || 0,
     cashReceived: t.cash_received || 0, splitCash: t.split_cash || 0,
     splitCard: t.split_card || 0, returnReason: t.return_reason || '',
     kitchenOrderId: t.kitchen_order_id || null
@@ -3189,6 +3229,7 @@ function switchView(v) {
   loadHistoryForRange(document.getElementById('history-date-picker').value, document.getElementById('history-date-to-picker').value);
 }
   if (v === 'credit') renderCreditView();
+  if (v === 'foodpanda') { fpRender(); setTimeout(()=>document.getElementById('fp-search')?.focus(),100); }
   if (v === 'crosscheck') {
     _applySharedRangeOrDefault('xc-date-from', 'xc-date-to');
     loadCrossCheck();
@@ -4921,10 +4962,9 @@ async function _assignKotNumber(orderRef) {
       .select('bill_no').eq('branch', activeBranch).eq('date', todayKey());
     const { data: koData } = await sb.from('kitchen_orders')
       .select('kot_no').eq('branch', activeBranch)
-      .gte('created_at', todayKey() + 'T00:00:00+05:00')
-      .lte('created_at', todayKey() + 'T23:59:59+05:00');
+      .gte('created_at', todayKey() + 'T' + String(BIZ_DAY_START_HOUR).padStart(2,'0') + ':00:00+05:00');
     const allNums = [...(txData || []).map(t => t.bill_no), ...(koData || []).map(k => k.kot_no)]
-      .map(b => parseInt(String(b).split('-').pop())).filter(n => !isNaN(n));
+      .filter(b => b && !String(b).startsWith('DLV-')).map(b => String(b).match(/-(\d{1,6})$/)).filter(Boolean).map(m => parseInt(m[1], 10));
     if (allNums.length > 0) nextNum = Math.max(...allNums) + 1;
   } catch (e) { console.warn("DB counter check failed, using local counter:", e); }
 
@@ -4932,6 +4972,7 @@ async function _assignKotNumber(orderRef) {
 
   const assignedKot = DEVICE_CODE + '-' + String(nextNum).padStart(3, '0');
   order.kotNo = assignedKot;
+  if (order.id && sb) sbWrite('kitchen_orders', 'update', { kot_no: assignedKot }, { eq: [['id', order.id]] });
   billCounter = Math.max(billCounter, nextNum + 1);
   document.getElementById('bar-billno').textContent = String(billCounter).padStart(3, '0');
 
@@ -5327,7 +5368,7 @@ async function completePayment() {
       order_started_at: currentOrder.startTime ? new Date(currentOrder.startTime).toISOString() : null,
       items: sale.items,
       items_text: sale.items.map(i => `${i.qty}x ${i.name}`).join(', ') + sale.riderTag,
-      subtotal: sale.items.reduce((s,i) => s + i.price * i.qty, 0),
+      subtotal: sale.items.filter(i => !i.returned).reduce((s,i) => s + i.price * i.qty, 0),
       sc: sale.sc, sc_pct: sale.scPct, discount: sale.disc || 0,
       delivery_charge: sale.deliveryCharge || 0,
       tax: sale.tax || 0,
@@ -5852,7 +5893,7 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
         }
 
         completedOrders.push(sale);
-        if (paymentMethod === 'cash') cashInHand += grandTotal; // fee comes back to the shop
+        cashInHand = computeCashInHand(completedOrders, openingBalance);
         document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
         saveTodaySales();
       }
@@ -6232,8 +6273,8 @@ async function exportExpensesExcel() {
   if (typeof ExcelJS === 'undefined') { showToast('Excel library not loaded — refresh the page', 'error'); return; }
   if (!sb || !isOnline) { showToast('No internet connection', 'error'); return; }
 
-  const fromVal = (_sharedDateRange && _sharedDateRange.from) || (todayKey() + 'T00:00');
-  const toVal   = (_sharedDateRange && _sharedDateRange.to)   || (todayKey() + 'T23:59');
+  const fromVal = (_sharedDateRange && _sharedDateRange.from) || (bizDayFrom());
+  const toVal   = (_sharedDateRange && _sharedDateRange.to)   || (bizDayTo());
   const fromISO = _dtLocalToISO(fromVal), toISO = _dtLocalToISO(toVal);
   showToast('Preparing expenses export…', 'success');
 
@@ -6383,13 +6424,12 @@ function renderCashView(txList, openingBal, isRange) {
   const bills = orders.filter(o => !NON_BILL.includes(o.method));
   const pm = sumByMethod(bills);
   const grandTotal = bills.reduce((s,o) => s + (o.total||0), 0);
-  const grossSale = bills.reduce((s,o) => s + (o.subtotal ? o.subtotal :
-        Math.max(0,(o.total||0)-(o.sc||0)-(o.deliveryCharge||0)-(o.tax||0)+(o.disc||0))), 0);
+const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
   const discGiven = bills.reduce((s,o) => s + (o.disc||0), 0);
   const netSale = grossSale - discGiven;
   const scCollected = bills.reduce((s,o) => s + (o.sc||0), 0);
   const taxTotal = bills.reduce((s,o) => s + (o.tax||0), 0);
-  const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.deliveryCharge||0), 0);
+  const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
   const avg = bills.length ? Math.round(grandTotal / bills.length) : 0;
   const returnTotal = orders.filter(o => o.method==='return').reduce((s,o) => s + Math.abs(o.total), 0);
   const expAll = orders.filter(o => o.method==='expense');
@@ -6406,7 +6446,7 @@ function renderCashView(txList, openingBal, isRange) {
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${delFees}</div><div class="cs-lbl">Del Fees (incl.)</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${delFees}</div><div class="cs-lbl">Rider Fees (not ours)</div></div>
     <div class="cs-card orange"><div class="cs-val">${bills.length}</div><div class="cs-lbl">Bills</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${pm.cash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -6443,9 +6483,9 @@ function renderCashView(txList, openingBal, isRange) {
       <td style="text-align:center;">
         <div style="display:flex;gap:3px;justify-content:center;">
         ${o.billNo && !/^(CI|CO|VOID|RTN|ADJ|DISC|DELDEL|EXP|CRPAY)(-X|$)/.test(o.billNo) && !o.billNo.startsWith('SPL') ? 
-          `<button onclick="reprintReceipt('${o.billNo}')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;" title="Reprint">🖨️</button>` : 
+          `<button onclick="reprintReceipt('${o.billNo}','${o.id||''}')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;" title="Reprint">🖨️</button>` : 
           '<span style="color:var(--text3);font-size:11px;"></span>'}
-        ${currentStaffRole === 'Admin' && o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' ? `<button onclick="openAdminTxModal('${o.billNo}',${(o.date||todayKey())===todayKey()},'${o.date||todayKey()}','${activeBranch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;" title="Admin Edit">⚙️</button>` : ''}
+        ${currentStaffRole === 'Admin' && o.billNo && o.billNo !== 'CI' && o.billNo !== 'CO' ? `<button onclick="openAdminTxModal('${o.billNo}',${(o.date||todayKey())===todayKey()},'${o.date||todayKey()}','${activeBranch}','${o.id||''}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;" title="Admin Edit">⚙️</button>` : ''}
         </div>
       </td>
     </tr>
@@ -6461,8 +6501,8 @@ let _cashViewFrom = '';
 let _cashViewTo = '';
 
 async function loadCashForRange(fromVal, toVal) {
-  if (!fromVal) fromVal = todayKey() + 'T00:00';
-  if (!toVal) toVal = todayKey() + 'T23:59';
+  if (!fromVal) fromVal = bizDayFrom();
+  if (!toVal) toVal = bizDayTo();
   const fromDate = fromVal.slice(0,10);
   let txs = [];
   try {
@@ -6480,7 +6520,7 @@ async function loadCashForRange(fromVal, toVal) {
     staff: t.staff, deliveryAddress: t.delivery_address || '',
     deliveryCharge: t.delivery_charge || 0,
     splitCash: t.split_cash || 0, splitCard: t.split_card || 0,
-    subtotal: t.subtotal || 0, sc: t.sc || 0, disc: t.discount || 0, tax: t.tax || 0,
+    subtotal: t.subtotal || 0, sc: t.sc || 0, disc: t.discount || 0, tax: t.tax || 0, riderFee: t.rider_fee || 0,
     kitchenOrderId: t.kitchen_order_id || null
   }));
 
@@ -6501,8 +6541,8 @@ async function loadCashForRange(fromVal, toVal) {
 }
 
 async function printCashDrawerReport() {
-  const fromVal = _cashViewFrom || document.getElementById('cash-date-from')?.value || (todayKey() + 'T00:00');
-  const toVal = _cashViewTo || document.getElementById('cash-date-to')?.value || (todayKey() + 'T23:59');
+  const fromVal = _cashViewFrom || document.getElementById('cash-date-from')?.value || (bizDayFrom());
+  const toVal = _cashViewTo || document.getElementById('cash-date-to')?.value || (bizDayTo());
   const orders = _cashViewTxs || completedOrders;
   const opening = _cashViewTxs ? _cashViewOpening : openingBalance;
 
@@ -6513,7 +6553,7 @@ async function printCashDrawerReport() {
   const totalCash = cashSales + splitCash;
   const totalCard = orders.filter(o=>['card','bank','jazzcash'].includes(o.method)).reduce((s,o)=>s+o.total,0) + splitCard;
   const totalPanda = orders.filter(o=>o.method==='foodpanda').reduce((s,o)=>s+o.total,0);
-  const totalDelFees = orders.filter(o=>o.type==='Delivery' && !['void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o)=>s+(o.deliveryCharge||0),0);
+  const totalDelFees = orders.filter(o=>o.type==='Delivery' && !['void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o)=>s+(o.riderFee ?? o.deliveryCharge ?? 0),0);
   const cashOuts = orders.filter(o=>o.method==='cash-out').reduce((s,o)=>s+Math.abs(o.total),0);
   const expenses = orders.filter(o=>o.method==='expense').reduce((s,o)=>s+Math.abs(o.total),0);
   const expected = computeCashInHand(orders, opening);
@@ -6551,20 +6591,42 @@ async function printCashDrawerReport() {
 // ══════════════════════════════════
 // CLOSING REPORT
 // ══════════════════════════════════
+// Gross sale of one bill. Delivery rows store subtotal AFTER discount — add it back.
+function _grossOf(t) {
+  const sub = Number(t.subtotal)||0, disc = Number(t.discount ?? t.disc)||0, sc = Number(t.sc)||0,
+        tax = Number(t.tax)||0, del = Number(t.delivery_charge ?? t.deliveryCharge)||0, tot = Number(t.total)||0;
+  if (!sub) return Math.max(0, tot - sc - del - tax + disc);
+  if (t.type === 'Delivery' && disc > 0 && Math.abs(sub - disc + sc + tax + del - tot) === disc) return sub + disc;
+  return sub;
+}
 function sumByMethod(list) {
-  const r = { cash:0, card:0, bank:0, jazzcash:0, foodpanda:0 };
-  (list || []).forEach(t => {
-    const sc = t.split_cash ?? t.splitCash ?? 0, sk = t.split_card ?? t.splitCard ?? 0;
-    if (t.method === 'split') { r.cash += sc; r.card += sk; }
-    else if (t.method in r) r[t.method] += t.total || 0;
+  const totals = {
+    cash: 0,
+    card: 0,
+    bank: 0,
+    jazzcash: 0,
+    foodpanda: 0
+  };
+
+  (list || []).forEach(o => {
+    const method = String(o.method || '').toLowerCase();
+    const amount = Number(o.total) || 0;
+
+    if (method === 'split') {
+      totals.cash += Number(o.split_cash ?? o.splitCash) || 0;
+      totals.card += Number(o.split_card ?? o.splitCard) || 0;
+    } else if (Object.prototype.hasOwnProperty.call(totals, method)) {
+      totals[method] += amount;
+    }
   });
-  return r;
+
+  return totals;
 }
 async function renderClosingReport() {
   const fromEl = document.getElementById('closing-date-from');
   const toEl = document.getElementById('closing-date-to');
-  if (!fromEl.value) fromEl.value = todayKey() + 'T00:00';
-  if (!toEl.value) toEl.value = todayKey() + 'T23:59';
+  if (!fromEl.value) fromEl.value = bizDayFrom();
+  if (!toEl.value) toEl.value = bizDayTo();
   const fromDate = fromEl.value.slice(0,10), toDate = toEl.value.slice(0,10);
 
   document.getElementById('closing-date').textContent =
@@ -6581,7 +6643,7 @@ async function renderClosingReport() {
   const sales = txs.filter(t => !['cash-in','cash-out'].includes(t.method));
   const billsOnly = sales.filter(t => !['void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
   const total = billsOnly.reduce((s,t) => s + t.total, 0);
-  const deliveryFeesOnly = billsOnly.filter(t => t.type === 'Delivery').reduce((s,t) => s + (t.delivery_charge||0), 0);
+  const deliveryFeesOnly = billsOnly.filter(t => t.type === 'Delivery').reduce((s,t) => s + (t.rider_fee||0), 0);
   const shopTotal = total;
   const totalCash = billsOnly.filter(t => t.method === 'cash').reduce((s,t) => s + t.total, 0)
     + billsOnly.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_cash||0), 0);
@@ -6608,7 +6670,7 @@ async function renderClosingReport() {
   const totalDelCharges = deliveryFeesOnly;
   const avg = billsOnly.length > 0 ? Math.round(shopTotal/billsOnly.length) : 0;
     const pm = sumByMethod(billsOnly);
-  const grossSale = billsOnly.reduce((s,t) => s + (t.subtotal||0), 0);
+  const grossSale = billsOnly.reduce((s,t) => s + _grossOf(t), 0);
   const netSale = grossSale - discGiven;
   const taxTotal = billsOnly.reduce((s,t) => s + (t.tax||0), 0);
 
@@ -6636,7 +6698,7 @@ async function renderClosingReport() {
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Del Fees (incl.)</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Fees (not ours)</div></div>
     <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -6655,7 +6717,7 @@ async function renderClosingReport() {
   const staffBreakdownHTML = staffNames.map(name => {
     const staffSales = billsOnly.filter(t => t.staff === name);
     const staffTotal = staffSales.reduce((s,t) => s + t.total, 0);
-    const staffDelFees = staffSales.filter(t=>t.type==='Delivery').reduce((s,t)=>s+(t.delivery_charge||0),0);
+    const staffDelFees = staffSales.filter(t=>t.type==='Delivery').reduce((s,t)=>s+(t.rider_fee||0),0);
     const staffShopTotal = staffTotal;
     const staffCash = staffSales.filter(t => t.method === 'cash').reduce((s,t) => s + t.total, 0) + staffSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_cash||0), 0);
     const staffCard = staffSales.filter(t => ['card','bank','jazzcash','foodpanda'].includes(t.method)).reduce((s,t) => s + t.total, 0) + staffSales.filter(t => t.method === 'split').reduce((s,t) => s + (t.split_card||0), 0);
@@ -6713,8 +6775,8 @@ async function renderClosingReport() {
 }
 
 async function printClosingReport() {
-  const fromVal = document.getElementById('closing-date-from').value || (todayKey() + 'T00:00');
-  const toVal   = document.getElementById('closing-date-to').value   || (todayKey() + 'T23:59');
+  const fromVal = document.getElementById('closing-date-from').value || (bizDayFrom());
+  const toVal   = document.getElementById('closing-date-to').value   || (bizDayTo());
   const fromDate = fromVal.slice(0,10), toDate = toVal.slice(0,10);
 
   let txs = [];
@@ -6772,8 +6834,8 @@ async function printClosingReport() {
   }, 500);
 }
 async function exportClosingExcel() {
-  const fromVal = document.getElementById('closing-date-from').value || (todayKey() + 'T00:00');
-  const toVal   = document.getElementById('closing-date-to').value   || (todayKey() + 'T23:59');
+  const fromVal = document.getElementById('closing-date-from').value || (bizDayFrom());
+  const toVal   = document.getElementById('closing-date-to').value   || (bizDayTo());
   const fromDate = fromVal.slice(0,10), toDate = toVal.slice(0,10);
 
   let txs = [];
@@ -6827,6 +6889,13 @@ async function exportClosingExcel() {
   lines.push(`Discounts Given,Rs ${discGiven}`);
   lines.push(`Returns,Rs ${returnTotal}`);
   lines.push(`Voids,Rs ${voidTotal}`);
+const itemVoids = sales.filter(t => t.method === 'item-void');
+const itemVoidTotal = itemVoids.reduce((s,t) => s + Math.abs(t.total), 0);
+const discardedRows = sales.filter(t => t.method === 'discarded');
+const deletedDelRows = sales.filter(t => t.method === 'deleted-delivery');
+lines.push(`Items Removed After KOT,${itemVoids.length} (Rs ${itemVoidTotal})`);
+lines.push(`Discarded Orders,${discardedRows.length} (Rs ${discardedRows.reduce((s,t)=>s+Math.abs(t.total),0)})`);
+lines.push(`Deleted Delivery Orders,${deletedDelRows.length} (Rs ${deletedDelRows.reduce((s,t)=>s+Math.abs(t.total),0)})`);
   lines.push(`Cash Outs,Rs ${cashOuts}`);
   lines.push(`Expenses,Rs ${expenses}`);
   lines.push(`Opening Balance,Rs ${opening}`);
@@ -6834,13 +6903,25 @@ async function exportClosingExcel() {
   lines.push('');
 
   lines.push('ALL TRANSACTIONS');
-  lines.push('Bill#,Date,Time,Type,Table,Items,Payment Method,SC,Discount,Total,Staff');
+  lines.push('Bill#,Date,Time,Type,Table,Items,Payment Method,Subtotal,SC,Tax,Discount,Delivery Fee,Total,Staff');
   txs.forEach(t => {
     const time = new Date(t.created_at).toLocaleTimeString('en-PK', { hour:'2-digit', minute:'2-digit', hour12:true });
     const clean = str => (str||'—').toString().replace(/,/g,';').replace(/\n/g,' | ').trim();
-    lines.push(`${t.bill_no||'—'},${t.date||'—'},${time},${t.type||'—'},${clean(t.table_loc)},${clean(t.items_text)},${t.method||'—'},${t.sc||0},${t.discount||0},${Math.abs(t.total)},${t.staff||'—'}`);
+    lines.push(`${t.bill_no||'—'},${t.date||'—'},${time},${t.type||'—'},${clean(t.table_loc)},${clean(t.items_text)},${t.method||'—'},${t.subtotal||0},${t.sc||0},${t.tax||0},${t.discount||0},${t.rider_fee ?? t.delivery_charge ?? 0},${Math.abs(t.total)},${t.staff||'—'}`);
   });
   lines.push('');
+
+  [['ITEM REMOVAL DETAILS (after KOT)', itemVoids], ['DISCARDED ORDER DETAILS', discardedRows], ['DELETED DELIVERY DETAILS', deletedDelRows]].forEach(([title, arr]) => {
+    if (!arr.length) return;
+    lines.push('');
+    lines.push(title);
+    lines.push('Date,Time,Table,Type,Items,Amount,Staff,Reason');
+    arr.forEach(r => {
+      const time = new Date(r.created_at).toLocaleTimeString('en-PK', { hour:'2-digit', minute:'2-digit', hour12:true });
+      const clean = str => (str||'—').toString().replace(/,/g,';').replace(/\n/g,' | ').trim();
+      lines.push(`${r.date},${time},${clean(r.table_loc)},${r.type||'—'},${clean(r.items_text)},Rs ${Math.abs(r.total)},${r.staff||'—'},${clean(r.return_reason)}`);
+    });
+  });
 
   if (voids.length) {
     lines.push('VOID DETAILS');
@@ -6921,7 +7002,7 @@ async function loadTodaySales() {
 
    // ── Load completed transactions ───────────────────────────────
     const { data: txs } = await sb.from('shift_transactions')
-      .select('id, bill_no, type, table_loc, items_text, total, method, created_at, staff, branch, customer_name, customer_phone, delivery_address, delivery_charge, sc, sc_pct, discount, cash_received, split_cash, split_card, return_reason, kitchen_order_id')
+      .select('id, bill_no, type, table_loc, items_text, total, method, created_at, staff, branch, customer_name, customer_phone, delivery_address, delivery_charge, sc, sc_pct, tax, discount, cash_received, split_cash, split_card, return_reason, kitchen_order_id')
       .eq('branch', activeBranch).eq('date', todayK)
       .order('created_at', { ascending: true });
 
@@ -6934,7 +7015,7 @@ async function loadTodaySales() {
         staff: t.staff, branch: t.branch || activeBranch,
         customerName: t.customer_name || '', customerPhone: t.customer_phone || '',
         deliveryAddress: t.delivery_address || '', deliveryCharge: t.delivery_charge || 0,
-        sc: t.sc || 0, scPct: t.sc_pct || 0, disc: t.discount || 0,
+        sc: t.sc || 0, scPct: t.sc_pct || 0, disc: t.discount || 0, tax: t.tax || 0,
         cashReceived: t.cash_received || 0, splitCash: t.split_cash || 0,
         splitCard: t.split_card || 0, returnReason: t.return_reason || '',
         kitchenOrderId: t.kitchen_order_id || null
@@ -6976,13 +7057,13 @@ async function loadTodaySales() {
 // ══════════════════════════════════
 // TOAST
 // ══════════════════════════════════
-async function reprintReceipt(billNo) {
+async function reprintReceipt(billNo, rowId) {
   // ✅ FIX 3: Reprint any past bill from memory or Supabase
-  let sale = completedOrders.find(o => o.billNo === billNo);
+  let sale = completedOrders.find(o => rowId ? o.id === rowId : o.billNo === billNo);
   if (!sale && sb) {
     try {
       const { data } = await sb.from('shift_transactions')
-        .select('*').eq('branch', activeBranch).eq('bill_no', billNo)
+        .select('*').eq('branch', activeBranch).match(rowId ? { id: rowId } : { bill_no: billNo })
         .order('created_at', { ascending: false }).limit(1);
       if (data && data[0]) {
         const t = data[0];
@@ -6992,7 +7073,7 @@ async function reprintReceipt(billNo) {
           staff:t.staff, branch:t.branch||activeBranch,
           customerName:t.customer_name||'', customerPhone:t.customer_phone||'',
           deliveryAddress:t.delivery_address||'', deliveryCharge:t.delivery_charge||0,
-          sc:t.sc||0, scPct:t.sc_pct||7, disc:t.discount||0,
+          sc:t.sc||0, scPct:t.sc_pct||7, disc:t.discount||0, tax:t.tax||0,
           cashReceived:t.cash_received||0, splitCash:t.split_cash||0, splitCard:t.split_card||0 };
       }
     } catch(e) { showToast('Could not fetch bill', 'error'); return; }
@@ -7038,6 +7119,7 @@ async function reprintReceipt(billNo) {
         ${food>0?'<div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>Rs '+food+'</span></div>':''}
         ${(sale.sc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>SC ('+sale.scPct+'%):</span><span>Rs '+sale.sc+'</span></div>':''}
         ${(sale.deliveryCharge||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Delivery:</span><span>Rs '+sale.deliveryCharge+'</span></div>':''}
+        ${(sale.tax||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Tax:</span><span>Rs '+sale.tax+'</span></div>':''}
         ${(sale.disc||0)>0?'<div style="display:flex;justify-content:space-between;"><span>Discount:</span><span>-Rs '+sale.disc+'</span></div>':''}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid #000;padding-top:3px;margin-top:3px;">
           <span>TOTAL:</span><span>Rs ${sale.total}</span>
@@ -7376,7 +7458,7 @@ async function loadHistoryForRange(fromDateTime, toDateTime) {
                   <td style="color:var(--text2);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.items_text||'—'}</td>
                   <td><span class="tx-type tx-sale">${t.method||'—'}</span></td>
                   <td style="text-align:right;font-weight:700;color:${t.total<0?'var(--red)':'var(--green)'};">Rs ${Math.abs(t.total)}</td>
-                  ${currentStaffRole==='Admin'?`<td style="text-align:center;padding:4px 8px;"><button onclick="openAdminTxModal('${t.bill_no}',false,'${t.date}','${branch}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;">⚙️</button></td>`:'<td></td>'}
+                  ${currentStaffRole==='Admin'?`<td style="text-align:center;padding:4px 8px;"><button onclick="openAdminTxModal('${t.bill_no}',false,'${t.date}','${branch}','${t.id||''}')" style="padding:2px 8px;border-radius:4px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;cursor:pointer;">⚙️</button></td>`:'<td></td>'}
                 </tr>
               `).join('')}
             </tbody>
@@ -7410,8 +7492,8 @@ async function fetchRangeTotals(branch, fromISO, toISO) {
 }
 
 async function loadTotalsForRange(fromVal, toVal) {
-  if (!fromVal) fromVal = todayKey() + 'T00:00';
-  if (!toVal) toVal = todayKey() + 'T23:59';
+  if (!fromVal) fromVal = bizDayFrom();
+  if (!toVal) toVal = bizDayTo();
   const content = document.getElementById('totals-content');
   content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);">Loading totals…</div>';
 
@@ -7443,6 +7525,108 @@ async function loadTotalsForRange(fromVal, toVal) {
     </div>
   `;
   showToast('Totals loaded ✅', 'success');
+}
+
+// ══════════ FOODPANDA PUNCH-IN ══════════
+let fpLines = [];
+function fpAllItems() {
+  const out = [];
+  for (const cat in menuData) menuData[cat].forEach(i => {
+    if (i._unavailable || (i.bwp && activeBranch !== 'BWP')) return;
+    if (typeof i.p === 'object') Object.entries(i.p).forEach(([s,p]) => out.push({ name: i.n + ' (' + s + ')', price: p, cat }));
+    else out.push({ name: i.n, price: i.p, cat });
+  });
+  dealsData.forEach(d => { if (!d._unavailable) out.push({ name: d.n, price: d.p, cat: 'Deals' }); });
+  return out;
+}
+function fpSearch(v) {
+  const box = document.getElementById('fp-results');
+  v = (v || '').toLowerCase().trim();
+  if (v.length < 2) { box.innerHTML = ''; return; }
+  const m = fpAllItems().filter(i => i.name.toLowerCase().includes(v)).slice(0, 30);
+  window._fpMatches = m;
+  box.innerHTML = m.length ? m.map((i,k) =>
+    `<div onclick="fpAdd(${k})" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;background:var(--surface2);cursor:pointer;display:flex;justify-content:space-between;">
+      <span style="font-weight:700;">${i.name} <span style="font-size:11px;color:var(--text3);">${i.cat}</span></span>
+      <span style="color:var(--orange);font-weight:800;">Rs ${i.price}</span></div>`).join('')
+    : '<div style="padding:12px;color:var(--text3);font-size:13px;">Not found — use "+ New item / deal"</div>';
+}
+function fpAdd(k) {
+  const i = window._fpMatches[k]; if (!i) return;
+  fpPush(i.name, i.price);
+}
+function fpPush(name, price) {
+  const ex = fpLines.find(l => l.name === name);
+  if (ex) ex.qty++; else fpLines.push({ name, price: Number(price) || 0, qty: 1 });
+  fpRender();
+}
+function fpRender() {
+  const el = document.getElementById('fp-lines');
+  if (!el) return;
+  el.innerHTML = fpLines.length ? fpLines.map((l,i) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
+      <div style="flex:1;font-weight:700;">${l.name}</div>
+      <button onclick="fpQty(${i},-1)" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;">−</button>
+      <b style="min-width:26px;text-align:center;">${l.qty}</b>
+      <button onclick="fpQty(${i},1)" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;">+</button>
+      <input type="number" value="${l.price}" min="0" oninput="fpPrice(${i},this.value)" style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px;color:var(--orange);font-weight:700;text-align:center;">
+      <div style="width:80px;text-align:right;color:var(--green);font-weight:800;">Rs ${l.price * l.qty}</div>
+    </div>`).join('')
+    : '<div style="padding:18px;text-align:center;color:var(--text3);">No items yet — search above and tap to add</div>';
+  document.getElementById('fp-total').textContent = 'Rs ' + fpLines.reduce((s,l) => s + l.price * l.qty, 0);
+}
+function fpQty(i, d) { fpLines[i].qty += d; if (fpLines[i].qty <= 0) fpLines.splice(i, 1); fpRender(); }
+function fpPrice(i, v) {
+  fpLines[i].price = parseFloat(v) || 0;
+  document.getElementById('fp-total').textContent = 'Rs ' + fpLines.reduce((s,l) => s + l.price * l.qty, 0);
+}
+function fpClear() { fpLines = []; fpRender(); }
+
+async function fpAddNew() {
+  const kind = await askText('What do you want to add?\n1 = Menu item\n2 = Deal');
+  if (kind === null) return;
+  if (kind.trim() !== '1' && kind.trim() !== '2') { showToast('Enter 1 or 2', 'error'); return; }
+  const name = (await askText('Name:') || '').trim();
+  if (!name) return;
+  const price = parseFloat(await askText('Price (Rs):')) || 0;
+  if (price <= 0) { showToast('Valid price required', 'error'); return; }
+  let res;
+  if (kind.trim() === '1') {
+    res = await sbWrite('custom_menu_items', 'insert', [{ branch: activeBranch, category: 'Add-ons', name, price: String(price), available: true }]);
+    if (!res.error) { if (!menuData['Add-ons']) menuData['Add-ons'] = []; menuData['Add-ons'].push({ n: name, p: price, _custom: true }); }
+  } else {
+    const desc = (await askText('Deal description (optional):') || '').trim();
+    res = await sbWrite('custom_deals', 'insert', [{ branch: activeBranch, name, deal_desc: desc, price, available: true }]);
+    if (!res.error) dealsData.push({ n: name, d: desc, p: price, _custom: true });
+  }
+  if (res && res.error) { showToast('Could not save to menu — added to this list only', 'error'); }
+  else showToast('Saved to menu ✅ — set its recipe in Analytics → Ingredients', 'success');
+  fpPush(name, price);
+}
+
+async function fpSave() {
+  if (!fpLines.length) { showToast('No items added', 'error'); return; }
+  if (!isOnline) { showToast('No internet', 'error'); return; }
+  const total = fpLines.reduce((s,l) => s + l.price * l.qty, 0);
+  const items = fpLines.map(l => ({ name: l.name, price: l.price, qty: l.qty, note: '' }));
+  const itemsText = items.map(i => i.qty + 'x ' + i.name).join(', ');
+  const id = genId();
+  const snap = { kotNo: null, table: null };
+  const { res, billNo } = await _insertShiftTxWithRetry(snap, (b) => ({
+    id, branch: activeBranch, date: todayKey(), bill_no: b, type: 'Takeaway', table_loc: 'FoodPanda',
+    items, items_text: itemsText, subtotal: total, sc: 0, sc_pct: 0, discount: 0, delivery_charge: 0, tax: 0,
+    total, method: 'foodpanda', cash_received: 0, split_cash: 0, split_card: 0,
+    staff: currentStaff, customer_name: 'FoodPanda', customer_phone: '', delivery_address: '', kitchen_order_id: null
+  }));
+  if (res && res.error) { showToast('⚠️ Could not save — check internet. Nothing recorded.', 'error'); return; }
+  const sale = { id, billNo, table: 'FoodPanda', type: 'Takeaway', items, itemsText, total, method: 'foodpanda',
+    time: new Date(), staff: currentStaff, branch: activeBranch, sc: 0, disc: 0, tax: 0, splitCash: 0, splitCard: 0 };
+  if (!completedOrders.some(o => o.id === id)) completedOrders.push(sale);
+  deductInventoryForSale(sale);
+  salesTotal += total;
+  fpLines = []; fpRender();
+  document.getElementById('fp-search').value = ''; document.getElementById('fp-results').innerHTML = '';
+  showToast('FoodPanda sale saved — Rs ' + total + ' (' + billNo + ')', 'success');
 }
 
 let toastTimer;
@@ -7584,7 +7768,7 @@ async function submitDeclaration() {
   btn.disabled = true;
   let sys;
   try {
-    const rows = await _xcFetchAll(shiftStart ? shiftStart.toISOString() : _dtLocalToISO(todayKey() + 'T00:00'), new Date().toISOString(), currentStaff);
+    const rows = await _xcFetchAll(shiftStart ? shiftStart.toISOString() : _dtLocalToISO(bizDayFrom()), new Date().toISOString(), currentStaff);
     sys = _xcCalc(rows);
   } catch (e) { btn.disabled = false; showToast('Could not load system figures — check internet', 'error'); return; }
 
@@ -7737,6 +7921,7 @@ async function _xcFetchAll(fromISO, toISO, staff) {
     from += data.length;                   // step by what we really got
     console.log('XC page loaded, total so far:', all.length);
   }
+  all.forEach(_stripRiderFee);
   return all;
 }
 
@@ -7755,8 +7940,8 @@ function _xcCalc(rows) {
 }
 
 async function loadCrossCheck() {
-  const fromVal = document.getElementById('xc-date-from').value || (todayKey() + 'T00:00');
-  const toVal = document.getElementById('xc-date-to').value || (todayKey() + 'T23:59');
+  const fromVal = document.getElementById('xc-date-from').value || (bizDayFrom());
+  const toVal = document.getElementById('xc-date-to').value || (bizDayTo());
   const content = document.getElementById('xc-content');
   if (!isOnline) { showToast('No internet connection', 'error'); return; }
   content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);">Loading…</div>';
@@ -7980,16 +8165,22 @@ async function closeAllShifts() {
   }]);
   const _closeGotQueued = !!(_closureResult && _closureResult.error);
 
-  // Capture totals BEFORE clearing
-  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
+  // Capture totals BEFORE clearing — from the DB over the WHOLE shift window
+  const _cf = bizDayFrom();
+  let _rows = completedOrders, _open = openingBalance;
+  try {
+    const raw = await _xcFetchAll(_dtLocalToISO(_cf), new Date().toISOString());
+    _rows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
+    _open = (await fetchOpeningBalance(activeBranch, _cf.slice(0,10))).amount;
+  } catch(e) { console.warn('Close slip fallback to memory:', e.message); }
+  const allSales = _rows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
-  const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
-    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
-  const totalCard = allSales.filter(o => o.method === 'card').reduce((s,o) => s + o.total, 0)
-    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCard||0), 0);
-  const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
-  const finalHandOver = computeCashInHand(completedOrders, openingBalance);
-  const savedOpeningBalance = openingBalance;
+  const _pm = sumByMethod(allSales);
+  const totalCash = _pm.cash;
+  const totalCard = _pm.card + _pm.bank + _pm.jazzcash + _pm.foodpanda;
+  const cashOuts = _rows.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
+  const finalHandOver = computeCashInHand(_rows, _open);
+  const savedOpeningBalance = _open;
   const savedBranch = activeBranch;
 
   document.getElementById('print-area').innerHTML = `
@@ -8118,13 +8309,18 @@ async function closeAllShiftsAndArchive() {
   }]);
   const _archiveGotQueued = !!(_archiveResult && _archiveResult.error);
 
-  // Capture totals BEFORE clearing
-  const allSales = completedOrders.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
+  // Capture totals BEFORE clearing — from the DB over the whole business day
+  let _rows = completedOrders, _open = openingBalance;
+  try {
+    const raw = await _xcFetchAll(_dtLocalToISO(bizDayFrom()), new Date().toISOString());
+    _rows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
+    _open = (await fetchOpeningBalance(activeBranch, todayKey())).amount;
+  } catch(e) { console.warn('Archive slip fallback to memory:', e.message); }
+  const allSales = _rows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
-  const totalCash = allSales.filter(o => o.method === 'cash').reduce((s,o) => s + o.total, 0)
-    + allSales.filter(o => o.method === 'split').reduce((s,o) => s + (o.splitCash||0), 0);
-  const cashOuts = completedOrders.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
-  const finalHandOver = computeCashInHand(completedOrders, openingBalance);
+  const totalCash = sumByMethod(allSales).cash;
+  const cashOuts = _rows.filter(o => o.method === 'cash-out').reduce((s,o) => s + Math.abs(o.total), 0);
+  const finalHandOver = computeCashInHand(_rows, _open);
   const savedBranch = activeBranch;
 
   document.getElementById('print-area').innerHTML = `
@@ -8314,7 +8510,9 @@ function _recalcAllTotals() {
 
 // Open the admin edit modal for a transaction
 // tx = the completedOrders object (today) or a row object from history DB
-function openAdminTxModal(billNo, isToday, dateStr, branchStr) {
+let _adminTxRowId = '';
+function openAdminTxModal(billNo, isToday, dateStr, branchStr, rowId) {
+  _adminTxRowId = rowId || '';
   if (currentStaffRole !== 'Admin') { showToast('Admin only', 'error'); return; }
   _adminTxIsToday = isToday;
   _adminTxDate    = dateStr || todayKey();
@@ -8324,7 +8522,7 @@ function openAdminTxModal(billNo, isToday, dateStr, branchStr) {
   // sharing the same bill_no, so we always edit/delete the exact one.
   let tx = null;
   if (isToday) {
-    const matches = completedOrders.filter(o => o.billNo === billNo);
+    const matches = completedOrders.filter(o => _adminTxRowId ? o.id === _adminTxRowId : o.billNo === billNo);
     tx = matches.length > 1
       ? matches[matches.length - 1] // most recent — best-effort until user picks
       : matches[0];
@@ -8341,6 +8539,21 @@ function openAdminTxModal(billNo, isToday, dateStr, branchStr) {
 }
 
 async function _fetchAndOpenAdminTxModal(billNo) {
+  if (_adminTxRowId) {
+    const { data: one } = await sb.from('shift_transactions').select('*').eq('id', _adminTxRowId).limit(1);
+    if (one && one.length) {
+      const t = one[0];
+      _adminTxDate = t.date || _adminTxDate;
+      return _openAdminTxModalWithData({
+        billNo: t.bill_no, table: t.table_loc, type: t.type,
+        items: Array.isArray(t.items) ? t.items : [], itemsText: t.items_text || '',
+        total: t.total, method: t.method, time: new Date(t.created_at), staff: t.staff,
+        customerName: t.customer_name || '', sc: t.sc || 0, disc: t.discount || 0,
+        deliveryCharge: t.delivery_charge || 0, splitCash: t.split_cash || 0, splitCard: t.split_card || 0,
+        _dbId: t.id
+      });
+    }
+  }
   try {
     const { data } = await sb.from('shift_transactions')
       .select('*')
@@ -8550,9 +8763,8 @@ async function adminTxSave() {
     total: newTotal,
     method: newMethod,
     items_text: newItemsText,
-    items: itemsForDB.length ? itemsForDB : null,
-    // Recalc subtotal from items if we have prices
-    subtotal: newItems.length ? newItems.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0) : undefined,
+    items: newItems.some(i => i.price > 0) ? itemsForDB : undefined,
+    subtotal: newItems.some(i => i.price > 0) ? newItems.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0) : undefined,
   };
 
   // Remove undefined keys
@@ -8636,7 +8848,7 @@ function toggleAnalyticsPanel() {
       document.getElementById('a-date-from').value = _sharedDateRange.from;
       document.getElementById('a-date-to').value = _sharedDateRange.to;
     } else {
-      const today = todayKey() + 'T23:59';
+      const today = bizDayTo();
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10) + 'T00:00';
       if (!document.getElementById('a-date-from').value) document.getElementById('a-date-from').value = monthStart;
       if (!document.getElementById('a-date-to').value) document.getElementById('a-date-to').value = today;
@@ -8753,7 +8965,7 @@ function aDestroyChart(id) {
 function aLoadOverview() {
   const txs = _aTxData;
   const total = txs.reduce((s,t)=>s+(t.total||0),0);
-  const delFees = txs.filter(t=>t.type==='Delivery').reduce((s,t)=>s+(t.delivery_charge||0),0);
+  const delFees = txs.filter(t=>t.type==='Delivery').reduce((s,t)=>s+(t.rider_fee||0),0);
   const shopTotal = total;
   const cash = txs.filter(t=>t.method==='cash').reduce((s,t)=>s+t.total,0)
               +txs.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_cash||0),0);
@@ -9477,6 +9689,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
