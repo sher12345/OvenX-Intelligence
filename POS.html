@@ -8170,7 +8170,16 @@ function fpSearch(v) {
   const box = document.getElementById('fp-results');
   v = (v || '').toLowerCase().trim();
   if (v.length < 2) { box.innerHTML = ''; return; }
-  const m = fpAllItems().filter(i => i.name.toLowerCase().includes(v)).slice(0, 30);
+  
+  // --- DEBUG START ---
+  const allItems = fpAllItems();
+  if (v === 'combo') {
+    const combosFound = allItems.filter(i => i.name.toLowerCase().includes('combo'));
+    alert("Total items in POS memory: " + allItems.length + "\n\nCombos found in memory: " + combosFound.length + "\n\nNames:\n" + combosFound.map(c => c.name).join("\n"));
+  }
+  // --- DEBUG END ---
+
+  const m = allItems.filter(i => i.name.toLowerCase().includes(v)).slice(0, 30);
   window._fpMatches = m;
   
   box.innerHTML = m.length ? m.map((i,k) =>
@@ -8291,17 +8300,36 @@ function fpAdd(k) {
 function toggleFpFlavor(flavor, btnElement) {
   const maxFlavors = 2;
   const idx = _fpSelectedFlavors.indexOf(flavor);
-  
+
+  // If already selected once, add it again (allows same flavour twice)
   if (idx > -1) {
-    _fpSelectedFlavors.splice(idx, 1);
-    btnElement.classList.remove('selected');
-  } else {
     if (_fpSelectedFlavors.length >= maxFlavors) {
-      showToast(`Max ${maxFlavors} flavours allowed`, 'error');
+      // Already at max — remove one instance instead
+      _fpSelectedFlavors.splice(idx, 1);
+      _fpUpdateFlavorBtn(flavor, btnElement);
       return;
     }
     _fpSelectedFlavors.push(flavor);
+    _fpUpdateFlavorBtn(flavor, btnElement);
+    return;
+  }
+
+  if (_fpSelectedFlavors.length >= maxFlavors) {
+    showToast(`Max ${maxFlavors} flavours allowed`, 'error');
+    return;
+  }
+  _fpSelectedFlavors.push(flavor);
+  _fpUpdateFlavorBtn(flavor, btnElement);
+}
+
+function _fpUpdateFlavorBtn(flavor, btnElement) {
+  const count = _fpSelectedFlavors.filter(f => f === flavor).length;
+  if (count === 0) {
+    btnElement.classList.remove('selected');
+    btnElement.innerHTML = `<div class="size-opt-name" style="font-size:12px;">${flavor}</div>`;
+  } else {
     btnElement.classList.add('selected');
+    btnElement.innerHTML = `<div class="size-opt-name" style="font-size:12px;">${flavor} ${count > 1 ? '×' + count : ''}</div>`;
   }
 }
 
