@@ -80,8 +80,19 @@ label{font-size:13px;font-weight:600;color:var(--t2);display:block}label>*{margi
 .tot{text-align:right;font-weight:700;font-size:17px;margin:10px 0}
 #toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:99px;z-index:99;display:none;font-weight:600;background:var(--card);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--hair);box-shadow:0 6px 24px rgba(0,0,0,.2)}
 @media(max-width:600px){.grid{grid-template-columns:1fr}.ph h2{font-size:21px}}
+#lock{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#lock .box{width:min(320px,100%);text-align:center;background:var(--card);border-radius:20px;padding:28px 22px;box-shadow:var(--shadow)}
+#lock h2{font-size:22px;letter-spacing:-.02em;margin-bottom:4px}
+#lock p{color:var(--t2);font-size:14px;margin-bottom:18px}
+#lock input{text-align:center;font-size:28px;letter-spacing:.5em;padding:12px}
+#pinerr{color:var(--bad);font-size:13px;min-height:20px;margin-top:10px;font-weight:600}
+#lock.shake .box{animation:shk 300ms}
+@keyframes shk{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 </style></head><body>
-<div class="top"><div><div class="logo">Central Warehouse<small>Stock, purchasing and accounts</small></div><div id="tabs"></div><div class="sp row"><span id="sync" class="pill">Connecting…</span></div></div></div>
+<div id="lock"><div class="box"><h2>Central Warehouse</h2><p>Enter PIN to continue</p>
+<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" oninput="if(this.value.length==4)tryPin()" onkeydown="if(event.key=='Enter')tryPin()">
+<div id="pinerr"></div></div></div>
+<div class="top"><div><div class="logo">Central Warehouse<small>Stock, purchasing and accounts</small></div><div id="tabs"></div><div class="sp row"><span id="sync" class="pill">Connecting…</span><button class="b2 sm" onclick="lockApp()">🔒 Lock</button></div></div></div>
 <main id="main"></main><div id="toast"></div>
 <script>
 const SB=supabase.createClient('https://frjcefugnvitexxcated.supabase.co','sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ');
@@ -426,5 +437,14 @@ create table if not exists ledger(id text primary key,party_id text references p
 create table if not exists stock_moves(id text primary key,type text,ingredient_id integer,from_loc text,to_loc text,qty numeric,unitcost numeric default 0,ref text default '',note text default '',at timestamptz default now());
 create table if not exists purchase_orders(id text primary key,no text,party_id text,bizday date,loc_id text,status text default 'open',total numeric default 0,note text default '');
 create table if not exists po_items(id text primary key,po_id text references purchase_orders(id) on delete cascade,ingredient_id integer,qty numeric,price numeric);</pre>`)}
-boot();
-</script></body></html>
+const PIN='2100';
+function startApp(){$('lock').style.display='none';boot()}
+function tryPin(){
+  if($('pin').value===PIN){try{localStorage.setItem('wh_ok','1')}catch(e){}startApp()}
+  else{$('pinerr').textContent='Wrong PIN';$('pin').value='';const l=$('lock');l.classList.remove('shake');void l.offsetWidth;l.classList.add('shake')}
+}
+function lockApp(){try{localStorage.removeItem('wh_ok')}catch(e){}location.reload()}
+let _ok=false;try{_ok=localStorage.getItem('wh_ok')==='1'}catch(e){}
+if(_ok)startApp();else $('pin').focus();
+</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body></html>
