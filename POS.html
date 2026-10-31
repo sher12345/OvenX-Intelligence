@@ -6684,7 +6684,11 @@ async function addCashOut() {
 }
 
 function renderCashView(txList, openingBal, isRange) {
-  const orders = txList || completedOrders;
+  if (!txList) {
+    loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
+    return;
+  }
+  const orders = txList;
   const opening = openingBal !== undefined ? openingBal : openingBalance;
   const NON_BILL = ['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'];
   const bills = orders.filter(o => !NON_BILL.includes(o.method));
@@ -6696,6 +6700,8 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
   const scCollected = bills.reduce((s,o) => s + (o.sc||0), 0);
   const taxTotal = bills.reduce((s,o) => s + (o.tax||0), 0);
   const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
+  const feeFromDrawer = bills.filter(o => o.type==='Delivery' && ['card','bank','jazzcash'].includes(o.method)).reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
+  const feeInCashSales = delFees - feeFromDrawer;
   const avg = bills.length ? Math.round(grandTotal / bills.length) : 0;
   const returnTotal = orders.filter(o => o.method==='return').reduce((s,o) => s + Math.abs(o.total), 0);
   const expAll = orders.filter(o => o.method==='expense');
@@ -6712,7 +6718,10 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${delFees}</div><div class="cs-lbl">Rider Payouts (Cash)</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${delFees}</div><div class="cs-lbl">Rider Fees Given (Total)</div></div>
+    <div class="cs-card red"><div class="cs-val">Rs ${feeInCashSales}</div><div class="cs-lbl">Rider Fees: already out of Cash Collected</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${feeFromDrawer}</div><div class="cs-lbl">Rider Fees: taken from Drawer (card/bank bills)</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.staff}</div><div class="cs-lbl">Staff Meals</div></div>
     <div class="cs-card orange"><div class="cs-val">${bills.length}</div><div class="cs-lbl">Bills</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${pm.cash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -6871,7 +6880,8 @@ function sumByMethod(list) {
     card: 0,
     bank: 0,
     jazzcash: 0,
-    foodpanda: 0
+    foodpanda: 0,
+    staff: 0
   };
 
   (list || []).forEach(o => {
@@ -6934,6 +6944,8 @@ async function renderClosingReport() {
   const expenses = sales.filter(t => t.method === 'expense' && !/^\s*\[FINANCE\]/i.test(t.items_text || '')).reduce((s,t) => s + Math.abs(t.total), 0);
   const financeExp = sales.filter(t => t.method === 'expense' && /^\s*\[FINANCE\]/i.test(t.items_text || '')).reduce((s,t) => s + Math.abs(t.total), 0);
   const totalDelCharges = deliveryFeesOnly;
+  const feeFromDrawer = billsOnly.filter(t => t.type==='Delivery' && ['card','bank','jazzcash'].includes(t.method)).reduce((s,t) => s + (t.rider_fee||0), 0);
+  const feeInCashSales = deliveryFeesOnly - feeFromDrawer;
   const avg = billsOnly.length > 0 ? Math.round(shopTotal/billsOnly.length) : 0;
     const pm = sumByMethod(billsOnly);
   const grossSale = billsOnly.reduce((s,t) => s + _grossOf(t), 0);
@@ -6964,7 +6976,10 @@ async function renderClosingReport() {
     <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
     <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Payouts (Cash)</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Fees Given (Total)</div></div>
+    <div class="cs-card red"><div class="cs-val">Rs ${feeInCashSales}</div><div class="cs-lbl">Rider Fees: already out of Cash Collected</div></div>
+    <div class="cs-card red"><div class="cs-val">-Rs ${feeFromDrawer}</div><div class="cs-lbl">Rider Fees: taken from Drawer (card/bank bills)</div></div>
+    <div class="cs-card blue"><div class="cs-val">Rs ${pm.staff}</div><div class="cs-lbl">Staff Meals</div></div>
     <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
     <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
@@ -7010,7 +7025,9 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Delivery (${delivery.length} bills)</span><span class="cb-row-val">Rs ${delivery.reduce((s,t)=>s+t.total,0)}</span></div>
       <div class="cb-row"><span>SC Collected</span><span class="cb-row-val">Rs ${scCollected}</span></div>
       <div class="cb-row"><span>📦 Delivery Fees Collected</span><span class="cb-row-val" style="color:var(--green);">Rs ${totalDelCharges}</span></div>
-      <div class="cb-row"><span>🏍️ Rider Payouts (From Cash)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${totalDelCharges}</span></div>
+      <div class="cb-row"><span>🏍️ Rider Fees Given (Total)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${totalDelCharges}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">↳ already removed from Cash Sales</span><span class="cb-row-val">Rs ${feeInCashSales}</span></div>
+      <div class="cb-row"><span style="padding-left:12px;">↳ taken from drawer (card/bank/jazz bills)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${feeFromDrawer}</span></div>
       <div class="cb-row"><span>Discounts Given</span><span class="cb-row-val" style="color:var(--red);">Rs ${discGiven}</span></div>
       <div class="cb-row"><span>Returns (${returns.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${returnTotal}</span></div>
       <div class="cb-row"><span>Voids (${voids.length})</span><span class="cb-row-val" style="color:var(--red);">-Rs ${voidTotal}</span></div>
@@ -7026,8 +7043,10 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Bank Sales</span><span class="cb-row-val">Rs ${pm.bank}</span></div>
       <div class="cb-row"><span>JazzCash Sales</span><span class="cb-row-val">Rs ${pm.jazzcash}</span></div>
       <div class="cb-row"><span>FoodPanda Sales</span><span class="cb-row-val">Rs ${pm.foodpanda}</span></div>
+      <div class="cb-row"><span>Staff Meals (no cash received)</span><span class="cb-row-val">Rs ${pm.staff}</span></div>
       <div class="cb-row"><span>Cash Outs</span><span class="cb-row-val" style="color:var(--red);">-Rs ${cashOuts}</span></div>
       <div class="cb-row"><span>Till Expenses</span><span class="cb-row-val" style="color:var(--red);">-Rs ${expenses}</span></div>
+      <div class="cb-row"><span>Rider Fees paid from drawer (non-cash bills)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${feeFromDrawer}</span></div>
       <div class="cb-row"><span>Finance Expenses (not taken from drawer)</span><span class="cb-row-val">Rs ${financeExp}</span></div>
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Expected in Drawer</span>
@@ -10576,6 +10595,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
