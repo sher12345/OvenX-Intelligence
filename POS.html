@@ -1166,6 +1166,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <button class="pay-method-btn"           id="pm-jazzcash"  onclick="selectPayMethod('jazzcash')">📱 JazzCash</button>
       <button class="pay-method-btn"           id="pm-foodpanda" onclick="selectPayMethod('foodpanda')">🐼 FoodPanda</button>
       <button class="pay-method-btn"           id="pm-split"     onclick="selectPayMethod('split')">✂️ Split</button>
+      <button class="pay-method-btn" id="pm-staff" onclick="selectPayMethod('staff')">👷 Staff Meal</button>
     </div>
     <!-- Cash section -->
 <div id="cash-pay-section">
@@ -1294,6 +1295,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
         <button class="pay-method-btn" id="atm-pm-jazzcash"  onclick="adminTxSelectMethod('jazzcash')">📱 JazzCash</button>
         <button class="pay-method-btn" id="atm-pm-foodpanda" onclick="adminTxSelectMethod('foodpanda')">🐼 FoodPanda</button>
         <button class="pay-method-btn" id="atm-pm-split"     onclick="adminTxSelectMethod('split')">✂️ Split</button>
+        <button class="pay-method-btn" id="atm-pm-expense"   onclick="adminTxSelectMethod('expense')" style="grid-column: 1 / -1;">🧾 Expense / Adjustment</button>
       </div>
     </div>
     <div class="admin-tx-section">
@@ -2056,7 +2058,13 @@ function bizDayFrom() { return todayKey() + 'T' + String(BIZ_DAY_START_HOUR).pad
 function bizDayTo()   { return bizDayEndKey() + 'T' + String(BIZ_DAY_START_HOUR - 1).padStart(2,'0') + ':59'; }
 function _dtLocalToISO(val) {
   if (!val) return null;
-  return new Date(val + ':00+05:00').toISOString(); // datetime-local has no TZ — treat as Pakistan time
+  let v = String(val).trim();
+  if (v.includes('T')) {
+    if (v.length === 16) v += ':00'; // e.g. 2026-10-30T10:00 -> 2026-10-30T10:00:00
+  } else {
+    v += 'T00:00:00'; // e.g. 2026-10-30 -> 2026-10-30T00:00:00
+  }
+  return new Date(v + '+05:00').toISOString();
 }
 async function promptPaymentMethod(title) {
   const methodMap = { '1':'cash','2':'jazzcash','3':'card','4':'foodpanda','5':'bank' };
@@ -5463,7 +5471,7 @@ function openPayModal() {
   document.getElementById('split-cash').value = '';
   document.getElementById('split-card').value = '';
   payMethod = 'cash';
-  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(m => {
+  ['cash','card','bank','jazzcash','foodpanda','split','staff'].forEach(m => {
     document.getElementById('pm-'+m).classList.toggle('selected', m === 'cash');
   });
   document.getElementById('cash-pay-section').style.display = 'block'; // Default to showing cash input
@@ -5473,7 +5481,7 @@ function openPayModal() {
 
 function selectPayMethod(m) {
   if (m === 'split') { closeModal('pay-modal'); openSplitModal(); setSplitMode('amount'); return; }
-  payMethod = m;
+  payMethod = m; const _sb = document.getElementById('pm-staff'); if (_sb) _sb.classList.toggle('selected', m === 'staff');
   ['cash','card','bank','jazzcash','foodpanda','split'].forEach(id => {
     document.getElementById('pm-'+id).classList.toggle('selected', id === m);
   });
@@ -7134,7 +7142,7 @@ async function exportClosingStatement() {
   const cashInHand = computeCashInHand(txs, opening);
   const sessions = {};
   decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
-  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]);
+  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]).sort((a, b) => new Date(a.shift_end) - new Date(b.shift_end)).slice(-1);
   const hasDecl = finals.length > 0;
   const submitted = sum(finals, d => d.cash_amount);
   const difference = Math.round(submitted - (cashInHand - opening));
@@ -7348,7 +7356,7 @@ async function _exportClosingStatementOld() {
   // Submitted cash = final attempt of each cashier's end-of-shift report
   const sessions = {};
   decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
-  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]);
+  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]).sort((a, b) => new Date(a.shift_end) - new Date(b.shift_end)).slice(-1);
   const hasDecl = finals.length > 0;
   const submitted = sum(finals, d => d.cash_amount);
   const expectedComparable = cashInHand - opening;   // declared cash excludes the opening float
@@ -8503,13 +8511,15 @@ function askCashierDeclaration() {
 
 function renderDeclForm() {
   document.getElementById('decl-sub').textContent = _declAttempt === 1
-    ? 'Enter your figures for this shift before logging out. Use 0 if none.'
+    ? 'Enter the TOTAL figures for the whole day (all cashiers combined) before logging out. Use 0 if none.'
     : 'Please re-check and enter the correct figures.';
   document.getElementById('decl-body').innerHTML = `
     <div class="of-label">Cash amount collected (Rs)</div>
-    <input class="of-input" type="number" id="decl-cash" min="0" placeholder="0">
+    <input class="of-input" type="number" id="decl-cash" min="0" placeholder="Cash handed over (excluding float)">
     <div class="of-label">Online amount (JazzCash + Card + Bank + FoodPanda) (Rs)</div>
     <input class="of-input" type="number" id="decl-online" min="0" placeholder="0">
+    <div class="of-label">Float kept in drawer for tomorrow (Rs) — 0 if none</div>
+    <input class="of-input" type="number" id="decl-float" min="0" placeholder="0">
     <div class="of-label" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Expenses paid — what for, and how much</span>
       <span style="color:var(--orange);font-weight:800;">Total: <span id="decl-exp-total">Rs 0</span></span>
@@ -8618,11 +8628,12 @@ async function submitDeclaration() {
 
   const btn = document.getElementById('decl-submit-btn');
   btn.disabled = true;
-  let sys;
-  try {
-    const rows = await _xcFetchAll(shiftStart ? shiftStart.toISOString() : _dtLocalToISO(bizDayFrom()), new Date().toISOString(), currentStaff);
-    sys = _xcCalc(rows);
-  } catch (e) { btn.disabled = false; showToast('Could not load system figures — check internet', 'error'); return; }
+let sys;
+try {
+  // Fetch the whole business day (no staff filter)
+  const rows = await _xcFetchAll(_dtLocalToISO(bizDayFrom()), new Date().toISOString());
+  sys = _xcCalc(rows);
+} catch (e) { btn.disabled = false; showToast('Could not load system figures — check internet', 'error'); return; }
 
   const sc = Math.round(sys.cash), so = Math.round(sys.online), se = Math.round(sys.exp);
   const mismatch = cash !== (sc - se) || online !== so || exp !== se;
@@ -8783,7 +8794,8 @@ function _xcCalc(rows) {
   const bills = rows.filter(t => !_XC_NON_BILL.includes(t.method));
   const held = t => 0; // riders return the fee to the shop
   const cash = s(bills.filter(t => t.method === 'cash'), t => (t.total || 0) - held(t))
-             + s(bills.filter(t => t.method === 'split'), t => t.split_cash || 0);
+             + s(bills.filter(t => t.method === 'split'), t => t.split_cash || 0)
+             - s(rows.filter(t => t.method === 'cash-out'), t => Math.abs(t.total || 0));
   const online = s(bills.filter(t => ['jazzcash','card','bank','foodpanda'].includes(t.method)), t => t.total || 0)
                + s(bills.filter(t => t.method === 'split'), t => t.split_card || 0);
   const expRows = rows.filter(t => t.method === 'expense' && !/^\s*\[FINANCE\]/i.test(t.items_text || ''));
@@ -8807,9 +8819,23 @@ async function loadCrossCheck() {
     _xcDecls = decls || [];
     const { data: st } = await sb.from('staff').select('name,role');
     _xcStaffRows = st || [];
-    await Promise.all(_xcDecls.filter(d => !d.session_id).map(async d => {
-      const start = d.shift_start || new Date(new Date(d.shift_end).getTime() - 16 * 3600 * 1000).toISOString();
-      d._pos = _xcCalc(await _xcFetchAll(start, d.shift_end, d.staff));
+    // Helper to find the 10 AM business day start for a historical timestamp
+    const getBizDayFromForDate = (isoString) => {
+      const date = new Date(isoString);
+      const pkTime = new Date(date.getTime() + (5 * 60 * 60 * 1000)); // Convert to PKT
+      if (pkTime.getUTCHours() < 10) { // If before 10 AM, belongs to previous day
+        pkTime.setUTCDate(pkTime.getUTCDate() - 1);
+      }
+      const yyyy = pkTime.getUTCFullYear();
+      const mm = String(pkTime.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(pkTime.getUTCDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}T10:00`;
+    };
+
+    // Recalculate _pos for ALL declarations (including old ones) based on the WHOLE day
+    await Promise.all(_xcDecls.map(async d => {
+      const start = getBizDayFromForDate(d.shift_end);
+      d._pos = _xcCalc(await _xcFetchAll(_dtLocalToISO(start), d.shift_end)); // No staff filter
     }));
   } catch (e) {
     content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--red);">Could not load: ' + _xcEsc(e.message) + '</div>';
@@ -8847,17 +8873,18 @@ function renderCrossCheck() {
       : '<span style="color:var(--red);font-weight:800;">' + (d > 0 ? '+' : '−') + 'Rs ' + Math.abs(d).toLocaleString('en-PK') + (d > 0 ? ' (cashier higher)' : ' (cashier lower)') + '</span>';
   };
 
-    // POS figures are stored at submit time; old reports (no session_id) fall back to the live calc.
-  const posOf = d => d.session_id
-    ? { cash: Number(d.pos_cash || 0) - Number(d.pos_expenses || 0), online: Number(d.pos_online || 0), exp: Number(d.pos_expenses || 0) }
-    : { cash: d._pos.cash - d._pos.exp, online: d._pos.online, exp: d._pos.exp };
+    // Always use the dynamically calculated whole-day totals, overriding old DB values
+  const posOf = d => {
+    if (!d._pos) return { cash: 0, online: 0, exp: 0 }; // Fallback safety
+    return { cash: d._pos.cash - d._pos.exp, online: d._pos.online, exp: d._pos.exp };
+  };
   const isWrong = d => { const p = posOf(d);
     return Math.round(Number(d.cash_amount) - p.cash) !== 0 || Math.round(Number(d.online_amount) - p.online) !== 0 || Math.round(Number(d.expenses_amount) - p.exp) !== 0; };
 
   const sessions = {};
   decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
   const sessList = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1)));
-  const finals = sessList.map(l => l[l.length - 1]);
+  const finals = sessList.map(l => l[l.length - 1]).sort((a, b) => new Date(a.shift_end) - new Date(b.shift_end)).slice(-1);
 
   const sessHtml = sessList.map(list => {
     const first = list[0], last = list[list.length - 1];
@@ -8901,11 +8928,15 @@ const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n =>
     <div class="cb-section" style="margin-bottom:12px;">
       <div class="cb-head">${title} (${arr.length}) — ${R(sum(arr, t => Math.abs(t.total)))}</div>
       <table class="transactions-table">
-        <thead><tr><th>Time</th><th>Staff</th><th>Details</th><th style="text-align:right;">Amount</th></tr></thead>
+        <thead><tr><th>Time</th><th>Staff</th><th>Details</th><th style="text-align:right;">Amount</th>${currentStaffRole === 'Admin' ? '<th style="text-align:center;">Action</th>' : ''}</tr></thead>
         <tbody>${arr.map(t => `<tr>
           <td>${fmtT(t.created_at)}</td><td>${_xcEsc(t.staff || '—')}</td>
           <td style="color:var(--text2);font-size:12px;">${_xcEsc([t.items_text, (t.return_reason && t.return_reason !== t.items_text) ? '— ' + t.return_reason : ''].filter(Boolean).join(' '))}</td>
-          <td style="text-align:right;font-weight:700;">${R(Math.abs(t.total))}</td></tr>`).join('')}</tbody>
+          <td style="text-align:right;font-weight:700;">${R(Math.abs(t.total))}</td>
+          ${currentStaffRole === 'Admin' ? `<td style="text-align:center;">
+            <button onclick="openAdminTxModal('${t.bill_no}', ${t.date === todayKey()}, '${t.date}', '${t.branch || activeBranch}', '${t.id}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;font-weight:bold;cursor:pointer;" title="Edit / Delete">✏️ Edit</button>
+          </td>` : ''}
+        </tr>`).join('')}</tbody>
       </table>
     </div>`;
   const by = m => rows.filter(t => t.method === m);
@@ -8927,7 +8958,7 @@ const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n =>
       ${sumRow('Banking (Bank transfer)', bankTotal, 'var(--blue)')}
       ${sumRow('Slip Expense (from till)', slipTotal, 'var(--red)')}
       ${sumRow('Finance Expense (owner, bank)', finTotal, 'var(--red)')}
-      <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:16px;font-weight:900;background:var(--surface2);"><span>Month Close</span><span style="color:var(--orange);">${R(monthClose)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:16px;font-weight:900;background:var(--surface2);"><span>Day Close</span><span style="color:var(--orange);">${R(monthClose)}</span></div>
     </div>`;
 
   content.innerHTML = `
@@ -9473,7 +9504,7 @@ function _openAdminTxModalWithData(tx) {
   document.getElementById('atm-total-input').value = Math.abs(tx.total);
 
   // Method buttons
-  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(m => {
+  ['cash','card','bank','jazzcash','foodpanda','split','expense'].forEach(m => {
     const el = document.getElementById('atm-pm-' + m);
     if (el) el.classList.toggle('selected', m === _adminTxMethod);
   });
@@ -9588,6 +9619,7 @@ async function adminTxDelete() {
     closeModal('admin-tx-modal');
     showToast('Transaction deleted ✅', 'success');
     if (document.getElementById('view-cash').classList.contains('active')) loadCashForRange(document.getElementById('cash-date-from').value, document.getElementById('cash-date-to').value);
+    if (document.getElementById('view-crosscheck').classList.contains('active')) loadCrossCheck();
 
     // Refresh whichever view triggered this
     if (!_adminTxIsToday) loadHistoryForDate(_adminTxDate);
