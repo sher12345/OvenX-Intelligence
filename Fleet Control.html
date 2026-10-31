@@ -120,6 +120,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
 const ADMIN_PIN='9999'; // CHANGE THIS
 const CASH_ALERT=20000, LATE_MIN=45, REFRESH=30;
+const HIST='kitchen_orders_history';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>'Rs '+Math.round(Number(n||0)).toLocaleString();
@@ -148,16 +149,27 @@ $('br').addEventListener('change',e=>{branch=e.target.value;load(true)});
 $('q').addEventListener('input',e=>{query=e.target.value.toLowerCase();renderTable()});
 
 /* data */
+async function fetchAll(make){
+ let all=[],from=0;
+ while(true){
+  const {data,error}=await make().range(from,from+999);
+  if(error)throw error;
+  all=all.concat(data);
+  if(data.length<1000||from>50000)break;
+  from+=1000;
+ }
+ return all;
+}
 async function load(a){
  left=REFRESH;if(a)anim=true;
  try{
   const s=range(period),iso=s.toISOString(),since=new Date(s.getTime()-2*864e5).toISOString();
-  const [att,ord,act]=await Promise.all([
-   sb.from('rider_attendance').select('*').gte('punched_in',since).order('punched_in',{ascending:false}).limit(3000),
-   sb.from('kitchen_orders').select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).limit(5000),
+  const [attD,ordD,act]=await Promise.all([
+   fetchAll(()=>sb.from('rider_attendance').select('*').gte('punched_in',since).order('punched_in',{ascending:false}).order('id')),
+   fetchAll(()=>sb.from(HIST).select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).order('created_at',{ascending:false}).order('id')),
    sb.from('kitchen_orders').select('*').in('status',['ASSIGNED','DELIVERING']).order('created_at',{ascending:true})]);
-  if(att.error)throw att.error;if(ord.error)throw ord.error;
-  build(att.data||[],ord.data||[],act.data||[],s);
+  if(act.error)throw act.error;
+  build(attD,ordD,act.data||[],s);
   $('upd').textContent='Updated '+tm(new Date())+' · auto-refresh 30s';
  }catch(e){console.error(e);$('upd').textContent='Load failed: '+e.message}
 }
@@ -272,14 +284,20 @@ function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)clo
  ${r.cancelled.length?`<h2 class="sub" style="margin:14px 0 8px">Cancelled by rider</h2>${r.cancelled.map(o=>`<div class="oc" style="border-color:rgba(255,107,122,.4)"><h4>📍 ${esc(o.location||'')}</h4><p class="rd">${esc(o.cancel_reason||'No reason')} · ${tm(o.cancelled_at)}</p></div>`).join('')}`:''}`;
  $('dr-bd').classList.add('on');$('dr').classList.add('on')}
 function closeDr(){openKey=null;$('dr-bd').classList.remove('on');$('dr').classList.remove('on')}
-async function settle(id,done){const {error}=await sb.from('kitchen_orders').update({settled:done,settled_at:done?new Date().toISOString():null}).eq('id',id);
+async function updOrders(ids,patch){
+ const a=await sb.from('kitchen_orders').update(patch).in('id',ids);
+ const b=await sb.from(HIST).update(patch).in('id',ids);
+ return a.error||b.error;
+}
+async function settle(id,done){
+ const error=await updOrders([id],{settled:done,settled_at:done?new Date().toISOString():null});
  if(error){toast('Error: '+error.message);return}toast(done?'Marked settled':'Settlement undone');load()}
 async function setMethod(id,m){
- const {error}=await sb.from('kitchen_orders').update({payment_method:m}).eq('id',id);
+ const error=await updOrders([id],{payment_method:m});
  if(error){toast('Error: '+error.message);return}toast('Payment method changed to '+(PMN[m]||m));load()}
 async function settleAll(key){const r=riders.find(x=>x.key===key);if(!r)return;const ids=r.orders.filter(o=>!o.settled).map(o=>o.id);
  if(!ids.length||!confirm(`Mark ${ids.length} orders as settled for ${r.name}?\nHe hands over ${fmt(r.cash)}, shop pays ${fmt(r.owed)}.`))return;
- const {error}=await sb.from('kitchen_orders').update({settled:true,settled_at:new Date().toISOString()}).in('id',ids);
+ const error=await updOrders(ids,{settled:true,settled_at:new Date().toISOString()});
  if(error){toast('Error: '+error.message);return}toast('All settled ✅');load()}
 function wa(key){const r=riders.find(x=>x.key===key);if(!r)return;const net=r.cash-r.owed;
  const txt=`*OvenX Hisab — ${r.name}*\n${new Date().toLocaleDateString('en-PK')}\nDeliveries: ${r.count}\nDelivery fees: ${fmt(r.fees)}\nCash with you: ${fmt(r.cash)}\nShop owes you: ${fmt(r.owed)}\n*${net>=0?'Please hand over: '+fmt(net):'Shop will pay you: '+fmt(-net)}*`;
@@ -290,6 +308,7 @@ function exportCsv(){const h=['Rider','Phone','Branch','Status','Hours','Deliver
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ovenx-riders-'+period+'.csv';a.click()}
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
