@@ -1754,6 +1754,7 @@ function computeCashInHand(orders, opening) {
   (orders || []).forEach(o => {
     if (o.method === 'cash')          cash += o.total;
     else if (o.method === 'cash-in')  cash += o.total;
+    else if (o.method === 'staff')    cash += o.total;   // staff meals are settled in cash
     else if (o.method === 'split')    cash += (o.splitCash || o.split_cash || 0);
     else if (o.method === 'cash-out') cash -= Math.abs(o.total);
     else if (o.method === 'expense' && !_isFinanceExpense(o)) cash -= Math.abs(o.total);
@@ -2826,7 +2827,7 @@ async function _loadActiveTables() {
     // failed but the sale was actually recorded.
     const CLOSING_METHODS = new Set([
       'cash', 'card', 'bank', 'jazzcash', 'foodpanda',
-      'split', 'void', 'discarded', 'deleted-delivery'
+      'split', 'staff', 'void', 'discarded', 'deleted-delivery'
     ]);
     let closedTxIds = new Set();
     if (orderIds.length) {
@@ -6733,6 +6734,7 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
     <div class="cs-card red"><div class="cs-val">-Rs ${tillExp}</div><div class="cs-lbl">Till Expenses</div></div>
     <div class="cs-card blue"><div class="cs-val">Rs ${finExp}</div><div class="cs-lbl">Finance Expenses</div></div>
     <div class="cs-card green"><div class="cs-val">Rs ${expected}</div><div class="cs-lbl">Expected in Drawer</div></div>
+    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge to pay out (enter as expense)</div></div>
     <div class="cs-card orange"><div class="cs-val" style="color:#fff;">Rs ${grandTotal}</div><div class="cs-lbl">Grand Total</div></div>
   `;
 
@@ -7043,11 +7045,12 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Bank Sales</span><span class="cb-row-val">Rs ${pm.bank}</span></div>
       <div class="cb-row"><span>JazzCash Sales</span><span class="cb-row-val">Rs ${pm.jazzcash}</span></div>
       <div class="cb-row"><span>FoodPanda Sales</span><span class="cb-row-val">Rs ${pm.foodpanda}</span></div>
-      <div class="cb-row"><span>Staff Meals (no cash received)</span><span class="cb-row-val">Rs ${pm.staff}</span></div>
+      <div class="cb-row"><span>Staff Meals (counted as cash)</span><span class="cb-row-val">Rs ${pm.staff}</span></div>
       <div class="cb-row"><span>Cash Outs</span><span class="cb-row-val" style="color:var(--red);">-Rs ${cashOuts}</span></div>
       <div class="cb-row"><span>Till Expenses</span><span class="cb-row-val" style="color:var(--red);">-Rs ${expenses}</span></div>
       <div class="cb-row"><span>Rider Fees paid from drawer (non-cash bills)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${feeFromDrawer}</span></div>
       <div class="cb-row"><span>Finance Expenses (not taken from drawer)</span><span class="cb-row-val">Rs ${financeExp}</span></div>
+      <div class="cb-row"><span>ℹ️ Service Charge today (enter as Till expense when paid out)</span><span class="cb-row-val" style="color:var(--gold);">Rs ${scCollected}</span></div>
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Expected in Drawer</span>
         <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${computeCashInHand(txs, opening)}</span>
@@ -7165,6 +7168,8 @@ async function exportClosingStatement() {
   const hasDecl = finals.length > 0;
   const submitted = sum(finals, d => d.cash_amount);
   const difference = Math.round(submitted - (cashInHand - opening));
+  const feeFromDrawer = sum(deliv.filter(t => ['card','bank','jazzcash'].includes(t.method)), t => t.rider_fee);
+  const feeInCash = sum(deliv, t => t.rider_fee) - feeFromDrawer;
   const cnt = m => bills.filter(t => t.method === m).length;
 
   // ---------- styling ----------
@@ -7267,7 +7272,9 @@ async function exportClosingStatement() {
   line(0, 'Net Sale', '', gross - disc, { bold: true, color: C.green });
   line(0, 'Tax', '', sum(bills, t => t.tax), { color: C.orange });
   line(0, 'Service Charges', '', sum(bills, t => t.sc), { color: C.orange });
-  line(0, 'Rider Fees (not ours)', '', sum(deliv, t => t.rider_fee), { color: C.mute });
+  line(0, 'Rider Fees Given (total)', '', sum(deliv, t => t.rider_fee), { color: C.mute });
+  line(0, '   ↳ already out of Cash Sale', '', feeInCash, { color: C.mute });
+  line(0, '   ↳ paid from drawer (card/bank bills)', '', feeFromDrawer, { color: C.red });
 
   // ---------- PANEL 2: Payments + Cash reconciliation ----------
   section(1, 'Payment Methods', C.blue, 'BILLS');
@@ -7276,9 +7283,11 @@ async function exportClosingStatement() {
   line(1, 'Jazz Cash', cnt('jazzcash'), pm.jazzcash);
   line(1, 'Bank Account Payment', cnt('bank'), pm.bank);
   line(1, 'Food Panda Sale', cnt('foodpanda'), pm.foodpanda);
+  line(1, 'Staff Meals (counted as cash)', cnt('staff'), pm.staff, { color: C.mute });
   line(1, 'Credit Issued (Udhaar)', '', creditIssued, { color: C.orange });
   line(1, 'Credit Collected', '', creditCollected, { color: C.green });
   section(1, 'Cash Reconciliation', C.orange);
+  line(1, 'Service Charge today (pay out as expense)', '', sum(bills, t => t.sc), { color: C.orange });
   line(1, 'CASH IN HAND', '', cashInHand, { fill: grad('FF8A4B12', 'FF5B2D7A'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
   line(1, 'SUBMITTED CASH', hasDecl ? finals.length : '', hasDecl ? submitted : '—', { fill: grad('FF1D5FA8', 'FF3B3FA8'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
   const ok = hasDecl && difference === 0;
@@ -8466,14 +8475,14 @@ async function fpAddNew() {
   if (price <= 0) { showToast('Valid price required', 'error'); return; }
 
   if (kind.trim() === '1') {
-    const res = await sbWrite('custom_menu_items', 'insert', [{ branch: activeBranch, category: 'Add-ons', name: finalName, price: String(price), available: true }]);
+    var res = await sbWrite('custom_menu_items', 'insert', [{ branch: activeBranch, category: 'Add-ons', name: finalName, price: String(price), available: true }]);
     if (!res.error) { 
       if (!menuData['Add-ons']) menuData['Add-ons'] = []; 
       menuData['Add-ons'].push({ n: finalName, p: price, _custom: true }); 
     }
   } else {
     const desc = (await askText('Deal description (optional):') || '').trim();
-    const res = await sbWrite('custom_deals', 'insert', [{ branch: activeBranch, name: finalName, deal_desc: desc, price, available: true }]);
+    var res = await sbWrite('custom_deals', 'insert', [{ branch: activeBranch, name: finalName, deal_desc: desc, price, available: true }]);
     if (!res.error) { dealsData.push({ n: finalName, d: desc, p: price, _custom: true }); }
   }
   
@@ -8553,7 +8562,7 @@ function renderDeclForm() {
     </div>`;
   declAddExpenseRow();
 }
-const EXPENSE_PRESETS = ['Rider Fuel','Owner Expense','Owner food','Ghar food','Staff food','Vaggie bill','Chicken bill','Staff advance'];
+const EXPENSE_PRESETS = ['Rider Fuel','Owner Expense','Owner food','Ghar food','Staff food','Vaggie bill','Chicken bill','Staff advance','Service charge'];
 
 function expDescFieldHTML(cls) {
   const st = "width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;";
@@ -8812,9 +8821,10 @@ function _xcCalc(rows) {
   const s = (arr, f) => arr.reduce((a, t) => a + f(t), 0);
   const bills = rows.filter(t => !_XC_NON_BILL.includes(t.method));
   const held = t => 0; // riders return the fee to the shop
-  const cash = s(bills.filter(t => t.method === 'cash'), t => (t.total || 0) - held(t))
+  const cash = s(bills.filter(t => t.method === 'cash' || t.method === 'staff'), t => (t.total || 0) - held(t))
              + s(bills.filter(t => t.method === 'split'), t => t.split_cash || 0)
-             - s(rows.filter(t => t.method === 'cash-out'), t => Math.abs(t.total || 0));
+             - s(rows.filter(t => t.method === 'cash-out'), t => Math.abs(t.total || 0))
+             - s(bills.filter(t => t.type === 'Delivery' && ['card','bank','jazzcash'].includes(t.method)), t => t.rider_fee || 0);
   const online = s(bills.filter(t => ['jazzcash','card','bank','foodpanda'].includes(t.method)), t => t.total || 0)
                + s(bills.filter(t => t.method === 'split'), t => t.split_card || 0);
   const expRows = rows.filter(t => t.method === 'expense' && !/^\s*\[FINANCE\]/i.test(t.items_text || ''));
@@ -8854,7 +8864,7 @@ async function loadCrossCheck() {
     // Recalculate _pos for ALL declarations (including old ones) based on the WHOLE day
     await Promise.all(_xcDecls.map(async d => {
       const start = getBizDayFromForDate(d.shift_end);
-      d._pos = _xcCalc(await _xcFetchAll(_dtLocalToISO(start), d.shift_end)); // No staff filter
+      d._pos = _xcCalc(await _xcFetchAll(_dtLocalToISO(start), toISO)); // whole day, up to end of selected range
     }));
   } catch (e) {
     content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--red);">Could not load: ' + _xcEsc(e.message) + '</div>';
@@ -8941,7 +8951,7 @@ function renderCrossCheck() {
       <tbody>${totRow('Cash', tot.cash, tot.cashP)}${totRow('Online', tot.online, tot.onlineP)}${totRow('Expenses', tot.exp, tot.expP)}</tbody></table></div>` : '';
   const declaredNames = new Set(_xcDecls.map(d => d.staff));
   const roleOf = n => (_xcStaffRows.find(s => s.name === n) || {}).role;
-const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n => !declaredNames.has(n) && !['Admin','Manager'].includes(roleOf(n)));
+const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n => !declaredNames.has(n) && !['Admin','Manager'].includes(roleOf(n)) && n !== 'OvenX Fleet');
 
   const listTable = (title, arr) => !arr.length ? '' : `
     <div class="cb-section" style="margin-bottom:12px;">
