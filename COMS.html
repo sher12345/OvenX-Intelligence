@@ -346,6 +346,84 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   .items-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
 }
 </style>
+<!-- ===== MOBILE FIX (paste before </head>) ===== -->
+<style id="mobile-fix">
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{max-width:100vw}
+.right-panel,.view,.order-panel{min-width:0}
+img,canvas{max-width:100%}
+
+/* PHONES (portrait): slimmer header, full-width action row */
+@media (max-width:600px){
+  .topbar{padding:6px 10px;gap:4px 8px}
+  .topbar-center{flex:1 1 100%;order:3}
+  .topbar-right{flex:1 1 100%;order:2;justify-content:space-between;gap:6px 8px}
+  .topbar-right .topbar-info:nth-of-type(n+2){display:none}
+  .logout-btn{padding:6px 10px}
+  .items-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:8px}
+  .live-grid{padding:10px}
+  .riders-body,.stats-body{padding:12px}
+  .modal-box,.assign-modal-box{max-height:92dvh}
+}
+
+/* PHONES (landscape): side-by-side again, each pane scrolls on its own */
+@media (max-height:520px) and (orientation:landscape) and (min-width:560px){
+  .app-body{display:grid;grid-template-columns:minmax(250px,38vw) minmax(0,1fr);overflow:hidden}
+  .app-body > *{flex-shrink:1}
+  .order-panel{order:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;border-top:none;border-right:1px solid var(--border);min-height:0}
+  .order-panel > *{flex-shrink:0}
+  .op-items{flex:none;max-height:none;min-height:90px}
+  .right-panel{order:0;display:grid;overflow:hidden;min-height:0}
+  .view{height:100%;min-height:0;overflow:hidden}
+  .menu-body{overflow:hidden;flex-direction:row}
+  .cat-bar{width:96px;display:block;flex-direction:initial;overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--border);border-bottom:none}
+  .cat-btn-item{width:100%;white-space:normal}
+  .items-area,.live-grid,.riders-body,.stats-body{overflow-y:auto}
+  .items-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+  /* slim header */
+  .topbar{min-height:40px;padding:3px 10px;gap:4px 10px;flex-wrap:nowrap}
+  .topbar-logo{font-size:15px}
+  .topbar-logo span:last-child{display:none}
+  .topbar-center{flex:1 1 auto}
+  .topbar-right{flex:0 0 auto;flex-wrap:nowrap;gap:6px}
+  .topbar-right .topbar-info{display:none}
+  .topbar-right > *{flex:0 0 auto}
+  .topbar-right button{padding:5px 9px !important;font-size:10px !important;letter-spacing:.3px !important;white-space:nowrap}
+  .topbar-center{overflow-x:auto}
+  .tab-btn{padding:6px 10px;flex:0 0 auto}
+  .menu-header,.live-header,.riders-header-bar{padding:6px 10px}
+  .login-box{padding:18px 26px;max-height:96dvh;overflow-y:auto}
+  .login-logo{font-size:30px}
+  #fab{display:none !important}
+}
+</style>
+<script id="mobile-fix-js">
+/* The #fab button had CSS but no element. Create it, and flip it between "Order" and "Menu". */
+(function(){
+  function init(){
+    if(document.getElementById('fab'))return;
+    var b=document.createElement('button');b.id='fab';b.type='button';b.textContent='🧾 View Order';
+    b.onclick=function(){
+      var toOrder=b.dataset.to!=='menu';
+      var t=document.querySelector(toOrder?'.order-panel':'.right-panel');
+      if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+      b.dataset.to=toOrder?'menu':'order';
+      b.textContent=toOrder?'📋 Back to Menu':'🧾 View Order';
+    };
+    document.body.appendChild(b);
+    var body=document.querySelector('.app-body');
+    if(body)body.addEventListener('scroll',function(){
+      var op=document.querySelector('.order-panel');if(!op)return;
+      var nearOrder=op.getBoundingClientRect().top < window.innerHeight*0.5;
+      b.dataset.to=nearOrder?'menu':'order';
+      b.textContent=nearOrder?'📋 Back to Menu':'🧾 View Order';
+    },{passive:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+<!-- ===== END MOBILE FIX ===== -->
+
 </head>
 <body>
 <div class="toast" id="toast"></div>
