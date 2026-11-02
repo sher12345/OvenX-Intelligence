@@ -536,7 +536,133 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   }
 }
 </style>
-</head>
+<meta name="theme-color" content="#111318">
+<style id="mobile-fix">
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{max-width:100vw}
+#pos-app,.pos-view{min-width:0}
+.pos-view > *{min-width:0}
+img,canvas,video{max-width:100%}
+
+@media (max-width:1100px){
+  body,#pos-app{height:100vh;height:100dvh}
+  .pos-topbar{height:auto;min-height:52px;padding:6px 10px;flex-wrap:wrap;gap:6px 8px;position:relative}
+  .pos-logo{font-size:18px}
+  .pos-topbar-center{flex:1 1 100%;order:3;flex-wrap:wrap;gap:5px;min-width:0}
+  .pos-topbar-center > .nav-btn,.pos-topbar-center > .nav-dd{flex:1 1 auto}
+  .pos-topbar-center .nav-dd > .nav-btn{width:100%}
+  .pos-topbar-right{flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end;gap:6px 10px;min-width:0}
+  .nav-btn{padding:9px 12px;font-size:12px}
+  .logout-btn{padding:8px 12px}
+  .nav-dd{position:static}
+  .nav-dd-menu,.nav-dd.right .nav-dd-menu{position:absolute;left:8px;right:8px;top:100%;min-width:0;max-height:70dvh;overflow-y:auto}
+  #analytics-panel{top:var(--tb-h,58px) !important}
+  #analytics-panel > div > div:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;padding:0 8px !important}
+  .table-map-header{flex-wrap:wrap}
+  .table-legend{flex-wrap:wrap;gap:8px}
+  .table-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+  .closing-breakdown{grid-template-columns:1fr}
+}
+
+/* portrait: menu on top, bill below */
+@media (max-width:900px) and (orientation:portrait),(max-width:700px){
+  #view-order.active{flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .order-right{order:1;flex:none;height:calc(100dvh - var(--tb-h,100px) - 8px);min-height:420px}
+  .order-left{order:2;width:100%;flex:none;border-right:none;border-top:3px solid var(--orange);overflow:visible}
+  .order-items-list{max-height:none;overflow:visible}
+  .menu-body{flex-direction:column}
+  .cat-sidebar{width:100%;display:flex;flex-direction:row;gap:5px;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--border);padding:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .cat-sidebar::-webkit-scrollbar{display:none}
+  .cat-btn{width:auto;flex:0 0 auto;white-space:nowrap;padding:9px 12px}
+  .items-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .menu-item-card{padding:14px 12px}
+  .deals-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
+
+/* phone landscape: keep two panes, shrink chrome */
+@media (max-height:520px) and (orientation:landscape){
+  .pos-topbar{min-height:40px;padding:4px 8px}
+  .pos-logo{font-size:15px}
+  .nav-btn{padding:6px 9px;font-size:11px}
+  .logout-btn{padding:5px 9px;font-size:11px}
+  .order-left{width:min(340px,42vw);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .order-left > *{flex-shrink:0}
+  .order-items-list{flex:none;overflow:visible;min-height:90px}
+  .cat-sidebar{width:96px}
+  .items-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+  .menu-item-card{min-height:80px;padding:10px}
+  .table-cell{min-height:84px}
+  .modal-box{max-height:94dvh}
+  .login-box{padding:20px 28px;max-height:96dvh;overflow-y:auto}
+  .login-logo{font-size:32px}.login-sub{margin-bottom:16px}
+}
+
+/* compact header: phones + short landscape (logo/admin row, info row, scrolling nav) */
+@media (max-width:600px),(max-height:520px) and (orientation:landscape){
+  .pos-topbar{padding:4px 8px;gap:2px 6px;min-height:0}
+  .pos-topbar-right{display:contents}
+  .pos-logo{order:1;margin-right:auto;font-size:17px}
+  #dd-admin{order:2}
+  .pos-topbar-right > .logout-btn{order:3}
+  .pos-topbar-right > .topbar-info{order:4;font-size:11px;padding:0 4px}
+  #bar-time,.topbar-info:has(#bar-billno){display:none !important}
+  .pos-topbar-center{order:5;flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:5px;padding:2px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .pos-topbar-center::-webkit-scrollbar{display:none}
+  .pos-topbar-center > .nav-btn,.pos-topbar-center > .nav-dd{flex:0 0 auto}
+  .pos-topbar-center .nav-dd > .nav-btn{width:auto}
+  .nav-btn{padding:8px 11px}
+  .logout-btn{padding:6px 10px;font-size:12px}
+  .nav-dd-menu,.nav-dd.right .nav-dd-menu{position:fixed;top:var(--tb-h,100px);left:8px;right:8px;z-index:8600}
+}
+
+@media (max-width:600px){
+  .login-box{width:min(400px,92vw);padding:32px 22px}
+  #view-delivery,#view-cash,#view-closing,#view-history,#view-credit,#view-crosscheck,#view-foodpanda,#view-totals{padding:12px !important}
+  .delivery-orders-grid{grid-template-columns:1fr}
+  .cash-grid,.closing-stats{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .modal-box{min-width:0;width:94%;padding:18px;max-height:92dvh}
+  .pay-method-grid,.admin-method-grid,.admin-action-btns{grid-template-columns:1fr 1fr}
+  .toast{left:10px;right:10px;bottom:12px}
+  #pos-app [style*="grid-template-columns:1fr 1fr;gap:14px"],
+  #pos-app [style*="grid-template-columns:1fr 1fr;gap:16px"]{grid-template-columns:1fr !important}
+  #pos-app table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+
+/* floating Menu <-> Bill button (portrait only) */
+#ox-fab{display:none}
+@media (max-width:900px) and (orientation:portrait),(max-width:700px){
+  body.ox-order-open #ox-fab{display:flex}
+  #ox-fab{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:7500;align-items:center;gap:6px;padding:13px 18px;border:none;border-radius:30px;background:var(--orange);color:#fff;font-family:var(--font);font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer}
+}
+</style>
+<script id="mobile-fix-js">
+(function(){
+  function tb(){var t=document.querySelector('.pos-topbar');if(t)document.documentElement.style.setProperty('--tb-h',t.offsetHeight+'px');}
+  function fabInit(){
+    if(document.getElementById('ox-fab'))return;
+    var f=document.createElement('button');f.id='ox-fab';f.type='button';f.textContent='🧾 View Bill';
+    f.onclick=function(){
+      var v=document.getElementById('view-order'),l=v.querySelector('.order-left'),r=v.querySelector('.order-right');
+      var toBill=f.dataset.to!=='menu';
+      (toBill?l:r).scrollIntoView({behavior:'smooth',block:'start'});
+      f.dataset.to=toBill?'menu':'bill';f.textContent=toBill?'🍽️ Back to Menu':'🧾 View Bill';
+    };
+    document.body.appendChild(f);
+    var vo=document.getElementById('view-order');
+    if(vo&&window.MutationObserver){
+      new MutationObserver(function(){
+        document.body.classList.toggle('ox-order-open',vo.classList.contains('active'));
+        if(!vo.classList.contains('active')){f.dataset.to='bill';f.textContent='🧾 View Bill';}
+        tb();
+      }).observe(vo,{attributes:true,attributeFilter:['class']});
+    }
+  }
+  window.addEventListener('resize',tb);
+  window.addEventListener('orientationchange',function(){setTimeout(tb,250)});
+  window.addEventListener('load',function(){tb();fabInit();setTimeout(tb,600);
+    if(window.ResizeObserver){var t=document.querySelector('.pos-topbar');if(t)new ResizeObserver(tb).observe(t);}});
+})();
+</script>
 <body>
 <div id="print-area"></div>
 <div class="toast" id="toast"></div>
