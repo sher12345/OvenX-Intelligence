@@ -6365,7 +6365,7 @@ ${priceHtml}
   <button class="btn-action" style="background:#7c3aed;" onclick="openCardEntry('${o.id}')">${cardMap[o.id] ? '🎓 CARD ✓' : '🎓 CARD'}</button>
   <button class="btn-action btn-void-order" onclick="adminVoidOrder('${o.id}')">VOID ALL</button>
   <button class="btn-action btn-print-front" onclick="printOrderData('${o.id}', 'front')">🖨️ FRONT</button>
-  <button class="btn-action btn-print-kitchen" onclick="printOrderData('${o.id}', 'kitchen')">🍳 KITCHEN</button>
+  <button class="btn-action btn-print-kitchen ${isKitchenPrinted(o.id) ? 'printed' : ''}" onclick="printOrderData('${o.id}', 'kitchen')">${isKitchenPrinted(o.id) ? '✅ SENT' : '🍳 KITCHEN'}</button>
   ${o.type === 'Delivery' ? `<button class="btn-action btn-send-cc" onclick="sendToCC('${o.id}', '${b64enc(o.items)}', '${jsq(o.location)}', ${o.subtotal || 0}, ${o.delivery_fee || 0}, '${o.created_at}', this)">🏍️ NOTIFY CUSTOMER</button>` : ''}
 </div>
 ${riderHtml}
@@ -6946,7 +6946,17 @@ ${sc > 0 ? `
     setTimeout(() => {
         window.print();
         printArea.innerHTML = "";
+        if (type === 'kitchen') markKitchenPrinted(id);
     }, 400);
+}
+const _kPrinted = new Set(JSON.parse(localStorage.getItem('ovenx_kitchen_printed') || '[]'));
+function isKitchenPrinted(id) { return _kPrinted.has(String(id)); }
+function markKitchenPrinted(id) {
+    id = String(id);
+    _kPrinted.add(id);
+    try { localStorage.setItem('ovenx_kitchen_printed', JSON.stringify([..._kPrinted].slice(-500))); } catch (e) {}
+    const btn = document.querySelector(`#kitchen-orders-list>.kitchen-card[data-id="${id}"] .btn-print-kitchen`);
+    if (btn) { btn.classList.add('printed'); btn.innerHTML = '✅ SENT'; }
 }
 
     function renderAuditUI(orders) {
@@ -11201,6 +11211,10 @@ header .logo{transition:font-size .35s var(--spring)}
   50%{transform:translate(-1px,2px) rotate(.2deg)}
   75%{transform:translate(2px,-2px) rotate(-.2deg)}
   100%{transform:translate(2px,1px) rotate(.2deg)}}
+  .btn-action.btn-print-kitchen.printed{
+  background:linear-gradient(180deg,#34c759 0%,#16a34a 100%)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.25)!important}
 </style>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <style id="partners-css">
@@ -11450,6 +11464,7 @@ window.ptPrint = function(id){
 };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
