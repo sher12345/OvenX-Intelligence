@@ -452,6 +452,67 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   padding:14px 0 0;margin-top:10px;border-top:1px solid var(--border);
 }
 
+/* ══ SUMMARY DASHBOARD (Cash + Closing) ══ */
+.sum-wrap{display:flex !important;flex-direction:column;gap:18px;margin-bottom:22px;}
+.sum-sec{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.sum-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,rgba(255,255,255,0.05),transparent);}
+.sum-head-ic{font-size:18px;}
+.sum-head-t{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--text);}
+.sum-head-s{margin-left:auto;font-size:12px;color:var(--text3);font-weight:600;text-align:right;}
+.sum-body{padding:16px 18px;}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+.sum-tile{position:relative;border-radius:14px;padding:16px 18px 14px 20px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;}
+.sum-tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--text3));}
+.sum-tile .v{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--c,var(--text));line-height:1.1;font-variant-numeric:tabular-nums;}
+.sum-tile .l{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-top:7px;}
+.sum-tile .h{font-size:12px;color:var(--text3);margin-top:4px;line-height:1.4;}
+.sum-tile.dim{opacity:.45;}
+.sum-tile.big{background:linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02));}
+.sum-tile.alert{background:linear-gradient(135deg,rgba(192,57,43,0.22),rgba(192,57,43,0.06));border-color:rgba(192,57,43,0.5);}
+.sum-tile.alert .h{color:#ff8a7a;font-weight:700;}
+
+/* payment bars */
+.pay-row{display:grid;grid-template-columns:120px 1fr 110px 46px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.pay-row:last-child{border-bottom:none;}
+.pay-name{font-size:13px;font-weight:700;color:var(--text);}
+.pay-bar{height:10px;border-radius:6px;background:var(--surface3);overflow:hidden;}
+.pay-bar i{display:block;height:100%;border-radius:6px;background:var(--c);}
+.pay-amt{font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;text-align:right;color:var(--c);font-variant-numeric:tabular-nums;}
+.pay-pct{font-size:12px;color:var(--text3);text-align:right;font-weight:700;}
+
+/* tax split bar */
+.split-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:var(--surface3);margin:4px 0 6px;}
+.split-bar i{display:block;height:100%;}
+.split-legend{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:14px;}
+
+/* cash drawer walkthrough */
+.wf-row{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px;}
+.wf-sign{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0;}
+.wf-sign.plus{background:rgba(39,174,96,0.18);color:var(--green);}
+.wf-sign.minus{background:rgba(192,57,43,0.18);color:var(--red);}
+.wf-lbl{flex:1;color:var(--text);font-weight:600;}
+.wf-lbl small{display:block;font-size:11px;color:var(--text3);font-weight:500;margin-top:1px;}
+.wf-val{font-family:'Outfit',sans-serif;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;}
+.wf-total{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:16px 20px;border-radius:14px;background:linear-gradient(135deg,rgba(39,174,96,0.25),rgba(39,174,96,0.08));border:1px solid rgba(39,174,96,0.5);}
+.wf-total .t{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--green);}
+.wf-total .a{font-family:'Outfit',sans-serif;font-size:32px;font-weight:900;color:white;font-variant-numeric:tabular-nums;}
+
+/* pay-out callout */
+.payout-box{margin-top:16px;border:2px dashed rgba(230,126,34,0.6);border-radius:14px;padding:14px 18px;background:rgba(230,126,34,0.07);}
+.payout-title{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:8px;}
+.payout-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px;font-weight:600;}
+.payout-row b{font-family:'Outfit',sans-serif;color:white;font-size:15px;}
+.payout-sum{display:flex;justify-content:space-between;border-top:1px solid rgba(230,126,34,0.4);margin-top:6px;padding-top:9px;font-size:15px;font-weight:800;color:var(--orange);}
+.payout-sum b{font-family:'Outfit',sans-serif;font-size:20px;color:white;}
+.payout-note{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5;}
+
+@media (max-width:600px){
+  .pay-row{grid-template-columns:90px 1fr 80px;}
+  .pay-pct{display:none;}
+  .sum-tile .v{font-size:22px;}
+  .wf-total .a{font-size:26px;}
+}
+
 #print-area{display:none;}
 
 @media print {
@@ -6826,6 +6887,7 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
   const netSale = grossSale - discGiven;
   const scCollected = bills.reduce((s,o) => s + (o.sc||0), 0);
   const taxTotal = bills.reduce((s,o) => s + (o.tax||0), 0);
+  const taxPM = taxByMethod(bills);
   const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
   const feeFromDrawer = bills.filter(o => o.type==='Delivery' && ['card','bank','jazzcash'].includes(o.method)).reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
   const feeInCashSales = delFees - feeFromDrawer;
@@ -6837,32 +6899,8 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
   const expected = computeCashInHand(orders, opening);
 
   const cardsEl = document.getElementById('cash-cards');
-  cardsEl.className = 'closing-stats';
-  cardsEl.innerHTML = `
-    <div class="cs-card blue"><div class="cs-val">Rs ${opening}</div><div class="cs-lbl">Opening Balance</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${grossSale}</div><div class="cs-lbl">Gross Sale</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${discGiven}</div><div class="cs-lbl">Total Discount</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${delFees}</div><div class="cs-lbl">Rider Fees Given (Total)</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${feeInCashSales}</div><div class="cs-lbl">Rider Fees: already out of Cash Collected</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${feeFromDrawer}</div><div class="cs-lbl">Rider Fees: taken from Drawer (card/bank bills)</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.staff}</div><div class="cs-lbl">Staff Meals</div></div>
-    <div class="cs-card orange"><div class="cs-val">${bills.length}</div><div class="cs-lbl">Bills</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${pm.cash}</div><div class="cs-lbl">Cash Collected</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.jazzcash}</div><div class="cs-lbl">JazzCash</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.bank}</div><div class="cs-lbl">Bank</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.foodpanda}</div><div class="cs-lbl">FoodPanda</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${returnTotal}</div><div class="cs-lbl">Returns</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${tillExp}</div><div class="cs-lbl">Till Expenses</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${finExp}</div><div class="cs-lbl">Finance Expenses</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${expected}</div><div class="cs-lbl">Expected in Drawer</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge to pay out (enter as expense)</div></div>
-    <div class="cs-card orange"><div class="cs-val" style="color:#fff;">Rs ${grandTotal}</div><div class="cs-lbl">Grand Total</div></div>
-  `;
+  cardsEl.className = 'sum-wrap';
+  cardsEl.innerHTML = buildSummaryHTML(orders, opening);
 
   document.getElementById('tx-tbody').innerHTML = orders.slice().reverse().map(o => `
     <tr>
@@ -7026,6 +7064,130 @@ function sumByMethod(list) {
 
   return totals;
 }
+// Splits tax by how the customer paid. Works for both DB rows (split_cash)
+// and in-memory rows (splitCash). Split bills divide tax by the cash/card ratio.
+function taxByMethod(list) {
+  const r = { cash:0, card:0, bank:0, jazzcash:0, foodpanda:0, total:0 };
+  (list || []).forEach(o => {
+    const tax = Number(o.tax) || 0;
+    if (!tax) return;
+    const m = String(o.method || '').toLowerCase();
+    r.total += tax;
+    if (m === 'split') {
+      const sc = Number(o.split_cash ?? o.splitCash) || 0;
+      const sk = Number(o.split_card ?? o.splitCard) || 0;
+      const cashPart = (sc + sk) > 0 ? Math.round(tax * sc / (sc + sk)) : Math.round(tax / 2);
+      r.cash += cashPart; r.card += tax - cashPart;
+    } else if (m === 'staff') r.cash += tax;           // staff meals settle in cash
+    else if (m in r && m !== 'total') r[m] += tax;
+  });
+  return r;
+}
+// Builds the whole summary dashboard. `list` = every transaction row in the
+// range (DB rows or in-memory rows, both field styles work).
+function buildSummaryHTML(list, opening) {
+  const R = v => 'Rs ' + Math.round(v || 0).toLocaleString('en-PK');
+  const sum = (a, f) => a.reduce((s, o) => s + (Number(f(o)) || 0), 0);
+  const NB = ['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'];
+  const bills = list.filter(o => !NB.includes(o.method));
+  const by = m => list.filter(o => o.method === m);
+
+  const pm = sumByMethod(bills);
+  const tp = taxByMethod(bills);
+  const gross = sum(bills, _grossOf);
+  const disc  = sum(bills, o => o.disc ?? o.discount);
+  const net   = gross - disc;
+  const sc    = sum(bills, o => o.sc);
+  const grand = sum(bills, o => o.total);
+  const avg   = bills.length ? Math.round(grand / bills.length) : 0;
+
+  const del = bills.filter(o => o.type === 'Delivery');
+  const riderTotal  = sum(del, o => o.riderFee ?? o.rider_fee);
+  const riderDrawer = sum(del.filter(o => ['card','bank','jazzcash'].includes(o.method)), o => o.riderFee ?? o.rider_fee);
+  const riderInCash = riderTotal - riderDrawer;
+
+  const cashIn  = sum(by('cash-in'),  o => o.total);
+  const cashOut = sum(by('cash-out'), o => Math.abs(o.total));
+  const expAll  = by('expense');
+  const finExp  = sum(expAll.filter(_isFinanceExpense),  o => Math.abs(o.total));
+  const tillExp = sum(expAll.filter(o => !_isFinanceExpense(o)), o => Math.abs(o.total));
+  const returns = sum(by('return'), o => Math.abs(o.total));
+  const expected = computeCashInHand(list, opening);
+
+  const taxSent = tp.card + tp.bank + tp.jazzcash + tp.foodpanda;
+  const taxCashPct = tp.total ? Math.round(tp.cash / tp.total * 100) : 0;
+
+  const tile = (v, l, h, c, cls) =>
+    `<div class="sum-tile ${cls || ''}" style="--c:${c}"><div class="v">${v}</div><div class="l">${l}</div>${h ? `<div class="h">${h}</div>` : ''}</div>`;
+  const sec = (ic, title, sub, body) =>
+    `<div class="sum-sec"><div class="sum-head"><span class="sum-head-ic">${ic}</span><span class="sum-head-t">${title}</span><span class="sum-head-s">${sub || ''}</span></div><div class="sum-body">${body}</div></div>`;
+
+  // 1) SALES
+  const s1 = sec('📈', 'Sales Overview', bills.length + ' bills · avg ' + R(avg),
+    `<div class="sum-grid">
+      ${tile(R(gross), 'Gross Sale', 'Before discounts', 'var(--green)')}
+      ${tile('− ' + R(disc), 'Discounts', 'Given to customers', 'var(--red)')}
+      ${tile(R(net), 'Net Sale', 'Gross minus discounts', 'var(--green)', 'big')}
+      ${tile(R(grand), 'Grand Total', 'What customers paid (incl. tax &amp; service charge)', 'var(--orange)', 'big')}
+    </div>`);
+
+  // 2) PAYMENT METHODS
+  const payTotal = pm.cash + pm.card + pm.bank + pm.jazzcash + pm.foodpanda + pm.staff;
+  const pct = v => payTotal ? Math.round(v / payTotal * 100) : 0;
+  const payRow = (ic, name, v, c) =>
+    `<div class="pay-row" style="--c:${c}"><div class="pay-name">${ic} ${name}</div><div class="pay-bar"><i style="width:${pct(v)}%"></i></div><div class="pay-amt">${R(v)}</div><div class="pay-pct">${pct(v)}%</div></div>`;
+  const s2 = sec('💳', 'How Customers Paid', 'Total ' + R(payTotal),
+    payRow('💵', 'Cash', pm.cash, 'var(--red)') +
+    payRow('💳', 'Card', pm.card, 'var(--blue)') +
+    payRow('🏦', 'Bank', pm.bank, 'var(--purple)') +
+    payRow('📱', 'JazzCash', pm.jazzcash, 'var(--orange)') +
+    payRow('🐼', 'FoodPanda', pm.foodpanda, 'var(--green)') +
+    payRow('👷', 'Staff Meals', pm.staff, 'var(--gold)'));
+
+  // 3) TAX
+  const s3 = sec('🧾', 'Tax', 'Total ' + R(tp.total),
+    `<div class="split-bar"><i style="width:${taxCashPct}%;background:var(--red)"></i><i style="width:${tp.total ? 100 - taxCashPct : 0}%;background:var(--blue)"></i></div>
+     <div class="split-legend"><span style="color:var(--red)">● In cash: ${R(tp.cash)} (${taxCashPct}%)</span><span style="color:#5dade2">● Already sent to boss: ${R(taxSent)} (${tp.total ? 100 - taxCashPct : 0}%)</span></div>
+     <div class="sum-grid">
+      ${tile(R(tp.cash), 'Tax in Cash', '⚠ Sitting in drawer — pay out &amp; enter as expense', 'var(--red)', 'alert')}
+      ${tile(R(tp.card), 'Tax via Card', '✓ Already sent', 'var(--blue)', tp.card ? '' : 'dim')}
+      ${tile(R(tp.bank), 'Tax via Bank', '✓ Already sent', 'var(--blue)', tp.bank ? '' : 'dim')}
+      ${tile(R(tp.jazzcash), 'Tax via JazzCash', '✓ Already sent', 'var(--blue)', tp.jazzcash ? '' : 'dim')}
+      ${tile(R(tp.foodpanda), 'Tax via FoodPanda', '✓ Already sent', 'var(--blue)', tp.foodpanda ? '' : 'dim')}
+    </div>`);
+
+  // 4) RIDER FEES
+  const s4 = sec('🏍️', 'Delivery Rider Fees', del.length + ' delivery bills',
+    `<div class="sum-grid">
+      ${tile(R(riderTotal), 'Total Given to Riders', 'All delivery fees', 'var(--orange)', 'big')}
+      ${tile(R(riderInCash), 'Already Out of Cash Sales', 'Rider kept it from cash bills — nothing to do', 'var(--text2)')}
+      ${tile(R(riderDrawer), 'Paid From Drawer', 'Card / bank / JazzCash bills — taken from drawer cash', 'var(--red)')}
+    </div>`);
+
+  // 5) CASH DRAWER
+  const wf = (sign, label, sub, v) =>
+    `<div class="wf-row"><div class="wf-sign ${sign === '+' ? 'plus' : 'minus'}">${sign === '+' ? '+' : '−'}</div><div class="wf-lbl">${label}${sub ? `<small>${sub}</small>` : ''}</div><div class="wf-val" style="color:${sign === '+' ? 'var(--green)' : 'var(--red)'}">${R(v)}</div></div>`;
+  const s5 = sec('💵', 'Cash Drawer', 'Should match the cash you count',
+    wf('+', 'Opening Balance', 'Float at start', opening) +
+    wf('+', 'Cash Collected', 'Cash sales (after rider fees)', pm.cash) +
+    wf('+', 'Staff Meals', 'Settled in cash', pm.staff) +
+    wf('+', 'Cash In', 'Money added to drawer', cashIn) +
+    wf('-', 'Cash Out', 'Money taken from drawer', cashOut) +
+    wf('-', 'Till Expenses', 'Paid from drawer', tillExp) +
+    wf('-', 'Rider Fees From Drawer', 'On card / bank / JazzCash bills', riderDrawer) +
+    `<div class="wf-total"><span class="t">Expected in Drawer</span><span class="a">${R(expected)}</span></div>
+     <div class="payout-box">
+       <div class="payout-title">⚠ Still to pay out at closing — enter each as a Till expense</div>
+       <div class="payout-row"><span>Service Charge</span><b>${R(sc)}</b></div>
+       <div class="payout-row"><span>Tax collected in Cash</span><b>${R(tp.cash)}</b></div>
+       <div class="payout-sum"><span>Total to pay out</span><b>${R(sc + tp.cash)}</b></div>
+       <div class="payout-note">Card / bank / JazzCash / FoodPanda tax (${R(taxSent)}) is already with the boss — no action needed.</div>
+     </div>
+     <div style="font-size:12px;color:var(--text3);margin-top:12px;">Also recorded (not in drawer): Finance expenses ${R(finExp)} · Returns ${R(returns)}</div>`);
+
+  return s1 + s2 + s3 + s4 + s5;
+}
+
 async function renderClosingReport() {
   const fromEl = document.getElementById('closing-date-from');
   const toEl = document.getElementById('closing-date-to');
@@ -7079,6 +7241,7 @@ async function renderClosingReport() {
   const grossSale = billsOnly.reduce((s,t) => s + _grossOf(t), 0);
   const netSale = grossSale - discGiven;
   const taxTotal = billsOnly.reduce((s,t) => s + (t.tax||0), 0);
+  const taxPM = taxByMethod(billsOnly);
 
   const _obResult = await fetchOpeningBalance(activeBranch, fromDate);
   let opening = _obResult.amount;
@@ -7097,30 +7260,9 @@ async function renderClosingReport() {
     adminBtn.onclick = () => adminDeleteFullDay(fromDate, activeBranch);
     document.querySelector('.closing-header div:last-child').appendChild(adminBtn);
   }
-    document.getElementById('closing-stats').innerHTML = `
-    <div class="cs-card blue"><div class="cs-val">Rs ${opening}</div><div class="cs-lbl">Opening Balance</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${grossSale}</div><div class="cs-lbl">Gross Sale</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${discGiven}</div><div class="cs-lbl">Total Discount</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${netSale}</div><div class="cs-lbl">Net Sale</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${taxTotal}</div><div class="cs-lbl">Tax</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${scCollected}</div><div class="cs-lbl">Service Charge</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${deliveryFeesOnly}</div><div class="cs-lbl">Rider Fees Given (Total)</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${feeInCashSales}</div><div class="cs-lbl">Rider Fees: already out of Cash Collected</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${feeFromDrawer}</div><div class="cs-lbl">Rider Fees: taken from Drawer (card/bank bills)</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.staff}</div><div class="cs-lbl">Staff Meals</div></div>
-    <div class="cs-card orange"><div class="cs-val">${billsOnly.length}</div><div class="cs-lbl">Bills Issued</div></div>
-    <div class="cs-card red"><div class="cs-val">Rs ${totalCash}</div><div class="cs-lbl">Cash Collected</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.card}</div><div class="cs-lbl">Card</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.jazzcash}</div><div class="cs-lbl">JazzCash</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.bank}</div><div class="cs-lbl">Bank</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${pm.foodpanda}</div><div class="cs-lbl">FoodPanda</div></div>
-    <div class="cs-card orange"><div class="cs-val">Rs ${avg}</div><div class="cs-lbl">Avg Bill Value</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${returnTotal}</div><div class="cs-lbl">Returns</div></div>
-    <div class="cs-card red"><div class="cs-val">-Rs ${expenses}</div><div class="cs-lbl">Till Expenses</div></div>
-    <div class="cs-card blue"><div class="cs-val">Rs ${financeExp}</div><div class="cs-lbl">Finance Expenses</div></div>
-    <div class="cs-card green"><div class="cs-val">Rs ${computeCashInHand(txs, opening)}</div><div class="cs-lbl">Expected in Drawer</div></div>
-    <div class="cs-card orange"><div class="cs-val" style="color:#fff;">Rs ${total}</div><div class="cs-lbl">Grand Total</div></div>
-  `;
+  const _csEl = document.getElementById('closing-stats');
+  _csEl.className = 'sum-wrap';
+  _csEl.innerHTML = buildSummaryHTML(txs, opening);
 
   const staffNames = [...new Set(txs.map(t => t.staff).filter(Boolean))];
   const staffBreakdownHTML = staffNames.map(name => {
@@ -7177,6 +7319,7 @@ async function renderClosingReport() {
       <div class="cb-row"><span>Rider Fees paid from drawer (non-cash bills)</span><span class="cb-row-val" style="color:var(--red);">-Rs ${feeFromDrawer}</span></div>
       <div class="cb-row"><span>Finance Expenses (not taken from drawer)</span><span class="cb-row-val">Rs ${financeExp}</span></div>
       <div class="cb-row"><span>ℹ️ Service Charge today (enter as Till expense when paid out)</span><span class="cb-row-val" style="color:var(--gold);">Rs ${scCollected}</span></div>
+
       <div class="cb-row" style="border-top:1px solid var(--border);margin-top:3px;padding-top:6px;">
         <span style="font-weight:700;color:white;">Expected in Drawer</span>
         <span class="cb-row-val" style="color:var(--green);font-size:15px;">Rs ${computeCashInHand(txs, opening)}</span>
@@ -7211,6 +7354,7 @@ async function printClosingReport() {
     + billsOnly.filter(t=>t.method==='split').reduce((s,t)=>s+(t.split_card||0),0);
   const panda = billsOnly.filter(t=>t.method==='foodpanda').reduce((s,t)=>s+t.total,0);
   const scColl = billsOnly.reduce((s,t)=>s+(t.sc||0),0);
+  const taxPM = taxByMethod(billsOnly);
   const discGiven = billsOnly.reduce((s,t)=>s+(t.discount||0),0);
   const cashOuts = txs.filter(t=>t.method==='cash-out').reduce((s,t)=>s+Math.abs(t.total),0);
   const expenses = sales.filter(t=>t.method==='expense').reduce((s,t)=>s+Math.abs(t.total),0);
@@ -7235,6 +7379,8 @@ async function printClosingReport() {
         <div style="display:flex;justify-content:space-between;"><span>Card Sales:</span><span>Rs ${card}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>FoodPanda:</span><span>Rs ${panda}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>SC Collected:</span><span>Rs ${scColl}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Tax (Cash):</span><span>Rs ${taxPM.cash}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Tax (Card/Online, sent):</span><span>Rs ${taxPM.card + taxPM.bank + taxPM.jazzcash + taxPM.foodpanda}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Discounts:</span><span>Rs ${discGiven}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash Outs:</span><span>Rs ${cashOuts}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Expenses:</span><span>Rs ${expenses}</span></div>
@@ -7297,6 +7443,7 @@ async function exportClosingStatement() {
   const feeFromDrawer = sum(deliv.filter(t => ['card','bank','jazzcash'].includes(t.method)), t => t.rider_fee);
   const feeInCash = sum(deliv, t => t.rider_fee) - feeFromDrawer;
   const cnt = m => bills.filter(t => t.method === m).length;
+  const tp = taxByMethod(bills);
 
   // ---------- styling ----------
   const C = { bg:'FF0B1020', glass:'FF18213D', glass2:'FF1F2A4D', edge:'FF3D4C7A', dot:'FF2B3760',
@@ -7396,7 +7543,9 @@ async function exportClosingStatement() {
   line(0, 'Gross Sale', '', gross);
   line(0, 'Discount', '', disc, { color: C.red });
   line(0, 'Net Sale', '', gross - disc, { bold: true, color: C.green });
-  line(0, 'Tax', '', sum(bills, t => t.tax), { color: C.orange });
+  line(0, 'Tax (total)', '', tp.total, { color: C.orange });
+  line(0, '   ↳ in Cash (pay out)', '', tp.cash, { color: C.red });
+  line(0, '   ↳ Card / Bank / Jazz / Panda (already sent)', '', tp.card + tp.bank + tp.jazzcash + tp.foodpanda, { color: C.mute });
   line(0, 'Service Charges', '', sum(bills, t => t.sc), { color: C.orange });
   line(0, 'Rider Fees Given (total)', '', sum(deliv, t => t.rider_fee), { color: C.mute });
   line(0, '   ↳ already out of Cash Sale', '', feeInCash, { color: C.mute });
@@ -7414,6 +7563,7 @@ async function exportClosingStatement() {
   line(1, 'Credit Collected', '', creditCollected, { color: C.green });
   section(1, 'Cash Reconciliation', C.orange);
   line(1, 'Service Charge today (pay out as expense)', '', sum(bills, t => t.sc), { color: C.orange });
+  line(1, 'Cash Tax today (pay out as expense)', '', tp.cash, { color: C.orange });
   line(1, 'CASH IN HAND', '', cashInHand, { fill: grad('FF8A4B12', 'FF5B2D7A'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
   line(1, 'SUBMITTED CASH', hasDecl ? finals.length : '', hasDecl ? submitted : '—', { fill: grad('FF1D5FA8', 'FF3B3FA8'), bold: true, size: 14, h: 32, color: 'FFFFFFFF' });
   const ok = hasDecl && difference === 0;
@@ -8688,7 +8838,7 @@ function renderDeclForm() {
     </div>`;
   declAddExpenseRow();
 }
-const EXPENSE_PRESETS = ['Rider Fuel','Owner Expense','Owner food','Ghar food','Staff food','Vaggie bill','Chicken bill','Staff advance','Service charge'];
+const EXPENSE_PRESETS = ['Rider Fuel','Owner Expense','Owner food','Ghar food','Staff food','Vaggie bill','Chicken bill','Staff advance','Service charge','Tax (cash)'];
 
 function expDescFieldHTML(cls) {
   const st = "width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;";
@@ -10731,6 +10881,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
