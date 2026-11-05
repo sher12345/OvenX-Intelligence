@@ -11488,16 +11488,16 @@ window.ptPrint = function(id){
     }
   };
 
-  // Trigger the print when Electron sends the job (Runs in the browser too)
+  /* ═════════ 2. PRINT STATION (runs only inside Electron) ═════════ */
+  if (!window.ovenxPrinter) { console.warn('ovenxPrinter is MISSING in this frame'); return; }
+  const BR = localStorage.getItem('ovenx_station_branch');
+  if (!BR || !sb) { console.warn('Print station: ovenx_station_branch not set', BR); return; }
+
+  // Trigger the print when Electron sends the job
   window.addEventListener('electron-print-job', (e) => {
     console.log('Electron says print this:', e.detail);
     handle(e.detail);
   });
-
-  /* ═════════ 2. PRINT STATION (runs only inside Electron) ═════════ */
-  if (!window.ovenxPrinter) return;
-  const BR = localStorage.getItem('ovenx_station_branch');
-  if (!BR || !sb) return;
 
   const W = 42;
   function EP(){
