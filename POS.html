@@ -9348,7 +9348,16 @@ async function closeAllShifts() {
 
   showToast('Finalizing all shifts...', 'success');
 
-  const closedDate = todayKey();
+  const _dayCf = document.getElementById('closing-date-from').value || bizDayFrom();
+  const _dayCt = document.getElementById('closing-date-to').value   || bizDayTo();
+  let _dayRows = [], _dayOpen = 0;
+  try {
+    const raw = await _xcFetchAll(_dtLocalToISO(_dayCf), _dtLocalToISO(_dayCt));
+    _dayRows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
+    _dayOpen = (await fetchOpeningBalance(activeBranch, _dayCf.slice(0,10))).amount;
+  } catch(e) { showToast('Could not load the day — close cancelled', 'error'); return; }
+  if (!_dayRows.length) { showToast('No sales found for ' + _dayCf + ' → ' + _dayCt + ' — close cancelled. Load the right day in Closing first.', 'error'); return; }
+  const closedDate = _dayCf.slice(0,10);
 
   const activeTables = Object.keys(tableOrders).length;
   if (activeTables > 0) {
@@ -9373,21 +9382,13 @@ async function closeAllShifts() {
     date: closedDate,
     closed_at: new Date().toISOString(),
     closed_by: currentStaff,
-    final_total: completedOrders
-      .filter(o => !['cash-in','cash-out'].includes(o.method))
-      .reduce((s,o) => s + o.total, 0),
-    bills_count: completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).length
+    final_total: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o) => s + o.total, 0),
+    bills_count: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length
   }]);
   const _closeGotQueued = !!(_closureResult && _closureResult.error);
 
   // Capture totals BEFORE clearing — from the DB over the WHOLE shift window
-  const _cf = bizDayFrom();
-  let _rows = completedOrders, _open = openingBalance;
-  try {
-    const raw = await _xcFetchAll(_dtLocalToISO(_cf), new Date().toISOString());
-    _rows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
-    _open = (await fetchOpeningBalance(activeBranch, _cf.slice(0,10))).amount;
-  } catch(e) { console.warn('Close slip fallback to memory:', e.message); }
+  const _rows = _dayRows, _open = _dayOpen;
   const allSales = _rows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const _pm = sumByMethod(allSales);
@@ -9494,7 +9495,16 @@ async function closeAllShiftsAndArchive() {
 
   showToast('Archiving shift data...', 'success');
 
-  const closedDate = todayKey();
+  const _dayCf = document.getElementById('closing-date-from').value || bizDayFrom();
+  const _dayCt = document.getElementById('closing-date-to').value   || bizDayTo();
+  let _dayRows = [], _dayOpen = 0;
+  try {
+    const raw = await _xcFetchAll(_dtLocalToISO(_dayCf), _dtLocalToISO(_dayCt));
+    _dayRows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
+    _dayOpen = (await fetchOpeningBalance(activeBranch, _dayCf.slice(0,10))).amount;
+  } catch(e) { showToast('Could not load the day — close cancelled', 'error'); return; }
+  if (!_dayRows.length) { showToast('No sales found for ' + _dayCf + ' → ' + _dayCt + ' — close cancelled. Load the right day in Closing first.', 'error'); return; }
+  const closedDate = _dayCf.slice(0,10);
 
   await saveShiftReport();
 
@@ -9518,20 +9528,13 @@ async function closeAllShiftsAndArchive() {
     date: closedDate,
     closed_at: new Date().toISOString(),
     closed_by: currentStaff,
-    final_total: completedOrders
-      .filter(o => !['cash-in','cash-out'].includes(o.method))
-      .reduce((s,o) => s + o.total, 0),
-    bills_count: completedOrders.filter(o => !['cash-in','cash-out'].includes(o.method)).length
+    final_total: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).reduce((s,o) => s + o.total, 0),
+    bills_count: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length
   }]);
   const _archiveGotQueued = !!(_archiveResult && _archiveResult.error);
 
   // Capture totals BEFORE clearing — from the DB over the whole business day
-  let _rows = completedOrders, _open = openingBalance;
-  try {
-    const raw = await _xcFetchAll(_dtLocalToISO(bizDayFrom()), new Date().toISOString());
-    _rows = raw.map(t => ({ method: t.method, total: t.total, splitCash: t.split_cash||0, splitCard: t.split_card||0, itemsText: t.items_text||'' }));
-    _open = (await fetchOpeningBalance(activeBranch, todayKey())).amount;
-  } catch(e) { console.warn('Archive slip fallback to memory:', e.message); }
+  const _rows = _dayRows, _open = _dayOpen;
   const allSales = _rows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method));
   const grandTotal = allSales.reduce((s,o) => s + o.total, 0);
   const totalCash = sumByMethod(allSales).cash;
@@ -10999,6 +11002,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
