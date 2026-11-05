@@ -429,9 +429,9 @@ body {
         }
 
         .kitchen-card { background: white; padding: 25px; border-radius: 30px; margin-bottom: 20px; border-left: 12px solid var(--orange); text-align: left; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .kitchen-card.status-preparing { border-left-color: #007bff; }
-        .kitchen-card.status-ready, .kitchen-card.status-completed, .kitchen-card.status-assigned { border-left-color: var(--wa-green); opacity: 0.6; }
-.kb-completed, .kb-assigned { background: #e8f5e9; color: var(--wa-green); }
+.kitchen-card.status-preparing { border-left-color: #007bff; }
+.kitchen-card.status-ready, .kitchen-card.status-completed, .kitchen-card.status-assigned { border-left-color: var(--wa-green); opacity: 0.6; }
+.kitchen-card.status-voided { border-left-color: #6b7280 !important; background: #f3f4f6 !important; opacity: 0.6; filter: grayscale(100%); }
         .kitchen-card.warning { box-shadow: 0 0 25px #ffd700; border-left-color: #ffd700 !important; animation: bounce 2s infinite; }
         .kitchen-card.late { background: #fff1f1; border-left-color: #ff0000 !important; box-shadow: 0 0 35px #ff0000; animation: aggressive-shake 0.2s infinite; border: 2px solid red; }
         .order-timer { font-size: 22px; font-weight: 700; color: #444; margin-top: 5px; font-family: monospace; }
@@ -6355,7 +6355,13 @@ function kitchenCardHtml(o, cardMap){
     customerInfoHtml += `</div>`;
   }
 
-  return `<span class="kitchen-badge kb-${escHtml(o.status.toLowerCase())}">${escHtml(o.status)}</span><div style="font-weight:700; color:var(--red); font-size:18px;">${escHtml(o.type).toUpperCase()} - ${escHtml(o.location)} <span class="order-branch-tag ${escHtml(orderBranch)}">${escHtml(orderBranch)}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'></div><div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${escHtml(o.items)}</div>
+  const voidBanner = o.status === 'VOIDED' 
+    ? `<div style="background:#fee2e2; border:2px solid #ef4444; color:#b91c1c; padding:12px; border-radius:12px; margin-bottom:12px; font-weight:700;">
+         🚫 VOIDED: ${escHtml(o.void_reason || 'No reason provided')}
+       </div>` 
+    : '';
+
+  return `<span class="kitchen-badge kb-${escHtml(o.status.toLowerCase())}">${escHtml(o.status)}</span><div style="font-weight:700; color:var(--red); font-size:18px;">${escHtml(o.type).toUpperCase()} - ${escHtml(o.location)} <span class="order-branch-tag ${escHtml(orderBranch)}">${escHtml(orderBranch)}</span></div>${customerInfoHtml}${cardBadgeHtml(cardMap[o.id])}<div class='order-timer'></div>${voidBanner}<div style="white-space:pre-wrap; font-weight:600; font-size:14px; background:#f9f9f9; padding:10px; border-radius:15px; margin-top:10px;">${escHtml(o.items)}</div>
 ${priceHtml}
 <div class="admin-actions">
   <button class="btn-action btn-void-item" onclick="adminVoidItem('${o.id}', '${b64enc(o.items)}', ${o.subtotal || 0}, '${jsq(o.payment_method || 'Cash')}', ${o.tax || 0}, '${jsq(o.type)}', ${o.discount || 0}, ${o.eligible_subtotal || 0})">VOID ITEM</button>
@@ -6984,10 +6990,15 @@ function markKitchenPrinted(id) {
 }
 
     async function adminVoidOrder(id) {
-    if (!confirm("Void this order? It will be kept in the audit trail as VOIDED, not deleted.")) return;
+    const reason = await askText("Why are you voiding this order?\n(e.g., Customer cancelled, Out of stock, Mistake)");
+    if (reason === null) return; // User clicked Cancel
+    if (!reason.trim()) return alert("A reason is required to void an order.");
+    
+    if (!confirm("Void this order? It will be kept in the audit trail as VOIDED.")) return;
+    
     playClick('thud');
     try {
-        await callAdminAction('voidOrder', { id });
+        await callAdminAction('voidOrder', { id, reason: reason.trim() });
         renderKitchenOrders();
     } catch (e) { /* alert already shown */ }
 }
