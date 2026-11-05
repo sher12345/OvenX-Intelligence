@@ -11492,6 +11492,11 @@ window.ptPrint = function(id){
   if (!window.ovenxPrinter) return;
   const BR = localStorage.getItem('ovenx_station_branch');
   if (!BR || !sb) return;
+  // Trigger the print when Electron sends the job
+window.addEventListener('electron-print-job', (e) => {
+    console.log('Electron says print this:', e.detail);
+    handle(e.detail);
+});
 
   const W = 42;
   function EP(){
