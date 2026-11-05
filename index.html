@@ -11586,6 +11586,7 @@ window.ptPrint = function(id){
   }
 
   async function handle(job){
+    if (!window.ovenxPrinter) return;   // frames without the printer bridge must not touch the job
     const { data: claimed } = await sb.from('print_jobs').update({ status:'printing' })
       .eq('id', job.id).eq('status','pending').select();
     if (!claimed || !claimed.length) return;
