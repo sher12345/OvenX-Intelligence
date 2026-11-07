@@ -9357,7 +9357,7 @@ async function closeAllShifts() {
     _dayOpen = (await fetchOpeningBalance(activeBranch, _dayCf.slice(0,10))).amount;
   } catch(e) { showToast('Could not load the day — close cancelled', 'error'); return; }
   if (!_dayRows.length) { showToast('No sales found for ' + _dayCf + ' → ' + _dayCt + ' — close cancelled. Load the right day in Closing first.', 'error'); return; }
-  const closedDate = _dayCf.slice(0,10);
+  const closedDate = todayKey();
 
   const activeTables = Object.keys(tableOrders).length;
   if (activeTables > 0) {
@@ -9386,6 +9386,7 @@ async function closeAllShifts() {
     bills_count: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length
   }]);
   const _closeGotQueued = !!(_closureResult && _closureResult.error);
+  if (_closeGotQueued) { alert('Closure NOT saved: ' + _closureResult.error + (_closureResult.isDupe ? ' (a closure for this date already exists)' : '')); return; }
 
   // Capture totals BEFORE clearing — from the DB over the WHOLE shift window
   const _rows = _dayRows, _open = _dayOpen;
@@ -9504,7 +9505,7 @@ async function closeAllShiftsAndArchive() {
     _dayOpen = (await fetchOpeningBalance(activeBranch, _dayCf.slice(0,10))).amount;
   } catch(e) { showToast('Could not load the day — close cancelled', 'error'); return; }
   if (!_dayRows.length) { showToast('No sales found for ' + _dayCf + ' → ' + _dayCt + ' — close cancelled. Load the right day in Closing first.', 'error'); return; }
-  const closedDate = _dayCf.slice(0,10);
+  const closedDate = todayKey();
 
   await saveShiftReport();
 
@@ -9532,6 +9533,7 @@ async function closeAllShiftsAndArchive() {
     bills_count: _dayRows.filter(o => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(o.method)).length
   }]);
   const _archiveGotQueued = !!(_archiveResult && _archiveResult.error);
+  if (_archiveGotQueued) { alert('Closure NOT saved: ' + _archiveResult.error + (_archiveResult.isDupe ? ' (a closure for this date already exists)' : '')); return; }
 
   // Capture totals BEFORE clearing — from the DB over the whole business day
   const _rows = _dayRows, _open = _dayOpen;
@@ -11002,6 +11004,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
