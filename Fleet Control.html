@@ -88,6 +88,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 .lr:nth-child(1) .tr i{background:linear-gradient(90deg,#ffc857,#ff9ec4)}.lr:nth-child(2) .tr i{background:linear-gradient(90deg,#3ddc84,#9ff5c4)}.lr:nth-child(3) .tr i{background:linear-gradient(90deg,#a78bfa,#d4c4ff)}.lr:nth-child(4) .tr i{background:linear-gradient(90deg,#ff5fa2,#ffb0d0)}.lr:nth-child(5) .tr i{background:linear-gradient(90deg,#5db4f5,#b5dcff)}.lr:nth-child(6) .tr i{background:linear-gradient(90deg,#2dd4bf,#99f6e4)}.lr:nth-child(7) .tr i{background:linear-gradient(90deg,#ffc857,#fde7a8)}.lr:nth-child(8) .tr i{background:linear-gradient(90deg,#a78bfa,#5db4f5)}
 .tag:nth-of-type(4n+1){background:rgba(61,220,132,.16)}.tag:nth-of-type(4n+2){background:rgba(93,180,245,.16)}.tag:nth-of-type(4n+3){background:rgba(167,139,250,.18)}.tag:nth-of-type(4n){background:rgba(255,95,162,.16)}
 .btn:hover{border-color:rgba(167,139,250,.5)}th:nth-child(4n+1){color:#9ff5c4}th:nth-child(4n+2){color:#b5dcff}th:nth-child(4n+3){color:#d4c4ff}th:nth-child(4n){color:#ffb0d0}
+.pbtn{height:28px;padding:0 10px;font-size:12px}.fr td{cursor:pointer}.sb td{padding:7px 10px;font-size:12px;color:var(--t2);background:rgba(255,255,255,.025);border-bottom:1px solid rgba(255,255,255,.04);cursor:default}.sb td:first-child{padding-left:26px;border-left:3px solid var(--amb);white-space:normal;min-width:260px}.chev{display:inline-block;width:14px;color:var(--t3);transition:transform .2s}.chev.o{transform:rotate(90deg)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
 </style>
 </head>
@@ -105,6 +106,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
   <button class="btn" onclick="exportCsv()">CSV</button><button class="btn" onclick="lock()">Lock</button>
  </div>
  <div class="alerts" id="alerts"></div>
+ <div class="bento" id="money"></div>
  <div class="bento" id="hero"></div>
  <div class="bento">
   <div class="c s7"><h2>Top riders <i>deliveries · fees · tap for details</i></h2><div class="lb" id="lb"></div></div>
@@ -113,6 +115,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
   <div class="c s5"><h2>Payment mix <i>by orders</i></h2><div class="dn" id="dn"></div></div>
  </div>
  <div class="c"><h2>All riders <i>tap a row for full details</i></h2><div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div></div>
+ <div class="c" style="margin-top:14px"><h2>Delivery fees &amp; cash given from till <i id="plc">tap a rider to show / hide the bills paid from till</i></h2><div class="tw"><table style="min-width:640px"><thead><tr id="fhead"></tr></thead><tbody id="fbody"></tbody></table></div></div>
 </div>
 <div id="dr-bd" onclick="closeDr()"></div><aside id="dr" aria-label="Rider details"></aside><div class="toast" id="toast"></div>
 
@@ -120,21 +123,31 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
 const ADMIN_PIN='9999'; // CHANGE THIS
 const CASH_ALERT=20000, LATE_MIN=45, REFRESH=30;
-const HIST='kitchen_orders';
+const HIST='kitchen_orders';              // live orders
+const ARCHIVE='kitchen_orders_history';   // archived orders (older days live here)
+const PK=5*36e5;                          // Pakistan time = UTC+5 (no DST); all periods are computed in PKT
+const TZ='Asia/Karachi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>'Rs '+Math.round(Number(n||0)).toLocaleString();
-const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—';
-const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short'}):'—';
+const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:TZ}):'—';
+const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short',timeZone:TZ}):'—';
 const NONCASH=['jazzcash','card','bank','credited'];
 const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',credited:'Credited'};
 const PMC={cash:'#34e0a1',jazzcash:'#6cb8ff',card:'#a78bfa',bank:'#ffc857',credited:'#ff6b7a'};
 const normPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d};
-function bizDayStart(){const d=new Date();if(d.getHours()<6)d.setDate(d.getDate()-1);d.setHours(6,0,0,0);return d}
-function range(p){const n=new Date();if(p==='today')return bizDayStart();if(p==='week'){n.setDate(n.getDate()-6);n.setHours(0,0,0,0);return n}n.setDate(1);n.setHours(0,0,0,0);return n}
+
+/* Business day = 6:00 AM → 6:00 AM Pakistan time. Today / 7 days / Month ALL start on a 6 AM boundary,
+   so an order delivered at 1 AM always counts toward the same business day in every view. */
+function bizDayStart(){const n=new Date(Date.now()+PK);if(n.getUTCHours()<6)n.setUTCDate(n.getUTCDate()-1);n.setUTCHours(6,0,0,0);return new Date(n.getTime()-PK)}
+function range(p){const d=bizDayStart();
+ if(p==='today')return d;
+ if(p==='week')return new Date(d.getTime()-6*864e5);            // today + previous 6 business days
+ const m=new Date(d.getTime()+PK);m.setUTCDate(1);m.setUTCHours(6,0,0,0);return new Date(m.getTime()-PK)} // 1st of month, 6 AM
+
 function minsOf(o){const c=o.completed_at&&new Date(o.completed_at).getTime();const s=o.delivery_started_at?new Date(o.delivery_started_at).getTime():(o.created_at?new Date(o.created_at).getTime():null);return c&&s?Math.max(0,Math.round((c-s)/60000)):null}
 function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
-let period='today',branch='',query='',riders=[],active=[],hours=new Array(24).fill(0),pay={},sortKey='count',sortDir=-1,timer=null,tick=null,left=REFRESH,anim=true,prev={},openKey=null,fails=0;
+let period='today',branch='',query='',riders=[],active=[],hours=new Array(24).fill(0),pay={},sortKey='count',sortDir=-1,timer=null,tick=null,left=REFRESH,anim=true,prev={},openKey=null,fails=0,seq=0,warn='',drawList=[],feeOpen={};
 
 /* gate */
 function unlock(){if(fails>=5){$('err').textContent='Too many attempts. Reload the page.';return}
@@ -161,21 +174,42 @@ async function fetchAll(make){
  return all;
 }
 async function load(a){
+ const my=++seq;                       // ignore stale responses if the user switches period quickly
  left=REFRESH;if(a)anim=true;
  try{
   const s=range(period),iso=s.toISOString(),since=new Date(s.getTime()-2*864e5).toISOString();
-  const [attD,ordD,act]=await Promise.all([
+  const ordQ=t=>fetchAll(()=>sb.from(t).select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).order('created_at',{ascending:false}).order('id'));
+  let archErr=null;
+  const [attD,ordLive,ordArch,act]=await Promise.all([
    fetchAll(()=>sb.from('rider_attendance').select('*').gte('punched_in',since).order('punched_in',{ascending:false}).order('id')),
-   fetchAll(()=>sb.from(HIST).select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).order('created_at',{ascending:false}).order('id')),
+   ordQ(HIST),
+   ordQ(ARCHIVE).catch(e=>{archErr=e;console.warn('History table unavailable',e);return[]}),
    sb.from('kitchen_orders').select('*').in('status',['ASSIGNED','DELIVERING']).not('assigned_rider','is',null).order('created_at',{ascending:true})]);
   if(act.error)throw act.error;
-  build(attD,ordD,act.data||[],s);
-  $('upd').textContent='Updated '+tm(new Date())+' · auto-refresh 30s';
- }catch(e){console.error(e);$('upd').textContent='Load failed: '+e.message}
+
+  // Merge live + archived orders; an order present in both tables is counted once (live copy wins).
+  const seen=new Map();ordArch.forEach(o=>seen.set(String(o.id),o));ordLive.forEach(o=>seen.set(String(o.id),o));
+  const ordD=[...seen.values()];
+
+  // Orders can be assigned to a shift that started before the attendance window; load those shifts too,
+  // otherwise the same rider shows up as a second "Rider 1234" row and their deliveries get split.
+  const have=new Set(attD.map(x=>String(x.id)));
+  const miss=[...new Set([...ordD,...(act.data||[])].map(o=>o.assigned_rider).filter(v=>v!=null&&!have.has(String(v))).map(String))];
+  let extra=[];
+  for(let i=0;i<miss.length;i+=100){
+   const {data,error}=await sb.from('rider_attendance').select('*').in('id',miss.slice(i,i+100));
+   if(error){console.warn('Could not resolve riders',error);break}
+   extra=extra.concat(data||[]);
+  }
+  if(my!==seq)return;
+  warn=archErr?' · ⚠ order history not loaded, older days may be incomplete':'';
+  build(attD.concat(extra),ordD,act.data||[],s);
+  $('upd').textContent='Updated '+tm(new Date())+' · '+dt(s)+' '+tm(s)+' → now'+warn;
+ }catch(e){if(my!==seq)return;console.error(e);$('upd').textContent='Load failed: '+e.message}
 }
 function build(att,ord,act,s){
  const idKey={},R={};hours=new Array(24).fill(0);pay={};
- const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0});
+ const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[]});
  att.forEach(a=>{const k=normPhone(a.phone)||('id'+a.id);idKey[String(a.id)]=k;const r=get(k,a);
   if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=a.branch||r.branch}
   const end=a.punched_out?new Date(a.punched_out):new Date();
@@ -186,14 +220,16 @@ function build(att,ord,act,s){
    const m=minsOf(o);o.mins=m;r.orders.push(o);r.count++;r.fees+=o.delivery_fee||0;
    if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
    const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0,pm=o.payment_method;
-   if(!branch||r.branch===branch){hours[new Date(o.completed_at).getHours()]++;pay[pm||'cash']=(pay[pm||'cash']||0)+1}
+   const dr=['card','bank','jazzcash'].includes(pm)?fee:0;r.drawer+=dr;r.kept+=fee-dr;if(dr)r.drawerOrders.push(o);
+   if(!branch||r.branch===branch){hours[new Date(+new Date(o.completed_at)+PK).getUTCHours()]++;pay[pm||'cash']=(pay[pm||'cash']||0)+1}
    if(pm==='credited')r.cred+=food+fee;else r.collected+=food+fee;
    if(o.settled)r.settled++;else{r.unsettled++;if(NONCASH.includes(pm))r.owed+=fee;else r.cash+=food}
-  }else if(o.status==='CANCELLED')r.cancelled.push(o)});
+  }else if(o.status==='CANCELLED'){const ct=o.cancelled_at||o.completed_at;if(ct&&new Date(ct)>=s)r.cancelled.push(o)}});
  act.forEach(o=>{if(!o.assigned_rider)return;R[keyOf(o)].active.push(o)});
  riders=Object.values(R).filter(r=>!branch||r.branch===branch).filter(r=>r.count||r.cancelled.length||r.active.length||r.ms>0);
  active=riders.flatMap(r=>r.active.map(o=>({o,r})));
- renderAlerts();renderHero();renderLb();renderLive();renderHours();renderPay();renderTable();
+ drawList=riders.flatMap(r=>r.drawerOrders.map(o=>({o,r}))).sort((a,b)=>new Date(b.o.completed_at)-new Date(a.o.completed_at));
+ renderAlerts();renderMoney();renderHero();renderLb();renderLive();renderHours();renderPay();renderTable();renderFees();
  anim=false;if(openKey)openDr(openKey,true);
 }
 
@@ -215,7 +251,6 @@ function renderAlerts(){
 function renderHero(){
  const n=T('count'), valid=T('valid'), on=riders.filter(r=>r.status==='on-duty').length, brk=riders.filter(r=>r.status==='on-break').length, ot=valid?T('ontime')/valid*100:0, avg=valid?T('mins')/valid:0;
  const activeCount = active.length;
- const totalDeliveries = n + activeCount;
  const mx=Math.max(1,...hours),pts=hours.map((h,i)=>`${i*(300/23)},${56-h/mx*46}`);
  $('hero').innerHTML=`
  <div class="c s4 up" style="min-height:190px"><h2>Deliveries <i>${period==='today'?'business day':period==='week'?'last 7 days':'this month'}</i></h2><div class="big num" style="display:flex; align-items:baseline; gap:8px;">
@@ -263,6 +298,32 @@ function renderTable(){
 }
 function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'||k==='avg'?1:-1}renderTable()}
 
+/* money strip + delivery fee table (same rule as the POS: fee on card/bank/JazzCash bills is paid out of the drawer; on cash bills the rider keeps it) */
+function renderMoney(){
+ const earned=T('collected')+T('cred'),fees=T('fees'),drw=T('drawer'),kept=T('kept'),who=riders.filter(r=>r.drawer>0).length;
+ const lbl=period==='today'?'business day':period==='week'?'last 7 days':'this month';
+ $('money').innerHTML=`
+ <div class="c s3 up"><h2>Earned <i>${lbl}</i></h2><div class="big g num">${fmt(earned)}</div><div class="lab">${T('count')} delivered · food + tax + fees${T('cred')?' · incl. '+fmt(T('cred'))+' credited':''}</div></div>
+ <div class="c s3 up" style="animation-delay:.05s"><h2>Delivery fees <i>given to riders</i></h2><div class="big b num">${fmt(fees)}</div><div class="lab">across ${riders.filter(r=>r.count).length} riders</div></div>
+ <div class="c s3 up" style="animation-delay:.1s"><h2>Cash given from till <i>fees on non-cash bills</i></h2><div class="big o num">${fmt(drw)}</div><div class="lab">${drawList.length} bill${drawList.length===1?'':'s'} · ${who} rider${who===1?'':'s'}</div></div>
+ <div class="c s3 up" style="animation-delay:.15s"><h2>Kept by riders <i>from cash bills</i></h2><div class="big num">${fmt(kept)}</div><div class="lab">already out of cash sales</div></div>`;
+}
+function feeIsOpen(r){return r.key in feeOpen?feeOpen[r.key]:period==='today'}
+function toggleFee(k){const r=riders.find(x=>x.key===k);if(!r)return;feeOpen[k]=!feeIsOpen(r);renderFees()}
+function renderFees(){
+ const H=[['Rider',0],['Deliveries',1],['Fees earned',1],['Kept from cash bills',1],['Paid from till',1],['',1]];
+ $('fhead').innerHTML=H.map(x=>`<th class="${x[1]?'r':''}" style="cursor:default">${x[0]}</th>`).join('');
+ const rows=riders.filter(r=>r.count).sort((a,b)=>b.drawer-a.drawer||b.fees-a.fees);
+ const sm=k=>rows.reduce((a,r)=>a+r[k],0);
+ $('fbody').innerHTML=rows.length?rows.map(r=>{
+  const open=feeIsOpen(r),has=r.drawerOrders.length>0,k=esc(r.key);
+  const bills=[...r.drawerOrders].sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at));
+  return `<tr class="fr" ${has?`onclick="toggleFee('${k}')"`:''}><td><span class="chev ${open&&has?'o':''}">${has?'›':''}</span><b>${esc(r.name)}</b><span class="sub" style="padding-left:14px">${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'}</span></td><td class="r num">${r.count}</td><td class="r num g">${fmt(r.fees)}</td><td class="r num">${fmt(r.kept)}</td><td class="r num o"><b>${fmt(r.drawer)}</b>${has?`<span class="sub">${bills.length} bill${bills.length===1?'':'s'}</span>`:''}</td><td class="r"><button class="btn pbtn" onclick="event.stopPropagation();openDr('${k}')">Details</button></td></tr>`
+  +(open?bills.map(o=>`<tr class="sb"><td colspan="4">${dt(o.completed_at)} ${tm(o.completed_at)} · ${esc(o.customer_name||'')} · ${esc(o.location||'No address')}</td><td class="r num o">${fmt(o.delivery_fee)}<span class="sub">${PMN[o.payment_method]||''}</span></td><td></td></tr>`).join(''):'')}).join('')
+  +`<tr style="cursor:default"><td><b>Total</b></td><td class="r num"><b>${sm('count')}</b></td><td class="r num g"><b>${fmt(sm('fees'))}</b></td><td class="r num"><b>${fmt(sm('kept'))}</b></td><td class="r num o"><b>${fmt(sm('drawer'))}</b><span class="sub">${drawList.length} bills</span></td><td></td></tr>`
+  :'<tr><td colspan="6" class="empty">No deliveries in this period.</td></tr>';
+}
+
 /* drawer */
 const items=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).map(esc).join('<br>');
 function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)closeDr();return}openKey=key;
@@ -271,7 +332,9 @@ function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)clo
  <div class="g3"><div><b class="g">${r.count}</b><span>Deliveries</span></div><div><b>${avg??'—'} min</b><span>Avg time</span></div><div><b class="${ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</b><span>On time</span></div>
  <div><b class="g">${fmt(r.fees)}</b><span>Fees earned</span></div><div><b class="o">${fmt(r.cash)}</b><span>Cash to hand over</span></div><div><b class="g">${fmt(r.owed)}</b><span>Shop owes rider</span></div>
  <div><b>${(r.ms/36e5).toFixed(1)} h</b><span>Hours worked</span></div><div><b class="rd">${fmt(r.cred)}</b><span>Credited</span></div><div><b class="rd">${r.cancelled.length}</b><span>Cancelled</span></div></div>
+ <div class="g3"><div><b class="o">${fmt(r.drawer)}</b><span>Paid from till</span></div><div><b>${fmt(r.kept)}</b><span>Kept from cash bills</span></div><div><b>${r.drawerOrders.length}</b><span>Bills paid from till</span></div></div>
  <div class="acts"><button class="btn" onclick="wa('${esc(r.key)}')">📲 Send hisab (WhatsApp)</button>${r.unsettled?`<button class="btn" onclick="settleAll('${esc(r.key)}')">✅ Settle all (${r.unsettled})</button>`:''}</div>
+ ${r.drawerOrders.length?`<h2 class="sub" style="margin:0 0 8px">Cash given from till</h2>${r.drawerOrders.map(x=>`<div class="oc" style="padding:8px 12px;margin-bottom:6px"><h4>${fmt(x.delivery_fee)} · ${PMN[x.payment_method]||""} bill · ${dt(x.completed_at)} ${tm(x.completed_at)}</h4><p>${esc(x.location||"")}</p></div>`).join("")}<div style="height:10px"></div>`:""}
  <h2 class="sub" style="margin:0 0 8px">Shifts</h2>${r.shifts.length?r.shifts.map(a=>`<div class="oc" style="padding:8px 12px;margin-bottom:6px"><h4>${dt(a.punched_in)} · In ${tm(a.punched_in)} → ${a.punched_out?'Out '+tm(a.punched_out):'still on'}</h4></div>`).join(''):'<div class="empty">No shifts.</div>'}
  ${r.active.length?`<h2 class="sub" style="margin:12px 0 8px">Active orders</h2>${r.active.map(o=>`<div class="oc"><h4>📍 ${esc(o.location||'')}</h4><p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${esc(o.status)}</p></div>`).join('')}`:''}
  <h2 class="sub" style="margin:12px 0 8px">Completed orders (${orders.length})</h2>
@@ -286,7 +349,7 @@ function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)clo
 function closeDr(){openKey=null;$('dr-bd').classList.remove('on');$('dr').classList.remove('on')}
 async function updOrders(ids,patch){
   const a=await sb.from('kitchen_orders').update(patch).in('id',ids);
-  const b=await sb.from('kitchen_orders_history').update(patch).in('id',ids);
+  const b=await sb.from(ARCHIVE).update(patch).in('id',ids);
   return a.error||b.error;
 }
 async function settle(id,done){
@@ -300,17 +363,30 @@ async function settleAll(key){const r=riders.find(x=>x.key===key);if(!r)return;c
  const error=await updOrders(ids,{settled:true,settled_at:new Date().toISOString()});
  if(error){toast('Error: '+error.message);return}toast('All settled ✅');load()}
 function wa(key){const r=riders.find(x=>x.key===key);if(!r)return;const net=r.cash-r.owed;
- const txt=`*OvenX Hisab — ${r.name}*\n${new Date().toLocaleDateString('en-PK')}\nDeliveries: ${r.count}\nDelivery fees: ${fmt(r.fees)}\nCash with you: ${fmt(r.cash)}\nShop owes you: ${fmt(r.owed)}\n*${net>=0?'Please hand over: '+fmt(net):'Shop will pay you: '+fmt(-net)}*`;
+ const txt=`*OvenX Hisab — ${r.name}*\n${new Date().toLocaleDateString('en-PK',{timeZone:TZ})}\nDeliveries: ${r.count}\nDelivery fees: ${fmt(r.fees)}\nCash with you: ${fmt(r.cash)}\nShop owes you: ${fmt(r.owed)}\n*${net>=0?'Please hand over: '+fmt(net):'Shop will pay you: '+fmt(-net)}*`;
  const p=normPhone(r.phone);window.open('https://wa.me/'+(p?'92'+p:'')+'?text='+encodeURIComponent(txt),'_blank')}
-function exportCsv(){const h=['Rider','Phone','Branch','Status','Hours','Deliveries','Avg min','On time %','Fees','Cash to hand over','Shop owes rider','Credited','Cancelled'];
- const rows=riders.map(r=>[r.name,r.phone,r.branch,r.status,(r.ms/36e5).toFixed(1),r.count,r.valid?Math.round(r.mins/r.valid):'',r.valid?Math.round(r.ontime/r.valid*100):'',r.fees,r.cash,r.owed,r.cred,r.cancelled.length]);
- const csv=[h,...rows].map(l=>l.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ovenx-riders-'+period+'.csv';a.click()}
+function exportCsv(){
+ const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""').replace(/\n/g,' | ')+'"';
+ const line=a=>a.map(q).join(',');
+ const dtm=d=>d?new Date(d).toLocaleString('en-PK',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:TZ}):'';
+ const out=[];
+ out.push(line(['OvenX Fleet — '+period+' (from '+dtm(range(period))+') — '+(branch||'All branches')+' — exported '+dtm(new Date())]));
+ out.push('');
+ out.push(line(['RIDER SUMMARY']));
+ out.push(line(['Rider','Phone','Branch','Status','Hours','Deliveries','Avg min','On time %','Fees','Cash to hand over','Shop owes rider','Credited','Cancelled','Fees kept (cash bills)','Fees paid from till']));
+ riders.forEach(r=>out.push(line([r.name,r.phone,r.branch,r.status,(r.ms/36e5).toFixed(1),r.count,r.valid?Math.round(r.mins/r.valid):'',r.valid?Math.round(r.ontime/r.valid*100):'',r.fees,r.cash,r.owed,r.cred,r.cancelled.length,r.kept,r.drawer])));
+ out.push('');
+ out.push(line(['CASH GIVEN FROM TILL ('+drawList.length+')']));out.push(line(['Delivered','Rider','Order code','Payment','Fee']));drawList.slice().reverse().forEach(({o,r})=>out.push(line([dtm(o.completed_at),r.name,'DLV-'+String(o.id).slice(0,8).toUpperCase(),PMN[o.payment_method]||o.payment_method,o.delivery_fee||0])));out.push('');
+ const all=riders.flatMap(r=>r.orders.map(o=>({o,r}))).sort((a,b)=>new Date(a.o.completed_at)-new Date(b.o.completed_at));
+ out.push(line(['ALL DELIVERED ORDERS ('+all.length+')']));
+ out.push(line(['Order code','Branch','Created','Delivered','Rider','Customer','Phone','Address','Items','Payment','Food+tax','Delivery fee','Discount','Customer total','Settled','Minutes']));
+ all.forEach(({o,r})=>{const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0;
+  out.push(line(['DLV-'+String(o.id).slice(0,8).toUpperCase(),o.branch,dtm(o.created_at),dtm(o.completed_at),r.name,o.customer_name,o.phone,o.location,o.items,PMN[o.payment_method]||o.payment_method||'',food,fee,o.discount||0,food+fee,o.settled?'Yes':'No',o.mins==null?'':o.mins]))});
+ out.push(line(['','','','','','','','','TOTAL',all.length+' orders',all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0),0),all.reduce((s,x)=>s+(x.o.delivery_fee||0),0),all.reduce((s,x)=>s+(x.o.discount||0),0),all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0)+(x.o.delivery_fee||0),0),'','']));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+out.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='ovenx-riders-orders-'+period+'.csv';a.click();
+}
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
