@@ -2315,28 +2315,333 @@ function convertQtyToUnit(qty, fromUnit, toUnit) {
   return qty; // unconvertible units (pcs, tbsp, etc.) — leave as-is
 }
 
-async function deductInventoryForSale(sale, bizdayOverride) {
-  const bizday = bizdayOverride || todayKey();
-  const isDineIn = sale.type === 'Dine-In';
-  for (const item of sale.items) {
-    if (item.returned) continue;
-    const recipe = _recipeCache[item.name];
-    if (!recipe) continue;
-    for (const ing of recipe) {
-      if (!ing.ingredient_id) continue;
-      // Packaging is only used for Takeaway/Delivery. If a Dine-In order later
-      // moves to a takeaway table, sale.type is already 'Takeaway' by payment time.
-      if (ing.is_packaging && isDineIn) continue;
-      const rawQty = ing.qty * item.qty;
-      await sbInventoryOp('deduct', {
-        ingredient_id: ing.ingredient_id,
-        rawQty, fromUnit: ing.unit,
-        itemName: ing.name,
-        branch: activeBranch, bizday,
-        billNo: sale.billNo || null
-      });
-    }
+// ══════════════════════════════════
+// CONSUMPTION ENGINE
+// One shared brain used by (a) stock deduction at sale time and
+// (b) Analytics → Consumption tab, so the two can never disagree.
+// ══════════════════════════════════
+
+// Same ingredient written differently → ONE canonical name.
+// First name in each group is the one shown in reports.
+// Only groups you confirmed as the SAME item are listed here.
+// (Peri Peri Burger Sauce is deliberately NOT merged with Peri Peri Sauce.)
+const ING_ALIAS_GROUPS = [
+  ['Flour Maida', 'Maida', 'White Flour'],
+  ['Chicken Fajita', 'Fajita', 'Fajita Chicken'],
+  ['Bonfire Sauce', 'BonFire Sauce', 'Bonefire Sauce'],
+  ['Chili Mayo Sauce', 'Chilli Mayo Sauce', 'Chili Mayo', 'Chilli Mayo'],
+  ['Peri Peri Sauce', 'Peri-Peri Sauce', 'Peri Peri Pizza'],
+  ['Jalapeno', 'Jalapeños', 'Jalapenos'],
+  ['Olives', 'Black Olives'],
+  ['Cucumber', 'Cuccumber'],
+  ['Iceberg', 'Ice Berg'],
+  ['Mexican Burger Sauce', 'Mexican Sauce'],
+  ['Chicken Malai', 'Malai'],
+  ['Tomato', 'Tomato Slice'],
+  ['Seekh Kabab', 'Kabab'],
+  ['Boneless Thigh Fillet', 'Zinger Fillet', 'Bonless Thigh Zinger'],
+  ['Hot Shots', 'Chicken Pop Shots']
+];
+function ingKey(n) {
+  return String(n == null ? '' : n).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+const _ING_CANON = {}, _ING_DISPLAY = {};
+ING_ALIAS_GROUPS.forEach(g => {
+  const c = ingKey(g[0]);
+  _ING_DISPLAY[c] = g[0];
+  g.forEach(n => { _ING_CANON[ingKey(n)] = c; });
+});
+function ingCanon(n) { const k = ingKey(n); return _ING_CANON[k] || k; }
+
+// Menu item names that differ from the recipe name.
+// Also covers names typed differently on web / delivery orders.
+const RECIPE_NAME_ALIASES = {
+  'Sprite 1.5L': 'Sprite L',
+  'Coke liter': 'Coke 1 Liter', 'Coke litre': 'Coke 1 Liter', 'Cokelitter': 'Coke 1 Liter',
+  'Reg Fries': 'Plain Fries (Reg)', 'Regular Fries': 'Plain Fries (Reg)'
+};
+const _RECIPE_ALIAS_KEYS = {};
+Object.keys(RECIPE_NAME_ALIASES).forEach(k => { _RECIPE_ALIAS_KEYS[ingKey(k)] = RECIPE_NAME_ALIASES[k]; });
+
+// What the "1L Drink" / "Buddy Drink" inside a deal takes out of stock.
+const DEAL_DRINK_1L = 'Coke 1 Liter';
+const DEAL_BUDDY_DRINK = 'Coke Buddy';
+// Words used inside deal text ("Includes: 2x Zinger Burger, 1x Reg Fries, 2x Buddy Drink") → [recipe, amount per 1]
+const DEAL_INCLUDE_ALIASES = {
+  'buddydrink': [DEAL_BUDDY_DRINK, 1], 'drink': [DEAL_BUDDY_DRINK, 1],
+  '1ldrink': [DEAL_DRINK_1L, 1], 'literdrink': [DEAL_DRINK_1L, 1], 'litredrink': [DEAL_DRINK_1L, 1],
+  'wings': ['Hot Wings (M)', 1 / 6], 'wing': ['Hot Wings (M)', 1 / 6],   // Hot Wings (M) = 6 wings
+  'zinger': ['Zinger Burger', 1], 'zingers': ['Zinger Burger', 1]
+};
+// What is inside each deal. Pizza flavour(s) come from the flavour the cashier picked.
+// Custom deals not listed here are read from their description (e.g. "1 Large Pizza + 1L Drink").
+const DEAL_RECIPES = {
+  'Family Feast':  { pizzas: { count: 2, size: 'M' }, extras: [['Zinger Burger', 2], ['Hot Wings (M)', 1]], drink: 1 },
+  'Extreme Buddy': { pizzas: { count: 1, size: 'M' }, drink: 1 },
+  '01 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
+  '02 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
+  '03 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
+  '04 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
+  'Combo 1':       { extras: [['Zinger Burger', 1]] },
+  'Combo 2':       { extras: [['Khameera Sandwich', 1]] },
+  'Combo 3':       { pizzas: { count: 2, size: 'S' } }
+};
+const _SIZE_SUFFIX = { S: ['(S)', '(Small)'], M: ['(M)', '(Med)', '(Medium)'], L: ['(L)', '(Large)'] };
+
+// ── stock-item index (pos_ingredients) ──
+let _ingIndex = { byId: new Map(), byKey: new Map(), loadedAt: 0 };
+async function ensureIngIndex(force) {
+  if (!sb) return _ingIndex;
+  if (!force && _ingIndex.loadedAt && Date.now() - _ingIndex.loadedAt < 5 * 60 * 1000) return _ingIndex;
+  try {
+    const { data, error } = await sb.from('pos_ingredients').select('id,name,unit,is_active');
+    if (error) throw error;
+    const refIds = new Set(); // ids recipes already point at win when the table has look-alike rows
+    Object.values(_recipeCache || {}).forEach(r => (r || []).forEach(i => { if (i && i.ingredient_id) refIds.add(String(i.ingredient_id)); }));
+    const byId = new Map(), byKey = new Map();
+    (data || []).forEach(i => {
+      byId.set(String(i.id), i);
+      if (i.is_active === false) return;
+      const k = ingCanon(i.name), cur = byKey.get(k);
+      if (!cur || (refIds.has(String(i.id)) && !refIds.has(String(cur.id)))) byKey.set(k, i);
+    });
+    _ingIndex = { byId, byKey, loadedAt: Date.now() };
+  } catch (e) { console.warn('ensureIngIndex failed:', e.message); }
+  return _ingIndex;
+}
+function resolveIng(row, idx) {
+  if (!idx) return null;
+  if (row.ingredient_id && idx.byId.has(String(row.ingredient_id))) return idx.byId.get(String(row.ingredient_id));
+  return idx.byKey.get(row.canon) || null;
+}
+function _unitFamily(u) {
+  const x = String(u || '').toLowerCase().trim();
+  if (x === 'g' || x === 'kg') return 'mass';
+  if (x === 'ml' || x === 'l') return 'vol';
+  if (!x || ['pcs', 'pc', 'piece', 'pieces', 'bottle', 'bottles', 'can', 'pack', 'slice', 'unit', 'units'].includes(x)) return 'count';
+  return x;
+}
+function unitsCompatible(a, b) { return _unitFamily(a) === _unitFamily(b); }
+
+// ── recipe lookup ──
+function makeConsCtx(recipes, idx) {
+  const rIdx = {};
+  Object.keys(recipes || {}).forEach(n => { rIdx[ingKey(n)] = n; });
+  return { recipes: recipes || {}, rIdx, idx: idx || _ingIndex, deals: (typeof dealsData !== 'undefined' ? dealsData : []) };
+}
+async function buildConsCtx() {
+  if (!_recipeCache || !Object.keys(_recipeCache).length) { try { await loadRecipeCache(); } catch (e) {} }
+  const idx = await ensureIngIndex();
+  return makeConsCtx(_recipeCache || {}, idx);
+}
+function findRecipeName(name, ctx) {
+  if (!name) return null;
+  if (ctx.recipes[name]) return name;
+  const hit = ctx.rIdx[ingKey(name)];
+  if (hit) return hit;
+  const al = RECIPE_NAME_ALIASES[name] || _RECIPE_ALIAS_KEYS[ingKey(name)];
+  return (al && ctx.recipes[al]) ? al : null;
+}
+// "Pan Chicken Supreme", "fajita", "Bonfire Pizza" → the recipe it means (with size when the deal has one)
+function resolveFlavor(fl, size, ctx) {
+  const cands = [fl, String(fl).replace(/^(pan|premium|extreme|craft|deep dish)\s+/i, ''), 'Chicken ' + fl];
+  for (const c of cands) {
+    const r = size ? findSizedRecipe(c, size, ctx) : findRecipeName(c, ctx);
+    if (r) return r;
   }
+  return null;
+}
+// "A + B" or "Category 1: A, Category 2: B" or "Pizza: A" → ['A','B']
+function splitFlavors(text) {
+  return String(text || '').split(/\s*\+\s*|,\s*(?=[^,:]{1,30}:)/)
+    .map(s => s.replace(/^[^:]{1,30}:\s*/, '').replace(/[\[\]]/g, '').trim()).filter(Boolean);
+}
+// "2x Zinger Burger, 1x Reg Fries" → [{n:'Zinger Burger', c:2}, ...]
+function parseIncludes(text) {
+  const out = [], re = /(\d+)\s*x\s*([^,;+\]]+)/gi;
+  let m;
+  while ((m = re.exec(String(text || '')))) out.push({ n: m[2].trim(), c: parseInt(m[1], 10) });
+  return out;
+}
+function findSizedRecipe(base, size, ctx) {
+  for (const suf of (_SIZE_SUFFIX[size] || [])) {
+    const r = findRecipeName(base + ' ' + suf, ctx);
+    if (r) return r;
+  }
+  return null;
+}
+function parseDealDesc(desc) {
+  const d = String(desc || ''), out = { pizzas: null, drink: 0 };
+  const m = d.match(/(\d+)?\s*(small|medium|med|large)\b/i);
+  if (m) out.pizzas = { count: parseInt(m[1] || '1', 10), size: /^s/i.test(m[2]) ? 'S' : /^l/i.test(m[2]) ? 'L' : 'M' };
+  if (/\b1\s*(l|ltr|liter|litre)\b/i.test(d) && /drink|cola|coke|sprite/i.test(d)) out.drink = 1;
+  return out;
+}
+// "2x Zinger Burger [note], 1x Coke Buddy" → [{name, qty, note}]
+function _splitItemSegments(text) {
+  // split on newline, or on a comma that starts a new "2x ..." item, but never inside [ ] or ( )
+  const segs = []; let depth = 0, cur = '';
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '[' || ch === '(') depth++;
+    else if (ch === ']' || ch === ')') depth = Math.max(0, depth - 1);
+    if (depth === 0 && (ch === '\n' || (ch === ',' && /^\s*\d+\s*x\s/i.test(s.slice(i + 1))))) { segs.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  segs.push(cur);
+  return segs;
+}
+function parseItemsTextToItems(text) {
+  const out = [];
+  _splitItemSegments(text).forEach(seg => {
+    const m = seg.trim().match(/^(\d+)\s*x\s+(.+)$/i);
+    if (!m) return;
+    let name = m[2], note = '';
+    const nm = name.match(/\[([^\]]*)\]/);
+    if (nm && !/^\s*rider\s*:/i.test(nm[1])) note = nm[1].trim();
+    name = name.replace(/\s*@\s*Rs\s*[\d,.]+.*$/i, '').replace(/\s*\[.*$/, '').trim();
+    if (name) out.push({ name, qty: parseInt(m[1], 10), note });
+  });
+  return out;
+}
+
+// One sold line → list of recipes to use (or a direct stock item for bottled drinks).
+function expandSaleItem(item, ctx) {
+  const q = Number(item.qty) || 0;
+  const res = { parts: [], missing: [], isDeal: false };
+  if (!q || !item.name) return res;
+  const direct = findRecipeName(item.name, ctx);
+  if (direct) { res.parts.push({ recipe: direct, qty: q }); return res; }
+
+  // Deal name, optionally with flavours in brackets: "Combo 3 (Chicken Supreme + Chicken Fajita)"
+  let dealName = String(item.name).trim(), nameFlavors = '';
+  const pm = dealName.match(/^(.*?)\s*\((.+)\)\s*$/);
+  const findDeal = n => ctx.deals.find(d => d.n === n) || ctx.deals.find(d => ingKey(d.n) === ingKey(n));
+  let deal = findDeal(dealName);
+  if (!deal && pm && (findDeal(pm[1]) || DEAL_RECIPES[pm[1]] || dealFlavorMap[pm[1]])) { dealName = pm[1]; nameFlavors = pm[2]; deal = findDeal(dealName); }
+  const cfg = DEAL_RECIPES[dealName] || (deal && DEAL_RECIPES[deal.n]) || null;
+
+  if (deal || cfg || dealFlavorMap[dealName]) {
+    res.isDeal = true;
+    let notePart = String(item.note || '').split('|')[0];
+    let inc = null;                                   // "Includes: 2x Zinger Burger, 1x Reg Fries ..."
+    const im = notePart.match(/includes?\s*:\s*([\s\S]*)$/i);
+    if (im) { inc = parseIncludes(im[1]); notePart = notePart.slice(0, im.index); }
+    if (!inc && !cfg && deal) { const di = parseIncludes(deal.d); if (di.length) inc = di; }
+
+    const guess = parseDealDesc(deal ? deal.d : '');
+    const pizzas = (cfg && cfg.pizzas) || guess.pizzas;
+    const flavors = splitFlavors(nameFlavors + ' + ' + notePart);
+    flavors.forEach(fl => {
+      const r = resolveFlavor(fl, pizzas ? pizzas.size : null, ctx);
+      const per = pizzas ? pizzas.count / flavors.length : 1;
+      if (r) res.parts.push({ recipe: r, qty: q * per }); else res.missing.push(fl);
+    });
+
+    const addNamed = (name, count) => {
+      const al = DEAL_INCLUDE_ALIASES[ingKey(name)];
+      const r = al ? findRecipeName(al[0], ctx) : findRecipeName(name, ctx);
+      if (r) res.parts.push({ recipe: r, qty: q * count * (al ? al[1] : 1) }); else res.missing.push(name);
+    };
+    if (inc) {
+      inc.forEach(i => addNamed(i.n, i.c));
+    } else {
+      ((cfg && cfg.extras) || []).forEach(([n, c]) => addNamed(n, c));
+      const drink = (cfg && cfg.drink != null) ? cfg.drink : guess.drink;
+      if (drink) addNamed(DEAL_DRINK_1L, drink);
+    }
+    return res;
+  }
+  // No recipe, not a deal → the product itself may be a stock item (bottled drinks etc.)
+  const ing = ctx.idx && ctx.idx.byKey ? ctx.idx.byKey.get(ingCanon(item.name)) : null;
+  if (ing) res.parts.push({ stock: ing, qty: q });
+  return res;
+}
+
+function newConsAcc() { return { agg: new Map(), unmapped: {}, missing: {}, sold: {} }; }
+function _addUsage(acc, ing, qty, source, isPack) {
+  const canon = ingCanon(ing.name);
+  let unit = ing.unit || '', u = unit.toLowerCase();
+  if (u === 'kg') { unit = 'g'; qty *= 1000; } else if (u === 'l' || u === 'ltr') { unit = 'ml'; qty *= 1000; }
+  const key = canon + '||' + _unitFamily(unit);   // bottle + pcs are the same thing; g + pcs are not
+  let r = acc.agg.get(key);
+  if (!r) {
+    r = { key, canon, name: _ING_DISPLAY[canon] || ing.name, unit, ingredient_id: null, qty: 0, isPackaging: false, sources: {} };
+    acc.agg.set(key, r);
+  }
+  if (!r.ingredient_id && ing.ingredient_id) r.ingredient_id = ing.ingredient_id;
+  r.qty += qty;
+  if (isPack) r.isPackaging = true;
+  r.sources[source] = (r.sources[source] || 0) + qty;
+}
+// items → ingredient totals. Packaging is only counted for Takeaway/Delivery.
+function computeUsage(items, type, ctx, acc) {
+  acc = acc || newConsAcc();
+  const isDineIn = type === 'Dine-In';
+  (items || []).forEach(item => {
+    if (!item || item.returned) return;
+    const q = Number(item.qty) || 0;
+    if (!q || !item.name) return;
+    acc.sold[item.name] = (acc.sold[item.name] || 0) + q;
+    const ex = expandSaleItem(item, ctx);
+    ex.missing.forEach(m => { const k = item.name + ' → ' + m; acc.missing[k] = (acc.missing[k] || 0) + q; });
+    if (!ex.parts.length) { acc.unmapped[item.name] = (acc.unmapped[item.name] || 0) + q; return; }
+    ex.parts.forEach(p => {
+      if (p.stock) { _addUsage(acc, { name: p.stock.name, unit: p.stock.unit || 'pcs', ingredient_id: p.stock.id }, p.qty, item.name, false); return; }
+      (ctx.recipes[p.recipe] || []).forEach(ing => {
+        if (!ing || !ing.name) return;
+        const per = Number(ing.qty);
+        if (!per) return;                          // "Packing" rows with no quantity
+        if (ing.is_packaging && isDineIn) return;  // dine-in uses no takeaway packaging
+        _addUsage(acc, ing, per * p.qty, p.recipe, !!ing.is_packaging);
+      });
+    });
+  });
+  return acc;
+}
+
+// ── deduction at sale time ──
+const _warnedOnce = new Set();
+function _warnOnce(msg) {
+  if (_warnedOnce.has(msg)) return;
+  _warnedOnce.add(msg);
+  console.warn(msg);
+  showToast('⚠️ ' + msg, 'error');
+}
+let _deductChain = Promise.resolve();
+// Deductions run one after another so two quick sales can't overwrite each other's stock count.
+function deductInventoryForSale(sale, bizdayOverride, opts) {
+  const p = _deductChain
+    .then(() => _deductInventoryForSaleNow(sale, bizdayOverride, opts || {}))
+    .catch(e => console.error('deductInventoryForSale failed:', e));
+  _deductChain = p;
+  return p;
+}
+async function _deductInventoryForSaleNow(sale, bizdayOverride, opts) {
+  if (!sb || !sale || !Array.isArray(sale.items) || !sale.items.length) return;
+  const bizday = bizdayOverride || todayKey();
+  if (opts.dedupeBill && sale.billNo && isOnline) {
+    try {
+      const { count } = await sb.from('pos_consumption').select('id', { count: 'exact', head: true })
+        .eq('branch', activeBranch).eq('bill_no', sale.billNo);
+      if (count > 0) return; // this bill was already deducted
+    } catch (e) {}
+  }
+  const ctx = await buildConsCtx();
+  if (!ctx.idx || !ctx.idx.byId.size) { _warnOnce('Ingredient list could not be loaded — stock NOT deducted'); return; }
+  const acc = computeUsage(sale.items, sale.type, ctx);
+  for (const r of acc.agg.values()) {
+    const ing = resolveIng(r, ctx.idx);
+    if (!ing) { _warnOnce('No stock item found for "' + r.name + '" — not deducted'); continue; }
+    if (!unitsCompatible(r.unit, ing.unit)) _warnOnce('"' + r.name + '": recipe is in ' + (r.unit || '—') + ' but stock is in ' + (ing.unit || '—') + ' — fix the recipe unit');
+    await sbInventoryOp('deduct', {
+      ingredient_id: ing.id, rawQty: r.qty, fromUnit: r.unit || ing.unit,
+      itemName: ing.name, branch: activeBranch, bizday, billNo: sale.billNo || null
+    });
+  }
+  Object.keys(acc.unmapped).forEach(n => _warnOnce('"' + n + '" has no recipe or stock item — stock not deducted'));
+  Object.keys(acc.missing).forEach(k => _warnOnce('Deal part not found: ' + k));
 }
 
 async function sbInventoryOp(opType, data) {
@@ -2651,6 +2956,9 @@ async function settleDeliveryToCash(n) {
   };
   const res = await sbWrite('shift_transactions', 'insert', [row]);
   if (res && res.error && !res.isDupe) { showToast('Could not save delivery to Cash tab', 'error'); return; }
+  if (!(res && res.isDupe) && !completedOrders.some(o => o.id === n.id || o.kitchenOrderId === n.id)) {
+    deductInventoryForSale({ billNo: row.bill_no, type: 'Delivery', items: parseItemsTextToItems(n.items) }, null, { dedupeBill: true });
+  }
   const i = completedOrders.findIndex(o => o.id === n.id);
   if (i > -1) {
     completedOrders[i].method = method;
@@ -6347,6 +6655,8 @@ async function updateDeliveryStatus(orderId, status, knownOrder) {
         }
 
         completedOrders.push(sale);
+        // Delivery sales are saved from the kitchen order TEXT (items: []), so they never deducted stock.
+        deductInventoryForSale({ billNo: 'DLV-' + String(orderId).slice(0, 8).toUpperCase(), type: 'Delivery', items: parseItemsTextToItems(ko.items) }, null, { dedupeBill: true });
         cashInHand = computeCashInHand(completedOrders, openingBalance);
         document.getElementById('bar-cash').textContent = 'Rs ' + cashInHand;
         saveTodaySales();
@@ -9979,7 +10289,7 @@ async function adminTxSave() {
     : (document.getElementById('atm-raw-items')?.value || _adminTxCurrent.itemsText || '');
 
   // Build items array for JSONB
-  const itemsForDB = newItems.map(i => ({ name: i.name, qty: i.qty, price: i.price || 0, note: '' }));
+  const itemsForDB = newItems.map(i => ({ name: i.name, qty: i.qty, price: i.price || 0, note: i.note || '' }));
 
   const updatePayload = {
     total: newTotal,
@@ -10009,7 +10319,7 @@ async function adminTxSave() {
     if (updErr) throw updErr;
 
     if (itemsForDB.length) {
-      await deductInventoryForSale({ billNo: _adminTxCurrent.billNo, items: itemsForDB }, _adminTxDate);
+      await deductInventoryForSale({ billNo: _adminTxCurrent.billNo, items: itemsForDB, type: _adminTxCurrent.type }, _adminTxDate);
     }
       
 
@@ -10124,7 +10434,7 @@ async function aLoadTransactions() {
     const data = await _xcFetchAll(_dtLocalToISO(from), _dtLocalToISO(to));
     _aTxData = mergeInPendingTx(data || [], activeBranch, _dtLocalToISO(from), _dtLocalToISO(to))
       .filter(t => !['cash-in','cash-out','void','return','expense','discarded','deleted-delivery','item-void'].includes(t.method));
-    _aTxData.forEach(t => { t.items_text = aCleanItemsText(t.items_text); });
+    _aTxData.forEach(t => { t._raw_items_text = t.items_text; t.items_text = aCleanItemsText(t.items_text); });
     const pendingCount = _aTxData.filter(t => t._pending).length;
     if (pendingCount) showToast(pendingCount + ' sale(s) not yet synced — included from local queue', 'error');
     try { localStorage.setItem(ANALYTICS_CACHE_KEY + '_' + activeBranch, JSON.stringify({ data: _aTxData, savedAt: Date.now() })); } catch(e) {}
@@ -10533,52 +10843,143 @@ async function aDeleteRecipe(itemName, btn) {
   } catch(e){showToast('Delete failed','error');}
 }
 
-async function aCalcConsumption() {
-  const el=document.getElementById('a-consumption-content');
-  el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">Calculating...</div>';
-  if(!_aTxData.length)await aLoadTransactions();
-  try {
-    const{data}=await sb.from('item_recipes').select('*').eq('branch',activeBranch);
-    _aRecipes={};(data||[]).forEach(r=>{_aRecipes[r.item_name]=r.ingredients;});
-  } catch(e){}
-  if(!Object.keys(_aRecipes).length){el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">No recipes found. Add recipes in the Ingredients tab first.</div>';return;}
-  const soldItems=aParseItems(_aTxData);
-  const soldMap={};soldItems.forEach(i=>{soldMap[i.name]=i.qty;});
-  const ingMap={};let matched=0;
-  Object.entries(_aRecipes).forEach(([itemName,ingredients])=>{
-    let soldQty=0;
-    Object.entries(soldMap).forEach(([soldName,qty])=>{
-      const sn=soldName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
-      const rn=itemName.toLowerCase().replace(/\s*\([^)]*\)\s*/g,'').trim();
-      if(sn.includes(rn)||rn.includes(sn)||soldName.toLowerCase()===itemName.toLowerCase())soldQty+=qty;
-    });
-    if(!soldQty)return;matched++;
-    ingredients.forEach(ing=>{
-      const key=ing.name+'||'+ing.unit;
-      if(!ingMap[key])ingMap[key]={name:ing.name,unit:ing.unit,qty:0,items:[]};
-      ingMap[key].qty+=ing.qty*soldQty;
-      ingMap[key].items.push({item:itemName,sold:soldQty,each:ing.qty});
-    });
-  });
-  if(!Object.keys(ingMap).length){el.innerHTML='<div style="text-align:center;padding:24px;color:#555d70;font-size:13px;">No matches found. '+Object.keys(_aRecipes).length+' recipes, '+soldItems.length+' items sold.</div>';return;}
-  const sorted=Object.values(ingMap).sort((a,b)=>a.name.localeCompare(b.name));
-  el.innerHTML=`
-    <div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#27ae60;font-weight:700;">
-      ✅ ${matched} recipes matched | ${sorted.length} ingredients | ${document.getElementById('a-date-from').value} to ${document.getElementById('a-date-to').value}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
-    ${sorted.map(ing=>{
-      const dq=ing.qty>=1000&&ing.unit==='g'?(ing.qty/1000).toFixed(2)+' kg':ing.qty>=1000&&ing.unit==='ml'?(ing.qty/1000).toFixed(2)+' L':Math.round(ing.qty*100)/100+' '+ing.unit;
-      return `<div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;">
-        <div style="font-size:14px;font-weight:800;color:#f0f0f0;margin-bottom:5px;">${ing.name}</div>
-        <div style="font-size:26px;font-weight:900;color:#e67e22;">${dq}</div>
-        <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:7px;">
-          ${ing.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555d70;padding:2px 0;">${i.item.slice(0,26)}<span>${i.sold}x${i.each}${ing.unit}</span></div>`).join('')}
-        </div>
-      </div>`;
-    }).join('')}
-    </div>`;
+// Items of one stored transaction. Prefers the saved items JSON (keeps deal flavours),
+// falls back to the text. Split-by-amount bills repeat the full item list on every share,
+// so only share 1 is counted.
+function _aTxItems(t) {
+  const raw = String(t._raw_items_text != null ? t._raw_items_text : (t.items_text || ''));
+  const sp = raw.match(/^\s*Split Payment \((\d+)\/(\d+)\):\s*/i);
+  if (sp && parseInt(sp[1], 10) !== 1) return [];
+  if (!sp && Array.isArray(t.items) && t.items.length) {
+    return t.items.filter(i => i && i.name).map(i => ({ name: i.name, qty: Number(i.qty) || 0, note: i.note || '', returned: !!i.returned }));
+  }
+  return parseItemsTextToItems(sp ? raw.replace(sp[0], '') : raw);
 }
+
+// Single calculation used by the Consumption tab AND the CSV export.
+async function aComputeConsumption() {
+  if (!_aTxData.length) await aLoadTransactions();
+  try {
+    const { data } = await sb.from('item_recipes').select('*').eq('branch', activeBranch);
+    _aRecipes = {}; (data || []).forEach(r => { _aRecipes[r.item_name] = r.ingredients; });
+  } catch (e) {}
+  const idx = await ensureIngIndex();
+  const ctx = makeConsCtx(_aRecipes, idx);
+  const acc = newConsAcc();
+  let bills = 0;
+  _aTxData.forEach(t => {
+    const items = _aTxItems(t);
+    if (!items.length) return;
+    bills++;
+    computeUsage(items, t.type, ctx, acc);
+  });
+  return { acc, ctx, bills, recipeCount: Object.keys(_aRecipes).length };
+}
+
+// What the POS actually took out of stock (pos_consumption) in the selected range.
+function _aBizdayOf(localStr) {
+  const d = new Date(localStr);
+  if (isNaN(d)) return String(localStr).slice(0, 10);
+  d.setHours(d.getHours() - BIZ_DAY_START_HOUR);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+async function aFetchDeducted(idx) {
+  const out = new Map();
+  try {
+    const from = _aBizdayOf(document.getElementById('a-date-from').value);
+    const to = _aBizdayOf(document.getElementById('a-date-to').value);
+    for (let start = 0; start < 200000; start += 1000) {
+      const { data, error } = await sb.from('pos_consumption').select('ingredient_id,itemname,qty,unit')
+        .eq('branch', activeBranch).gte('bizday', from).lte('bizday', to).range(start, start + 999);
+      if (error) throw error;
+      (data || []).forEach(r => {
+        const ing = r.ingredient_id != null && idx && idx.byId.get(String(r.ingredient_id));
+        const canon = ingCanon(ing ? ing.name : r.itemname);
+        const cur = out.get(canon) || { qty: 0, unit: r.unit };
+        cur.qty += Number(r.qty) || 0;
+        out.set(canon, cur);
+      });
+      if (!data || data.length < 1000) break;
+    }
+  } catch (e) { console.warn('aFetchDeducted failed:', e.message); return null; }
+  return out;
+}
+
+function _aFmtQty(qty, unit) {
+  const u = String(unit || '');
+  if (qty >= 1000 && u === 'g') return (qty / 1000).toFixed(2) + ' kg';
+  if (qty >= 1000 && u === 'ml') return (qty / 1000).toFixed(2) + ' L';
+  return (Math.round(qty * 100) / 100) + (u ? ' ' + u : '');
+}
+
+async function aCalcConsumption() {
+  const el = document.getElementById('a-consumption-content');
+  const note = (msg, color) => '<div style="text-align:center;padding:24px;color:' + (color || '#555d70') + ';font-size:13px;">' + msg + '</div>';
+  el.innerHTML = note('Calculating...');
+  let result;
+  try { result = await aComputeConsumption(); }
+  catch (e) { console.error(e); el.innerHTML = note('Could not calculate: ' + _xcEsc(e.message || e), '#c0392b'); return; }
+  const { acc, ctx, bills, recipeCount } = result;
+  if (!recipeCount) { el.innerHTML = note('No recipes found. Add recipes in the Ingredients tab first.'); return; }
+  const esc = _xcEsc;
+  const rows = Array.from(acc.agg.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const deducted = await aFetchDeducted(ctx.idx);
+  const unitsPerCanon = {};
+  rows.forEach(r => { (unitsPerCanon[r.canon] = unitsPerCanon[r.canon] || []).push(r); });
+  const soldQty = Object.values(acc.sold).reduce((s, n) => s + n, 0);
+
+  const card = r => {
+    let ded = '';
+    if (deducted) {
+      const only = unitsPerCanon[r.canon].length === 1;
+      const d = deducted.get(r.canon);
+      if (only) {
+        const dq = d ? convertQtyToUnit(d.qty, d.unit, r.unit) : 0;
+        const off = Math.abs(dq - r.qty) > Math.max(0.5, r.qty * 0.02);
+        ded = '<div style="font-size:11px;margin-top:4px;font-weight:700;color:' + (off ? '#e67e22' : '#27ae60') + ';">Taken from stock: ' + _aFmtQty(dq, r.unit) + (off ? ' ⚠' : ' ✓') + '</div>';
+      }
+    }
+    const src = Object.entries(r.sources).sort((a, b) => b[1] - a[1]);
+    return '<div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;">' +
+      '<div style="font-size:14px;font-weight:800;color:#f0f0f0;margin-bottom:5px;">' + esc(r.name) + '</div>' +
+      '<div style="font-size:26px;font-weight:900;color:#e67e22;">' + _aFmtQty(r.qty, r.unit) + '</div>' + ded +
+      '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:7px;">' +
+      src.slice(0, 8).map(([n, q]) => '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#555d70;padding:2px 0;"><span>' + esc(n.slice(0, 28)) + '</span><span>' + _aFmtQty(q, r.unit) + '</span></div>').join('') +
+      (src.length > 8 ? '<div style="font-size:11px;color:#555d70;padding-top:3px;">+' + (src.length - 8) + ' more</div>' : '') +
+      '</div></div>';
+  };
+  const grid = list => '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:18px;">' + list.map(card).join('') + '</div>';
+  const head = t => '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#9aa0b0;margin:6px 0 10px;">' + t + '</div>';
+  const warnBox = (title, body) => '<div style="background:rgba(230,126,34,0.08);border:1px solid rgba(230,126,34,0.35);border-radius:10px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:12px;font-weight:800;color:#e67e22;margin-bottom:6px;">' + title + '</div>' + body + '</div>';
+  const line = (l, r) => '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#c8cdd8;padding:2px 0;"><span>' + esc(l) + '</span><span style="font-weight:800;">' + r + '</span></div>';
+
+  let html = '<div style="background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#27ae60;font-weight:700;">✅ ' +
+    bills + ' bills | ' + soldQty + ' items sold | ' + rows.length + ' ingredients | ' +
+    esc(document.getElementById('a-date-from').value) + ' to ' + esc(document.getElementById('a-date-to').value) + '</div>';
+
+  // Beverages: every drink sold, and whether it is linked to stock
+  const drinkKeys = new Set((menuData['Drinks'] || []).map(i => ingKey(i.n)));
+  const drinksSold = Object.entries(acc.sold).filter(([n]) => drinkKeys.has(ingKey(n))).sort((a, b) => b[1] - a[1]);
+  if (drinksSold.length) {
+    html += '<div style="background:#1c1f27;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:12px;font-weight:800;color:#9aa0b0;margin-bottom:6px;">🥤 BEVERAGES SOLD</div>' +
+      drinksSold.map(([n, q]) => line(n, q + ' sold ' + (acc.unmapped[n] ? '<span style="color:#c0392b;">✗ not linked to stock</span>' : '<span style="color:#27ae60;">✓</span>'))).join('') + '</div>';
+  }
+  const unm = Object.entries(acc.unmapped).sort((a, b) => b[1] - a[1]);
+  if (unm.length) html += warnBox('⚠ Sold but NOT linked to stock (no recipe, no matching stock item) — these take nothing out of inventory',
+    unm.map(([n, q]) => line(n, q + ' sold')).join(''));
+  const mis = Object.entries(acc.missing);
+  if (mis.length) html += warnBox('⚠ Deal parts that could not be matched to a recipe', mis.map(([n, q]) => line(n, q + ' deal(s)')).join(''));
+  const clash = Object.values(unitsPerCanon).filter(l => l.length > 1);
+  if (clash.length) html += warnBox('⚠ Same ingredient used in two different units — change the recipes to one unit',
+    clash.map(l => line(l[0].name, l.map(r => _aFmtQty(r.qty, r.unit)).join('  +  '))).join(''));
+
+  if (!rows.length) { el.innerHTML = html + note('No ingredient usage found for this period. ' + recipeCount + ' recipes loaded.'); return; }
+  const food = rows.filter(r => !r.isPackaging), pack = rows.filter(r => r.isPackaging);
+  if (food.length) html += head('Ingredients') + grid(food);
+  if (pack.length) html += head('📦 Packaging (Takeaway / Delivery only)') + grid(pack);
+  el.innerHTML = html;
+}
+
 
 function exportACSV() {
   if(!_aTxData.length){showToast('Load data first','error');return;}
@@ -10594,12 +10995,13 @@ function exportACSV() {
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   showToast('CSV exported ✅','success');
 }
-function exportConsumptionCSV() {
+async function exportConsumptionCSV() {
   if (!_aTxData.length) {
     showToast('Load data first and click Calculate', 'error');
     return;
   }
-  if (!Object.keys(_aRecipes).length) {
+  const { acc, recipeCount } = await aComputeConsumption();
+  if (!recipeCount) {
     showToast('No recipes found — add recipes in Ingredients tab', 'error');
     return;
   }
@@ -10607,54 +11009,12 @@ function exportConsumptionCSV() {
   const from = document.getElementById('a-date-from').value;
   const to   = document.getElementById('a-date-to').value;
 
-  // ────────────────────────────────────────────────────────────
-  // 1. Build sold items map (item name → total qty sold in range)
-  // ────────────────────────────────────────────────────────────
-  const soldItems = aParseItems(_aTxData);
-  const soldMap = {};
-  soldItems.forEach(i => { soldMap[i.name] = (soldMap[i.name] || 0) + i.qty; });
-
-  // ────────────────────────────────────────────────────────────
-  // 2. Compute POS CONSUMED per ingredient from recipes × sold qty
-  //    Also record unit, cost-per-unit, and the breakdown of which
-  //    items contributed (for a "source" note in the export).
-  // ────────────────────────────────────────────────────────────
-  const ingMap = {}; // key = ingredient name + unit  (avoid merging g & kg)
-
-  const addIngredient = (ingName, unit, qtyPerServing, soldQty, itemName) => {
-    if (!qtyPerServing || !soldQty) return;
-    const key = ingName.toLowerCase() + '||' + unit;
-    if (!ingMap[key]) {
-      ingMap[key] = {
-        name: ingName,
-        unit: unit,
-        posConsumed: 0,
-        costPerUnit: null,
-        sources: {}
-      };
-    }
-    ingMap[key].posConsumed += qtyPerServing * soldQty;
-    ingMap[key].sources[itemName] = (ingMap[key].sources[itemName] || 0) + qtyPerServing * soldQty;
-  };
-
-  // Walk every recipe × every sold item (fuzzy match on name).
-  Object.entries(_aRecipes).forEach(([recipeItemName, ingredients]) => {
-    // find all sold items whose name matches this recipe
-    let soldQty = 0;
-    Object.entries(soldMap).forEach(([soldName, qty]) => {
-      const sn = soldName.toLowerCase().replace(/\s*\([^)]*\)\s*/g, '').trim();
-      const rn = recipeItemName.toLowerCase().replace(/\s*\([^)]*\)\s*/g, '').trim();
-      if (sn === rn || sn.includes(rn) || rn.includes(sn)) {
-        soldQty += qty;
-      }
-    });
-    if (!soldQty) return;
-
-    (ingredients || []).forEach(ing => {
-      if (!ing || !ing.name) return;
-      addIngredient(ing.name, ing.unit || '', Number(ing.qty) || 0, soldQty, recipeItemName);
-    });
+  // Same engine as the Consumption tab: exact recipe match, deals expanded, duplicate names merged.
+  const ingMap = {};
+  acc.agg.forEach(r => {
+    ingMap[r.key] = { name: r.name, unit: r.unit, posConsumed: r.qty, costPerUnit: null, sources: r.sources };
   });
+  const unlinked = Object.entries(acc.unmapped);
 
   // ────────────────────────────────────────────────────────────
   // 3. Try to enrich with cost-per-unit + current stock from
@@ -10707,6 +11067,7 @@ function exportConsumptionCSV() {
   lines.push(esc('Period: ' + from + ' to ' + to));
   lines.push(esc('Generated: ' + new Date().toLocaleString('en-PK') + ' by ' + currentStaff));
   lines.push(esc('Rows sorted alphabetically. Fill in OPENING, GRN+, PHYSICAL, and KITCHEN CONSUMED manually.'));
+  if (unlinked.length) lines.push(esc('NOT LINKED TO STOCK (no recipe): ' + unlinked.map(([n, q]) => q + 'x ' + n).join('; ')));
   lines.push('');
 
   // the reconciliation table header — matches your Excel file exactly
@@ -11004,6 +11365,7 @@ async function clearAnalyticsAndSupabase() {
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
