@@ -1860,10 +1860,7 @@ const dealFlavorMap = {
   '02 PIZZA DEAL':   ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
   '03 PIZZA DEAL':   ['Kabab Crust','Crown Crust','Cheese Crust'],
   '04 PIZZA DEAL':   ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
-  'Midnight Deal 1': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
-  'Midnight Deal 2': ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
-  'Midnight Deal 3': ['BBQ Pizza','Creamy Dreamy','OvenX Special Premium','Bonfire Pizza'],
-  'Midnight Deal 4': ['Extreme Peri Peri','Extreme Flaming Kabab','Crispy Extreme'],
+  '11:11 Deal':      ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
   // Custom deals
   'Solo Inferno':    ['Chicken Tikka','Chicken Fajita','Chicken Supreme','Cheese Lover','Veg Lover','Sicilian Pizza'],
   'The Roll Out':    ['Zingeratha Roll','Paratha Roll','Malai Roll','Behari Roll','Peri Peri Wrap','Crunch Wrap'],
@@ -2356,6 +2353,7 @@ function ingCanon(n) { const k = ingKey(n); return _ING_CANON[k] || k; }
 // Menu item names that differ from the recipe name.
 // Also covers names typed differently on web / delivery orders.
 const RECIPE_NAME_ALIASES = {
+  'CM Grilled Burger': 'CM Grilled',
   'Sprite 1.5L': 'Sprite L',
   'Coke liter': 'Coke 1 Liter', 'Coke litre': 'Coke 1 Liter', 'Cokelitter': 'Coke 1 Liter',
   'Reg Fries': 'Plain Fries (Reg)', 'Regular Fries': 'Plain Fries (Reg)'
@@ -2382,9 +2380,11 @@ const DEAL_RECIPES = {
   '02 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
   '03 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
   '04 PIZZA DEAL': { pizzas: { count: 1, size: 'L' }, drink: 1 },
+  '11:11 Deal':    { pizzas: { count: 1, size: 'L' }, drink: 0 },
   'Combo 1':       { extras: [['Zinger Burger', 1]] },
   'Combo 2':       { extras: [['Khameera Sandwich', 1]] },
-  'Combo 3':       { pizzas: { count: 2, size: 'S' } }
+  'Combo 3':       { pizzas: { count: 2, size: 'S' } },
+  '11:11 Deal':    { pizzas: { count: 1, size: 'L' }, drink: 0 }
 };
 const _SIZE_SUFFIX = { S: ['(S)', '(Small)'], M: ['(M)', '(Med)', '(Medium)'], L: ['(L)', '(Large)'] };
 
