@@ -206,8 +206,10 @@ async function find(raw){
     return { list: data || [], label: displayPhone(p) };
   }
   if (t.length >= 2) {   // WhatsApp shows saved contacts by name
-    const { data } = await sb.from('customers').select('*').ilike('name', '%' + t.replace(/[%,()]/g, ' ') + '%').limit(5);
-    return { list: data || [], label: t };
+    const q = t.replace(/[%,()_]/g, ' ').trim();
+    let { data } = await sb.from('customers').select('*').ilike('name', q).limit(5);   // exact name first
+    if (!data || !data.length) ({ data } = await sb.from('customers').select('*').ilike('name', '%' + q + '%').limit(5));
+    return { list: data || [], label: t, byName: true };
   }
   return { list: [], label: t || 'Unknown' };
 }
@@ -216,6 +218,7 @@ async function lookup(raw){
   if (r.list.length === 1) renderCustomer(r.list[0]);
   else if (r.list.length > 1) showChoices(r.list);
   else renderNew(r.label);
+  if (r.byName && r.list.length) resultCard.insertAdjacentHTML('afterbegin', '<span class="badge warn" style="display:inline-block;margin-bottom:12px">Matched by name only. Confirm the number with the caller.</span>');
   return r;
 }
 function renderNew(label){
@@ -264,7 +267,11 @@ function copyText(btn){
 }
 
 /* ── incoming call handling ── */
+const OWN_NUMBERS = ['923001450301'];   // the restaurant's own number is never a customer
 async function handleCall(raw){
+  const prev = calls[0];
+  if (isNumber(raw) && OWN_NUMBERS.includes(normalizePhone(raw))) return;
+  if (prev && prev.raw === raw && Date.now() - prev.ts < 60000) return;   // WhatsApp repeats the ringing notification
   const { list, label } = await lookup(raw);
   phoneInput.value = label;
   const one = list.length === 1 ? list[0] : null;
@@ -281,7 +288,7 @@ async function backfill(){
   try {
     const { data, error } = await sb.from('incoming_calls').select('*').order('created_at', { ascending: false }).limit(100);
     if (error || !data || !data.length) return;
-    const rows = data.filter(r => r.created_at && r.phone);
+    const rows = data.filter(r => r.created_at && r.phone && !(isNumber(r.phone) && OWN_NUMBERS.includes(normalizePhone(r.phone))));
     const nums = [...new Set(rows.filter(r => isNumber(r.phone)).map(r => normalizePhone(r.phone)))];
     const names = [...new Set(rows.filter(r => !isNumber(r.phone)).map(r => r.phone))];
     const [a, b] = await Promise.all([
@@ -295,6 +302,7 @@ async function backfill(){
       const nm = num ? byPhone[key] : byName[key];
       return { ts: new Date(r.created_at).getTime(), raw: r.phone, label: labelFor(r.phone), name: nm || null, known: !!nm };
     });
+    calls = calls.filter((c, i) => !(i < calls.length - 1 && calls[i + 1].raw === c.raw && c.ts - calls[i + 1].ts < 60000));   // collapse repeats
     store.set('ox_calls', calls); renderStats();
   } catch(e){}
 }
