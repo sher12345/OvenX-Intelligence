@@ -3,86 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OvenX — Caller Lookup</title>
+<title>OvenX Caller Desk</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --red:#c0392b; --dark-red:#922b21; --orange:#e67e22; --bg:#f8f5f2;
-    --card:#ffffff; --ink:#1a1a1a; --muted:#8a8a8a; --line:#eee0d8;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Outfit',sans-serif;padding:20px;}
-  .wrap{max-width:640px;margin:0 auto;}
-  h1{font-size:22px;font-weight:900;margin:0 0 4px;}
-  .sub{color:var(--muted);font-size:13px;margin-bottom:18px;}
-  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:18px;}
-  .dot{width:8px;height:8px;border-radius:50%;background:#2e7d32;animation:pulse 1.5s infinite;}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-  .search-row{display:flex;gap:10px;margin-bottom:20px;}
-  input#phoneInput{
-    flex:1;padding:16px;font-size:17px;border-radius:14px;border:2px solid var(--line);
-    font-family:'Outfit',sans-serif;font-weight:600;
-  }
-  input#phoneInput:focus{outline:none;border-color:var(--orange);}
-  button#searchBtn{
-    padding:16px 22px;border:none;border-radius:14px;background:var(--red);color:#fff;
-    font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 0 var(--dark-red);
-  }
-  button#searchBtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--dark-red);}
-  .card{background:var(--card);border-radius:20px;padding:22px;box-shadow:0 2px 16px rgba(0,0,0,0.07);display:none;}
-  .card.show{display:block;}
-  .cust-name{font-size:20px;font-weight:900;margin:0 0 2px;}
-  .cust-phone{color:var(--muted);font-size:13px;margin-bottom:14px;}
-  .badge-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
-  .badge{background:#fdf0e6;color:var(--dark-red);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;}
-  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin:16px 0 8px;}
-  .addr{
-    background:#faf7f4;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:8px;
-    display:flex;justify-content:space-between;align-items:center;gap:10px;
-  }
-  .addr-text{font-size:14px;font-weight:600;line-height:1.4;}
-  .addr-meta{font-size:11px;color:var(--muted);margin-top:3px;}
-  .copy-btn{
-    border:none;background:var(--orange);color:#fff;padding:8px 12px;border-radius:10px;
-    font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
-  }
-  .addr-btns{display:flex;flex-direction:column;gap:6px;}
-  .map-btn{
-    border:none;background:#2e7d32;color:#fff;padding:8px 12px;border-radius:10px;
-    font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;text-align:center;
-  }
-  .fee-badge{
-    display:inline-block;background:#fff3e0;color:#e67e22;font-size:11px;font-weight:700;
-    padding:2px 8px;border-radius:8px;margin-top:4px;
-  }
-  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
-  .empty .big{font-size:40px;margin-bottom:10px;}
-  .new-cust{
-    background:#fff8e1;border:1px solid #ffe082;border-radius:16px;padding:18px;text-align:center;
-    font-weight:700;color:#8a6d00;
-  }
-  .toast{
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;
-    padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;
-  }
-  .toast.show{opacity:1;}
+:root{--red:#c0392b;--dk:#922b21;--or:#e67e22;--bg:#f6f3ef;--card:#fff;--ink:#1a1a1a;--mut:#7d7d7d;--line:#eadfd7;--ok:#2e7d32}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Outfit',system-ui,sans-serif;padding:20px}
+.wrap{max-width:1000px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:24px;font-weight:900;margin:0}
+.sub{color:var(--mut);font-size:13px;margin-top:2px}
+.ctl{display:flex;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:7px 13px;font:700 12px 'Outfit',sans-serif;color:var(--ink)}
+button.pill{cursor:pointer}
+button:focus-visible,input:focus-visible,.row:focus-visible{outline:3px solid var(--or);outline-offset:2px}
+.dot{width:8px;height:8px;border-radius:50%;background:#bbb}
+.pill.ok .dot{background:var(--ok);animation:pulse 1.5s infinite}
+.pill.bad .dot{background:var(--red)}
+@keyframes pulse{50%{opacity:.3}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:16px}
+.stat{padding:16px 20px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-size:30px;line-height:1.1;font-weight:900;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--mut)}
+.live{display:none;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--red);color:#fff;border-radius:16px;padding:16px 20px;margin-bottom:16px;font-size:18px;font-weight:800;animation:glow 1.2s infinite}
+.live.show{display:flex}
+.live small{font-size:13px;font-weight:600;opacity:.9;align-self:center}
+@keyframes glow{50%{box-shadow:0 0 0 7px rgba(192,57,43,.22)}}
+@media (prefers-reduced-motion:reduce){.live,.pill.ok .dot{animation:none}}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+.search-row{display:flex;gap:10px;margin-bottom:16px}
+input#phoneInput{flex:1;min-width:0;padding:16px;font:600 17px 'Outfit',sans-serif;border-radius:14px;border:2px solid var(--line)}
+input#phoneInput:focus{border-color:var(--or)}
+button#searchBtn{padding:16px 22px;border:none;border-radius:14px;background:var(--red);color:#fff;font:800 15px 'Outfit',sans-serif;cursor:pointer;box-shadow:0 4px 0 var(--dk)}
+button#searchBtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--dk)}
+.card{background:var(--card);border-radius:22px;padding:24px;box-shadow:0 2px 18px rgba(0,0,0,.07)}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.cust-name{font-size:24px;font-weight:900;margin:0 0 2px}
+.cust-phone{color:var(--mut);font-size:14px;margin-bottom:14px}
+.badge-row{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.badge{background:#fdf0e6;color:var(--dk);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.badge.vip{background:#fff3cd;color:#7a5d00}.badge.reg{background:#e8f5e9;color:var(--ok)}.badge.new{background:#e3f2fd;color:#1565c0}.badge.warn{background:#fdecea;color:var(--dk)}
+.title{font-size:14px;color:var(--mut);font-weight:700;margin:18px 0 8px}
+.addr{background:#faf7f4;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.addr-text{font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.addr-meta{font-size:12px;color:var(--mut);margin-top:3px}
+.copy-btn{border:none;background:var(--or);color:#fff;padding:8px 12px;border-radius:10px;font:700 12px 'Outfit',sans-serif;cursor:pointer;white-space:nowrap}
+.copy-btn.alt{background:var(--ink)}
+.addr-btns{display:flex;flex-direction:column;gap:6px}
+.map-btn{background:var(--ok);color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;white-space:nowrap}
+.fee-badge{display:inline-block;background:#fff3e0;color:#b9610b;font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;margin:4px 4px 0 0}
+.empty{text-align:center;padding:36px 16px;color:var(--mut)}
+.empty .big{font-size:38px;margin-bottom:8px}
+.side{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.side .title{margin-top:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.row:last-child{border-bottom:0}
+.bars{display:flex;align-items:flex-end;gap:3px;height:72px}
+.bars i{flex:1;background:#efd6c8;border-radius:3px 3px 0 0}
+.bars i.now{background:var(--or)}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-top:5px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(3){border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--line)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>📞 OvenX Caller Lookup</h1>
-  <div class="sub">Enter or auto-fill the caller's number to pull their order history</div>
-  <div class="status"><span class="dot"></span> Listening for incoming calls</div>
+  <header>
+    <div><h1>📞 OvenX Caller Desk</h1><div class="sub">Recognises callers and tracks today’s calls. It is <span id="clock"></span>.</div></div>
+    <div class="ctl">
+      <span class="pill" id="conn"><span class="dot"></span><span id="connTxt">Connecting…</span></span>
+      <button class="pill" id="soundBtn" type="button"></button>
+    </div>
+  </header>
 
-  <div class="search-row">
-    <input id="phoneInput" type="tel" placeholder="03XX-XXXXXXX" autofocus>
-    <button id="searchBtn">Look Up</button>
+  <div class="stats">
+    <div class="stat"><b id="sCalls">0</b><span>Calls today</span></div>
+    <div class="stat"><b id="sNew">0</b><span>New callers</span></div>
+    <div class="stat"><b id="sRet">0</b><span>Known customers</span></div>
+    <div class="stat"><b id="sLast">—</b><span>Last call</span></div>
   </div>
 
-  <div class="card" id="resultCard"></div>
-</div>
+  <div class="live" id="live" role="status"></div>
 
+  <div class="grid">
+    <div>
+      <div class="search-row">
+        <input id="phoneInput" type="text" placeholder="Phone number or name (press / to focus)" autofocus>
+        <button id="searchBtn" type="button">Look up</button>
+      </div>
+      <div class="card" id="resultCard"></div>
+    </div>
+    <div>
+      <div class="side"><div class="title">Recent calls</div><div id="recent"></div></div>
+      <div class="side"><div class="title">Calls by hour today</div><div class="bars" id="bars"></div>
+        <div class="axis"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div></div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -90,107 +110,212 @@ const SUPABASE_URL = "https://frjcefugnvitexxcated.supabase.co";
 const SUPABASE_KEY = "sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const phoneInput = document.getElementById('phoneInput');
-const resultCard = document.getElementById('resultCard');
-const toast = document.getElementById('toast');
+const $ = id => document.getElementById(id);
+const phoneInput = $('phoneInput'), resultCard = $('resultCard');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+let calls = store.get('ox_calls', []);      // newest first: {ts, raw, label, name, known}
+let soundOn = store.get('ox_sound', true);
+let lastMatches = [], liveT;
 
 function normalizePhone(raw){
+  const hadPlus = raw.trim().startsWith('+');
   let p = raw.replace(/\D/g, '');
   if (p.startsWith('0092')) p = p.slice(2);
+  if (hadPlus && !p.startsWith('92')) return p;
   if (p.startsWith('0')) p = '92' + p.slice(1);
-  if (!p.startsWith('92')) p = '92' + p;
+  else if (!p.startsWith('92')) p = '92' + p;
   return p;
 }
 function displayPhone(p){
-  // 923001450301 -> 0300-1450301
-  const local = '0' + p.slice(2);
-  return local.slice(0,4) + '-' + local.slice(4);
+  if (p.startsWith('92')) { const l = '0' + p.slice(2); return l.slice(0,4) + '-' + l.slice(4); }
+  return '+' + p;
 }
+const isNumber = t => (t || '').replace(/\D/g, '').length >= 10;
+const labelFor = raw => isNumber(raw) ? displayPhone(normalizePhone(raw)) : (raw || 'Unknown');
+
 function showToast(msg){
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(()=>toast.classList.remove('show'), 1600);
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1600);
 }
 function timeAgo(iso){
-  if(!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'today';
+  if (!iso) return '';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 864e5);
+  if (days <= 0) return 'today';
   if (days === 1) return 'yesterday';
   if (days < 30) return days + ' days ago';
-  return Math.floor(days/30) + ' months ago';
+  return Math.floor(days / 30) + ' months ago';
+}
+function ago(ms){
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.floor(m / 60);
+  return h < 24 ? h + ' h ago' : Math.floor(h / 24) + ' d ago';
+}
+function fmtTime(ts){
+  const d = new Date(ts), t = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString([], {day:'numeric', month:'short'}) + ' ' + t;
 }
 
-async function lookup(rawPhone){
-  const phone = normalizePhone(rawPhone);
-  const { data, error } = await sb.from('customers').select('*').eq('phone', phone);
-  const customer = data && data[0];
+/* ── sound ── */
+function paintSound(){ $('soundBtn').textContent = soundOn ? '🔔 Sound on' : '🔕 Sound off'; }
+function beep(){
+  if (!soundOn) return;
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)();
+    [660, 880].forEach((f, i) => {
+      const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + i * .22;
+      o.frequency.value = f; o.connect(g); g.connect(a.destination);
+      g.gain.setValueAtTime(.18, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+      o.start(t); o.stop(t + .22);
+    });
+  } catch(e){}
+}
+$('soundBtn').onclick = () => { soundOn = !soundOn; store.set('ox_sound', soundOn); paintSound(); if (soundOn) beep(); };
 
-  resultCard.classList.add('show');
+/* ── stats, recent calls, hourly chart ── */
+function renderStats(){
+  const s = new Date(); s.setHours(0,0,0,0);
+  const t = calls.filter(c => c.ts >= s.getTime());
+  $('sCalls').textContent = t.length;
+  $('sNew').textContent = t.filter(c => !c.known).length;
+  $('sRet').textContent = t.filter(c => c.known).length;
+  $('sLast').textContent = calls[0] ? ago(Date.now() - calls[0].ts) : '—';
+  const h = Array(24).fill(0); t.forEach(c => h[new Date(c.ts).getHours()]++);
+  const mx = Math.max(1, ...h), now = new Date().getHours();
+  $('bars').innerHTML = h.map((v, i) => `<i class="${i === now ? 'now' : ''}" style="height:${Math.max(4, v / mx * 100)}%" title="${i}:00, ${v} calls"></i>`).join('');
+  $('recent').innerHTML = calls.slice(0, 8).map((c, i) => `
+    <div class="row" tabindex="0" onclick="reopen(${i})" onkeydown="if(event.key==='Enter')reopen(${i})">
+      <div><div class="addr-text">${esc(c.name || c.label)}</div><div class="addr-meta">${esc(fmtTime(c.ts))}</div></div>
+      <span class="badge ${c.known ? 'reg' : 'new'}">${c.known ? 'Known' : 'New'}</span>
+    </div>`).join('') || '<div class="addr-meta">No calls yet. The next call will appear here.</div>';
+}
+function reopen(i){ const c = calls[i]; if (!c) return; phoneInput.value = c.label; lookup(c.raw); }
+function tick(){ $('clock').textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); renderStats(); }
 
-  if (!customer) {
-    resultCard.innerHTML = `
-      <div class="empty">
-        <div class="big">🆕</div>
-        <div><b>New Customer</b></div>
-        <div style="font-size:13px;margin-top:4px;">${displayPhone(phone)} — no order history yet.<br>Ask for their name & address as usual.</div>
-      </div>`;
-    return;
+/* ── customer lookup ── */
+async function find(raw){
+  const t = (raw || '').trim();
+  if (isNumber(t)) {
+    const p = normalizePhone(t);
+    const { data } = await sb.from('customers').select('*').eq('phone', p);
+    return { list: data || [], label: displayPhone(p) };
   }
-
-  const addrHtml = (customer.addresses || []).map(a => {
-    const mapsUrl = (a.lat && a.lng) ? `https://www.google.com/maps?q=${a.lat},${a.lng}` : null;
-    return `
-    <div class="addr">
-      <div>
-        <div class="addr-text">📍 ${a.address}</div>
-        <div class="addr-meta">Used ${a.count || 1}x · last ${timeAgo(a.last_used)}</div>
-        ${a.delivery_fee != null ? `<div class="fee-badge">🚚 Rs ${a.delivery_fee} delivery</div>` : ''}
-      </div>
-      <div class="addr-btns">
-        <button class="copy-btn" onclick="copyAddr(this)" data-addr="${a.address.replace(/"/g,'&quot;')}">Copy</button>
-        ${mapsUrl ? `<a class="map-btn" href="${mapsUrl}" target="_blank">🗺️ Map</a>` : ''}
-      </div>
-    </div>
-  `;
+  if (t.length >= 2) {   // WhatsApp shows saved contacts by name
+    const { data } = await sb.from('customers').select('*').ilike('name', '%' + t.replace(/[%,()]/g, ' ') + '%').limit(5);
+    return { list: data || [], label: t };
+  }
+  return { list: [], label: t || 'Unknown' };
+}
+async function lookup(raw){
+  const r = await find(raw);
+  if (r.list.length === 1) renderCustomer(r.list[0]);
+  else if (r.list.length > 1) showChoices(r.list);
+  else renderNew(r.label);
+  return r;
+}
+function renderNew(label){
+  resultCard.innerHTML = `<div class="empty"><div class="big">🆕</div><div><b>New customer</b></div>
+    <div style="font-size:14px;margin-top:4px">${esc(label)} has no order history.<br>Ask for their name and address.</div></div>`;
+}
+function showChoices(list){
+  lastMatches = list;
+  resultCard.innerHTML = `<div class="title" style="margin-top:0">Several customers match. Choose one.</div>` + list.map((c, i) => `
+    <div class="addr"><div><div class="addr-text">👤 ${esc(c.name || 'No name')}</div>
+    <div class="addr-meta">${c.phone && c.phone.length >= 10 ? esc(displayPhone(c.phone)) : 'No phone on file'}</div></div>
+    <button class="copy-btn" onclick="renderCustomer(lastMatches[${i}])">Open</button></div>`).join('');
+}
+function renderCustomer(c){
+  const o = c.total_orders || 0;
+  const tier = o >= 10 ? ['VIP ⭐', 'vip'] : o >= 3 ? ['Regular', 'reg'] : o >= 1 ? ['Returning', 'new'] : ['New', 'new'];
+  const days = c.last_order_at ? Math.floor((Date.now() - new Date(c.last_order_at)) / 864e5) : null;
+  const addrs = [...(c.addresses || [])].sort((a, b) => (b.count || 1) - (a.count || 1));
+  const phone = c.phone && c.phone.length >= 10 ? displayPhone(c.phone) : 'No phone on file';
+  const summary = [c.name, phone, addrs[0] && addrs[0].address].filter(Boolean).join(' | ');
+  const addrHtml = addrs.map((a, i) => {
+    const map = (a.lat && a.lng) ? `https://www.google.com/maps?q=${a.lat},${a.lng}` : null;
+    return `<div class="addr"><div>
+      <div class="addr-text">📍 ${esc(a.address)}</div>
+      <div class="addr-meta">Used ${a.count || 1}x, last ${esc(timeAgo(a.last_used))}</div>
+      ${i === 0 && addrs.length > 1 ? '<span class="fee-badge">Most used</span>' : ''}
+      ${a.delivery_fee != null ? `<span class="fee-badge">🚚 Rs ${esc(a.delivery_fee)} delivery</span>` : ''}
+    </div><div class="addr-btns">
+      <button class="copy-btn" onclick="copyText(this)" data-t="${esc(a.address)}">Copy</button>
+      ${map ? `<a class="map-btn" href="${esc(map)}" target="_blank" rel="noopener">🗺️ Map</a>` : ''}
+    </div></div>`;
   }).join('') || '<div class="addr-meta">No saved addresses yet.</div>';
-
   resultCard.innerHTML = `
-    <div class="cust-name">👤 ${customer.name || 'Name not on file'}</div>
-    <div class="cust-phone">${displayPhone(customer.phone)}</div>
+    <div class="head"><div><div class="cust-name">👤 ${esc(c.name || 'Name not on file')}</div><div class="cust-phone">${esc(phone)}</div></div>
+      <button class="copy-btn alt" onclick="copyText(this)" data-t="${esc(summary)}">Copy details</button></div>
     <div class="badge-row">
-      <div class="badge">🧾 ${customer.total_orders || 0} orders</div>
-      <div class="badge">🕒 Last order ${timeAgo(customer.last_order_at)}</div>
-      ${customer.last_branch ? `<div class="badge">🏪 ${customer.last_branch}</div>` : ''}
+      <span class="badge ${tier[1]}">${tier[0]}</span>
+      <span class="badge">🧾 ${o} orders</span>
+      <span class="badge ${days !== null && days >= 45 ? 'warn' : ''}">🕒 ${days !== null && days >= 45 ? days + ' days since last order' : 'Last order ' + esc(timeAgo(c.last_order_at))}</span>
+      ${c.last_branch ? `<span class="badge">🏪 ${esc(c.last_branch)}</span>` : ''}
     </div>
-    <div class="section-title">Saved Addresses</div>
-    ${addrHtml}
-  `;
+    <div class="title">Saved addresses</div>${addrHtml}`;
+}
+function copyText(btn){
+  navigator.clipboard.writeText(btn.getAttribute('data-t')).then(() => showToast('Copied ✓'));
 }
 
-function copyAddr(btn){
-  const text = btn.getAttribute('data-addr');
-  navigator.clipboard.writeText(text).then(()=> showToast('Address copied ✓'));
+/* ── incoming call handling ── */
+async function handleCall(raw){
+  const { list, label } = await lookup(raw);
+  phoneInput.value = label;
+  const one = list.length === 1 ? list[0] : null;
+  calls.unshift({ ts: Date.now(), raw, label, name: one ? one.name : null, known: list.length > 0 });
+  calls = calls.slice(0, 200); store.set('ox_calls', calls); renderStats();
+  const lv = $('live');
+  lv.innerHTML = `<span>📞 Incoming call: ${esc(one ? one.name : label)}</span><small>${list.length ? 'Known customer' : 'New customer'}</small>`;
+  lv.classList.add('show'); clearTimeout(liveT); liveT = setTimeout(() => lv.classList.remove('show'), 15000);
+  beep();
 }
 
-document.getElementById('searchBtn').addEventListener('click', () => {
-  if (phoneInput.value.trim()) lookup(phoneInput.value.trim());
-});
-phoneInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && phoneInput.value.trim()) lookup(phoneInput.value.trim());
+/* Rebuild today’s stats from the database when the page opens (needs a created_at column) */
+async function backfill(){
+  try {
+    const { data, error } = await sb.from('incoming_calls').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error || !data || !data.length) return;
+    const rows = data.filter(r => r.created_at && r.phone);
+    const nums = [...new Set(rows.filter(r => isNumber(r.phone)).map(r => normalizePhone(r.phone)))];
+    const names = [...new Set(rows.filter(r => !isNumber(r.phone)).map(r => r.phone))];
+    const [a, b] = await Promise.all([
+      nums.length ? sb.from('customers').select('phone,name').in('phone', nums) : { data: [] },
+      names.length ? sb.from('customers').select('phone,name').in('name', names) : { data: [] }
+    ]);
+    const byPhone = Object.fromEntries((a.data || []).map(c => [c.phone, c.name]));
+    const byName = Object.fromEntries((b.data || []).map(c => [c.name, c.name]));
+    calls = rows.map(r => {
+      const num = isNumber(r.phone), key = num ? normalizePhone(r.phone) : r.phone;
+      const nm = num ? byPhone[key] : byName[key];
+      return { ts: new Date(r.created_at).getTime(), raw: r.phone, label: labelFor(r.phone), name: nm || null, known: !!nm };
+    });
+    store.set('ox_calls', calls); renderStats();
+  } catch(e){}
+}
+
+/* ── wiring ── */
+$('searchBtn').onclick = () => { if (phoneInput.value.trim()) lookup(phoneInput.value.trim()); };
+phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter' && phoneInput.value.trim()) lookup(phoneInput.value.trim()); });
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== phoneInput) { e.preventDefault(); phoneInput.focus(); phoneInput.select(); }
 });
 
-// ── Realtime: auto-popup the moment a call comes in ──
-// Fed by the Android automation step (MacroDroid/Tasker) posting
-// to the `incoming_calls` table when the phone rings.
 sb.channel('incoming-calls-listen')
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incoming_calls' }, (payload) => {
-    const num = payload.new.phone;
-    phoneInput.value = displayPhone(normalizePhone(num));
-    lookup(num);
-    showToast('📞 Incoming call — looked up automatically');
-  })
-  .subscribe();
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incoming_calls' }, p => handleCall(p.new.phone))
+  .subscribe(status => {
+    const ok = status === 'SUBSCRIBED';
+    $('conn').className = 'pill ' + (ok ? 'ok' : 'bad');
+    $('connTxt').textContent = ok ? 'Listening for calls' : 'Reconnecting…';
+  });
+
+resultCard.innerHTML = '<div class="empty"><div class="big">📞</div><div><b>Waiting for a call</b></div><div style="font-size:14px;margin-top:4px">Callers appear here automatically. You can also type a number or name above.</div></div>';
+paintSound(); tick(); setInterval(tick, 15000); backfill();
 </script>
 </body>
 </html>
