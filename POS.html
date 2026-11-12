@@ -2337,7 +2337,8 @@ const ING_ALIAS_GROUPS = [
   ['Tomato', 'Tomato Slice'],
   ['Seekh Kabab', 'Kabab'],
   ['Boneless Thigh Fillet', 'Zinger Fillet', 'Bonless Thigh Zinger'],
-  ['Hot Shots', 'Chicken Pop Shots']
+  ['Hot Shots', 'Chicken Pop Shots'],
+  ['Coke 1.5L', 'Coke 1.5']
 ];
 function ingKey(n) {
   return String(n == null ? '' : n).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -2355,6 +2356,7 @@ function ingCanon(n) { const k = ingKey(n); return _ING_CANON[k] || k; }
 const RECIPE_NAME_ALIASES = {
   'CM Grilled Burger': 'CM Grilled',
   'Sprite 1.5L': 'Sprite L',
+  'Coke 1.5': 'Coke 1.5L',
   'Coke liter': 'Coke 1 Liter', 'Coke litre': 'Coke 1 Liter', 'Cokelitter': 'Coke 1 Liter',
   'Reg Fries': 'Plain Fries (Reg)', 'Regular Fries': 'Plain Fries (Reg)'
 };
@@ -2369,7 +2371,8 @@ const DEAL_INCLUDE_ALIASES = {
   'buddydrink': [DEAL_BUDDY_DRINK, 1], 'drink': [DEAL_BUDDY_DRINK, 1],
   '1ldrink': [DEAL_DRINK_1L, 1], 'literdrink': [DEAL_DRINK_1L, 1], 'litredrink': [DEAL_DRINK_1L, 1],
   'wings': ['Hot Wings (M)', 1 / 6], 'wing': ['Hot Wings (M)', 1 / 6],   // Hot Wings (M) = 6 wings
-  'zinger': ['Zinger Burger', 1], 'zingers': ['Zinger Burger', 1]
+  'zinger': ['Zinger Burger', 1], 'zingers': ['Zinger Burger', 1],
+  'zingerburger': ['Zinger Burger', 1], 'zingerburgers': ['Zinger Burger', 1]
 };
 // What is inside each deal. Pizza flavour(s) come from the flavour the cashier picked.
 // Custom deals not listed here are read from their description (e.g. "1 Large Pizza + 1L Drink").
@@ -2458,9 +2461,10 @@ function splitFlavors(text) {
 }
 // "2x Zinger Burger, 1x Reg Fries" → [{n:'Zinger Burger', c:2}, ...]
 function parseIncludes(text) {
-  const out = [], re = /(\d+)\s*x\s*([^,;+\]]+)/gi;
+  const out = [], s = String(text || '').split(/\bnote\s*:/i)[0], re = /(\d+)\s*x\s*([^,;+\]]+)/gi;
   let m;
-  while ((m = re.exec(String(text || '')))) out.push({ n: m[2].trim(), c: parseInt(m[1], 10) });
+  while ((m = re.exec(s))) out.push({ n: m[2].trim(), c: parseInt(m[1], 10) });
+  if (/(^|[,\s])1\s*l\s*drink/i.test(s)) out.push({ n: '1L Drink', c: 1 });
   return out;
 }
 function findSizedRecipe(base, size, ctx) {
@@ -2486,7 +2490,7 @@ function _splitItemSegments(text) {
     const ch = s[i];
     if (ch === '[' || ch === '(') depth++;
     else if (ch === ']' || ch === ')') depth = Math.max(0, depth - 1);
-    if (depth === 0 && (ch === '\n' || (ch === ',' && /^\s*\d+\s*x\s/i.test(s.slice(i + 1))))) { segs.push(cur); cur = ''; continue; }
+    if (depth === 0 && (ch === '\n' || ch === ',') && /^\s*\d+\s*x\s/i.test(s.slice(i + 1))) { segs.push(cur); cur = ''; continue; }
     cur += ch;
   }
   segs.push(cur);
@@ -2494,13 +2498,17 @@ function _splitItemSegments(text) {
 }
 function parseItemsTextToItems(text) {
   const out = [];
-  _splitItemSegments(text).forEach(seg => {
-    const m = seg.trim().match(/^(\d+)\s*x\s+(.+)$/i);
+  const clean = String(text || '').replace(/\s*\[\s*Rider\s*:[^\]]*\]/gi, '');
+  _splitItemSegments(clean).forEach(seg => {
+    const m = seg.trim().match(/^(\d+)\s*x\s+([\s\S]+)$/i);
     if (!m) return;
-    let name = m[2], note = '';
-    const nm = name.match(/\[([^\]]*)\]/);
-    if (nm && !/^\s*rider\s*:/i.test(nm[1])) note = nm[1].trim();
-    name = name.replace(/\s*@\s*Rs\s*[\d,.]+.*$/i, '').replace(/\s*\[.*$/, '').trim();
+    const lines = m[2].split('\n');
+    const head = lines.shift();
+    const bi = head.indexOf('[');
+    const name = (bi > -1 ? head.slice(0, bi) : head).replace(/\s*@\s*Rs\s*[\d,.]+.*$/i, '').trim();
+    let note = [bi > -1 ? head.slice(bi + 1) : '', ...lines].map(s => s.trim()).filter(Boolean).join(' ')
+      .replace(/\]+\s*$/, '').trim();
+    if (/^(recall|smart add-on)$/i.test(note)) note = '';
     if (name) out.push({ name, qty: parseInt(m[1], 10), note });
   });
   return out;
@@ -2522,12 +2530,12 @@ function expandSaleItem(item, ctx) {
   if (!deal && pm && (findDeal(pm[1]) || DEAL_RECIPES[pm[1]] || dealFlavorMap[pm[1]])) { dealName = pm[1]; nameFlavors = pm[2]; deal = findDeal(dealName); }
   const cfg = DEAL_RECIPES[dealName] || (deal && DEAL_RECIPES[deal.n]) || null;
 
-  if (deal || cfg || dealFlavorMap[dealName]) {
+  if (deal || cfg || dealFlavorMap[dealName] || /includes?\s*:/i.test(item.note || '')) {
     res.isDeal = true;
     let notePart = String(item.note || '').split('|')[0];
     let inc = null;                                   // "Includes: 2x Zinger Burger, 1x Reg Fries ..."
     const im = notePart.match(/includes?\s*:\s*([\s\S]*)$/i);
-    if (im) { inc = parseIncludes(im[1]); notePart = notePart.slice(0, im.index); }
+    if (im) { inc = parseIncludes(im[1]); if (!inc.length) inc = null; notePart = notePart.slice(0, im.index); }
     if (!inc && !cfg && deal) { const di = parseIncludes(deal.d); if (di.length) inc = di; }
 
     const guess = parseDealDesc(deal ? deal.d : '');
@@ -2617,6 +2625,31 @@ function deductInventoryForSale(sale, bizdayOverride, opts) {
     .catch(e => console.error('deductInventoryForSale failed:', e));
   _deductChain = p;
   return p;
+}
+
+// One-off / on-demand backfill: scans Delivery bills whose stock deduction
+// was missed (e.g. saved before the deduction path existed, or an offline
+// write that got lost) and re-runs the deduction for each. dedupeBill:true
+// means any bill already in pos_consumption is skipped, so this is safe to
+// run repeatedly and safe to run over a wide date range.
+async function backfillDeliveryConsumption(fromDate, toDate) {
+  if (!sb || !isOnline) { showToast('Offline', 'error'); return; }
+  const { data, error } = await sb.from('shift_transactions')
+    .select('bill_no,date,items_text,type')
+    .eq('branch', activeBranch).eq('type', 'Delivery')
+    .like('bill_no', 'DLV-%')
+    .gte('date', fromDate || '2026-11-09').lte('date', toDate || todayKey());
+  if (error) { console.error(error); showToast('Backfill query failed', 'error'); return; }
+  let n = 0;
+  for (const r of (data || [])) {
+    const items = parseItemsTextToItems(r.items_text);
+    if (!items.length) continue;
+    await deductInventoryForSale(
+      { billNo: r.bill_no, type: 'Delivery', items },
+      r.date, { dedupeBill: true });
+    n++;
+  }
+  showToast('Checked ' + n + ' delivery bills — missing ones deducted', 'success');
 }
 async function _deductInventoryForSaleNow(sale, bizdayOverride, opts) {
   if (!sb || !sale || !Array.isArray(sale.items) || !sale.items.length) return;
@@ -2956,9 +2989,7 @@ async function settleDeliveryToCash(n) {
   };
   const res = await sbWrite('shift_transactions', 'insert', [row]);
   if (res && res.error && !res.isDupe) { showToast('Could not save delivery to Cash tab', 'error'); return; }
-  if (!(res && res.isDupe) && !completedOrders.some(o => o.id === n.id || o.kitchenOrderId === n.id)) {
-    deductInventoryForSale({ billNo: row.bill_no, type: 'Delivery', items: parseItemsTextToItems(n.items) }, null, { dedupeBill: true });
-  }
+  deductInventoryForSale({ billNo: row.bill_no, type: 'Delivery', items: parseItemsTextToItems(n.items) }, null, { dedupeBill: true });
   const i = completedOrders.findIndex(o => o.id === n.id);
   if (i > -1) {
     completedOrders[i].method = method;
@@ -11743,5 +11774,6 @@ async function assignHeldTo(orderId){
   setInterval(tick,30000); setTimeout(tick,8000);
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
