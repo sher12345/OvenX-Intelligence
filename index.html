@@ -6778,25 +6778,58 @@ function downloadCardRecordsCSV() {
     URL.revokeObjectURL(url);
     playClick('thud');
 }
-// Builds a clean, price-free item list for the kitchen ticket
-function buildKitchenItemsHtml(itemsText) {
+// Parses stored order text into [{qty,name,notes[]}]
+function parseKitchenItems(itemsText) {
     const items = [];
     String(itemsText || '').split('\n').forEach(raw => {
         const line = raw.trim();
         if (!line) return;
         const m = line.match(/^(\d+)x\s+(.+?)\s+@\s+Rs\s+\d+\s*(?:\[(.*))?$/);
         if (m) {
-            const item = { qty: m[1], name: m[2], notes: [] };
+            const item = { qty: parseInt(m[1], 10), name: m[2], notes: [] };
             if (m[3]) item.notes.push(m[3].replace(/\]$/, '').trim());
             items.push(item);
         } else if (items.length) {
             items[items.length - 1].notes.push(line.replace(/\]$/, '').trim());
         }
     });
+    return items;
+}
 
+// ── Kitchen print memory (so recalls print ONLY the new items) ──
+const _KSNAP_KEY = 'ovenx_kitchen_snap';
+function _ksnapKey(it) {
+    return it.name + '|' + it.notes.filter(n => n && !/^(recall|smart add-on|add-on)$/i.test(n)).join(';');
+}
+function getKitchenSnap(id) {
+    try { return (JSON.parse(localStorage.getItem(_KSNAP_KEY) || '{}'))[String(id)] || null; } catch (e) { return null; }
+}
+function saveKitchenSnap(id, itemsText) {
+    try {
+        const all = JSON.parse(localStorage.getItem(_KSNAP_KEY) || '{}');
+        const snap = {};
+        parseKitchenItems(itemsText).forEach(it => { const k = _ksnapKey(it); snap[k] = (snap[k] || 0) + it.qty; });
+        all[String(id)] = snap;
+        const ids = Object.keys(all);
+        if (ids.length > 300) delete all[ids[0]];   // keep it small
+        localStorage.setItem(_KSNAP_KEY, JSON.stringify(all));
+    } catch (e) {}
+}
+// Items not yet printed to kitchen (qty = only the NEW quantity)
+function diffKitchenItems(items, snap) {
+    const left = { ...snap }, out = [];
+    items.forEach(it => {
+        const k = _ksnapKey(it), had = left[k] || 0, used = Math.min(had, it.qty);
+        left[k] = had - used;
+        if (it.qty - used > 0) out.push({ ...it, qty: it.qty - used });
+    });
+    return out;
+}
+
+function buildKitchenItemsHtmlFromItems(items) {
     return items.map(it => {
         const notes = it.notes
-            .filter(n => n && n !== 'Smart Add-on' && n !== 'Add-on')
+            .filter(n => n && !/^(smart add-on|add-on|recall)$/i.test(n))
             .map(n => {
                 const isCustom = /^note:/i.test(n);
                 return `<div style="font-size:14px;margin:2px 0 0 26px;line-height:1.3;${isCustom ? 'font-weight:bold;border:1.5px solid #000;padding:2px 5px;display:inline-block;' : ''}">${isCustom ? '&#9888; ' : '- '}${escHtml(n)}</div>`;
@@ -6811,6 +6844,7 @@ function buildKitchenItemsHtml(itemsText) {
         </div>`;
     }).join('');
 }
+function buildKitchenItemsHtml(itemsText) { return buildKitchenItemsHtmlFromItems(parseKitchenItems(itemsText)); }
 
             async function printOrderData(id, type) {
     if (!sb) return alert("Database connection error");
@@ -6924,10 +6958,24 @@ ${sc > 0 ? `
         else if (isCar) bigLine = escHtml(String(o.location).replace('Car Dine:', '').trim());
         const shortId = String(o.id).slice(0, 6).toUpperCase();
 
+        // RECALL LOGIC: if this order was already printed to kitchen, print only what's new
+        const allItems = parseKitchenItems(o.items);
+        const prevSnap = getKitchenSnap(o.id);
+        let printItems = allItems, isRecall = false;
+        if (prevSnap) {
+            const fresh = diffKitchenItems(allItems, prevSnap);
+            if (fresh.length) { printItems = fresh; isRecall = true; }
+            else if (!confirm('No new items since the last kitchen print.\n\nReprint the FULL order?')) {
+                printArea.innerHTML = '';
+                return;
+            }
+        }
+
         printArea.innerHTML = `
             <div style="font-family:Arial,Helvetica,sans-serif;color:#000;text-align:center;padding:4px 2px;">
 
                 <div style="font-size:13px;font-weight:bold;letter-spacing:3px;">KITCHEN ORDER</div>
+                ${isRecall ? '<div style="border:3px solid #000;padding:5px;margin-top:6px;font-size:17px;font-weight:900;">&#9888; ADD-ON ONLY<br><span style="font-size:13px;">DO NOT REMAKE FULL ORDER</span></div>' : ''}
                 <div style="border-top:3px solid #000;margin:5px 0 8px;"></div>
 
                 <div style="border:3px solid #000;padding:6px 0;font-size:28px;font-weight:700;letter-spacing:2px;">
@@ -6944,7 +6992,7 @@ ${sc > 0 ? `
                 <div style="border-top:2px dashed #000;margin:8px 0 10px;"></div>
 
                 <div style="text-align:left;">
-                    ${buildKitchenItemsHtml(o.items)}
+                    ${buildKitchenItemsHtmlFromItems(printItems)}
                 </div>
 
                 <div style="border-top:3px solid #000;margin:8px 0 4px;"></div>
@@ -6955,7 +7003,7 @@ ${sc > 0 ? `
     setTimeout(() => {
         window.print();
         printArea.innerHTML = "";
-        if (type === 'kitchen') markKitchenPrinted(id);
+        if (type === 'kitchen') { saveKitchenSnap(id, o.items); markKitchenPrinted(id); }
     }, 400);
 }
 const _kPrinted = new Set(JSON.parse(localStorage.getItem('ovenx_kitchen_printed') || '[]'));
@@ -7091,7 +7139,7 @@ function recalcBillAfterEdit(itemsText, orderType, payMethod, oldDiscount, oldEl
 
     playClick('thud');
 
-    const updatedItems = items + "\n" + ni + " @ Rs " + addedPrice + " [RECALL]";
+    const updatedItems = items + "\n1x " + ni + " @ Rs " + addedPrice + " [RECALL]";
     const bill = recalcBillAfterEdit(updatedItems, orderType, payMethod, oldDiscount || 0, oldEligible || 0, sub || 0);
 
     try {
@@ -11726,6 +11774,7 @@ window.ptPrint = function(id){
   };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
