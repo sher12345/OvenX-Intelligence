@@ -1963,7 +1963,7 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
 <div id="admin-login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:9000;backdrop-filter:blur(8px);">
     <div class="modal">
         <h2 style="color:var(--red); font-weight:700;">Kitchen Access</h2>
-        <input type="text" id="adminPassword" placeholder="Secret Code" class="big-input" oninput="handlePassInput(this)" style="text-align:center; letter-spacing:4px; font-size:22px;">
+        <input type="text" id="adminPassword" placeholder="Secret Code" class="big-input" oninput="handlePassInput(this)" onkeydown="handlePassKey(event,this)" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" style="text-align:center; letter-spacing:4px; font-size:22px;">
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="next-btn btn-3d" style="background:#888;" onclick="closeAdminLogin()">BACK</button>
             <button class="next-btn btn-3d" style="background:var(--red);" onclick="verifyAdmin()">UNLOCK</button>
@@ -2262,6 +2262,7 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
                 <button class="header-back-btn btn-3d" style="background:#7c3aed;" onclick="openCardRecords()">🎓 CARD DASHBOARD</button>
                 <button class="header-back-btn btn-3d" style="background:#f39c12;" onclick="openAdminReviews()">⭐ REVIEWS</button>
                 <button class="header-back-btn btn-3d" style="background:#444;" onclick="openManualOrderModal()">MANUAL ORDER ➕</button>
+                <button class="header-back-btn btn-3d" style="background:#7c3aed;" onclick="openStampFix()">🎟️ FIX STAMPS</button>
                 <button id="fuel-price-btn" class="header-back-btn btn-3d" style="background:#fd7e14;" onclick="openFuelPricePrompt()">⛽ Set Fuel Price</button>
                 <button class="header-back-btn btn-3d" style="background:#8b0000;" onclick="adminToggleAllBranches()">🔒 CLOSE/OPEN ALL BRANCHES</button>
                 <button class="header-back-btn btn-3d" onclick="closeKitchenPanel()">EXIT</button>
@@ -3908,7 +3909,7 @@ function renderAdminReviews() {
                 "Order now to claim your gift!";
         } else {
             msg.innerHTML =
-                `Order ${10 - stamps} more times (Above Rs 1000) to unlock a ` +
+                `Order ${10 - stamps} more times (above Rs 1000 after discount) to unlock a ` +
                 `<span class='gold-label'>Free Mystery Meal</span>`;
         }
 
@@ -4837,6 +4838,9 @@ function unlockOrderButton() {
         orderObj.phone = deliveryPhone;
     }
 
+    orderObj.source = 'web';
+    if (!orderObj.phone && memberPhone) orderObj.phone = memberPhone;
+
     // Save to Supabase
     let orderId = null;
     try { 
@@ -4931,11 +4935,6 @@ if (!custPhone.startsWith('92')) custPhone = '92' + custPhone;
     let bonus = "";
     if (claimedPrize) {
         bonus = "\n\n🌟 MEMBER GIFT CLAIMED: " + claimedPrize;
-    } else if (memberPhone && sb && foodTotal >= 1000) {
-        try {
-            const { error } = await sb.rpc('increment_gold_club_stamp', { member_phone: memberPhone });
-            if (error) throw error;
-        } catch(e) { console.error('Stamp sync error:', e); }
     }
     localStorage.removeItem('ovenx_stamps');
 
@@ -5342,24 +5341,29 @@ function showPermissionDeniedHelp() {
     let adminPassTracker = "";
     function openAdminLogin() { playClick('pop'); adminPassTracker = ""; document.getElementById('adminPassword').value = ""; document.getElementById('admin-login-overlay').style.display = 'flex'; setScrollLock(true); }
     function closeAdminLogin() { document.getElementById('admin-login-overlay').style.display = 'none'; setScrollLock(false); }
-    function handlePassInput(el) {
-    const cur = el.value;
-
-    // Handle Backspace/Delete correctly
-    if (cur.length < adminPassTracker.length) {
-        adminPassTracker = adminPassTracker.substring(0, cur.length);
+    // The box shows one 🍕 per typed character; the real code lives in adminPassTracker.
+// (🍕 is two UTF-16 units, so we count whole characters, never string length.)
+function renderPass(el) {
+    el.value = "🍕".repeat(Array.from(adminPassTracker).length);
+    try { el.setSelectionRange(el.value.length, el.value.length); } catch(e) {}
+}
+function handlePassKey(e, el) {
+    if (e.key === "Enter") { e.preventDefault(); verifyAdmin(); return; }
+    if (e.key === "Escape") { e.preventDefault(); closeAdminLogin(); return; }
+    if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey || e.altKey) adminPassTracker = "";
+        else adminPassTracker = Array.from(adminPassTracker).slice(0, -1).join("");
+        renderPass(el);
     }
-    // Add only the newly typed character
-    else if (cur.length > adminPassTracker.length) {
-        const last = cur.substring(cur.length - 1);
-
-        if (last !== "🍕") {
-            adminPassTracker += last;
-        }
-    }
-
-    // Keep the password field masked
-    el.value = "🍕".repeat(adminPassTracker.length);
+}
+// Fallback for phone keyboards (which don't send usable key names) and paste.
+function handlePassInput(el) {
+    const chars = Array.from(el.value);
+    const pizzas = chars.filter(c => c === "🍕").length;
+    const typed = chars.filter(c => c !== "🍕" && !/[\uD800-\uDFFF]/.test(c)).join("");
+    adminPassTracker = Array.from(adminPassTracker).slice(0, pizzas).join("") + typed;
+    renderPass(el);
 }
     
     async function verifyAdmin() {
@@ -6127,6 +6131,7 @@ async function loadDeliveryHistory() {
             discount_claimed: t.discount > 0,
             branch: (activeBranch || BRANCH_CONFIG.MULTAN).id
         };
+        obj.source = 'manual';
         if (custName) obj.customer_name = custName;
         if (custPhone) obj.phone = custPhone;
 
@@ -6139,6 +6144,28 @@ async function loadDeliveryHistory() {
             } else alert("Error saving manual order.");
         }
     }
+async function openStampFix() {
+    if (!sb) return alert("No database connection.");
+    if (!_adminSecret) { alert("Session expired. Please log in again."); return openAdminLogin(); }
+    const phone = await askText("Customer's membership phone number:");
+    if (!phone) return;
+    const { data, error } = await sb.rpc('gc_staff_card', { p_code: _adminSecret, p_phone: phone });
+    if (error) return alert(/wrong staff code/i.test(error.message) ? "Staff code not set up in database yet." : "Error: " + error.message);
+    if (!data) return alert("No member found for that number.");
+    const hist = (data.history || []).slice(0, 8)
+        .map(h => `${fmtPKT(h.created_at).date}  ${h.delta > 0 ? '+' : ''}${h.delta}  ${h.kind}  ${h.note || ''}`)
+        .join('\n') || 'No history yet.';
+    const d = await askText(`${data.name} — ${data.stamps}/10 stamps\n\nRecent:\n${hist}\n\nStamps to ADD (e.g. 2) or REMOVE (e.g. -1):`, '1');
+    if (d === null) return;
+    const delta = parseInt(d, 10);
+    if (isNaN(delta) || delta === 0 || Math.abs(delta) > 10) return alert("Enter a number between -10 and 10.");
+    const note = await askText("Reason (required, saved in history):");
+    if (!note || !note.trim()) return alert("A reason is required.");
+    const r = await sb.rpc('gc_staff_adjust', { p_code: _adminSecret, p_phone: phone, p_delta: delta, p_note: note.trim() });
+    if (r.error) return alert("Failed: " + r.error.message);
+    playClick('thud');
+    alert(`✅ Done. ${data.name} now has ${r.data} stamps.`);
+}
 
 const CUSTOMER_CARE_NUMBER = '923002450301';
 
@@ -11774,6 +11801,7 @@ window.ptPrint = function(id){
   };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
