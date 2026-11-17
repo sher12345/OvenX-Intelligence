@@ -784,6 +784,7 @@ img,canvas,video{max-width:100%}
           <button class="nav-btn" id="nav-foodpanda" onclick="switchView('foodpanda')" style="background:rgba(230,126,34,0.15);color:var(--orange);">🐼 FoodPanda</button>
           <button class="nav-btn" id="nav-crosscheck" onclick="switchView('crosscheck')" style="background:rgba(212,175,55,0.15);color:var(--gold);">🔍 Cross-Check</button>
           <button class="print-report-btn" id="nav-closeshifts" onclick="closeAllShifts()" style="background:var(--red);color:white;border-color:var(--red);font-weight:800;">🔒 CLOSE ALL SHIFTS & RESET</button>
+          <button class="print-report-btn" id="nav-closepast" onclick="openCloseDayManual()" style="background:rgba(142,68,173,0.15);color:#bb77ff;border-color:rgba(142,68,173,0.4);font-weight:800;">🕐 CLOSE PAST DAY (ADMIN)</button>
         </div>
       </div>
     </div>
@@ -11775,5 +11776,108 @@ async function assignHeldTo(orderId){
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
+<script>
+/* ═══════════════ ADMIN: CLOSE A PAST DAY MANUALLY ═══════════════ */
+function openCloseDayManual() {
+  if (currentStaffRole !== 'Admin') { showToast('Only Admin can close a past day', 'error'); return; }
+  const old = document.getElementById('cdm-modal'); if (old) old.remove();
+  const d = todayKey();
+  const nextD = new Date(new Date(d + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
+  const el = document.createElement('div');
+  el.className = 'modal-backdrop open'; el.id = 'cdm-modal';
+  el.innerHTML = `
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-title">🕐 Close Past Day</div>
+      <div class="modal-sub">Use this when the cashier forgot to close the day. Pick the day to close and when it should have closed.</div>
+      <div class="of-label">Business day to close</div>
+      <input class="of-input" type="date" id="cdm-date" value="${d}">
+      <div class="of-label">Closing date &amp; time (when the day really ended)</div>
+      <input class="of-input" type="datetime-local" step="60" id="cdm-time" value="${d}T02:00">
+      <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px;">
+        • Sales from 10:00 AM of that day up to the closing time are counted in the closed day.<br>
+        • Any sales made <b>after</b> the closing time are moved to the next business day.<br>
+        • Set the opening balance for the new day afterwards in the Cash tab.
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="document.getElementById('cdm-modal').remove()">Cancel</button>
+        <button class="modal-confirm" id="cdm-btn" onclick="runCloseDayManual()">Close This Day</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+async function runCloseDayManual() {
+  if (currentStaffRole !== 'Admin') return;
+  const D = document.getElementById('cdm-date').value;
+  const closeVal = document.getElementById('cdm-time').value;
+  if (!D || !closeVal) { showToast('Pick both the day and the closing time', 'error'); return; }
+  if (!sb || !isOnline) { showToast('No internet connection', 'error'); return; }
+
+  const prevD = new Date(new Date(D + 'T00:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
+const startVal = prevD + 'T' + String(BIZ_DAY_START_HOUR).padStart(2, '0') + ':00';
+  if (closeVal <= startVal) { showToast('Closing time must be after ' + startVal.replace('T', ' '), 'error'); return; }
+  const fromISO = _dtLocalToISO(startVal), toISO = _dtLocalToISO(closeVal);
+  const nextD = new Date(new Date(D + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
+
+  const btn = document.getElementById('cdm-btn'); btn.disabled = true;
+  try {
+    // 1) already closed?
+    const { data: ex } = await sb.from('shift_closures').select('closed_at,closed_by')
+      .eq('branch', activeBranch).eq('date', D).maybeSingle();
+    if (ex) {
+      showToast('Day ' + D + ' is already closed (' + new Date(ex.closed_at).toLocaleString('en-PK') + ')', 'error');
+      btn.disabled = false; return;
+    }
+
+    // 2) totals for the window
+    const rows = await _xcFetchAll(fromISO, toISO);
+    const bills = rows.filter(t => !_XC_NON_BILL.includes(t.method));
+    const total = bills.reduce((s, t) => s + (t.total || 0), 0);
+
+    // 3) how many later sales will be moved to the next day
+    const { count: lateCount } = await sb.from('shift_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('branch', activeBranch).eq('date', D).gt('created_at', toISO);
+
+    const msg = 'Close business day ' + D + ' at ' + closeVal.replace('T', ' ') + '?\n\n' +
+      '• Bills in this day: ' + bills.length + '\n' +
+      '• Total sales: Rs ' + Math.round(total) + '\n' +
+      '• Later sales moved to ' + nextD + ': ' + (lateCount || 0) + '\n\nThis cannot be easily undone.';
+    if (!confirm(msg)) { btn.disabled = false; return; }
+
+    const pin = await askText('Enter Admin PIN to authorize:');
+    if (pin === null) { btn.disabled = false; return; }
+    if (pin !== '7530' && pin !== '1234') { showToast('Wrong PIN — cancelled', 'error'); btn.disabled = false; return; }
+
+    // 4) write the closure record with the chosen time
+    const res = await sbWrite('shift_closures', 'insert', [{
+      branch: activeBranch, date: D,
+      closed_at: toISO,
+      closed_by: currentStaff + ' (manual)',
+      final_total: total,
+      bills_count: bills.length
+    }]);
+    if (res && res.error) {
+      alert('Closure NOT saved: ' + res.error + (res.isDupe ? ' (a closure for this date already exists)' : ''));
+      btn.disabled = false; return;
+    }
+
+    // 5) move sales made after the closing time to the next business day
+    if (lateCount) {
+      const { error: mvErr } = await sb.from('shift_transactions').update({ date: nextD })
+        .eq('branch', activeBranch).eq('date', D).gt('created_at', toISO);
+      if (mvErr) showToast('Day closed, but moving later sales failed: ' + mvErr.message, 'error');
+    }
+
+    document.getElementById('cdm-modal')?.remove();
+    showToast('Day ' + D + ' closed ✅ — reloading…', 'success');
+    setTimeout(() => location.reload(), 1800);
+  } catch (e) {
+    console.error(e);
+    showToast('Failed: ' + (e.message || e), 'error');
+    btn.disabled = false;
+  }
+}
+</script>
 </body>
 </html>
