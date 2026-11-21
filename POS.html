@@ -1819,6 +1819,21 @@ const TABLES = {
 // All table IDs flat — for QR matching
 const ALL_TABLE_IDS = Object.values(TABLES).flat();
 
+// Per-branch table counts. Change these numbers to add tables.
+const BRANCH_TABLE_COUNTS = {
+  MULTAN: { A: 18, B: 6 },
+  BWP:    { A: 19, B: 15 }
+};
+
+function applyBranchTables() {
+  const c = BRANCH_TABLE_COUNTS[activeBranch] || BRANCH_TABLE_COUNTS.MULTAN;
+  const mk = (l, n) => Array.from({ length: n }, (_, i) => l + '-' + (i + 1));
+  TABLES['A Floor'] = mk('A', c.A);
+  TABLES['B Floor'] = mk('B', c.B);
+  ALL_TABLE_IDS.length = 0;
+  ALL_TABLE_IDS.push(...Object.values(TABLES).flat());
+}
+
 // ── MENU DATA ──
 const menuData = {
   "Starters":[{n:"Plain Fries",p:{Reg:230,Large:300}},{n:"Loaded Fries",p:699},{n:"Pizza Fries",p:799},{n:"Dragon Shots",p:449},{n:"Oven Baked Wings",p:{M:399,L:780}},{n:"Peri-Peri Wings",p:{M:399,L:780}},{n:"Hot Wings",p:{M:399,L:780}},{n:"Honey Chili Wings",p:{M:449,L:880}},{n:"Cheese Sticks",p:449},{n:"Meat Sticks",p:449},{n:"Nuggets",p:{M:350,L:650}}],
@@ -2083,6 +2098,7 @@ async function doLogin() {
   }
 
   currentStaff = staffRecord.name;
+applyBranchTables();
 currentStaffRole = staffRecord.role;
 currentStaffPermissions = staffRecord.permissions || {};
 {
