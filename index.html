@@ -1784,7 +1784,8 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
             <option value="Takeaway">Takeaway</option>
             <option value="Delivery">Delivery</option>
         </select>
-        <input type="text" id="man-loc" placeholder="Table # or Address" class="big-input">
+        <input type="text" id="man-loc" list="man-tables" placeholder="Table # or Address" class="big-input">
+<datalist id="man-tables"></datalist>
         <input type="text" id="man-cust-name" placeholder="👤 Customer Name (optional)" class="big-input">
         <input type="text" id="man-cust-phone" placeholder="📞 Phone (optional)" class="big-input">
 
@@ -2854,7 +2855,14 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
   // ══════════════════════════════════════════
     // BRANCH CONFIGURATION
     // ══════════════════════════════════════════
-    const BRANCH_CONFIG = {
+    // Builds ["A1","A2",...,"B15"] from { A: 19, B: 15 }
+function makeTables(groups) {
+    const out = [];
+    Object.keys(groups).forEach(l => { for (let i = 1; i <= groups[l]; i++) out.push(l + i); });
+    return out;
+}
+
+const BRANCH_CONFIG = {
         MULTAN: {
     id: 'MULTAN',
     name: 'Multan',
@@ -2892,6 +2900,7 @@ riderPhones: {
         "M Azeem":         "923116688948"
     },
     inventoryPassword: 'bwp123',
+    tables: makeTables({ A: 19, B: 15 }),   // A1-A19, B1-B15. Change these numbers to add tables
     excludedDeals: []
 },
     };
@@ -3142,6 +3151,7 @@ riderPhones: {
         if (document.getElementById('inv-branch-label')) document.getElementById('inv-branch-label').textContent = b.name.toUpperCase();
         if (document.getElementById('man-branch-tag')) document.getElementById('man-branch-tag').textContent = b.name.toUpperCase();
         if (document.getElementById('calc-branch-label')) document.getElementById('calc-branch-label').textContent = 'From: OvenX ' + b.name + ' Kitchen';
+        setTimeout(validateScannedTable, 0);
         // Handle QR table
         try {
             const p = new URLSearchParams(window.location.search);
@@ -3179,7 +3189,15 @@ loadCustomItemsIntoMenu();
     document.getElementById('bcard-MULTAN').addEventListener('click', () => { manualBranchPick = true; selectBranch('MULTAN'); });
     document.getElementById('bcard-BWP').addEventListener('click', () => { manualBranchPick = true; selectBranch('BWP'); });
     document.getElementById('branch-manual-btn').addEventListener('click', () => chooseBranchManually());
-
+function validateScannedTable() {
+    if (!tableNum || !activeBranch || !activeBranch.tables) return;
+    if (activeBranch.tables.includes(tableNum)) return;
+    const bad = tableNum;
+    tableNum = ''; isQRScan = false;
+    document.getElementById('gateway-table-note').style.display = 'none';
+    document.getElementById('header-table-indicator').innerText = '';
+    alert('Table "' + bad + '" does not exist at OvenX ' + activeBranch.name + '. Please ask our staff for help.');
+}
     function resetBranchSelection() {
         if (!confirm('Switch branch? Your cart will be cleared.')) return;
         cart = []; updateCartBar(); activeBranch = null;
@@ -5058,7 +5076,29 @@ function removeItem(idx) {
     }
     
     function selectService(type) { playClick('pop'); orderType = type; if(type === 'Dine-In') { if(tableNum) renderFinalSummary(0); else renderTableStep(); } else if(type === 'Takeaway') renderFinalSummary(0); else renderAddressStep(); }
-    function renderTableStep() { chkStep = 2; document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`; }
+    function pickTable(t) { playClick('thud'); tableNum = t; renderFinalSummary(0); }
+
+function renderTableStep() {
+    chkStep = 2;
+    const tables = activeBranch && activeBranch.tables;
+
+    if (!tables) {   // Multan: free text, unchanged
+        document.getElementById('checkout-content').innerHTML = `<div class="chat-bubble">What is your <b>Table Number</b>?</div><div class="input-group"><input type="text" id="manualTable" placeholder="Example: A1" class="big-input"><button class="next-btn btn-3d" style="background:var(--red); box-shadow:0 6px 0px var(--dark-red);" onclick="playClick('thud'); tableNum=document.getElementById('manualTable').value.toUpperCase(); renderFinalSummary(0)">NEXT</button></div>`;
+        return;
+    }
+
+    let html = `<div class="chat-bubble">What is your <b>Table Number</b>?</div>`;
+    const letters = [...new Set(tables.map(t => t[0]))];
+    letters.forEach(letter => {
+        html += `<div style="font-weight:700;color:#888;font-size:12px;letter-spacing:2px;margin:14px 4px 8px;">SECTION ${letter}</div>
+                 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">`;
+        tables.filter(t => t[0] === letter).forEach(t => {
+            html += `<button class="btn-3d" onclick="pickTable('${t}')" style="padding:14px 0;border-radius:14px;border:1px solid #ddd;background:#fff;font-weight:700;font-size:15px;">${t}</button>`;
+        });
+        html += `</div>`;
+    });
+    document.getElementById('checkout-content').innerHTML = html;
+}
     
     function renderAddressStep() { 
         chkStep = 2; 
@@ -5703,6 +5743,7 @@ async function loadDeliveryHistory() {
         manCart = [];
         manPaymentMethod = "Cash";
         document.getElementById('man-loc').value = "";
+        document.getElementById('man-tables').innerHTML = ((activeBranch && activeBranch.tables) || []).map(t => `<option value="${t}">`).join('');
         document.getElementById('man-cust-name').value = "";
         document.getElementById('man-cust-phone').value = "";
         document.getElementById('man-discount-pct').value = "";
@@ -6108,6 +6149,8 @@ async function loadDeliveryHistory() {
         const custName = document.getElementById('man-cust-name').value.trim();
         const custPhone = document.getElementById('man-cust-phone').value.trim();
         if (!loc) return alert("Please fill Table/Address!");
+        const _tbls = activeBranch && activeBranch.tables;
+        if (type === 'Dine-In' && _tbls && !_tbls.includes(loc.toUpperCase())) return alert('Table "' + loc + '" does not exist for this branch.');
         if (!manCart.length) return alert("Please add at least one item!");
 
         const t = manCalcTotals();
