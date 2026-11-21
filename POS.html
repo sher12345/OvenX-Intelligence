@@ -1483,7 +1483,8 @@ img,canvas,video{max-width:100%}
         <button class="pay-method-btn" id="atm-pm-jazzcash"  onclick="adminTxSelectMethod('jazzcash')">📱 JazzCash</button>
         <button class="pay-method-btn" id="atm-pm-foodpanda" onclick="adminTxSelectMethod('foodpanda')">🐼 FoodPanda</button>
         <button class="pay-method-btn" id="atm-pm-split"     onclick="adminTxSelectMethod('split')">✂️ Split</button>
-        <button class="pay-method-btn" id="atm-pm-expense"   onclick="adminTxSelectMethod('expense')" style="grid-column: 1 / -1;">🧾 Expense / Adjustment</button>
+        <button class="pay-method-btn" id="atm-pm-staff"     onclick="adminTxSelectMethod('staff')">👷 Staff</button>
+        <button class="pay-method-btn" id="atm-pm-expense"   onclick="adminTxSelectMethod('expense')" style="grid-column: span 2;">🧾 Expense / Adjustment</button>
       </div>
     </div>
     <div class="admin-tx-section">
@@ -1924,18 +1925,21 @@ function _deliveryFeeHeldByRider(o) {
   // "Out" button (updateDeliveryStatus) — that's the only path that ever
   // creates a kitchen_orders row for a Delivery order, so kitchen_order_id
   // is the reliable signal for "rider collected this fee, not us."
-  if (o._feeStripped || o.type !== 'Delivery') return 0;
+  if (o.type !== 'Delivery') return 0;
+  // Staff: the fee is always paid out of the drawer, stripped or not
+  if (o.method === 'staff') return Number(o.riderFee || o.rider_fee || o.deliveryCharge || o.delivery_charge) || 0;
+  if (o._feeStripped) return 0;
   const fee = Number(o.deliveryCharge ?? o.delivery_charge) || 0;
   if (o.method === 'split') return Math.min(fee, o.splitCash || o.split_cash || 0);
-  if (['cash','card','bank','jazzcash'].includes(o.method)) return fee;
+  if (['cash','card','bank','jazzcash','staff'].includes(o.method)) return fee;
   return 0;
 }
 function _stripRiderFee(t) {
   if (t._feeStripped || t.type !== 'Delivery') return t;
-  if (!['cash','card','bank','jazzcash','foodpanda','split'].includes(t.method)) return t;
+  if (!['cash','card','bank','jazzcash','foodpanda','split','staff'].includes(t.method)) return t;
   const fee = Number(t.delivery_charge) || 0;
   t.rider_fee = fee;
-  if (!['cash','split'].includes(t.method)) return t; // non-cash: full amount stays in Bank/Card/JazzCash
+  if (!['cash','split','staff'].includes(t.method)) return t; // non-cash: full amount stays in Bank/Card/JazzCash
   t.total = (t.total || 0) - fee;
   t.delivery_charge = 0;
   if (t.method === 'split') t.split_cash = Math.max(0, (t.split_cash || 0) - fee);
@@ -1954,7 +1958,11 @@ function computeCashInHand(orders, opening) {
   (orders || []).forEach(o => {
     if (o.method === 'cash')          cash += o.total;
     else if (o.method === 'cash-in')  cash += o.total;
-    else if (o.method === 'staff')    cash += o.total;   // staff meals are settled in cash
+    else if (o.method === 'staff') {
+      // staff meals count as cash (food part only; the delivery fee is deducted separately below)
+      const _stripped = o._feeStripped || Number(o.riderFee || o.rider_fee) > 0;
+      cash += (o.type === 'Delivery' && !_stripped) ? o.total - (Number(o.deliveryCharge ?? o.delivery_charge) || 0) : o.total;
+    }
     else if (o.method === 'split')    cash += (o.splitCash || o.split_cash || 0);
     else if (o.method === 'cash-out') cash -= Math.abs(o.total);
     else if (o.method === 'expense' && !_isFinanceExpense(o)) cash -= Math.abs(o.total);
@@ -2269,13 +2277,13 @@ function _dtLocalToISO(val) {
   return new Date(v + '+05:00').toISOString();
 }
 async function promptPaymentMethod(title) {
-  const methodMap = { '1':'cash','2':'jazzcash','3':'card','4':'foodpanda','5':'bank' };
+  const methodMap = { '1':'cash','2':'jazzcash','3':'card','4':'foodpanda','5':'bank','6':'staff' };
   while (true) {
-    const mc = await askText(title + '\n1. Cash\n2. JazzCash\n3. Card\n4. FoodPanda\n5. Bank Transfer\n\nEnter number (1-5):');
+    const mc = await askText(title + '\n1. Cash\n2. JazzCash\n3. Card\n4. FoodPanda\n5. Bank Transfer\n6. Staff\n\nEnter number (1-6):');
     if (mc === null) return null; // cancelled
     const trimmed = (mc || '').trim();
     if (methodMap[trimmed]) return methodMap[trimmed];
-    showToast('Invalid entry — please type a number from 1 to 5.', 'error');
+    showToast('Invalid entry — please type a number from 1 to 6.', 'error');
   }
 }
 function _obCacheKey(branch) { return 'ovenx_openingbal_cache_' + branch; }
@@ -7248,7 +7256,7 @@ const grossSale = bills.reduce((s,o) => s + _grossOf(o), 0);
   const taxTotal = bills.reduce((s,o) => s + (o.tax||0), 0);
   const taxPM = taxByMethod(bills);
   const delFees = bills.filter(o => o.type==='Delivery').reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
-  const feeFromDrawer = bills.filter(o => o.type==='Delivery' && ['card','bank','jazzcash'].includes(o.method)).reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
+  const feeFromDrawer = bills.filter(o => o.type==='Delivery' && ['card','bank','jazzcash','staff'].includes(o.method)).reduce((s,o) => s + (o.riderFee ?? o.deliveryCharge ?? 0), 0);
   const feeInCashSales = delFees - feeFromDrawer;
   const avg = bills.length ? Math.round(grandTotal / bills.length) : 0;
   const returnTotal = orders.filter(o => o.method==='return').reduce((s,o) => s + Math.abs(o.total), 0);
@@ -7462,7 +7470,7 @@ function buildSummaryHTML(list, opening) {
 
   const del = bills.filter(o => o.type === 'Delivery');
   const riderTotal  = sum(del, o => o.riderFee ?? o.rider_fee);
-  const riderDrawer = sum(del.filter(o => ['card','bank','jazzcash'].includes(o.method)), o => o.riderFee ?? o.rider_fee);
+  const riderDrawer = sum(del.filter(o => ['card','bank','jazzcash','staff'].includes(o.method)), o => o.riderFee ?? o.rider_fee);
   const riderInCash = riderTotal - riderDrawer;
 
   const cashIn  = sum(by('cash-in'),  o => o.total);
@@ -7593,7 +7601,7 @@ async function renderClosingReport() {
   const expenses = sales.filter(t => t.method === 'expense' && !/^\s*\[FINANCE\]/i.test(t.items_text || '')).reduce((s,t) => s + Math.abs(t.total), 0);
   const financeExp = sales.filter(t => t.method === 'expense' && /^\s*\[FINANCE\]/i.test(t.items_text || '')).reduce((s,t) => s + Math.abs(t.total), 0);
   const totalDelCharges = deliveryFeesOnly;
-  const feeFromDrawer = billsOnly.filter(t => t.type==='Delivery' && ['card','bank','jazzcash'].includes(t.method)).reduce((s,t) => s + (t.rider_fee||0), 0);
+  const feeFromDrawer = billsOnly.filter(t => t.type==='Delivery' && ['card','bank','jazzcash','staff'].includes(t.method)).reduce((s,t) => s + (t.rider_fee||0), 0);
   const feeInCashSales = deliveryFeesOnly - feeFromDrawer;
   const avg = billsOnly.length > 0 ? Math.round(shopTotal/billsOnly.length) : 0;
     const pm = sumByMethod(billsOnly);
@@ -7799,7 +7807,7 @@ async function exportClosingStatement() {
   const hasDecl = finals.length > 0;
   const submitted = sum(finals, d => d.cash_amount);
   const difference = Math.round(submitted - (cashInHand - opening));
-  const feeFromDrawer = sum(deliv.filter(t => ['card','bank','jazzcash'].includes(t.method)), t => t.rider_fee);
+  const feeFromDrawer = sum(deliv.filter(t => ['card','bank','jazzcash','staff'].includes(t.method)), t => t.rider_fee);
   const feeInCash = sum(deliv, t => t.rider_fee) - feeFromDrawer;
   const cnt = m => bills.filter(t => t.method === m).length;
   const tp = taxByMethod(bills);
@@ -9485,7 +9493,7 @@ function _xcCalc(rows) {
   const cash = s(bills.filter(t => t.method === 'cash' || t.method === 'staff'), t => (t.total || 0) - held(t))
              + s(bills.filter(t => t.method === 'split'), t => t.split_cash || 0)
              - s(rows.filter(t => t.method === 'cash-out'), t => Math.abs(t.total || 0))
-             - s(bills.filter(t => t.type === 'Delivery' && ['card','bank','jazzcash'].includes(t.method)), t => t.rider_fee || 0);
+             - s(bills.filter(t => t.type === 'Delivery' && ['card','bank','jazzcash','staff'].includes(t.method)), t => t.rider_fee || 0);
   const online = s(bills.filter(t => ['jazzcash','card','bank','foodpanda'].includes(t.method)), t => t.total || 0)
                + s(bills.filter(t => t.method === 'split'), t => t.split_card || 0);
   const expRows = rows.filter(t => t.method === 'expense' && !/^\s*\[FINANCE\]/i.test(t.items_text || ''));
@@ -10199,7 +10207,7 @@ function _openAdminTxModalWithData(tx) {
   document.getElementById('atm-total-input').value = Math.abs(tx.total);
 
   // Method buttons
-  ['cash','card','bank','jazzcash','foodpanda','split','expense'].forEach(m => {
+  ['cash','card','bank','jazzcash','foodpanda','split','expense','staff'].forEach(m => {
     const el = document.getElementById('atm-pm-' + m);
     if (el) el.classList.toggle('selected', m === _adminTxMethod);
   });
@@ -10263,7 +10271,7 @@ function adminTxAddItem() {
 
 function adminTxSelectMethod(m) {
   _adminTxMethod = m;
-  ['cash','card','bank','jazzcash','foodpanda','split'].forEach(id => {
+  ['cash','card','bank','jazzcash','foodpanda','split','expense','staff'].forEach(id => {
     const el = document.getElementById('atm-pm-' + id);
     if (el) el.classList.toggle('selected', id === m);
   });
@@ -11895,5 +11903,6 @@ const startVal = prevD + 'T' + String(BIZ_DAY_START_HOUR).padStart(2, '0') + ':0
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
