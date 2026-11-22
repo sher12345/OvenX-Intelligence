@@ -1779,7 +1779,7 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
         <div style="background:#f0f0f0; padding:8px 15px; border-radius:10px; margin-bottom:10px; font-size:12px; font-weight:700; color:#555; text-align:center;">
             Branch: <span id="man-branch-tag" style="color:var(--red);">MULTAN</span>
         </div>
-        <select id="man-type" class="big-input" onchange="renderManSummary()">
+        <select id="man-type" class="big-input" onchange="renderManSummary();manApplyLookup()">
             <option value="Dine-In">Dine-In</option>
             <option value="Takeaway">Takeaway</option>
             <option value="Delivery">Delivery</option>
@@ -1787,7 +1787,8 @@ background:var(--char);color:var(--flour);font-family:var(--body);font-size:1.05
         <input type="text" id="man-loc" list="man-tables" placeholder="Table # or Address" class="big-input">
 <datalist id="man-tables"></datalist>
         <input type="text" id="man-cust-name" placeholder="👤 Customer Name (optional)" class="big-input">
-        <input type="text" id="man-cust-phone" placeholder="📞 Phone (optional)" class="big-input">
+        <input type="tel" id="man-cust-phone" placeholder="📞 Phone (optional)" class="big-input" maxlength="15" oninput="manPhoneInput(this.value)">
+        <div id="man-lookup-note" style="font-size:12px;font-weight:700;margin:6px 4px 0;min-height:16px;"></div>
 
         <div style="margin-top:15px; border:2px solid #f0ece8; border-radius:20px; padding:15px; background:#faf8f6;">
             <input type="text" id="man-item-search" placeholder="🔍 Search menu items..." class="big-input" style="margin-top:0;" oninput="renderManItemPicker(this.value)">
@@ -5746,6 +5747,8 @@ async function loadDeliveryHistory() {
         document.getElementById('man-tables').innerHTML = ((activeBranch && activeBranch.tables) || []).map(t => `<option value="${t}">`).join('');
         document.getElementById('man-cust-name').value = "";
         document.getElementById('man-cust-phone').value = "";
+        _manLookedPhone = ''; _manLast = null; _manAuto = { name:'', loc:'', fee:'' };
+        document.getElementById('man-lookup-note').textContent = '';
         document.getElementById('man-discount-pct').value = "";
         document.getElementById('man-fee').value = "";
         document.getElementById('man-item-search').value = "";
@@ -5756,6 +5759,144 @@ async function loadDeliveryHistory() {
         document.getElementById('manual-order-overlay').style.display = 'flex';
         setScrollLock(true);
         await renderManItemPicker('');
+    }
+
+    // ── Manual-order customer lookup (phone → name / address / delivery fee) ──
+    let _manLookedPhone = '', _manPhoneTimer = null, _manLast = null;
+    let _manAuto = { name:'', loc:'', fee:'' };   // remembers what WE filled, so we only ever overwrite our own autofill
+
+    function manNormPhone(raw) {
+        let p = String(raw || '').replace(/\D/g, '');
+        if (p.startsWith('0')) p = '92' + p.slice(1);
+        else if (!p.startsWith('92')) p = '92' + p;
+        return p;
+    }
+
+    function manPhoneInput(val) {
+        clearTimeout(_manPhoneTimer);
+        const d = String(val || '').replace(/\D/g, '');
+        if (d.length < 11) {
+            _manLookedPhone = ''; _manLast = null;
+            const n = document.getElementById('man-lookup-note'); if (n) n.textContent = '';
+            return;
+        }
+        _manPhoneTimer = setTimeout(() => manLookupCustomer(d), 400);
+    }
+
+    async function manLookupCustomer(digits) {
+        if (!sb) return;
+        const phone = manNormPhone(digits);
+        if (phone === _manLookedPhone) return;
+        const nameEl = document.getElementById('man-cust-name');
+        const locEl  = document.getElementById('man-loc');
+        const feeEl  = document.getElementById('man-fee');
+        const note   = document.getElementById('man-lookup-note');
+
+        // New number: remove only what a previous lookup auto-filled
+        if (nameEl.value === _manAuto.name) nameEl.value = '';
+        if (locEl.value  === _manAuto.loc)  locEl.value  = '';
+        if (feeEl.value  === _manAuto.fee)  feeEl.value  = '';
+        _manAuto = { name:'', loc:'', fee:'' };
+        _manLookedPhone = phone; _manLast = null;
+        note.style.color = '#999'; note.textContent = '🔎 Searching…';
+
+        let name = '', addrs = [], count = 0;
+        try {
+            const { data: c } = await sb.from('customers').select('*').eq('phone', phone).maybeSingle();
+            if (c) { name = c.name || ''; addrs = Array.isArray(c.addresses) ? c.addresses : []; count = c.total_orders || 0; }
+
+            // Not in customers yet → search past orders (covers people who ordered before this feature)
+            if (!name && !addrs.length) {
+                const local = '0' + phone.slice(2);
+                const variants = [phone, local, local.slice(0,4) + '-' + local.slice(4), '+' + phone];
+                let rows = [];
+                for (const tbl of ['kitchen_orders', 'kitchen_orders_archive']) {
+                    const { data } = await sb.from(tbl)
+                        .select('customer_name,location,type,delivery_fee,created_at')
+                        .in('phone', variants).order('created_at', { ascending: false }).limit(20);
+                    rows = rows.concat(data || []);
+                }
+                rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                const withName = rows.find(r => r.customer_name);
+                name = withName ? withName.customer_name : '';
+                const seen = new Set();
+                rows.filter(r => r.type === 'Delivery' && r.location).forEach(r => {
+                    if (seen.has(r.location)) return;
+                    seen.add(r.location);
+                    addrs.push({ address: r.location, delivery_fee: r.delivery_fee || 0 });
+                });
+                count = rows.length;
+            }
+        } catch (e) { console.warn('manLookupCustomer failed:', e.message); note.textContent = ''; return; }
+
+        // Ignore a slow reply if the number on screen has changed meanwhile
+        const stillSame = manNormPhone(document.getElementById('man-cust-phone').value) === phone;
+        if (!stillSame) return;
+
+        if (!name && !addrs.length) {
+            note.style.color = '#c2410c'; note.textContent = '🆕 New customer';
+            return;
+        }
+        _manLast = { name, addrs };
+        manApplyLookup();
+        note.style.color = '#16a34a';
+        note.textContent = '📇 Returning customer: ' + (name || phone) + (count ? ' — ' + count + '+ past orders' : '');
+    }
+
+    // Fills name (always) and address + fee (Delivery only), never overwriting what staff typed
+    function manApplyLookup() {
+        if (!_manLast) return;
+        const nameEl = document.getElementById('man-cust-name');
+        const locEl  = document.getElementById('man-loc');
+        const feeEl  = document.getElementById('man-fee');
+        const type   = document.getElementById('man-type').value;
+        const { name, addrs } = _manLast;
+
+        if (name && !nameEl.value.trim()) { nameEl.value = name; _manAuto.name = name; }
+
+        if (type === 'Delivery' && addrs.length) {
+            // all saved addresses become suggestions in the address box
+            document.getElementById('man-tables').innerHTML =
+                addrs.map(a => `<option value="${escHtml(a.address)}">`).join('');
+            if (!locEl.value.trim()) {
+                locEl.value = addrs[0].address; _manAuto.loc = addrs[0].address;
+                if (!feeEl.value && addrs[0].delivery_fee) {
+                    feeEl.value = addrs[0].delivery_fee; _manAuto.fee = String(addrs[0].delivery_fee);
+                    renderManSummary();
+                }
+            }
+        }
+    }
+
+    // Saves/updates the customer after a manual order is stored
+    async function manSaveCustomer(rawPhone, name, type, loc, fee) {
+        if (!sb || !rawPhone) return;
+        try {
+            const phone = manNormPhone(rawPhone);
+            const { data: ex } = await sb.from('customers').select('*').eq('phone', phone).maybeSingle();
+            let addresses = (ex && ex.addresses) || [];
+            if (type === 'Delivery' && loc) {
+                const idx = addresses.findIndex(a => a.address === loc);
+                const entry = { address: loc, delivery_fee: fee || 0, lat: null, lng: null, last_used: new Date().toISOString(), count: 1 };
+                if (idx > -1) {
+                    entry.count = (addresses[idx].count || 1) + 1;
+                    entry.lat = addresses[idx].lat || null;
+                    entry.lng = addresses[idx].lng || null;
+                    addresses.splice(idx, 1);
+                }
+                addresses.unshift(entry);
+                addresses = addresses.slice(0, 5);
+            }
+            await sb.from('customers').upsert([{
+                phone,
+                name: name || (ex && ex.name) || '',
+                addresses,
+                total_orders: ((ex && ex.total_orders) || 0) + 1,
+                last_order_at: new Date().toISOString(),
+                last_branch: (activeBranch || BRANCH_CONFIG.MULTAN).id,
+                updated_at: new Date().toISOString()
+            }], { onConflict: 'phone' });
+        } catch (e) { console.warn('manSaveCustomer failed:', e.message); }
     }
 
     function closeManualOrderModal() {
@@ -6181,6 +6322,7 @@ async function loadDeliveryHistory() {
         if (sb) {
             playClick('thud');
             const { error } = await sb.from('kitchen_orders').insert([obj]);
+            if (!error && custPhone) manSaveCustomer(custPhone, custName, type, loc, t.fee);
             if (!error) {
                 closeManualOrderModal();
                 renderKitchenOrders();
@@ -11844,6 +11986,7 @@ window.ptPrint = function(id){
   };
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
