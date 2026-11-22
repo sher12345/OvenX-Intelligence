@@ -2996,7 +2996,7 @@ async function settleDeliveryToCash(n) {
   const fee  = Number(n.delivery_fee) || 0;
   const pm   = String(n.payment_method || 'cash').toLowerCase();
   if (pm === 'credited') return;
-  const NONCASH = { jazzcash:'jazzcash', card:'card', bank:'bank', online:'bank' };
+  const NONCASH = { jazzcash:'jazzcash', card:'card', bank:'bank', online:'bank', staff:'staff' };
   const method = NONCASH[pm] || 'cash';
   const riderTag = n.rider ? ' [Rider: ' + n.rider + ']' : '';
   const row = {
@@ -11903,6 +11903,7 @@ const startVal = prevD + 'T' + String(BIZ_DAY_START_HOUR).padStart(2, '0') + ':0
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
