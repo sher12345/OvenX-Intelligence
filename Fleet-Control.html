@@ -132,9 +132,9 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const fmt=n=>'Rs '+Math.round(Number(n||0)).toLocaleString();
 const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:TZ}):'—';
 const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short',timeZone:TZ}):'—';
-const NONCASH=['jazzcash','card','bank','credited'];
-const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',credited:'Credited'};
-const PMC={cash:'#34e0a1',jazzcash:'#6cb8ff',card:'#a78bfa',bank:'#ffc857',credited:'#ff6b7a'};
+const NONCASH=['jazzcash','card','bank','staff','credited'];
+const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',staff:'Staff',credited:'Credited'};
+const PMC={cash:'#34e0a1',jazzcash:'#6cb8ff',card:'#a78bfa',bank:'#ffc857',staff:'#ff9ec4',credited:'#ff6b7a'};
 const normPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d};
 
 /* Business day = 6:00 AM → 6:00 AM Pakistan time. Today / 7 days / Month ALL start on a 6 AM boundary,
@@ -220,7 +220,7 @@ function build(att,ord,act,s){
    const m=minsOf(o);o.mins=m;r.orders.push(o);r.count++;r.fees+=o.delivery_fee||0;
    if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
    const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0,pm=o.payment_method;
-   const dr=['card','bank','jazzcash'].includes(pm)?fee:0;r.drawer+=dr;r.kept+=fee-dr;if(dr)r.drawerOrders.push(o);
+   const dr=['card','bank','jazzcash','staff'].includes(pm)?fee:0;r.drawer+=dr;r.kept+=fee-dr;if(dr)r.drawerOrders.push(o);
    if(!branch||r.branch===branch){hours[new Date(+new Date(o.completed_at)+PK).getUTCHours()]++;pay[pm||'cash']=(pay[pm||'cash']||0)+1}
    if(pm==='credited')r.cred+=food+fee;else r.collected+=food+fee;
    if(o.settled)r.settled++;else{r.unsettled++;if(NONCASH.includes(pm))r.owed+=fee;else r.cash+=food}
@@ -387,6 +387,7 @@ function exportCsv(){
 }
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
