@@ -369,7 +369,7 @@ return `<article class="card ${go?'go':''}">
 <div class="row big"><span>Collect</span><b class="num">${fmt(shop+tax+fee)}</b></div>
 <div class="row ho" style="border-top:1px solid var(--line)"><span>Hand over to shop</span><b class="num">${fmt(shop+tax)}</b></div></div>
 <div class="ca">${go?`<button class="go-b done" onclick="markComplete('${id}')">Mark delivered</button>`:`<button class="go-b start" onclick="startDelivery('${id}')">Start delivery</button>`}
-<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="showRoute('${id}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
+<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
 <button class="lnk" style="color:var(--green)" onclick="shareTrack('${id}')">📍 Send tracking link to customer</button>
 <button class="lnk" onclick="cancelOrder('${id}')">Can't deliver</button></div></article>`}).join('')}
 
@@ -443,9 +443,9 @@ if(!await ask({title:'Report this order as cancelled?',sub:'Reason: '+r+'. This 
 try{await sb.from('kitchen_orders').update({status:'CANCELLED',cancel_reason:r,cancelled_at:new Date().toISOString(),cancelled_by:riderName}).eq('id',id);showToast('Order reported as cancelled','error');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
 function directCall(p){window.open('tel:'+p,'_self')}
 function openWhatsApp(p){let w=p.replace(/\D/g,'');if(w.startsWith('0'))w='92'+w.slice(1);if(w.startsWith('3')&&w.length===10)w='92'+w;if(!w.startsWith('92')&&!w.startsWith('9'))w='92'+w;window.open('https://wa.me/'+w,'_blank')}
-function openMaps(id,addr){sb.from('kitchen_orders').select('latitude, longitude').eq('id',id).single().then(({data,error})=>{
-if(!error&&data&&data.latitude&&data.longitude){window.open(`https://www.google.com/maps?q=${data.latitude},${data.longitude}&z=16`,'_blank')}
-else{window.open(`https://maps.google.com/maps?q=${encodeURIComponent(decodeURIComponent(addr))}`,'_blank');showToast('No GPS saved — searching the address','info')}})}
+function openMaps(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
+const dest=(o.latitude&&o.longitude)?`${o.latitude},${o.longitude}`:encodeURIComponent(o.location||'');
+window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,'_blank')}
 function startPolling(){sb.channel('rider-orders-'+riderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_orders',filter:`assigned_rider=eq.${riderId}`},p=>{if(p.new.status==='ASSIGNED')alertNewOrder(p.new);loadOrders()}).subscribe();_poll=setInterval(loadOrders,20000)}
 
 /* ── KPI (custom SVG/CSS charts, no Chart.js) ── */
@@ -498,40 +498,82 @@ let _act=[],_geo=null,_pos=null,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=nul
 const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
 
 function startGPS(){if(_geo!=null||!navigator.geolocation)return;
- _geo=navigator.geolocation.watchPosition(p=>{_pos=p.coords;pushLoc();if(_rm)_rm.setLatLng([_pos.latitude,_pos.longitude])},
+ _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;pushLoc();moveRider()},
   e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
 function stopGPS(){if(_geo!=null){navigator.geolocation.clearWatch(_geo);_geo=null}}
 async function pushLoc(){if(!_pos||Date.now()-_lastPush<7000)return;_lastPush=Date.now();
  const rows=_act.filter(o=>o.status==='DELIVERING').map(o=>({order_id:String(o.id),rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()}));
  if(rows.length)try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
 
+let _dest=null,_follow=true,_lastRoute=0,_nav=false,_sim=null,_steps=[],_lastSay='';
+async function geocode(addr){const city=riderBranch==='BWP'?'Bahawalpur':'Multan';
+ for(const q of [addr+', '+city+', Pakistan',addr]){try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q='+encodeURIComponent(q))).json();if(r&&r[0])return[+r[0].lat,+r[0].lon]}catch(e){}}
+ return null}
+function moveRider(){if(!_pos||!_rmap||!_dest||!document.getElementById('rmap')||!$('sheet').classList.contains('on'))return;
+ const p=[_pos.latitude,_pos.longitude];
+ if(!_rm)_rm=L.marker(p,{icon:dot('r','🛵')}).addTo(_rmap);else _rm.setLatLng(p);
+ if(_follow)_rmap.panTo(p,{animate:true});
+ if(Date.now()-_lastRoute>(_nav?4000:8000))fetchRoute(false)}
+function stepText(s){const m=s.maneuver,t=m.type,d=m.modifier||'';
+ if(t==='arrive')return'🏁 Arrive at destination';if(t==='roundabout'||t==='rotary')return'⭕ Take the roundabout';
+ const dir=d==='uturn'?'↩ U-turn':d.includes('left')?'⬅ Turn left':d.includes('right')?'➡ Turn right':'⬆ Continue straight';
+ return dir+(s.name?' onto '+s.name:'')}
+async function fetchRoute(fit){if(!_pos||!_dest||!_rmap)return;_lastRoute=Date.now();
+ const p=[_pos.latitude,_pos.longitude],c=_dest;
+ try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${p[1]},${p[0]};${c[1]},${c[0]}?overview=full&geometries=geojson&steps=true`)).json(),x=r.routes&&r.routes[0];if(!x)throw new Error('no route');
+  const pts=x.geometry.coordinates.map(q=>[q[1],q[0]]);_steps=(x.legs&&x.legs[0]&&x.legs[0].steps)||[];
+  if(_rl)_rl.setLatLngs(pts);else _rl=L.polyline(pts,{color:'#1a73e8',weight:7,opacity:.9}).addTo(_rmap);
+  const mins=Math.max(1,Math.round(x.duration/60)),km=(x.distance/1000).toFixed(1);
+  if(x.distance>30000)$('rt-info').innerHTML=`<b style="color:var(--red)">Bad GPS Pin</b> · Location is ${(x.distance/1000).toFixed(0)} km away. Check the address.`;
+  else if(_nav&&_steps.length>1){const txt=stepText(_steps[1]),dm=Math.round(_steps[0].distance);
+   $('rt-info').innerHTML=`<b style="color:var(--green);font-size:17px">${esc(txt)}</b><br>in ${dm>=1000?(dm/1000).toFixed(1)+' km':dm+' m'} · ${mins} min · ${km} km left`;
+   if(dm<200&&txt!==_lastSay){_lastSay=txt;try{if(window.speechSynthesis){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(txt.replace(/[^\w\s]/g,'')+' in '+dm+' meters'))}}catch(e){}}}
+  else $('rt-info').innerHTML=`<b style="color:var(--green)">${mins} min</b> · ${km} km${_dest.approx?' · approx. from address':''}`;
+  if(_nav&&x.distance<40){navStop();showToast('You have arrived')}
+  if(fit)_rmap.fitBounds(_rl.getBounds(),{padding:[30,30]})}
+ catch(e){$('rt-info').textContent='Could not load route'}}
+
 async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
- if(!o.latitude||!o.longitude){
-  openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" style="color:var(--red)">This customer didn't drop a GPS pin on the map.</div><p style="text-align:center;color:var(--t2);margin-bottom:20px">You can search for the address manually in Google Maps.</p><button class="opt grn" onclick="window.open('https://maps.google.com/maps?q=${encodeURIComponent(o.location||'')}','_blank')">Open in Google Maps</button><button class="opt x" onclick="closeSheet()">Cancel</button>`);
-  return;
-}
- openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding route…</div><div id="rmap" style="height:58vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt x" onclick="closeSheet()">Close</button>`);
+ openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding address…</div><div id="rmap" style="height:50vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt grn" id="nav-btn" onclick="navGo()">▶ Start navigation</button><button class="opt" style="text-align:center" onclick="testDrive()">🧪 Test drive (simulate movement)</button><div style="display:flex;gap:8px"><button class="opt" style="text-align:center" onclick="recenter()">📍 Re-center</button><button class="opt" style="text-align:center" onclick="retryLoc()">🔄 Retry location</button></div><button class="opt x" onclick="closeSheet()">Close</button>`);
  startGPS();
- setTimeout(()=>{if(_rmap){_rmap.remove();_rmap=null}
-  const c=[+o.latitude,+o.longitude];_rmap=L.map('rmap',{zoomControl:false}).setView(c,14);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_5fa7_1_d4e48b30ee3b2f52bc9d5d56',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(_rmap);
-  _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);_rm=null;_rl=null;
-  const draw=async(fit)=>{if(!document.getElementById('rmap')){clearInterval(_rtTimer);return}
-   const p=_pos?[_pos.latitude,_pos.longitude]:await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>r([g.coords.latitude,g.coords.longitude]),()=>r(null),{enableHighAccuracy:true,timeout:10000}));
-   if(!p){$('rt-info').textContent='Turn on location to see your route';return}
-   if(!_rm)_rm=L.marker(p,{icon:dot('r','🛵')}).addTo(_rmap);else _rm.setLatLng(p);
-   try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${p[1]},${p[0]};${c[1]},${c[0]}?overview=full&geometries=geojson`)).json(),x=r.routes[0],pts=x.geometry.coordinates.map(q=>[q[1],q[0]]);
-    if(_rl)_rl.setLatLngs(pts);else _rl=L.polyline(pts,{color:'#3ddc84',weight:5}).addTo(_rmap);
-    
-    // Check if the distance is absurdly long (e.g., wrong GPS pin)
-    if (x.distance > 30000) {
-      $('rt-info').innerHTML=`<b style="color:var(--red)">Bad GPS Pin</b> · The customer location is 100+ km away. Check the address manually.`;
-    } else {
-      $('rt-info').innerHTML=`<b style="color:var(--green)">${Math.max(1,Math.round(x.duration/60))} min</b> · ${(x.distance/1000).toFixed(1)} km · ${esc(o.location||'')}`;
-    }
-    
-    if(fit)_rmap.fitBounds(_rl.getBounds(),{padding:[30,30]})}catch(e){$('rt-info').textContent='Could not load route'}};
-  draw(true);clearInterval(_rtTimer);_rtTimer=setInterval(()=>draw(false),15000)},450)}
+ let c=(o.latitude&&o.longitude)?[+o.latitude,+o.longitude]:null,approx=false;
+ if(!c){c=await geocode(o.location||'');approx=true}
+ if(!$('sheet').classList.contains('on'))return;
+ if(!c){openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" style="color:var(--red)">Could not find this address on the map.</div><button class="opt grn" onclick="openMaps('${esc(o.id)}','${encodeURIComponent(o.location||'')}')">Open in Google Maps</button><button class="opt x" onclick="closeSheet()">Cancel</button>`);return}
+ await new Promise(r=>setTimeout(r,450));
+ if(!document.getElementById('rmap'))return;
+ if(_rmap){_rmap.remove();_rmap=null}
+ navStop();_rm=null;_rl=null;_follow=true;_dest=c;_dest.approx=approx;
+ _rmap=L.map('rmap',{zoomControl:false}).setView(c,14);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_rmap);
+ setTimeout(()=>_rmap&&_rmap.invalidateSize(),100);
+ _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);
+ _rmap.on('dragstart',()=>{_follow=false});
+ if(!_pos)await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;r()},()=>r(),{enableHighAccuracy:true,timeout:10000}));
+ if(!_pos){$('rt-info').textContent='Turn on location to see your route';return}
+ _lastRoute=Date.now();moveRider();await fetchRoute(true)}
+
+function navGo(){if(_nav)return navStop();
+ if(!_dest)return showToast('Route not ready','error');
+ if(!_pos)return showToast('No location yet. Tap Retry location, or Test drive','error');
+ _nav=true;_follow=true;_lastSay='';$('nav-btn').textContent='■ Stop navigation';
+ _rmap.setView([_pos.latitude,_pos.longitude],18);fetchRoute(false)}
+function navStop(){_nav=false;if(_sim){clearInterval(_sim);_sim=null}
+ const b=$('nav-btn');if(b)b.textContent='▶ Start navigation';try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}}
+async function testDrive(){if(!_dest||!_rmap)return;navStop();
+ const s=_pos?[_pos.latitude,_pos.longitude]:[_dest[0]+.012,_dest[1]+.008];
+ try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${s[1]},${s[0]};${_dest[1]},${_dest[0]}?overview=full&geometries=geojson`)).json();
+  const pts=r.routes[0].geometry.coordinates.map(q=>[q[1],q[0]]);let i=0;
+  _pos={latitude:pts[0][0],longitude:pts[0][1]};
+  _sim=setInterval(()=>{if(!document.getElementById('rmap')||i>=pts.length){navStop();return}
+   _pos={latitude:pts[i][0],longitude:pts[i][1]};i+=2;moveRider()},1000);
+  navGo()}catch(e){showToast('Test drive failed','error')}}
+function recenter(){if(!_rmap)return;_follow=true;
+ if(_pos)_rmap.setView([_pos.latitude,_pos.longitude],17,{animate:true});else if(_dest)_rmap.setView(_dest,16)}
+function retryLoc(){if(!navigator.geolocation)return showToast('Location not supported','error');
+ $('rt-info').textContent='Getting your location…';
+ navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;startGPS();moveRider();fetchRoute(true)},
+  ()=>{$('rt-info').textContent='Turn on location to see your route';showToast('Location blocked. Allow it in browser settings','error')},{enableHighAccuracy:true,timeout:15000})}
 
 function shareTrack(id){const o=_act.find(x=>String(x.id)===String(id));if(!o||!o.tracking_token)return showToast('No tracking link for this order','error');
  const url=location.href.replace(/[^/]*([?#].*)?$/,'')+'track.html?t='+o.tracking_token;
