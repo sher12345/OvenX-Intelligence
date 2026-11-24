@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{--bg:#0a0b10;--c:rgba(255,255,255,.045);--c2:rgba(255,255,255,.08);--line:rgba(255,255,255,.09);--t1:#f4f3f1;--t2:#a8a5a0;--t3:#6f6c68;--acc:#3ddc84;--mint:#34e0a1;--sky:#6cb8ff;--vio:#a78bfa;--pink:#ff5fa2;--rb:linear-gradient(120deg,#3ddc84,#5db4f5 45%,#a78bfa 75%,#ff5fa2);--red:#ff6b7a;--amb:#ffc857;
 --font:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
@@ -90,6 +92,14 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 .btn:hover{border-color:rgba(167,139,250,.5)}th:nth-child(4n+1){color:#9ff5c4}th:nth-child(4n+2){color:#b5dcff}th:nth-child(4n+3){color:#d4c4ff}th:nth-child(4n){color:#ffb0d0}
 .pbtn{height:28px;padding:0 10px;font-size:12px}.fr td{cursor:pointer}.sb td{padding:7px 10px;font-size:12px;color:var(--t2);background:rgba(255,255,255,.025);border-bottom:1px solid rgba(255,255,255,.04);cursor:default}.sb td:first-child{padding-left:26px;border-left:3px solid var(--amb);white-space:normal;min-width:260px}.chev{display:inline-block;width:14px;color:var(--t3);transition:transform .2s}.chev.o{transform:rotate(90deg)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+#fmap{height:480px;border-radius:18px;overflow:hidden;z-index:0}
+.fp{position:relative;width:36px;height:36px;border-radius:50%;background:#3ddc84;border:3px solid #fff;display:grid;place-items:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.fp.first{background:#ffc857}.fp.stale{background:#6f6c68}
+.fp b{position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,11,16,.88);color:#fff;font-size:11px;padding:2px 7px;border-radius:8px}
+.fd{width:28px;height:28px;border-radius:50%;background:#ff5fa2;border:3px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.mr{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--c);margin-top:8px;cursor:pointer;border-left:3px solid var(--sky)}
+.mr:first-child{border-color:var(--amb)}.mr .pos{width:26px;height:26px;border-radius:50%;background:var(--c2);display:grid;place-items:center;font-weight:800;font-size:12px}
+.mr small{display:block;color:var(--t2);font-size:12px}
 </style>
 </head>
 <body>
@@ -114,7 +124,11 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
   <div class="c s7"><h2>Peak hours <i>when orders get delivered</i></h2><div class="hrs" id="hrs"></div></div>
   <div class="c s5"><h2>Payment mix <i>by orders</i></h2><div class="dn" id="dn"></div></div>
  </div>
- <div class="c"><h2>All riders <i>tap a row for full details</i></h2><div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div></div>
+ <div class="c" style="margin-bottom:14px"><h2>Live map <i id="mc">0 on the road</i></h2>
+ <div id="fmap"></div>
+ <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pbtn" onclick="fitMap()">Fit all riders</button></div>
+ <div id="mapList"></div></div>
+<div class="c"><h2>All riders <i>tap a row for full details</i></h2><div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div></div>
  <div class="c" style="margin-top:14px"><h2>Delivery fees &amp; cash given from till <i id="plc">tap a rider to show / hide the bills paid from till</i></h2><div class="tw"><table style="min-width:640px"><thead><tr id="fhead"></tr></thead><tbody id="fbody"></tbody></table></div></div>
 </div>
 <div id="dr-bd" onclick="closeDr()"></div><aside id="dr" aria-label="Rider details"></aside><div class="toast" id="toast"></div>
@@ -229,7 +243,7 @@ function build(att,ord,act,s){
  riders=Object.values(R).filter(r=>!branch||r.branch===branch).filter(r=>r.count||r.cancelled.length||r.active.length||r.ms>0);
  active=riders.flatMap(r=>r.active.map(o=>({o,r})));
  drawList=riders.flatMap(r=>r.drawerOrders.map(o=>({o,r}))).sort((a,b)=>new Date(b.o.completed_at)-new Date(a.o.completed_at));
- renderAlerts();renderMoney();renderHero();renderLb();renderLive();renderHours();renderPay();renderTable();renderFees();
+ renderAlerts();renderMoney();renderHero();renderLb();renderLive();renderHours();renderPay();renderTable();renderFees();renderMap();
  anim=false;if(openKey)openDr(openKey,true);
 }
 
@@ -385,8 +399,68 @@ function exportCsv(){
  out.push(line(['','','','','','','','','TOTAL',all.length+' orders',all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0),0),all.reduce((s,x)=>s+(x.o.delivery_fee||0),0),all.reduce((s,x)=>s+(x.o.discount||0),0),all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0)+(x.o.delivery_fee||0),0),'','']));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+out.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='ovenx-riders-orders-'+period+'.csv';a.click();
 }
+/* ───────── LIVE FLEET MAP ───────── */
+const LOC_TABLE='rider_locations';
+let fmap=null,fMk={},fDm={},fRt={},fGeo={},fEta={},fBusy=false,fFit=false,fPts=[];
+const hav=(a,b,c,d)=>{const R=6371,x=Math.PI/180,dl=(c-a)*x,dg=(d-b)*x,h=Math.sin(dl/2)**2+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+async function fGeocode(o){
+ if(o.latitude&&o.longitude)return[+o.latitude,+o.longitude];
+ const k=String(o.id);if(k in fGeo)return fGeo[k];fGeo[k]=null;
+ const city=o.branch==='BWP'?'Bahawalpur':'Multan';
+ for(const q of[(o.location||'')+', '+city+', Pakistan',o.location||'']){
+  if(!q.trim())continue;
+  try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q='+encodeURIComponent(q))).json();if(r&&r[0]){fGeo[k]=[+r[0].lat,+r[0].lon];return fGeo[k]}}catch(e){}
+ }
+ return null}
+async function fEtaFor(id,loc,dest){
+ const c=fEta[id];if(c&&Date.now()-c.t<20000)return c;
+ let mins=null,km=hav(loc.lat,loc.lng,dest[0],dest[1]);
+ try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${dest[1]},${dest[0]}?overview=false`)).json();
+  if(r.routes&&r.routes[0]){mins=Math.max(1,Math.round(r.routes[0].duration/60));km=r.routes[0].distance/1000}}catch(e){}
+ if(mins==null)mins=Math.max(1,Math.round(km/25*60)); // fallback: straight line at 25 km/h
+ return fEta[id]={t:Date.now(),mins,km}}
+function fitMap(){if(fmap&&fPts.length)fmap.fitBounds(fPts,{padding:[40,40],maxZoom:16})}
+async function renderMap(){
+ if(fBusy||!$('fmap'))return;fBusy=true;
+ try{
+  if(!fmap){fmap=L.map('fmap').setView([30.1575,71.5249],12);
+   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(fmap);
+   setTimeout(()=>fmap.invalidateSize(),200)}
+  const go=active.filter(x=>x.o.status==='DELIVERING');
+  $('mc').textContent=go.length+' on the road';
+  const keep=new Set(go.map(x=>String(x.o.id)));
+  Object.keys(fMk).forEach(k=>{if(!keep.has(k)){fmap.removeLayer(fMk[k]);delete fMk[k];if(fDm[k]){fmap.removeLayer(fDm[k]);delete fDm[k]}if(fRt[k]){fmap.removeLayer(fRt[k]);delete fRt[k]}}});
+  if(!go.length){$('mapList').innerHTML='<div class="empty">No rider is on the road right now.</div>';fPts=[];return}
+  const{data,error}=await sb.from(LOC_TABLE).select('*').in('order_id',go.map(x=>String(x.o.id)));
+  if(error){$('mapList').innerHTML='<div class="empty">Could not read '+esc(LOC_TABLE)+': '+esc(error.message)+'</div>';return}
+  const by={};(data||[]).forEach(l=>{const k=String(l.order_id);if(!by[k]||new Date(l.updated_at)>new Date(by[k].updated_at))by[k]=l});
+  const rows=await Promise.all(go.map(async({o,r})=>{
+   const id=String(o.id),loc=by[id]||null,dest=await fGeocode(o);
+   const stale=loc?(Date.now()-new Date(loc.updated_at))>120000:true;
+   let e=null;if(loc&&dest)e=await fEtaFor(id,loc,dest);
+   return{o,r,id,loc,dest,stale,mins:e?e.mins:null,km:e?e.km:null}}));
+  rows.sort((a,b)=>(a.mins==null)-(b.mins==null)||a.mins-b.mins);
+  fPts=[];
+  rows.forEach((x,i)=>{
+   if(x.dest){fPts.push(x.dest);const ic=L.divIcon({className:'',html:'<div class="fd">🏠</div>',iconSize:[28,28],iconAnchor:[14,14]});
+    if(fDm[x.id])fDm[x.id].setLatLng(x.dest);else fDm[x.id]=L.marker(x.dest,{icon:ic,zIndexOffset:-100}).bindTooltip(esc(x.o.location||'')).addTo(fmap)}
+   if(x.loc){const p=[x.loc.lat,x.loc.lng];fPts.push(p);
+    const ic=L.divIcon({className:'',html:`<div class="fp ${x.stale?'stale':i===0?'first':''}">🛵<b>${esc(x.r.name)}${x.mins!=null?' · '+x.mins+'m':''}</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    if(fMk[x.id]){fMk[x.id].setLatLng(p);fMk[x.id].setIcon(ic)}else fMk[x.id]=L.marker(p,{icon:ic,zIndexOffset:500}).addTo(fmap);
+    if(x.dest){const ln=[p,x.dest];if(fRt[x.id])fRt[x.id].setLatLngs(ln);else fRt[x.id]=L.polyline(ln,{color:'#6cb8ff',weight:3,opacity:.7,dashArray:'6 8'}).addTo(fmap)}}
+  });
+  if(!fFit&&fPts.length){fFit=true;fitMap()}
+  $('mapList').innerHTML=rows.map((x,i)=>{
+   const ago=x.loc?Math.round((Date.now()-new Date(x.loc.updated_at))/1000):null;
+   return `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
+   <div><b>${esc(x.r.name)}</b><small>${esc(x.o.location||'No address')}</small></div>
+   <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+Math.round(ago/60)+'m old':''):' · waiting for GPS'}</small></div></div>`}).join('');
+ }catch(e){console.error(e)}finally{fBusy=false}}
+function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{animate:true})}
+setInterval(()=>{if($('app').classList.contains('on')&&active.length)renderMap()},8000); // positions refresh every 8s
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
