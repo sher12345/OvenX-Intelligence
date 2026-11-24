@@ -49,7 +49,7 @@ const TOKEN=new URLSearchParams(location.search).get('t');
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const map=L.map('map',{zoomControl:false}).setView([30.1978,71.4711],12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_5fa7_1_d4e48b30ee3b2f52bc9d5d56',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);
 const icon=(cls,html)=>L.divIcon({className:'',html:`<div class="mk ${cls}">${html}</div>`,iconSize:[40,40],iconAnchor:[20,20]});
 let rMk=null,cMk=null,line=null,fitted=false,lastRoute=0,eta=null;
 const STEPS=['Received','Assigned','On the way','Delivered'];
@@ -65,7 +65,19 @@ async function route(a,b){
 async function poll(){
  if(!TOKEN)return fail('Missing tracking link');
  const{data:d,error}=await sb.rpc('get_tracking',{p_token:TOKEN});
- if(error||!d)return fail('Order not found');
+ 
+ // Check for database errors
+ if(error){
+    console.error("DB Error:", error);
+    return fail('Database error: ' + error.message);
+ }
+ 
+ // Check if order was actually found
+ if(!d || !d.status){
+    console.warn("Token not found in DB. Token was:", TOKEN);
+    return fail('Order not found. Check DB token.');
+ }
+ 
  const st=stage(d.status),hasR=d.lat!=null&&d.lng!=null,hasC=d.customer_lat!=null&&d.customer_lng!=null;
  const fresh=hasR&&Date.now()-new Date(d.updated_at)<90000;
  if(hasC){const c=[d.customer_lat,d.customer_lng];if(!cMk)cMk=L.marker(c,{icon:icon('c','🏠')}).addTo(map)}
@@ -84,7 +96,6 @@ async function poll(){
  ${d.rider_name&&st>0&&st<3?`<div class="rider"><div class="av">${esc(d.rider_name[0])}</div><div><b>${esc(d.rider_name)}</b><span><i class="live ${fresh?'':'stale'}"></i>${st===2&&eta?eta.km.toFixed(1)+' km away':'Delivery partner'}</span></div></div>`:''}
  ${d.address?`<p style="color:var(--t2);font-size:12px;margin-top:12px">📍 ${esc(d.address)}</p>`:''}`;
 }
-poll();setInterval(poll,5000);
 </script>
 </body>
 </html>
