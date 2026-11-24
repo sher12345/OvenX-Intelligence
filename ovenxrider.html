@@ -12,6 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{--bg:#0a0b10;--s1:rgba(255,255,255,.05);--s2:rgba(255,255,255,.09);--line:rgba(255,255,255,.09);--t1:#f4f3f1;--t2:#a8a5a0;--t3:#6f6c68;
 --green:#3ddc84;--orange:#ffc857;--red:#ff6b7a;--blue:#6cb8ff;--vio:#a78bfa;--pink:#ff5fa2;--rb:linear-gradient(120deg,#3ddc84,#6cb8ff 45%,#a78bfa 75%,#ff5fa2);--sp:cubic-bezier(.32,.72,0,1);
@@ -160,6 +162,9 @@ main{padding:calc(52px + var(--sat)) 16px calc(96px + var(--sab))}
 .rank .who{flex:1;min-width:0;margin:0}.rank .who b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank .who span{font-size:12px;color:var(--t2)}
 .rank .num-tag{text-align:right;flex-shrink:0}.rank .num-tag b{display:block;font-size:16px;font-weight:800;color:var(--green)}.rank .num-tag span{font-size:11px;color:var(--t3)}
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation:none!important}}
+.pin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.pin.r{background:#3ddc84}.pin.c{background:#ff5fa2}
+.act.dr{color:var(--green)}
 </style>
 </head>
 <body>
@@ -259,7 +264,7 @@ addEventListener('scroll',()=>$('nav').classList.toggle('sc',scrollY>34),{passiv
 /* ── sheets ── */
 let _ask=null,_opts=[],_dy=0;
 function openSheet(html){$('sb').innerHTML=html;$('bd').classList.add('on');$('sheet').style.transform='';$('sheet').classList.add('on')}
-function closeSheet(){$('bd').classList.remove('on');$('sheet').classList.remove('on');$('sheet').style.transform='';if(_ask){const r=_ask;_ask=null;r(null)}}
+function closeSheet(){clearInterval(_rtTimer);$('bd').classList.remove('on');$('sheet').classList.remove('on');$('sheet').style.transform='';if(_ask){const r=_ask;_ask=null;r(null)}}
 (function(){const g=$('grab'),s=$('sheet');let y0=0,drag=false,v=0,ly=0,lt=0;
 g.addEventListener('pointerdown',e=>{g.setPointerCapture(e.pointerId);drag=true;y0=e.clientY;ly=y0;lt=performance.now();s.classList.add('drag')});
 g.addEventListener('pointermove',e=>{if(!drag)return;const n=performance.now();_dy=Math.max(0,e.clientY-y0);v=(e.clientY-ly)/Math.max(1,n-lt);ly=e.clientY;lt=n;s.style.transform=`translate(-50%,${_dy}px)`});
@@ -338,7 +343,7 @@ const{data:assigned,error:e1}=await sb.from('kitchen_orders').select('*').in('as
 const iso=bizDayStart().toISOString();
 const{data:completed,error:e2}=await sb.from('kitchen_orders').select('*').in('assigned_rider',ids).eq('status','COMPLETED').or(`completed_at.gte.${iso},created_at.gte.${iso}`).order('completed_at',{ascending:false,nullsFirst:false});
 if(e2){console.error(e2);showToast('History failed to load','error')}if(e1)throw e1;
-const act=assigned||[],done=completed||[];detectNewOrders(act);
+const act=assigned||[],done=completed||[];_act=act;(act.some(o=>o.status==='DELIVERING')||($('rmap')&&$('sheet').classList.contains('on')))?startGPS():stopGPS();detectNewOrders(act);
 cu('stat-assigned',act.length,FN);cu('stat-completed',done.length,FN);cu('stat-earnings',[...act,...done].reduce((s,o)=>s+(o.delivery_fee||0),0),v=>fmt(v));
 const n=$('tb-n');n.textContent=act.length;n.classList.toggle('show',act.length>0);
 renderOrders(act,done);renderCompleted(done);
@@ -364,7 +369,8 @@ return `<article class="card ${go?'go':''}">
 <div class="row big"><span>Collect</span><b class="num">${fmt(shop+tax+fee)}</b></div>
 <div class="row ho" style="border-top:1px solid var(--line)"><span>Hand over to shop</span><b class="num">${fmt(shop+tax)}</b></div></div>
 <div class="ca">${go?`<button class="go-b done" onclick="markComplete('${id}')">Mark delivered</button>`:`<button class="go-b start" onclick="startDelivery('${id}')">Start delivery</button>`}
-<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')">${IC.map}Maps</button>`:''}</div>
+<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
+<button class="lnk" style="color:var(--green)" onclick="shareTrack('${id}')">📍 Send tracking link to customer</button>
 <button class="lnk" onclick="cancelOrder('${id}')">Can't deliver</button></div></article>`}).join('')}
 
 /* ── history ── */
@@ -421,7 +427,7 @@ ${rows||'<div class="slip-r">No completed orders</div>'}
 $('slip').style.display='block';$('slip').scrollTop=0}
 
 /* ── order actions ── */
-async function startDelivery(id){try{const{error}=await sb.from('kitchen_orders').update({status:'DELIVERING',delivery_started_at:new Date().toISOString()}).eq('id',id);if(error)throw error;showToast('Delivery started');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
+async function startDelivery(id){try{const{error}=await sb.from('kitchen_orders').update({status:'DELIVERING',delivery_started_at:new Date().toISOString()}).eq('id',id);if(error)throw error;showToast('Delivery started');startGPS();loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
 async function markComplete(id){
  if(!await ask({title:'Confirm delivery completed?',sub:'Next you will choose how it was paid.',opts:[{label:'Yes, delivered',val:1,cls:'grn'}]}))return;
  const m=await ask({title:'How was this order paid?',opts:[{label:'💵 Cash',val:'cash'},{label:'📱 JazzCash / EasyPaisa',val:'jazzcash'},{label:'💳 Card',val:'card'},{label:'🏦 Bank transfer',val:'bank'},{label:'📋 Credited',sub:'Not collected from customer',val:'credited'}]});
@@ -487,6 +493,41 @@ el.innerHTML=list.map((r,i)=>`<div class="rank"><div class="pos ${i===0?'g1':i==
 <div class="num-tag"><b class="num">${fmt(r.fees)}</b><span>fees</span></div></div>`).join('')}
 catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24px">Could not load leaderboard</div>'}}
 
+/* ── live GPS + in-app directions ── */
+let _act=[],_geo=null,_pos=null,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
+const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
+
+function startGPS(){if(_geo!=null||!navigator.geolocation)return;
+ _geo=navigator.geolocation.watchPosition(p=>{_pos=p.coords;pushLoc();if(_rm)_rm.setLatLng([_pos.latitude,_pos.longitude])},
+  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
+function stopGPS(){if(_geo!=null){navigator.geolocation.clearWatch(_geo);_geo=null}}
+async function pushLoc(){if(!_pos||Date.now()-_lastPush<7000)return;_lastPush=Date.now();
+ const rows=_act.filter(o=>o.status==='DELIVERING').map(o=>({order_id:String(o.id),rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()}));
+ if(rows.length)try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
+
+async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
+ if(!o.latitude||!o.longitude){showToast('No GPS pin for this address. Opening search.','info');return openMaps(id,encodeURIComponent(o.location||''))}
+ openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding route…</div><div id="rmap" style="height:58vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt x" onclick="closeSheet()">Close</button>`);
+ startGPS();
+ setTimeout(()=>{if(_rmap){_rmap.remove();_rmap=null}
+  const c=[+o.latitude,+o.longitude];_rmap=L.map('rmap',{zoomControl:false}).setView(c,14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(_rmap);
+  _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);_rm=null;_rl=null;
+  const draw=async(fit)=>{if(!document.getElementById('rmap')){clearInterval(_rtTimer);return}
+   const p=_pos?[_pos.latitude,_pos.longitude]:await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>r([g.coords.latitude,g.coords.longitude]),()=>r(null),{enableHighAccuracy:true,timeout:10000}));
+   if(!p){$('rt-info').textContent='Turn on location to see your route';return}
+   if(!_rm)_rm=L.marker(p,{icon:dot('r','🛵')}).addTo(_rmap);else _rm.setLatLng(p);
+   try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${p[1]},${p[0]};${c[1]},${c[0]}?overview=full&geometries=geojson`)).json(),x=r.routes[0],pts=x.geometry.coordinates.map(q=>[q[1],q[0]]);
+    if(_rl)_rl.setLatLngs(pts);else _rl=L.polyline(pts,{color:'#3ddc84',weight:5}).addTo(_rmap);
+    $('rt-info').innerHTML=`<b style="color:var(--green)">${Math.max(1,Math.round(x.duration/60))} min</b> · ${(x.distance/1000).toFixed(1)} km · ${esc(o.location||'')}`;
+    if(fit)_rmap.fitBounds(_rl.getBounds(),{padding:[30,30]})}catch(e){$('rt-info').textContent='Could not load route'}};
+  draw(true);clearInterval(_rtTimer);_rtTimer=setInterval(()=>draw(false),15000)},450)}
+
+function shareTrack(id){const o=_act.find(x=>String(x.id)===String(id));if(!o||!o.tracking_token)return showToast('No tracking link for this order','error');
+ const url=location.href.replace(/[^/]*([?#].*)?$/,'')+'track.html?t='+o.tracking_token;
+ let w=String(o.phone||'').replace(/\D/g,'');if(w.startsWith('0'))w='92'+w.slice(1);
+ window.open('https://wa.me/'+w+'?text='+encodeURIComponent('Hi! Your OvenX order is on the way. Track your rider live here:\n'+url),'_blank')}
+ 
 /* pull to refresh */
 (function(){let y0=0,on=false;document.addEventListener('touchstart',e=>{on=scrollY<=0&&_cur===0&&!$('sheet').classList.contains('on');y0=e.touches[0].clientY},{passive:true});
 document.addEventListener('touchend',e=>{if(on&&e.changedTouches[0].clientY-y0>90){loadOrders();showToast('Refreshed','info')}on=false},{passive:true})})();
@@ -495,6 +536,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
