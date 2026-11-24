@@ -370,7 +370,7 @@ return `<article class="card ${go?'go':''}">
 <div class="row ho" style="border-top:1px solid var(--line)"><span>Hand over to shop</span><b class="num">${fmt(shop+tax)}</b></div></div>
 <div class="ca">${go?`<button class="go-b done" onclick="markComplete('${id}')">Mark delivered</button>`:`<button class="go-b start" onclick="startDelivery('${id}')">Start delivery</button>`}
 <div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
-<button class="lnk" style="color:var(--green)" onclick="shareTrack('${id}')">📍 Send tracking link to customer</button>
+
 <button class="lnk" onclick="cancelOrder('${id}')">Can't deliver</button></div></article>`}).join('')}
 
 /* ── history ── */
@@ -534,7 +534,7 @@ async function fetchRoute(fit){if(!_pos||!_dest||!_rmap)return;_lastRoute=Date.n
  catch(e){$('rt-info').textContent='Could not load route'}}
 
 async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
- openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding address…</div><div id="rmap" style="height:50vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt grn" id="nav-btn" onclick="navGo()">▶ Start navigation</button><button class="opt" style="text-align:center" onclick="testDrive()">🧪 Test drive (simulate movement)</button><div style="display:flex;gap:8px"><button class="opt" style="text-align:center" onclick="recenter()">📍 Re-center</button><button class="opt" style="text-align:center" onclick="retryLoc()">🔄 Retry location</button></div><button class="opt x" onclick="closeSheet()">Close</button>`);
+ openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding address…</div><div id="rmap" style="height:50vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt grn" id="nav-btn" onclick="navGo()">▶ Start navigation</button><div style="display:flex;gap:8px"><button class="opt" style="text-align:center" onclick="recenter()">📍 Re-center</button><button class="opt" style="text-align:center" onclick="retryLoc()">🔄 Retry location</button></div><button class="opt x" onclick="closeSheet()">Close</button>`);
  startGPS();
  let c=(o.latitude&&o.longitude)?[+o.latitude,+o.longitude]:null,approx=false;
  if(!c){c=await geocode(o.location||'');approx=true}
