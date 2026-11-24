@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Track your OvenX order</title>
+<meta name="theme-color" content="#0a0b10">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#0a0b10;--t1:#f4f3f1;--t2:#a8a5a0;--line:rgba(255,255,255,.12);--green:#3ddc84;--blue:#6cb8ff;--amb:#ffc857;--font:"Plus Jakarta Sans",-apple-system,system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--t1);font:500 15px/1.4 var(--font)}
+#map{position:fixed;inset:0}
+.pill{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:500;background:rgba(18,19,26,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-weight:800;white-space:nowrap}
+.pill span{background:linear-gradient(120deg,#3ddc84,#6cb8ff 50%,#ff5fa2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:460px;margin:0 auto;z-index:500;background:rgba(18,19,26,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--line);border-radius:26px;padding:18px}
+.eta{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.eta h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.eta p{color:var(--t2);font-size:13px;margin-top:3px}
+.eta b{font-size:34px;font-weight:800;letter-spacing:-.03em;color:var(--green);line-height:1;white-space:nowrap}
+.eta b small{font-size:14px;font-weight:700;color:var(--t2);margin-left:3px}
+.steps{display:flex;gap:6px;margin:16px 0 14px}
+.steps i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);transition:background .4s}
+.steps i.on{background:linear-gradient(90deg,var(--green),var(--blue))}
+.labels{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin:-8px 0 14px;gap:4px}
+.labels span.on{color:var(--t1);font-weight:700}
+.rider{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border-radius:18px;padding:10px 12px}
+.av{width:42px;height:42px;border-radius:50%;background:rgba(61,220,132,.16);color:var(--green);display:grid;place-items:center;font-weight:800;font-size:17px;flex-shrink:0}
+.rider div{flex:1;min-width:0}.rider b{display:block}.rider span{font-size:12px;color:var(--t2)}
+.live{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px}.live.stale{background:var(--amb)}
+.mk{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.mk.r{background:var(--green);transition:transform .3s}.mk.c{background:#ff5fa2}
+.msg{position:fixed;inset:0;z-index:600;display:grid;place-items:center;background:var(--bg);text-align:center;padding:30px;color:var(--t2)}
+.leaflet-container{background:#0a0b10}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="pill">OVEN <span>X</span></div>
+<div class="card" id="card"></div>
+<div class="msg" id="msg" style="display:none"></div>
+<script>
+const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
+const TOKEN=new URLSearchParams(location.search).get('t');
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const map=L.map('map',{zoomControl:false}).setView([30.1978,71.4711],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+const icon=(cls,html)=>L.divIcon({className:'',html:`<div class="mk ${cls}">${html}</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+let rMk=null,cMk=null,line=null,fitted=false,lastRoute=0,eta=null;
+const STEPS=['Received','Assigned','On the way','Delivered'];
+const stage=s=>s==='COMPLETED'?3:s==='DELIVERING'?2:s==='ASSIGNED'?1:0;
+
+function fail(t){const m=$('msg');m.style.display='grid';m.innerHTML='<div><b style="color:#f4f3f1;font-size:19px;display:block;margin-bottom:6px">'+t+'</b>Check the link you received and try again.</div>';$('card').style.display='none'}
+
+async function route(a,b){
+ try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?overview=full&geometries=geojson`)).json(),x=r.routes[0],pts=x.geometry.coordinates.map(c=>[c[1],c[0]]);
+  if(line)line.setLatLngs(pts);else line=L.polyline(pts,{color:'#3ddc84',weight:5,opacity:.9}).addTo(map);
+  eta={min:Math.max(1,Math.round(x.duration/60)),km:x.distance/1000}}catch(e){}}
+
+async function poll(){
+ if(!TOKEN)return fail('Missing tracking link');
+ const{data:d,error}=await sb.rpc('get_tracking',{p_token:TOKEN});
+ if(error||!d)return fail('Order not found');
+ const st=stage(d.status),hasR=d.lat!=null&&d.lng!=null,hasC=d.customer_lat!=null&&d.customer_lng!=null;
+ const fresh=hasR&&Date.now()-new Date(d.updated_at)<90000;
+ if(hasC){const c=[d.customer_lat,d.customer_lng];if(!cMk)cMk=L.marker(c,{icon:icon('c','🏠')}).addTo(map)}
+ if(hasR&&st<3){const p=[d.lat,d.lng];
+  if(!rMk)rMk=L.marker(p,{icon:icon('r','🛵')}).addTo(map);else rMk.setLatLng(p);
+  if(st===2&&hasC&&Date.now()-lastRoute>15000){lastRoute=Date.now();await route(p,[d.customer_lat,d.customer_lng])}
+  if(!fitted&&hasC){map.fitBounds(L.latLngBounds([p,[d.customer_lat,d.customer_lng]]),{padding:[60,60],paddingBottomRight:[60,260]});fitted=true}}
+ else if(hasC&&!fitted){map.setView([d.customer_lat,d.customer_lng],15);fitted=true}
+ if(st===3&&rMk){map.removeLayer(rMk);rMk=null}
+ if(st===3&&line){map.removeLayer(line);line=null}
+ const title=d.status==='CANCELLED'?'Order cancelled':['Preparing your order','Rider assigned','Your rider is on the way','Delivered. Enjoy your meal!'][st];
+ const sub=st===2?(fresh?'Live location · updates every few seconds':'Waiting for rider location…'):st===1?'Your rider will leave shortly':st===3?'Thank you for ordering with OvenX':'We will notify you when a rider is assigned';
+ $('card').innerHTML=`<div class="eta"><div><h1>${title}</h1><p>${sub}</p></div>${st===2&&eta?`<b>${eta.min}<small>min</small></b>`:''}</div>
+ <div class="steps">${STEPS.map((_,i)=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>
+ <div class="labels">${STEPS.map((s,i)=>`<span class="${i===st?'on':''}">${s}</span>`).join('')}</div>
+ ${d.rider_name&&st>0&&st<3?`<div class="rider"><div class="av">${esc(d.rider_name[0])}</div><div><b>${esc(d.rider_name)}</b><span><i class="live ${fresh?'':'stale'}"></i>${st===2&&eta?eta.km.toFixed(1)+' km away':'Delivery partner'}</span></div></div>`:''}
+ ${d.address?`<p style="color:var(--t2);font-size:12px;margin-top:12px">📍 ${esc(d.address)}</p>`:''}`;
+}
+poll();setInterval(poll,5000);
+</script>
+</body>
+</html>
