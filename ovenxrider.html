@@ -369,7 +369,7 @@ return `<article class="card ${go?'go':''}">
 <div class="row big"><span>Collect</span><b class="num">${fmt(shop+tax+fee)}</b></div>
 <div class="row ho" style="border-top:1px solid var(--line)"><span>Hand over to shop</span><b class="num">${fmt(shop+tax)}</b></div></div>
 <div class="ca">${go?`<button class="go-b done" onclick="markComplete('${id}')">Mark delivered</button>`:`<button class="go-b start" onclick="startDelivery('${id}')">Start delivery</button>`}
-<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}','${encodeURIComponent(o.location||'')}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
+<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="showRoute('${id}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
 <button class="lnk" style="color:var(--green)" onclick="shareTrack('${id}')">📍 Send tracking link to customer</button>
 <button class="lnk" onclick="cancelOrder('${id}')">Can't deliver</button></div></article>`}).join('')}
 
@@ -506,12 +506,15 @@ async function pushLoc(){if(!_pos||Date.now()-_lastPush<7000)return;_lastPush=Da
  if(rows.length)try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
 
 async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
- if(!o.latitude||!o.longitude){showToast('No GPS pin for this address. Opening search.','info');return openMaps(id,encodeURIComponent(o.location||''))}
+ if(!o.latitude||!o.longitude){
+  openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" style="color:var(--red)">This customer didn't drop a GPS pin on the map.</div><p style="text-align:center;color:var(--t2);margin-bottom:20px">You can search for the address manually in Google Maps.</p><button class="opt grn" onclick="window.open('https://maps.google.com/maps?q=${encodeURIComponent(o.location||'')}','_blank')">Open in Google Maps</button><button class="opt x" onclick="closeSheet()">Cancel</button>`);
+  return;
+}
  openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding route…</div><div id="rmap" style="height:58vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt x" onclick="closeSheet()">Close</button>`);
  startGPS();
  setTimeout(()=>{if(_rmap){_rmap.remove();_rmap=null}
   const c=[+o.latitude,+o.longitude];_rmap=L.map('rmap',{zoomControl:false}).setView(c,14);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(_rmap);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_5fa7_1_d4e48b30ee3b2f52bc9d5d56',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(_rmap);
   _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);_rm=null;_rl=null;
   const draw=async(fit)=>{if(!document.getElementById('rmap')){clearInterval(_rtTimer);return}
    const p=_pos?[_pos.latitude,_pos.longitude]:await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>r([g.coords.latitude,g.coords.longitude]),()=>r(null),{enableHighAccuracy:true,timeout:10000}));
@@ -519,7 +522,14 @@ async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(
    if(!_rm)_rm=L.marker(p,{icon:dot('r','🛵')}).addTo(_rmap);else _rm.setLatLng(p);
    try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${p[1]},${p[0]};${c[1]},${c[0]}?overview=full&geometries=geojson`)).json(),x=r.routes[0],pts=x.geometry.coordinates.map(q=>[q[1],q[0]]);
     if(_rl)_rl.setLatLngs(pts);else _rl=L.polyline(pts,{color:'#3ddc84',weight:5}).addTo(_rmap);
-    $('rt-info').innerHTML=`<b style="color:var(--green)">${Math.max(1,Math.round(x.duration/60))} min</b> · ${(x.distance/1000).toFixed(1)} km · ${esc(o.location||'')}`;
+    
+    // Check if the distance is absurdly long (e.g., wrong GPS pin)
+    if (x.distance > 30000) {
+      $('rt-info').innerHTML=`<b style="color:var(--red)">Bad GPS Pin</b> · The customer location is 100+ km away. Check the address manually.`;
+    } else {
+      $('rt-info').innerHTML=`<b style="color:var(--green)">${Math.max(1,Math.round(x.duration/60))} min</b> · ${(x.distance/1000).toFixed(1)} km · ${esc(o.location||'')}`;
+    }
+    
     if(fit)_rmap.fitBounds(_rl.getBounds(),{padding:[30,30]})}catch(e){$('rt-info').textContent='Could not load route'}};
   draw(true);clearInterval(_rtTimer);_rtTimer=setInterval(()=>draw(false),15000)},450)}
 
