@@ -149,6 +149,8 @@ const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short
 const NONCASH=['jazzcash','card','bank','staff','credited'];
 const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',staff:'Staff',credited:'Credited'};
 const PMC={cash:'#34e0a1',jazzcash:'#6cb8ff',card:'#a78bfa',bank:'#ffc857',staff:'#ff9ec4',credited:'#ff6b7a'};
+const CEN={MULTAN:[30.2197,71.4711],BWP:[29.3837,71.6709]};
+const normB=b=>{b=String(b||'').trim().toUpperCase();return b.startsWith('BAH')||b.startsWith('BWP')?'BWP':b.startsWith('MUL')?'MULTAN':b};
 const normPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d};
 
 /* Business day = 6:00 AM → 6:00 AM Pakistan time. Today / 7 days / Month ALL start on a 6 AM boundary,
@@ -172,7 +174,7 @@ function lock(){try{sessionStorage.removeItem('ovenx_admin')}catch(e){}location.
 try{if(sessionStorage.getItem('ovenx_admin')==='1')start()}catch(e){}
 function movePill(){const b=$('per').querySelector('.on'),p=$('per').querySelector('.pill');p.style.left=b.offsetLeft+'px';p.style.width=b.offsetWidth+'px'}
 $('per').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...$('per').querySelectorAll('button')].forEach(x=>x.classList.toggle('on',x===b));movePill();load(true)});
-$('br').addEventListener('change',e=>{branch=e.target.value;load(true)});
+$('br').addEventListener('change',e=>{branch=e.target.value;fFit=false;if(fmap)fmap.setView(CEN[branch]||CEN.MULTAN,12);load(true)});
 $('q').addEventListener('input',e=>{query=e.target.value.toLowerCase();renderTable()});
 
 /* data */
@@ -223,13 +225,13 @@ async function load(a){
 }
 function build(att,ord,act,s){
  const idKey={},R={};hours=new Array(24).fill(0);pay={};
- const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[],early:[]});
+ const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:normB(seed.branch),status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[],early:[]});
  att.forEach(a=>{const k=normPhone(a.phone)||('id'+a.id);idKey[String(a.id)]=k;const r=get(k,a);
-  if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=a.branch||r.branch}
+  if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=normB(a.branch)||r.branch}
   const end=a.punched_out?new Date(a.punched_out):new Date();
   if(end>=s){r.shifts.push(a);r.ms+=Math.max(0,end-Math.max(new Date(a.punched_in),s))}});
  const keyOf=o=>idKey[String(o.assigned_rider)]||get('id'+o.assigned_rider,{name:'Rider '+String(o.assigned_rider).slice(-4)}).key;
- ord.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];
+ ord.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];if(!r.branch)r.branch=normB(o.branch);
   if(o.status==='COMPLETED'&&o.completed_at&&new Date(o.completed_at)>=s){
    const m=minsOf(o);o.mins=m;r.orders.push(o);if(o.deliver_dist_m!=null&&o.deliver_dist_m>EARLY_M)r.early.push(o);r.count++;r.fees+=o.delivery_fee||0;
    if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
@@ -239,7 +241,7 @@ function build(att,ord,act,s){
    if(pm==='credited')r.cred+=food+fee;else r.collected+=food+fee;
    if(o.settled)r.settled++;else{r.unsettled++;if(NONCASH.includes(pm))r.owed+=fee;else r.cash+=food}
   }else if(o.status==='CANCELLED'){const ct=o.cancelled_at||o.completed_at;if(ct&&new Date(ct)>=s)r.cancelled.push(o)}});
- act.forEach(o=>{if(!o.assigned_rider)return;R[keyOf(o)].active.push(o)});
+ act.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];if(!r.branch)r.branch=normB(o.branch);r.active.push(o)});
  riders=Object.values(R).filter(r=>!branch||r.branch===branch).filter(r=>r.count||r.cancelled.length||r.active.length||r.ms>0);
  active=riders.flatMap(r=>r.active.map(o=>({o,r})));
  drawList=riders.flatMap(r=>r.drawerOrders.map(o=>({o,r}))).sort((a,b)=>new Date(b.o.completed_at)-new Date(a.o.completed_at));
@@ -407,7 +409,7 @@ const hav=(a,b,c,d)=>{const R=6371,x=Math.PI/180,dl=(c-a)*x,dg=(d-b)*x,h=Math.si
 async function fGeocode(o){
  if(o.latitude&&o.longitude)return[+o.latitude,+o.longitude];
  const k=String(o.id);if(k in fGeo)return fGeo[k];fGeo[k]=null;
- const city=o.branch==='BWP'?'Bahawalpur':'Multan';
+ const city=normB(o.branch)==='BWP'?'Bahawalpur':'Multan';
  for(const q of[(o.location||'')+', '+city+', Pakistan',o.location||'']){
   if(!q.trim())continue;
   try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q='+encodeURIComponent(q))).json();if(r&&r[0]){fGeo[k]=[+r[0].lat,+r[0].lon];return fGeo[k]}}catch(e){}
@@ -425,7 +427,7 @@ let fIdle={};
 async function renderMap(){
  if(fBusy||!$('fmap'))return;fBusy=true;
  try{
-  if(!fmap){fmap=L.map('fmap').setView([30.1575,71.5249],12);
+  if(!fmap){fmap=L.map('fmap').setView(CEN[branch]||CEN.MULTAN,12);
    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(fmap);
    setTimeout(()=>fmap.invalidateSize(),200)}
   const go=active.filter(x=>x.o.status==='DELIVERING');
@@ -460,7 +462,7 @@ async function renderMap(){
   idle.forEach(x=>{const p=[x.loc.lat,x.loc.lng];fPts.push(p);
    const ic=L.divIcon({className:'',html:`<div class="fp idle ${x.stale?'stale':''}">🛵<b>${esc(x.r.name)} · idle</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
    if(fIdle[x.r.key]){fIdle[x.r.key].setLatLng(p);fIdle[x.r.key].setIcon(ic)}else fIdle[x.r.key]=L.marker(p,{icon:ic,zIndexOffset:300}).addTo(fmap)});
-  if(!fFit&&fPts.length){fFit=true;fitMap()}
+  if(!fFit){if(fPts.length){fFit=true;fitMap()}else fmap.setView(CEN[branch]||CEN.MULTAN,12)}
   const ago=l=>l?Math.round((Date.now()-new Date(l.updated_at))/1000):null;
   const html=rows.map((x,i)=>{const a=ago(x.loc);
    return `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
@@ -473,6 +475,7 @@ function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{an
 setInterval(()=>{if($('app').classList.contains('on'))renderMap()},8000); // positions refresh every 8s
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
