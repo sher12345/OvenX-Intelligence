@@ -94,7 +94,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
 #fmap{height:480px;border-radius:18px;overflow:hidden;z-index:0}
 .fp{position:relative;width:36px;height:36px;border-radius:50%;background:#3ddc84;border:3px solid #fff;display:grid;place-items:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
-.fp.first{background:#ffc857}.fp.stale{background:#6f6c68}
+.fp.first{background:#ffc857}.fp.stale{background:#6f6c68}.fp.idle:not(.stale){background:#6cb8ff}
 .fp b{position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,11,16,.88);color:#fff;font-size:11px;padding:2px 7px;border-radius:8px}
 .fd{width:28px;height:28px;border-radius:50%;background:#ff5fa2;border:3px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
 .mr{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--c);margin-top:8px;cursor:pointer;border-left:3px solid var(--sky)}
@@ -136,7 +136,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 <script>
 const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
 const ADMIN_PIN='9999'; // CHANGE THIS
-const CASH_ALERT=20000, LATE_MIN=45, REFRESH=30;
+const CASH_ALERT=20000, LATE_MIN=45, REFRESH=30, EARLY_M=300;
 const HIST='kitchen_orders';              // live orders
 const ARCHIVE='kitchen_orders_history';   // archived orders (older days live here)
 const PK=5*36e5;                          // Pakistan time = UTC+5 (no DST); all periods are computed in PKT
@@ -223,7 +223,7 @@ async function load(a){
 }
 function build(att,ord,act,s){
  const idKey={},R={};hours=new Array(24).fill(0);pay={};
- const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[]});
+ const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:seed.branch||'',status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[],early:[]});
  att.forEach(a=>{const k=normPhone(a.phone)||('id'+a.id);idKey[String(a.id)]=k;const r=get(k,a);
   if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=a.branch||r.branch}
   const end=a.punched_out?new Date(a.punched_out):new Date();
@@ -231,7 +231,7 @@ function build(att,ord,act,s){
  const keyOf=o=>idKey[String(o.assigned_rider)]||get('id'+o.assigned_rider,{name:'Rider '+String(o.assigned_rider).slice(-4)}).key;
  ord.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];
   if(o.status==='COMPLETED'&&o.completed_at&&new Date(o.completed_at)>=s){
-   const m=minsOf(o);o.mins=m;r.orders.push(o);r.count++;r.fees+=o.delivery_fee||0;
+   const m=minsOf(o);o.mins=m;r.orders.push(o);if(o.deliver_dist_m!=null&&o.deliver_dist_m>EARLY_M)r.early.push(o);r.count++;r.fees+=o.delivery_fee||0;
    if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
    const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0,pm=o.payment_method;
    const dr=['card','bank','jazzcash','staff'].includes(pm)?fee:0;r.drawer+=dr;r.kept+=fee-dr;if(dr)r.drawerOrders.push(o);
@@ -260,7 +260,8 @@ function renderAlerts(){
  active.filter(x=>(Date.now()-new Date(x.o.created_at))/6e4>LATE_MIN).forEach(({o,r})=>a.push(['',`⏰ <b>${esc(r.name)}</b> has had an order for ${Math.floor((Date.now()-new Date(o.created_at))/6e4)} min → ${esc(o.location||'no address')}`]));
  riders.filter(r=>r.cash>=CASH_ALERT).forEach(r=>a.push(['w',`💰 <b>${esc(r.name)}</b> is holding ${fmt(r.cash)} unsettled cash`]));
  const cx=riders.filter(r=>r.cancelled.length>=3);cx.forEach(r=>a.push(['w',`⚠️ <b>${esc(r.name)}</b> cancelled ${r.cancelled.length} orders`]));
- $('alerts').innerHTML=a.slice(0,5).map(x=>`<div class="al ${x[0]}">${x[1]}</div>`).join('');
+ riders.forEach(r=>r.early.forEach(o=>a.unshift(['',`🚩 <b>${esc(r.name)}</b> marked delivered ${Math.round(o.deliver_dist_m)} m away from ${esc(o.location||'address')} (${tm(o.completed_at)})`])));
+ $('alerts').innerHTML=a.slice(0,8).map(x=>`<div class="al ${x[0]}">${x[1]}</div>`).join('');
 }
 function renderHero(){
  const n=T('count'), valid=T('valid'), on=riders.filter(r=>r.status==='on-duty').length, brk=riders.filter(r=>r.status==='on-break').length, ot=valid?T('ontime')/valid*100:0, avg=valid?T('mins')/valid:0;
@@ -296,8 +297,8 @@ function renderPay(){
  const segs=ks.map(k=>{const l=pay[k]/tot*L,s=`<circle cx="64" cy="64" r="${r}" stroke="${PMC[k]||'#888'}" data-d="${Math.max(0,l-3)} ${L}" stroke-dasharray="${anim?'0 '+L:Math.max(0,l-3)+' '+L}" stroke-dashoffset="${-off}" class="arc"/>`;off+=l;return s}).join('');
  $('dn').innerHTML=tot?`<svg viewBox="0 0 128 128"><circle cx="64" cy="64" r="${r}" stroke="rgba(255,255,255,.06)"/>${segs}</svg><div class="lg">${ks.sort((a,b)=>pay[b]-pay[a]).map(k=>`<div><span><i style="background:${PMC[k]||'#888'}"></i>${PMN[k]||k}</span><b class="num">${Math.round(pay[k]/tot*100)}%</b></div>`).join('')}</div>`:'<div class="empty" style="width:100%">No data yet.</div>';
 }
-const COLS=[['name','Rider'],['status','Status'],['ms','Hours',1],['count','Deliveries',1],['avg','Avg min',1],['ontimePct','On time',1],['fees','Fees',1],['cash','Cash to hand over',1],['owed','Shop owes',1],['cred','Credited',1],['cx','Cancelled',1]];
-function val(r,k){if(k==='avg')return r.valid?r.mins/r.valid:9999;if(k==='ontimePct')return r.valid?r.ontime/r.valid:-1;if(k==='cx')return r.cancelled.length;return r[k]}
+const COLS=[['name','Rider'],['status','Status'],['ms','Hours',1],['count','Deliveries',1],['avg','Avg min',1],['ontimePct','On time',1],['fees','Fees',1],['cash','Cash to hand over',1],['owed','Shop owes',1],['cred','Credited',1],['cx','Cancelled',1],['early','Marked early',1]];
+function val(r,k){if(k==='avg')return r.valid?r.mins/r.valid:9999;if(k==='ontimePct')return r.valid?r.ontime/r.valid:-1;if(k==='cx')return r.cancelled.length;if(k==='early')return r.early.length;return r[k]}
 function renderTable(){
  $('thead').innerHTML=COLS.map(c=>`<th class="${c[2]?'r':''}" onclick="sortBy('${c[0]}')">${c[1]}${sortKey===c[0]?(sortDir<0?' ↓':' ↑'):''}</th>`).join('');
  const rows=riders.filter(r=>!query||(r.name+r.phone).toLowerCase().includes(query)).sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return (x>y?1:x<y?-1:0)*sortDir});
@@ -308,7 +309,7 @@ function renderTable(){
   <td class="r num">${(r.ms/36e5).toFixed(1)}</td><td class="r num"><b>${r.count}</b>${r.active.length?`<span class="sub b">${r.active.length} active</span>`:''}</td>
   <td class="r num">${avg??'—'}</td><td class="r num ${ot==null?'':ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</td>
   <td class="r num g">${fmt(r.fees)}</td><td class="r num o">${fmt(r.cash)}</td><td class="r num g">${fmt(r.owed)}</td>
-  <td class="r num ${r.cred?'rd':''}">${fmt(r.cred)}</td><td class="r num ${r.cancelled.length?'rd':''}">${r.cancelled.length}</td></tr>`}).join(''):`<tr><td colspan="11" class="empty">No rider activity found.</td></tr>`;
+  <td class="r num ${r.cred?'rd':''}">${fmt(r.cred)}</td><td class="r num ${r.cancelled.length?'rd':''}">${r.cancelled.length}</td><td class="r num ${r.early.length?'rd':''}">${r.early.length?'🚩 '+r.early.length:0}</td></tr>`}).join(''):`<tr><td colspan="12" class="empty">No rider activity found.</td></tr>`;
 }
 function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'||k==='avg'?1:-1}renderTable()}
 
@@ -354,7 +355,7 @@ function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)clo
  <h2 class="sub" style="margin:12px 0 8px">Completed orders (${orders.length})</h2>
  ${orders.map(o=>{const food=(o.subtotal||0)+(o.tax||0),non=NONCASH.includes(o.payment_method);return `<div class="oc"><h4>📍 ${esc(o.location||'No address')}</h4>
  <p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${esc(o.branch||'')}</p><p style="margin-top:6px">${items(o.items)}</p>
- <span class="tag">${PMN[o.payment_method]||'—'}</span><span class="tag">⏱ ${o.mins??'—'} min</span><span class="tag">Received ${tm(o.created_at)}</span><span class="tag">Started ${tm(o.delivery_started_at)}</span><span class="tag">Delivered ${tm(o.completed_at)}</span>
+ <span class="tag">${PMN[o.payment_method]||'—'}</span><span class="tag">⏱ ${o.mins??'—'} min</span>${o.deliver_dist_m!=null?`<span class="tag" style="${o.deliver_dist_m>EARLY_M?'background:rgba(255,107,122,.25);color:#ff6b7a':''}">${o.deliver_dist_m>EARLY_M?'🚩 ':'📍 '}${Math.round(o.deliver_dist_m)} m from address at delivery</span>`:''}<span class="tag">Received ${tm(o.created_at)}</span><span class="tag">Started ${tm(o.delivery_started_at)}</span><span class="tag">Delivered ${tm(o.completed_at)}</span>
  <p style="margin-top:6px">Food+tax ${fmt(food)} · Fee ${fmt(o.delivery_fee)}${o.discount?' · Discount −'+fmt(o.discount):''} · <b>${o.payment_method==='credited'?'Not collected':non?'Shop pays rider '+fmt(o.delivery_fee):'Rider hands over '+fmt(food)}</b></p>
  <select class="inp" style="width:100%;margin-top:8px;border-radius:12px" onchange="setMethod('${esc(o.id)}',this.value)">${Object.keys(PMN).map(k=>`<option value="${k}" ${o.payment_method===k?'selected':''}>Paid by: ${PMN[k]}</option>`).join('')}</select>
 <button class="st ${o.settled?'ok':''}" onclick="settle('${esc(o.id)}',${!o.settled})">${o.settled?'✅ Hisab done '+tm(o.settled_at)+' (tap to undo)':'Mark hisab done'}</button></div>`}).join('')||'<div class="empty">No completed orders.</div>'}
@@ -420,6 +421,7 @@ async function fEtaFor(id,loc,dest){
  if(mins==null)mins=Math.max(1,Math.round(km/25*60)); // fallback: straight line at 25 km/h
  return fEta[id]={t:Date.now(),mins,km}}
 function fitMap(){if(fmap&&fPts.length)fmap.fitBounds(fPts,{padding:[40,40],maxZoom:16})}
+let fIdle={};
 async function renderMap(){
  if(fBusy||!$('fmap'))return;fBusy=true;
  try{
@@ -427,19 +429,23 @@ async function renderMap(){
    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(fmap);
    setTimeout(()=>fmap.invalidateSize(),200)}
   const go=active.filter(x=>x.o.status==='DELIVERING');
-  $('mc').textContent=go.length+' on the road';
   const keep=new Set(go.map(x=>String(x.o.id)));
   Object.keys(fMk).forEach(k=>{if(!keep.has(k)){fmap.removeLayer(fMk[k]);delete fMk[k];if(fDm[k]){fmap.removeLayer(fDm[k]);delete fDm[k]}if(fRt[k]){fmap.removeLayer(fRt[k]);delete fRt[k]}}});
-  if(!go.length){$('mapList').innerHTML='<div class="empty">No rider is on the road right now.</div>';fPts=[];return}
-  const{data,error}=await sb.from(LOC_TABLE).select('*').in('order_id',go.map(x=>String(x.o.id)));
+  const{data,error}=await sb.from(LOC_TABLE).select('*').gte('updated_at',new Date(Date.now()-15*60000).toISOString());
   if(error){$('mapList').innerHTML='<div class="empty">Could not read '+esc(LOC_TABLE)+': '+esc(error.message)+'</div>';return}
-  const by={};(data||[]).forEach(l=>{const k=String(l.order_id);if(!by[k]||new Date(l.updated_at)>new Date(by[k].updated_at))by[k]=l});
+  const idMap={};riders.forEach(r=>{r.shifts.forEach(a=>idMap[String(a.id)]=r);r.active.forEach(o=>idMap[String(o.assigned_rider)]=r)});
+  const by={},lastBy={};
+  (data||[]).forEach(l=>{const k=String(l.order_id);if(!by[k]||new Date(l.updated_at)>new Date(by[k].updated_at))by[k]=l;
+   const r=idMap[String(l.rider_id)];if(r&&(!lastBy[r.key]||new Date(l.updated_at)>new Date(lastBy[r.key].updated_at)))lastBy[r.key]=l});
   const rows=await Promise.all(go.map(async({o,r})=>{
    const id=String(o.id),loc=by[id]||null,dest=await fGeocode(o);
    const stale=loc?(Date.now()-new Date(loc.updated_at))>120000:true;
    let e=null;if(loc&&dest)e=await fEtaFor(id,loc,dest);
    return{o,r,id,loc,dest,stale,mins:e?e.mins:null,km:e?e.km:null}}));
   rows.sort((a,b)=>(a.mins==null)-(b.mins==null)||a.mins-b.mins);
+  const busy=new Set(go.map(x=>x.r.key));
+  const idle=riders.filter(r=>r.status!=='off-duty'&&!busy.has(r.key)&&lastBy[r.key]).map(r=>({r,loc:lastBy[r.key],stale:Date.now()-new Date(lastBy[r.key].updated_at)>120000}));
+  $('mc').textContent=go.length+' on the road · '+idle.length+' idle';
   fPts=[];
   rows.forEach((x,i)=>{
    if(x.dest){fPts.push(x.dest);const ic=L.divIcon({className:'',html:'<div class="fd">🏠</div>',iconSize:[28,28],iconAnchor:[14,14]});
@@ -449,17 +455,25 @@ async function renderMap(){
     if(fMk[x.id]){fMk[x.id].setLatLng(p);fMk[x.id].setIcon(ic)}else fMk[x.id]=L.marker(p,{icon:ic,zIndexOffset:500}).addTo(fmap);
     if(x.dest){const ln=[p,x.dest];if(fRt[x.id])fRt[x.id].setLatLngs(ln);else fRt[x.id]=L.polyline(ln,{color:'#6cb8ff',weight:3,opacity:.7,dashArray:'6 8'}).addTo(fmap)}}
   });
+  const idleKeep=new Set(idle.map(x=>x.r.key));
+  Object.keys(fIdle).forEach(k=>{if(!idleKeep.has(k)){fmap.removeLayer(fIdle[k]);delete fIdle[k]}});
+  idle.forEach(x=>{const p=[x.loc.lat,x.loc.lng];fPts.push(p);
+   const ic=L.divIcon({className:'',html:`<div class="fp idle ${x.stale?'stale':''}">🛵<b>${esc(x.r.name)} · idle</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+   if(fIdle[x.r.key]){fIdle[x.r.key].setLatLng(p);fIdle[x.r.key].setIcon(ic)}else fIdle[x.r.key]=L.marker(p,{icon:ic,zIndexOffset:300}).addTo(fmap)});
   if(!fFit&&fPts.length){fFit=true;fitMap()}
-  $('mapList').innerHTML=rows.map((x,i)=>{
-   const ago=x.loc?Math.round((Date.now()-new Date(x.loc.updated_at))/1000):null;
+  const ago=l=>l?Math.round((Date.now()-new Date(l.updated_at))/1000):null;
+  const html=rows.map((x,i)=>{const a=ago(x.loc);
    return `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
    <div><b>${esc(x.r.name)}</b><small>${esc(x.o.location||'No address')}</small></div>
-   <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+Math.round(ago/60)+'m old':''):' · waiting for GPS'}</small></div></div>`}).join('');
+   <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+Math.round(a/60)+'m old':''):' · waiting for GPS'}</small></div></div>`}).join('')
+  +idle.map(x=>{const a=ago(x.loc);return `<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.stale?'GPS '+Math.round(a/60)+'m old':'live'}</small></div></div>`}).join('');
+  $('mapList').innerHTML=html||'<div class="empty">No rider location available right now.</div>';
  }catch(e){console.error(e)}finally{fBusy=false}}
 function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{animate:true})}
-setInterval(()=>{if($('app').classList.contains('on')&&active.length)renderMap()},8000); // positions refresh every 8s
+setInterval(()=>{if($('app').classList.contains('on'))renderMap()},8000); // positions refresh every 8s
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
