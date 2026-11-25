@@ -497,11 +497,37 @@ catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24
 let _act=[],_geo=null,_pos=null,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
 const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
 
-function startGPS(){if(_geo!=null||!navigator.geolocation)return;
+const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+const BG=NATIVE?Capacitor.registerPlugin('BackgroundGeolocation'):null;
+let _bgOk=false;
+
+function startGPS(){if(_geo!=null)return;
+ if(NATIVE&&BG){
+  _geo='pending';
+  BG.addWatcher({
+    backgroundTitle:'OvenX delivery in progress',
+    backgroundMessage:'Sharing your location with the shop',
+    requestPermissions:true,stale:false,distanceFilter:0
+  },(l,err)=>{
+    if(err){if(err.code==='NOT_AUTHORIZED')showToast('Allow location "all the time" in settings','error');return}
+    _bgOk=true;
+    _pos={latitude:l.latitude,longitude:l.longitude,heading:l.bearing,speed:l.speed};
+    _lastPush=0;pushLoc();moveRider();
+  }).then(id=>{_geo=id}).catch(()=>{_geo=null;startWebGPS()});
+  return}
+ startWebGPS()}
+
+function startWebGPS(){if(!navigator.geolocation)return;
  _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;pushLoc();moveRider()},
   e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
-function stopGPS(){if(_geo!=null){navigator.geolocation.clearWatch(_geo);_geo=null}}
-async function pushLoc(){if(!_pos||Date.now()-_lastPush<7000)return;_lastPush=Date.now();
+
+function stopGPS(){if(_geo==null||_geo==='pending')return;
+ if(NATIVE&&BG&&_bgOk){BG.removeWatcher({id:_geo});_bgOk=false}else navigator.geolocation.clearWatch(_geo);
+ _geo=null}
+
+/* heartbeat: resend last known position every 5s so the Fleet map never looks stale while parked */
+setInterval(()=>{if(_pos&&_geo!=null&&_act.some(o=>o.status==='DELIVERING')){_lastPush=0;pushLoc()}},5000);
+async function pushLoc(){if(!_pos||Date.now()-_lastPush<4000)return;_lastPush=Date.now();
  const rows=_act.filter(o=>o.status==='DELIVERING').map(o=>({order_id:String(o.id),rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()}));
  if(rows.length)try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
 
@@ -588,6 +614,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
