@@ -239,6 +239,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const fmt=n=>'Rs '+Number(n||0).toLocaleString();
 const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—';
 const NONCASH=['jazzcash','card','bank','credited'];
+function distM(a,b,c,d){const x=Math.PI/180,R=6371000,dl=(c-a)*x,dg=(d-b)*x,h=Math.sin(dl/2)**2+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 function normPhone(p){let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d}
 function bizDayStart(){const d=new Date();if(d.getHours()<6)d.setDate(d.getDate()-1);d.setHours(6,0,0,0);return d}
 const IC={call:'<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
@@ -335,7 +336,7 @@ try{localStorage.removeItem('ovenx_rider_session')}catch(e){}location.reload()}
 /* ── duty ── */
 function toggleDuty(){setDuty(dutyStatus==='on-duty'?'on-break':'on-duty')}
 async function setDuty(s){if(s===dutyStatus)return;dutyStatus=s;if(riderId&&!String(riderId).startsWith('local-'))await sb.from('rider_attendance').update({status:s}).eq('id',riderId);updateDutyUI();showToast(s==='on-duty'?'Back on duty':'On break','info')}
-function updateDutyUI(){const on=dutyStatus==='on-duty';$('chip').className='chip'+(on?'':' brk');$('chip-t').textContent=on?'On duty':'On break';$('sg-on').classList.toggle('on',on);$('sg-br').classList.toggle('on',!on)}
+function updateDutyUI(){try{syncGPS()}catch(e){}const on=dutyStatus==='on-duty';$('chip').className='chip'+(on?'':' brk');$('chip-t').textContent=on?'On duty':'On break';$('sg-on').classList.toggle('on',on);$('sg-br').classList.toggle('on',!on)}
 
 /* ── orders ── */
 async function loadOrders(){try{const ids=await getMyIds();
@@ -343,7 +344,7 @@ const{data:assigned,error:e1}=await sb.from('kitchen_orders').select('*').in('as
 const iso=bizDayStart().toISOString();
 const{data:completed,error:e2}=await sb.from('kitchen_orders').select('*').in('assigned_rider',ids).eq('status','COMPLETED').or(`completed_at.gte.${iso},created_at.gte.${iso}`).order('completed_at',{ascending:false,nullsFirst:false});
 if(e2){console.error(e2);showToast('History failed to load','error')}if(e1)throw e1;
-const act=assigned||[],done=completed||[];_act=act;(act.some(o=>o.status==='DELIVERING')||($('rmap')&&$('sheet').classList.contains('on')))?startGPS():stopGPS();detectNewOrders(act);
+const act=assigned||[],done=completed||[];_act=act;syncGPS();detectNewOrders(act);
 cu('stat-assigned',act.length,FN);cu('stat-completed',done.length,FN);cu('stat-earnings',[...act,...done].reduce((s,o)=>s+(o.delivery_fee||0),0),v=>fmt(v));
 const n=$('tb-n');n.textContent=act.length;n.classList.toggle('show',act.length>0);
 renderOrders(act,done);renderCompleted(done);
@@ -433,7 +434,11 @@ async function markComplete(id){
  const m=await ask({title:'How was this order paid?',opts:[{label:'💵 Cash',val:'cash'},{label:'📱 JazzCash / EasyPaisa',val:'jazzcash'},{label:'💳 Card',val:'card'},{label:'🏦 Bank transfer',val:'bank'},{label:'📋 Credited',sub:'Not collected from customer',val:'credited'}]});
  if(!m)return;
  try{const{data:cur}=await sb.from('kitchen_orders').select('delivery_started_at,created_at').eq('id',id).single();const now=new Date().toISOString();
-  const patch={status:'COMPLETED',completed_at:now,payment_method:m};if(cur&&!cur.delivery_started_at)patch.delivery_started_at=cur.created_at||now;
+  const patch={status:'COMPLETED',completed_at:now,payment_method:m};
+  try{const o=_act.find(x=>String(x.id)===String(id));let p=_pos?{latitude:_pos.latitude,longitude:_pos.longitude}:null;
+   try{const g=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:5000,maximumAge:10000}));p={latitude:g.coords.latitude,longitude:g.coords.longitude}}catch(e){}
+   const d=o?((o.latitude&&o.longitude)?[+o.latitude,+o.longitude]:await geocode(o.location||'')):null;
+   if(p){patch.deliver_lat=p.latitude;patch.deliver_lng=p.longitude;if(d)patch.deliver_dist_m=Math.round(distM(p.latitude,p.longitude,d[0],d[1]))}}catch(e){console.error(e)}if(cur&&!cur.delivery_started_at)patch.delivery_started_at=cur.created_at||now;
   const{error}=await sb.from('kitchen_orders').update(patch).eq('id',id);if(error)throw error;
   showToast('Delivered · '+PM[m][0].replace(/^\S+\s/,'')+' recorded');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
 async function cancelOrder(id){const r=await ask({title:'Why is this order being cancelled?',sub:'Tap a reason or type your own.',input:'text',ph:'Reason',
@@ -446,7 +451,7 @@ function openWhatsApp(p){let w=p.replace(/\D/g,'');if(w.startsWith('0'))w='92'+w
 function openMaps(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
 const dest=(o.latitude&&o.longitude)?`${o.latitude},${o.longitude}`:encodeURIComponent(o.location||'');
 window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,'_blank')}
-function startPolling(){sb.channel('rider-orders-'+riderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_orders',filter:`assigned_rider=eq.${riderId}`},p=>{if(p.new.status==='ASSIGNED')alertNewOrder(p.new);loadOrders()}).subscribe();_poll=setInterval(loadOrders,20000)}
+function startPolling(){sb.channel('rider-orders-'+riderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_orders',filter:`assigned_rider=eq.${riderId}`},p=>{if(p.new.status==='ASSIGNED')alertNewOrder(p.new);loadOrders()}).subscribe();_poll=setInterval(loadOrders,45000)}
 
 /* ── KPI (custom SVG/CSS charts, no Chart.js) ── */
 let _kpiPeriod='today',_chartTab='speed';
@@ -507,29 +512,44 @@ function startGPS(){if(_geo!=null)return;
   BG.addWatcher({
     backgroundTitle:'OvenX delivery in progress',
     backgroundMessage:'Sharing your location with the shop',
-    requestPermissions:true,stale:false,distanceFilter:0
+    requestPermissions:true,stale:false,distanceFilter:20
   },(l,err)=>{
     if(err){if(err.code==='NOT_AUTHORIZED')showToast('Allow location "all the time" in settings','error');return}
     _bgOk=true;
     _pos={latitude:l.latitude,longitude:l.longitude,heading:l.bearing,speed:l.speed};
-    _lastPush=0;pushLoc();moveRider();
+    pushLoc();moveRider();
   }).then(id=>{_geo=id}).catch(()=>{_geo=null;startWebGPS()});
   return}
  startWebGPS()}
 
 function startWebGPS(){if(!navigator.geolocation)return;
  _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;pushLoc();moveRider()},
-  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
+  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:_hi,maximumAge:_hi?3000:30000,timeout:20000})}
 
 function stopGPS(){if(_geo==null||_geo==='pending')return;
  if(NATIVE&&BG&&_bgOk){BG.removeWatcher({id:_geo});_bgOk=false}else navigator.geolocation.clearWatch(_geo);
  _geo=null}
 
-/* heartbeat: resend last known position every 5s so the Fleet map never looks stale while parked */
-setInterval(()=>{if(_pos&&_geo!=null&&_act.some(o=>o.status==='DELIVERING')){_lastPush=0;pushLoc()}},5000);
-async function pushLoc(){if(!_pos||Date.now()-_lastPush<4000)return;_lastPush=Date.now();
- const rows=_act.filter(o=>o.status==='DELIVERING').map(o=>({order_id:String(o.id),rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()}));
- if(rows.length)try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
+let _hi=false,_lastSent=null;
+const busyNow=()=>_act.some(o=>o.status==='DELIVERING');
+function syncGPS(){
+ if(dutyStatus!=='on-duty'){stopGPS();return}
+ const busy=busyNow()||!!($('rmap')&&$('sheet').classList.contains('on'));
+ if(_geo==null){_hi=busy;startGPS();return}
+ if(!NATIVE&&_hi!==busy){stopGPS();_hi=busy;startGPS()}}
+setInterval(()=>pushLoc(),10000); // self-throttling
+async function pushLoc(){
+ if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
+ const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
+ const minGap=busy?10000:60000,maxGap=busy?30000:300000,minMove=busy?15:50;
+ const moved=_lastSent?distM(_lastSent.lat,_lastSent.lng,_pos.latitude,_pos.longitude):1e9;
+ if(gap<minGap)return;
+ if(moved<minMove&&gap<maxGap)return;
+ _lastPush=now;_lastSent={lat:_pos.latitude,lng:_pos.longitude};
+ const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()});
+ let rows=_act.filter(o=>o.status==='DELIVERING').map(o=>mk(String(o.id)));
+ if(!rows.length)rows=[mk('idle-'+riderId)];
+ try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
 
 let _dest=null,_follow=true,_lastRoute=0,_nav=false,_sim=null,_steps=[],_lastSay='';
 async function geocode(addr){const city=riderBranch==='BWP'?'Bahawalpur':'Multan';
