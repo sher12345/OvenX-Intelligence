@@ -433,7 +433,7 @@ async function renderMap(){
   const go=active.filter(x=>x.o.status==='DELIVERING');
   const keep=new Set(go.map(x=>String(x.o.id)));
   Object.keys(fMk).forEach(k=>{if(!keep.has(k)){fmap.removeLayer(fMk[k]);delete fMk[k];if(fDm[k]){fmap.removeLayer(fDm[k]);delete fDm[k]}if(fRt[k]){fmap.removeLayer(fRt[k]);delete fRt[k]}}});
-  const{data,error}=await sb.from(LOC_TABLE).select('*').gte('updated_at',new Date(Date.now()-15*60000).toISOString());
+  const{data,error}=await sb.from(LOC_TABLE).select('*').gte('updated_at',new Date(Date.now()-3*60000).toISOString());
   if(error){$('mapList').innerHTML='<div class="empty">Could not read '+esc(LOC_TABLE)+': '+esc(error.message)+'</div>';return}
   const idMap={};riders.forEach(r=>{r.shifts.forEach(a=>idMap[String(a.id)]=r);r.active.forEach(o=>idMap[String(o.assigned_rider)]=r)});
   const by={},lastBy={};
@@ -441,12 +441,20 @@ async function renderMap(){
    const r=idMap[String(l.rider_id)];if(r&&(!lastBy[r.key]||new Date(l.updated_at)>new Date(lastBy[r.key].updated_at)))lastBy[r.key]=l});
   const rows=await Promise.all(go.map(async({o,r})=>{
    const id=String(o.id),loc=by[id]||null,dest=await fGeocode(o);
-   const stale=loc?(Date.now()-new Date(loc.updated_at))>120000:true;
+   const stale=loc?(Date.now()-new Date(loc.updated_at))>45000:true;
    let e=null;if(loc&&dest)e=await fEtaFor(id,loc,dest);
    return{o,r,id,loc,dest,stale,mins:e?e.mins:null,km:e?e.km:null}}));
   rows.sort((a,b)=>(a.mins==null)-(b.mins==null)||a.mins-b.mins);
   const busy=new Set(go.map(x=>x.r.key));
-  const idle=riders.filter(r=>r.status!=='off-duty'&&!busy.has(r.key)&&lastBy[r.key]).map(r=>({r,loc:lastBy[r.key],stale:Date.now()-new Date(lastBy[r.key].updated_at)>120000}));
+  
+const idle=riders
+    .filter(r=>r.status!=='off-duty'&&!busy.has(r.key)&&lastBy[r.key])
+    .map(r=>({
+        r,
+        loc:lastBy[r.key],
+        stale:Date.now()-new Date(lastBy[r.key].updated_at)>45000
+    }));
+
   $('mc').textContent=go.length+' on the road · '+idle.length+' idle';
   fPts=[];
   rows.forEach((x,i)=>{
@@ -468,13 +476,18 @@ async function renderMap(){
    return `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
    <div><b>${esc(x.r.name)}</b><small>${esc(x.o.location||'No address')}</small></div>
    <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+Math.round(a/60)+'m old':''):' · waiting for GPS'}</small></div></div>`}).join('')
-  +idle.map(x=>{const a=ago(x.loc);return `<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.stale?'GPS '+Math.round(a/60)+'m old':'live'}</small></div></div>`}).join('');
+  +idle.map(x=>{const a=ago(x.loc);return `<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.stale?'GPS '+Math.round(a)+'s old':'Updated '+Math.round(a)+'s ago'}</small></div></div>`}).join('');
   $('mapList').innerHTML=html||'<div class="empty">No rider location available right now.</div>';
  }catch(e){console.error(e)}finally{fBusy=false}}
 function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{animate:true})}
-setInterval(()=>{if($('app').classList.contains('on'))renderMap()},8000); // positions refresh every 8s
+
+setInterval(()=>{
+    if($('app').classList.contains('on'))renderMap();
+},5000); // refresh every 5 seconds
+
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
