@@ -303,7 +303,7 @@ const p=await Notification.requestPermission();if(p==='granted'){try{await subsc
 let _wl=null;async function requestWakeLock(){try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen')}catch(e){}}
 async function initAlerts(){if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('./sw.js')}catch(e){console.error('SW',e)}}
 refreshAlertBanner();if('Notification' in window&&Notification.permission==='granted')subscribePush().catch(console.error);requestWakeLock()}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&riderId){requestWakeLock();loadOrders()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&riderId){requestWakeLock();if(!NATIVE)stopGPS();syncGPS();loadOrders()}});
 
 let _idsCache={t:0,ids:[]};
 async function getMyIds(){if(!riderId||String(riderId).startsWith('local-'))return[riderId];if(Date.now()-_idsCache.t<60000&&_idsCache.ids.length)return _idsCache.ids;
@@ -499,7 +499,7 @@ el.innerHTML=list.map((r,i)=>`<div class="rank"><div class="pos ${i===0?'g1':i==
 catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24px">Could not load leaderboard</div>'}}
 
 /* ── live GPS + in-app directions ── */
-let _act=[],_geo=null,_pos=null,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
+let _act=[],_geo=null,_pos=null,_posT=0,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
 const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
 
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
@@ -515,7 +515,7 @@ function startGPS(){if(_geo!=null)return;
     requestPermissions:true,stale:false,distanceFilter:20
   },(l,err)=>{
     if(err){if(err.code==='NOT_AUTHORIZED')showToast('Allow location "all the time" in settings','error');return}
-    _bgOk=true;
+    _bgOk=true;_posT=Date.now();
     _pos={latitude:l.latitude,longitude:l.longitude,heading:l.bearing,speed:l.speed};
     pushLoc();moveRider();
   }).then(id=>{_geo=id}).catch(()=>{_geo=null;startWebGPS()});
@@ -523,8 +523,8 @@ function startGPS(){if(_geo!=null)return;
  startWebGPS()}
 
 function startWebGPS(){if(!navigator.geolocation)return;
- _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;pushLoc();moveRider()},
-  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:_hi,maximumAge:_hi?3000:30000,timeout:20000})}
+ _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;_posT=p.timestamp;pushLoc();moveRider()},
+  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:0,timeout:20000})}
 
 function stopGPS(){if(_geo==null||_geo==='pending')return;
  if(NATIVE&&BG&&_bgOk){BG.removeWatcher({id:_geo});_bgOk=false}else navigator.geolocation.clearWatch(_geo);
@@ -534,19 +534,19 @@ let _hi=false,_lastSent=null;
 const busyNow=()=>_act.some(o=>o.status==='DELIVERING');
 function syncGPS(){
  if(dutyStatus!=='on-duty'){stopGPS();return}
- const busy=busyNow()||!!($('rmap')&&$('sheet').classList.contains('on'));
- if(_geo==null){_hi=busy;startGPS();return}
- if(!NATIVE&&_hi!==busy){stopGPS();_hi=busy;startGPS()}}
+ if(_geo==null)startGPS();
+}
 setInterval(()=>pushLoc(),10000); // self-throttling
 async function pushLoc(){
  if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
+ if(Date.now()-_posT>120000)return; // GPS frozen: don't send an old point as if it were live
  const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
- const minGap=busy?10000:60000,maxGap=busy?30000:300000,minMove=busy?15:50;
+ const minGap=busy?8000:15000,maxGap=busy?20000:60000,minMove=busy?10:25;
  const moved=_lastSent?distM(_lastSent.lat,_lastSent.lng,_pos.latitude,_pos.longitude):1e9;
  if(gap<minGap)return;
  if(moved<minMove&&gap<maxGap)return;
  _lastPush=now;_lastSent={lat:_pos.latitude,lng:_pos.longitude};
- const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date().toISOString()});
+ const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date(_posT).toISOString()});
  let rows=_act.filter(o=>o.status==='DELIVERING').map(o=>mk(String(o.id)));
  if(!rows.length)rows=[mk('idle-'+riderId)];
  try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
@@ -595,7 +595,7 @@ async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(
  setTimeout(()=>_rmap&&_rmap.invalidateSize(),100);
  _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);
  _rmap.on('dragstart',()=>{_follow=false});
- if(!_pos)await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;r()},()=>r(),{enableHighAccuracy:true,timeout:10000}));
+ if(!_pos)await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;_posT=g.timestamp;r()},()=>r(),{enableHighAccuracy:true,timeout:10000}));
  if(!_pos){$('rt-info').textContent='Turn on location to see your route';return}
  _lastRoute=Date.now();moveRider();await fetchRoute(true)}
 
@@ -618,7 +618,7 @@ function recenter(){if(!_rmap)return;_follow=true;
  if(_pos)_rmap.setView([_pos.latitude,_pos.longitude],17,{animate:true});else if(_dest)_rmap.setView(_dest,16)}
 function retryLoc(){if(!navigator.geolocation)return showToast('Location not supported','error');
  $('rt-info').textContent='Getting your location…';
- navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;startGPS();moveRider();fetchRoute(true)},
+ navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;_posT=g.timestamp;startGPS();moveRider();fetchRoute(true)},
   ()=>{$('rt-info').textContent='Turn on location to see your route';showToast('Location blocked. Allow it in browser settings','error')},{enableHighAccuracy:true,timeout:15000})}
 
 function shareTrack(id){const o=_act.find(x=>String(x.id)===String(id));if(!o||!o.tracking_token)return showToast('No tracking link for this order','error');
@@ -634,6 +634,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
