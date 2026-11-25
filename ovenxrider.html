@@ -515,15 +515,42 @@ function startGPS(){if(_geo!=null)return;
     requestPermissions:true,stale:false,distanceFilter:20
   },(l,err)=>{
     if(err){if(err.code==='NOT_AUTHORIZED')showToast('Allow location "all the time" in settings','error');return}
-    _bgOk=true;_posT=Date.now();
-    _pos={latitude:l.latitude,longitude:l.longitude,heading:l.bearing,speed:l.speed};
-    pushLoc();moveRider();
+_bgOk=true;
+
+_posT=l.time ? new Date(l.time).getTime() : Date.now();
+
+_pos={
+    latitude:l.latitude,
+    longitude:l.longitude,
+    heading:l.bearing,
+    speed:l.speed,
+    accuracy:Number.isFinite(Number(l.accuracy))
+        ? Number(l.accuracy)
+        : null
+};
+
+if (_pos.accuracy !== null && _pos.accuracy > 75) {
+    console.warn('Native GPS accuracy too poor:', _pos.accuracy);
+    return;
+}
+
+pushLoc();
+moveRider();
   }).then(id=>{_geo=id}).catch(()=>{_geo=null;startWebGPS()});
   return}
  startWebGPS()}
 
 function startWebGPS(){if(!navigator.geolocation)return;
- _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;_posT=p.timestamp;pushLoc();moveRider()},
+ _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;
+_posT=p.timestamp;
+
+if (Number.isFinite(_pos.accuracy) && _pos.accuracy > 75) {
+    console.warn('GPS accuracy too poor:', _pos.accuracy, 'metres');
+    return;
+}
+
+pushLoc();
+moveRider();},
   e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:0,timeout:20000})}
 
 function stopGPS(){if(_geo==null||_geo==='pending')return;
@@ -541,15 +568,37 @@ async function pushLoc(){
  if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
  if(Date.now()-_posT>120000)return; // GPS frozen: don't send an old point as if it were live
  const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
- const minGap=busy?8000:15000,maxGap=busy?20000:60000,minMove=busy?10:25;
+ const minGap=busy?5000:8000;
+const maxGap=busy?10000:20000;
+const minMove=busy?5:10;
  const moved=_lastSent?distM(_lastSent.lat,_lastSent.lng,_pos.latitude,_pos.longitude):1e9;
  if(gap<minGap)return;
  if(moved<minMove&&gap<maxGap)return;
- _lastPush=now;_lastSent={lat:_pos.latitude,lng:_pos.longitude};
+ 
  const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date(_posT).toISOString()});
  let rows=_act.filter(o=>o.status==='DELIVERING').map(o=>mk(String(o.id)));
  if(!rows.length)rows=[mk('idle-'+riderId)];
- try{const{error}=await sb.rpc('push_location',{p_rows:rows});if(error)console.error(error)}catch(e){console.error(e)}}
+ try {
+    const { error } = await sb.rpc('push_location', {
+        p_rows: rows
+    });
+
+    if (error) {
+        console.error('GPS upload failed:', error);
+        return;
+    }
+
+    // Update only after Supabase confirms success
+    _lastPush = Date.now();
+
+    _lastSent = {
+        lat: _pos.latitude,
+        lng: _pos.longitude
+    };
+
+} catch (e) {
+    console.error('GPS upload exception:', e);
+}}
 
 let _dest=null,_follow=true,_lastRoute=0,_nav=false,_sim=null,_steps=[],_lastSay='';
 async function geocode(addr){const city=riderBranch==='BWP'?'Bahawalpur':'Multan';
@@ -634,6 +683,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
