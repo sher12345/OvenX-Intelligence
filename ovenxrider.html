@@ -297,12 +297,181 @@ async function subscribePush(){if(!('serviceWorker' in navigator)||!('PushManage
 const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
 if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC_KEY)});
 await sb.from('push_subscriptions').upsert([{rider_id:String(riderId),rider_name:riderName,branch:riderBranch,subscription:sub.toJSON(),updated_at:new Date().toISOString()}],{onConflict:'rider_id'})}
-function refreshAlertBanner(){const ok='Notification' in window&&Notification.permission==='granted';$('alert-setup').style.display=ok?'none':'flex';$('me-al').textContent=ok?'On':'Off';$('me-al').style.color=ok?'var(--green)':'var(--orange)'}
-async function enableAlerts(){unlockAudio();if(!('Notification' in window)){showToast('On iPhone: Share → Add to Home Screen first','error');return}
-const p=await Notification.requestPermission();if(p==='granted'){try{await subscribePush();showToast('Alerts enabled')}catch(e){console.error(e)}}else showToast('Notifications are blocked in browser settings','error');refreshAlertBanner()}
-let _wl=null;async function requestWakeLock(){try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen')}catch(e){}}
-async function initAlerts(){if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('./sw.js')}catch(e){console.error('SW',e)}}
-refreshAlertBanner();if('Notification' in window&&Notification.permission==='granted')subscribePush().catch(console.error);requestWakeLock()}
+
+async function saveNativeFCMToken(token){
+  if(!NATIVE||!riderId||String(riderId).startsWith('local-')||!riderPhone)return;
+  if(!token)return;
+
+  const response=await fetch(
+    'https://frjcefugnvitexxcated.supabase.co/functions/v1/ovenx-fcm/register',
+    {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':'sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ'
+      },
+      body:JSON.stringify({
+        rider_id:String(riderId),
+        phone:riderPhone,
+        fcm_token:token
+      })
+    }
+  );
+
+  const result=await response.json();
+
+  if(!response.ok||!result.success){
+    throw new Error(result.error||'FCM token registration failed');
+  }
+
+  _nativePushToken=token;
+  _nativePushReady=true;
+  refreshAlertBanner();
+  console.log('OvenX native FCM token registered');
+}
+
+async function initNativePush(){
+  if(!NATIVE||!Push)return;
+
+  try{
+    if(!_nativePushListenersReady){
+      await Push.addListener('registration',async result=>{
+        try{
+          await saveNativeFCMToken(result.value);
+        }catch(e){
+          console.error('FCM token save:',e);
+          showToast('Could not register push token','error');
+        }
+      });
+
+      await Push.addListener('registrationError',error=>{
+        console.error('FCM registration error:',error);
+        showToast('Push registration failed','error');
+      });
+
+      await Push.addListener('pushNotificationReceived',notification=>{
+        console.log('Native push received:',notification);
+        showToast(notification.title||'New delivery order','info');
+        loadOrders();
+      });
+
+      await Push.addListener('pushNotificationActionPerformed',action=>{
+        console.log('Native notification opened:',action);
+        $('slip').style.display='none';tab(0);
+        loadOrders();
+      });
+
+      _nativePushListenersReady=true;
+    }
+
+    const permission=await Push.checkPermissions();
+
+    let receive=permission.receive;
+
+    if(receive!=='granted'){
+      const requested=await Push.requestPermissions();
+      receive=requested.receive;
+    }
+
+    if(receive!=='granted'){
+      showToast('Allow notifications in Android settings','error');
+      refreshAlertBanner();
+      return;
+    }
+
+    try{
+      await Push.createChannel({
+        id:'orders',
+        name:'Order alerts',
+        description:'New OvenX delivery orders',
+        importance:5,
+        vibration:true,
+        sound:'default'
+      });
+    }catch(e){
+      console.warn('Notification channel:',e);
+    }
+
+    await Push.register();
+
+  }catch(e){
+    console.error('Native push initialization:',e);
+    showToast('Could not initialize Android alerts','error');
+  }
+
+  refreshAlertBanner();
+}
+
+function refreshAlertBanner(){
+  const ok=NATIVE?_nativePushReady:
+    ('Notification' in window&&Notification.permission==='granted');
+
+  $('alert-setup').style.display=ok?'none':'flex';
+  $('me-al').textContent=ok?'On':'Off';
+  $('me-al').style.color=ok?'var(--green)':'var(--orange)';
+}
+
+async function enableAlerts(){
+  unlockAudio();
+
+  if(NATIVE){
+    await initNativePush();
+    return;
+  }
+
+  if(!('Notification' in window)){
+    showToast('Notifications are not supported in this browser','error');
+    return;
+  }
+
+  const p=await Notification.requestPermission();
+
+  if(p==='granted'){
+    try{
+      await subscribePush();
+      showToast('Alerts enabled');
+    }catch(e){
+      console.error(e);
+    }
+  }else{
+    showToast('Notifications are blocked in browser settings','error');
+  }
+
+  refreshAlertBanner();
+}
+
+let _wl=null;
+
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');
+  }catch(e){}
+}
+
+async function initAlerts(){
+  if(NATIVE){
+    await initNativePush();
+    requestWakeLock();
+    return;
+  }
+
+  if('serviceWorker' in navigator){
+    try{
+      await navigator.serviceWorker.register('./sw.js');
+    }catch(e){
+      console.error('SW',e);
+    }
+  }
+
+  refreshAlertBanner();
+
+  if('Notification' in window&&Notification.permission==='granted'){
+    subscribePush().catch(console.error);
+  }
+
+  requestWakeLock();
+}
+
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&riderId){requestWakeLock();if(!NATIVE)stopGPS();syncGPS();loadOrders()}});
 
 let _idsCache={t:0,ids:[]};
@@ -502,61 +671,129 @@ catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24
 let _act=[],_geo=null,_pos=null,_posT=0,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
 const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
 
+
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
-const BG=NATIVE?Capacitor.registerPlugin('BackgroundGeolocation'):null;
+const plug=n=>NATIVE?((Capacitor.Plugins&&Capacitor.Plugins[n])||(Capacitor.registerPlugin?Capacitor.registerPlugin(n):null)):null;
+const BG=plug('BackgroundGeolocation');
+const Push=plug('PushNotifications');
 let _bgOk=false;
+let _nativePushReady=false;
+let _nativePushToken='';
+let _nativePushListenersReady=false;
 
-function startGPS(){if(_geo!=null)return;
- if(NATIVE&&BG){
-  _geo='pending';
-  BG.addWatcher({
-    backgroundTitle:'OvenX delivery in progress',
-    backgroundMessage:'Sharing your location with the shop',
-    requestPermissions:true,stale:false,distanceFilter:20
-  },(l,err)=>{
-    if(err){if(err.code==='NOT_AUTHORIZED')showToast('Allow location "all the time" in settings','error');return}
-_bgOk=true;
+let _bgAttempt=0;
 
-_posT=l.time ? new Date(l.time).getTime() : Date.now();
-
-_pos={
-    latitude:l.latitude,
-    longitude:l.longitude,
-    heading:l.bearing,
-    speed:l.speed,
-    accuracy:Number.isFinite(Number(l.accuracy))
-        ? Number(l.accuracy)
-        : null
-};
-
-if (_pos.accuracy !== null && _pos.accuracy > 75) {
-    console.warn('Native GPS accuracy too poor:', _pos.accuracy);
-    return;
+function removeBGWatcher(id){
+  try{if(id!=null)BG.removeWatcher({id}).catch(()=>{})}catch(e){}
 }
 
-pushLoc();
-moveRider();
-  }).then(id=>{_geo=id}).catch(()=>{_geo=null;startWebGPS()});
-  return}
- startWebGPS()}
-
-function startWebGPS(){if(!navigator.geolocation)return;
- _geo=navigator.geolocation.watchPosition(p=>{if(_sim)return;_pos=p.coords;
-_posT=p.timestamp;
-
-if (Number.isFinite(_pos.accuracy) && _pos.accuracy > 75) {
-    console.warn('GPS accuracy too poor:', _pos.accuracy, 'metres');
-    return;
+let _lastGood=0;
+function goodFix(acc){
+ if(!Number.isFinite(acc))return true;
+ if(acc<=75){_lastGood=Date.now();return true}
+ return acc<=300&&Date.now()-_lastGood>60000; // accept a rough fix only if no good one for 60s
 }
 
-pushLoc();
-moveRider();},
-  e=>showToast('Turn on location so customers can track you','error'),{enableHighAccuracy:true,maximumAge:0,timeout:20000})}
+function startGPS(){
+  if(_geo!==null)return;
 
-function stopGPS(){if(_geo==null||_geo==='pending')return;
- if(NATIVE&&BG&&_bgOk){BG.removeWatcher({id:_geo});_bgOk=false}else navigator.geolocation.clearWatch(_geo);
- _geo=null}
+  if(NATIVE&&BG){
+    const attempt=++_bgAttempt;
+    let watcherId=null;
+    let failed=false;
+    _geo='pending';
 
+    Promise.resolve(BG.addWatcher({
+      backgroundTitle:'OvenX delivery in progress',
+      backgroundMessage:'Sharing your location with the shop',
+      requestPermissions:true,
+      stale:false,
+      distanceFilter:5
+    },(l,err)=>{
+      if(attempt!==_bgAttempt)return;
+
+      if(err){
+        failed=true;
+        _bgOk=false;
+        if(_geo==='pending'||_geo===watcherId)_geo=null;
+        if(watcherId!==null)removeBGWatcher(watcherId);
+
+        if(err.code==='NOT_AUTHORIZED'){
+          showToast('Allow location permission in Android settings','error');
+        }else{
+          console.error('Background GPS watcher:',err);
+          showToast('Background GPS failed. It will retry.','error');
+        }
+        return;
+      }
+
+      const acc=Number.isFinite(Number(l.accuracy))
+        ?Number(l.accuracy):null;
+
+      if(!goodFix(acc))return;
+
+      _posT=l.time?new Date(l.time).getTime():Date.now();
+      _pos={
+        latitude:l.latitude,
+        longitude:l.longitude,
+        heading:l.bearing,
+        speed:l.speed,
+        accuracy:acc
+      };
+
+      pushLoc();
+      moveRider();
+    })).then(id=>{
+      watcherId=id;
+
+      if(failed||attempt!==_bgAttempt){
+        removeBGWatcher(id);
+        return;
+      }
+
+      _geo=id;
+      _bgOk=true;
+    }).catch(err=>{
+      if(attempt!==_bgAttempt)return;
+
+      console.error('Background GPS registration failed:',err);
+      _geo=null;
+      _bgOk=false;
+      showToast('GPS registration failed. It will retry.','error');
+    });
+
+    return;
+  }
+
+  startWebGPS();
+}
+function startWebGPS(){
+  if(!navigator.geolocation)return;
+  _geo=navigator.geolocation.watchPosition(p=>{
+    if(_sim||!goodFix(p.coords.accuracy))return;
+    _pos=p.coords;_posT=p.timestamp;
+    pushLoc();moveRider();
+  },()=>showToast('Turn on location so customers can track you','error'),
+  {enableHighAccuracy:true,maximumAge:0,timeout:20000});
+}
+
+function stopGPS(){
+  if(_geo===null)return;
+
+  const old=_geo;
+  ++_bgAttempt;
+  _geo=null;
+  _bgOk=false;
+
+  if(NATIVE&&BG){
+    if(old!=='pending')removeBGWatcher(old);
+    return;
+  }
+
+  if(old!=='pending'&&navigator.geolocation){
+    navigator.geolocation.clearWatch(old);
+  }
+}
 let _hi=false,_lastSent=null;
 const busyNow=()=>_act.some(o=>o.status==='DELIVERING');
 function syncGPS(){
@@ -566,7 +803,7 @@ function syncGPS(){
 setInterval(()=>pushLoc(),10000); // self-throttling
 async function pushLoc(){
  if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
- if(Date.now()-_posT>120000)return; // GPS frozen: don't send an old point as if it were live
+ if(Date.now()-_posT>300000)return; // GPS frozen for 5+ min: stop sending
  const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
  const minGap=busy?5000:8000;
 const maxGap=busy?10000:20000;
@@ -575,7 +812,7 @@ const minMove=busy?5:10;
  if(gap<minGap)return;
  if(moved<minMove&&gap<maxGap)return;
  
- const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed,updated_at:new Date(_posT).toISOString()});
+ const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed});
  let rows=_act.filter(o=>o.status==='DELIVERING').map(o=>mk(String(o.id)));
  if(!rows.length)rows=[mk('idle-'+riderId)];
  try {
@@ -683,6 +920,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
