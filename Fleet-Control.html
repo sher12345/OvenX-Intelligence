@@ -100,6 +100,7 @@ tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var
 .mr{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--c);margin-top:8px;cursor:pointer;border-left:3px solid var(--sky)}
 .mr:first-child{border-color:var(--amb)}.mr .pos{width:26px;height:26px;border-radius:50%;background:var(--c2);display:grid;place-items:center;font-weight:800;font-size:12px}
 .mr small{display:block;color:var(--t2);font-size:12px}
+.fp.lt b{top:auto;bottom:38px}
 </style>
 </head>
 <body>
@@ -441,7 +442,7 @@ async function renderMap(){
    const r=idMap[String(l.rider_id)];if(r&&(!lastBy[r.key]||new Date(l.updated_at)>new Date(lastBy[r.key].updated_at)))lastBy[r.key]=l});
   const rows=await Promise.all(go.map(async({o,r})=>{
    const id=String(o.id),loc=by[id]||null,dest=await fGeocode(o);
-   const stale=loc?(Date.now()-new Date(loc.updated_at))>45000:true;
+   const stale=loc?Math.max(0,Date.now()-new Date(loc.updated_at))>45000:true;
    let e=null;if(loc&&dest)e=await fEtaFor(id,loc,dest);
    return{o,r,id,loc,dest,stale,mins:e?e.mins:null,km:e?e.km:null}}));
   rows.sort((a,b)=>(a.mins==null)-(b.mins==null)||a.mins-b.mins);
@@ -452,7 +453,7 @@ const idle=riders
     .map(r=>({
         r,
         loc:lastBy[r.key],
-        stale:Date.now()-new Date(lastBy[r.key].updated_at)>45000
+        stale:Math.max(0,Date.now()-new Date(lastBy[r.key].updated_at))>45000
     }));
 
   $('mc').textContent=go.length+' on the road · '+idle.length+' idle';
@@ -461,22 +462,24 @@ const idle=riders
    if(x.dest){fPts.push(x.dest);const ic=L.divIcon({className:'',html:'<div class="fd">🏠</div>',iconSize:[28,28],iconAnchor:[14,14]});
     if(fDm[x.id])fDm[x.id].setLatLng(x.dest);else fDm[x.id]=L.marker(x.dest,{icon:ic,zIndexOffset:-100}).bindTooltip(esc(x.o.location||'')).addTo(fmap)}
    if(x.loc){const p=[x.loc.lat,x.loc.lng];fPts.push(p);
-    const ic=L.divIcon({className:'',html:`<div class="fp ${x.stale?'stale':i===0?'first':''}">🛵<b>${esc(x.r.name)}${x.mins!=null?' · '+x.mins+'m':''}</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    const ic=L.divIcon({className:'',html:`<div class="fp ${x.stale?'stale':i===0?'first':''} ${i%2?'lt':''}">🛵<b>${esc(x.r.name)}${x.mins!=null?' · '+x.mins+'m':''}</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
     if(fMk[x.id]){fMk[x.id].setLatLng(p);fMk[x.id].setIcon(ic)}else fMk[x.id]=L.marker(p,{icon:ic,zIndexOffset:500}).addTo(fmap);
     if(x.dest){const ln=[p,x.dest];if(fRt[x.id])fRt[x.id].setLatLngs(ln);else fRt[x.id]=L.polyline(ln,{color:'#6cb8ff',weight:3,opacity:.7,dashArray:'6 8'}).addTo(fmap)}}
   });
   const idleKeep=new Set(idle.map(x=>x.r.key));
   Object.keys(fIdle).forEach(k=>{if(!idleKeep.has(k)){fmap.removeLayer(fIdle[k]);delete fIdle[k]}});
   idle.forEach(x=>{const p=[x.loc.lat,x.loc.lng];fPts.push(p);
-   const ic=L.divIcon({className:'',html:`<div class="fp idle ${x.stale?'stale':''}">🛵<b>${esc(x.r.name)} · idle</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+   const ic=L.divIcon({className:'',html:`<div class="fp idle ${x.stale?'stale':''} lt">🛵<b>${esc(x.r.name)} · idle</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
    if(fIdle[x.r.key]){fIdle[x.r.key].setLatLng(p);fIdle[x.r.key].setIcon(ic)}else fIdle[x.r.key]=L.marker(p,{icon:ic,zIndexOffset:300}).addTo(fmap)});
   if(!fFit){if(fPts.length){fFit=true;fitMap()}else fmap.setView(CEN[branch]||CEN.MULTAN,12)}
-  const ago=l=>l?Math.round((Date.now()-new Date(l.updated_at))/1000):null;
+  const ageMs=l=>l?Math.max(0,Date.now()-new Date(l.updated_at)):null;
+  const ago=l=>l?Math.round(ageMs(l)/1000):null;
+  const fmtAge=s=>s<60?s+'s':Math.round(s/60)+'m';
   const html=rows.map((x,i)=>{const a=ago(x.loc);
    return `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
    <div><b>${esc(x.r.name)}</b><small>${esc(x.o.location||'No address')}</small></div>
-   <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+Math.round(a/60)+'m old':''):' · waiting for GPS'}</small></div></div>`}).join('')
-  +idle.map(x=>{const a=ago(x.loc);return `<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.stale?'GPS '+Math.round(a)+'s old':'Updated '+Math.round(a)+'s ago'}</small></div></div>`}).join('');
+   <div style="text-align:right"><b class="num ${x.stale?'rd':'g'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${x.loc?(x.stale?' · GPS '+fmtAge(a)+' old':''):' · waiting for GPS'}</small></div></div>`}).join('')
+  +idle.map(x=>{const a=ago(x.loc);return `<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.stale?'GPS '+fmtAge(a)+' old':'Updated '+fmtAge(a)+' ago'}</small></div></div>`}).join('');
   $('mapList').innerHTML=html||'<div class="empty">No rider location available right now.</div>';
  }catch(e){console.error(e)}finally{fBusy=false}}
 function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{animate:true})}
@@ -487,11 +490,6 @@ setInterval(()=>{
 
 addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
