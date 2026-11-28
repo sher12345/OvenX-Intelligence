@@ -497,9 +497,10 @@ riderId=sv||('local-'+Date.now());showToast('Offline mode','error');console.erro
 try{if(riderId&&!String(riderId).startsWith('local-'))localStorage.setItem('ovenx_rider_session',JSON.stringify({name,phone,branch,riderId:String(riderId),ts:Date.now()}))}catch(e){}
 $('splash').style.display='none';$('app').classList.add('on');
 $('me-n').textContent=name;$('me-p').textContent=phone;$('me-b').textContent=branch==='BWP'?'Bahawalpur':'Multan';
-initAlerts();updateDutyUI();loadOrders();startPolling()}
+initAlerts();updateDutyUI();loadOrders();startPolling();
+try{if(Tracker&&!localStorage.getItem('ovenx_batt')){localStorage.setItem('ovenx_batt','1');setTimeout(()=>Tracker.requestBatteryExemption().catch(()=>{}),5000)}}catch(e){}}
 async function riderLogout(){const v=await ask({title:'End your shift?',sub:'You will be marked off duty.',opts:[{label:'End shift',val:1,cls:'red'}]});if(!v)return;
-clearInterval(_poll);if(riderId&&!String(riderId).startsWith('local-'))await sb.from('rider_attendance').update({status:'off-duty',punched_out:new Date().toISOString()}).eq('id',riderId);
+clearInterval(_poll);if(Tracker)Tracker.stop().catch(()=>{});if(riderId&&!String(riderId).startsWith('local-'))await sb.from('rider_attendance').update({status:'off-duty',punched_out:new Date().toISOString()}).eq('id',riderId);
 try{localStorage.removeItem('ovenx_rider_session')}catch(e){}location.reload()}
 
 /* ── duty ── */
@@ -676,6 +677,16 @@ const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNative
 const plug=n=>NATIVE?((Capacitor.Plugins&&Capacitor.Plugins[n])||(Capacitor.registerPlugin?Capacitor.registerPlugin(n):null)):null;
 const BG=plug('BackgroundGeolocation');
 const Push=plug('PushNotifications');
+const Tracker=plug('OvenxTracker');
+function nativeSync(){
+  if(!Tracker||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
+  Tracker.start({
+    url:'https://frjcefugnvitexxcated.supabase.co',
+    key:'sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ',
+    riderId:String(riderId),
+    orderIds:_act.filter(o=>o.status==='DELIVERING').map(o=>String(o.id))
+  }).catch(e=>console.error('tracker',e));
+}
 let _bgOk=false;
 let _nativePushReady=false;
 let _nativePushToken='';
@@ -753,6 +764,7 @@ function startGPS(){
 
       _geo=id;
       _bgOk=true;
+      nativeSync();
     }).catch(err=>{
       if(attempt!==_bgAttempt)return;
 
@@ -797,13 +809,14 @@ function stopGPS(){
 let _hi=false,_lastSent=null;
 const busyNow=()=>_act.some(o=>o.status==='DELIVERING');
 function syncGPS(){
- if(dutyStatus!=='on-duty'){stopGPS();return}
+ if(dutyStatus!=='on-duty'){stopGPS();if(Tracker)Tracker.stop().catch(()=>{});return}
  if(_geo==null)startGPS();
+ if(_bgOk)nativeSync();
 }
 setInterval(()=>pushLoc(),10000); // self-throttling
 async function pushLoc(){
  if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
- if(Date.now()-_posT>300000)return; // GPS frozen for 5+ min: stop sending
+ if(!NATIVE && Date.now()-_posT>300000)return; // GPS frozen for 5+ min: stop sending
  const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
  const minGap=busy?5000:8000;
 const maxGap=busy?10000:20000;
@@ -920,6 +933,7 @@ if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localSt
 $('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
 addEventListener('load',autoResume);
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
