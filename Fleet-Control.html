@@ -2,942 +2,534 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>OvenX Rider</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OvenX Fleet Control</title>
 <meta name="theme-color" content="#0a0b10">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root{--bg:#0a0b10;--s1:rgba(255,255,255,.05);--s2:rgba(255,255,255,.09);--line:rgba(255,255,255,.09);--t1:#f4f3f1;--t2:#a8a5a0;--t3:#6f6c68;
---green:#3ddc84;--orange:#ffc857;--red:#ff6b7a;--blue:#6cb8ff;--vio:#a78bfa;--pink:#ff5fa2;--rb:linear-gradient(120deg,#3ddc84,#6cb8ff 45%,#a78bfa 75%,#ff5fa2);--sp:cubic-bezier(.32,.72,0,1);
---font:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0a0b10;--c:rgba(255,255,255,.045);--c2:rgba(255,255,255,.08);--line:rgba(255,255,255,.09);--t1:#f4f3f1;--t2:#a8a5a0;--t3:#6f6c68;--acc:#3ddc84;--mint:#34e0a1;--sky:#6cb8ff;--vio:#a78bfa;--pink:#ff5fa2;--rb:linear-gradient(120deg,#3ddc84,#5db4f5 45%,#a78bfa 75%,#ff5fa2);--red:#ff6b7a;--amb:#ffc857;
+--font:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg)}
-body{color:var(--t1);font:500 15px/1.4 var(--font);max-width:430px;margin:0 auto;min-height:100vh;-webkit-font-smoothing:antialiased;
-background:radial-gradient(420px 320px at 0% 0%,rgba(61,220,132,.2),transparent 65%),radial-gradient(380px 360px at 100% 18%,rgba(108,184,255,.15),transparent 65%),radial-gradient(420px 340px at 100% 100%,rgba(255,95,162,.15),transparent 65%),radial-gradient(360px 300px at 0% 70%,rgba(167,139,250,.14),transparent 65%),var(--bg);background-attachment:fixed}
-button,input,select{font:inherit;color:inherit}
-button{border:0;background:none;cursor:pointer;transition:transform .12s var(--sp),opacity .12s}button:active{transform:scale(.96);opacity:.8}
-:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+body{color:var(--t1);font:500 14px/1.45 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+background:radial-gradient(500px 400px at 85% 95%,rgba(255,95,162,.16),transparent 65%),radial-gradient(450px 350px at 25% 65%,rgba(255,200,87,.07),transparent 65%),radial-gradient(700px 420px at 8% -5%,rgba(61,220,132,.22),transparent 65%),radial-gradient(650px 500px at 100% 10%,rgba(108,184,255,.14),transparent 65%),radial-gradient(700px 500px at 50% 110%,rgba(167,139,250,.14),transparent 65%),var(--bg);background-attachment:fixed}
+button,input,select{font:inherit;color:inherit}button{border:0;background:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums}
-.gx,.logo span{background:var(--rb);-webkit-background-clip:text;background-clip:text;color:transparent}
-.up{animation:up .55s both}@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes pl{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
-/* login */
-#splash{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:32px 24px calc(32px + var(--sab))}
-.logo{font-size:46px;font-weight:800;letter-spacing:-.03em;line-height:1}
-.tag{color:var(--t2);margin:8px 0 34px}
-.field{display:block;margin-bottom:14px}.field small{display:block;color:var(--t2);font-size:13px;margin:0 0 6px 4px}
-.inp{width:100%;background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:15px 16px;font-size:17px;outline:none;-webkit-appearance:none;transition:border-color .2s}.inp:focus{border-color:var(--green)}
-.cta{width:100%;height:54px;border-radius:18px;background:var(--rb);color:#06130b;font-weight:800;font-size:17px;margin-top:8px;box-shadow:0 10px 30px rgba(108,184,255,.25)}
-.badge{align-self:flex-start;background:var(--s2);color:var(--t1);font-size:13px;font-weight:700;padding:5px 14px;border-radius:14px;margin:-22px 0 30px;border:1px solid var(--line)}
-.err{color:var(--red);font-size:14px;margin-top:14px;text-align:center;min-height:20px}
-/* shell */
-#app{display:none}#app.on{display:block}
-.nav{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;height:calc(48px + var(--sat));padding:var(--sat) 16px 0;display:flex;align-items:center;justify-content:center;transition:background .25s}
-.nav.sc{background:rgba(10,11,16,.72);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
-.nav.sc::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--line)}
-.nav-t{font-weight:700;font-size:17px;opacity:0;transition:opacity .2s}.nav.sc .nav-t{opacity:1}
-.exit{position:absolute;left:16px;top:calc(var(--sat) + 9px);height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:700;background:rgba(255,107,122,.14);color:var(--red)}
-.chip{position:absolute;right:16px;top:calc(var(--sat) + 9px);height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;background:rgba(61,220,132,.16);color:var(--green)}
-.chip.brk{background:rgba(255,200,87,.16);color:var(--orange)}
-.chip i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pl 2s infinite}.chip.brk i{animation:none}
-main{padding:calc(52px + var(--sat)) 16px calc(96px + var(--sab))}
-.lt{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:6px 0 16px}
-.view{display:none}.view.on{display:block}
-.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:60;display:flex;padding:6px 8px calc(6px + var(--sab));background:rgba(18,19,26,.8);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-top:1px solid rgba(255,255,255,.1)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11px;font-weight:700;color:var(--t3);position:relative;transition:color .2s}
-.tab svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tab.on{color:var(--t1)}.tab.on::after{content:'';position:absolute;top:-6px;width:26px;height:3px;border-radius:0 0 4px 4px;background:var(--rb)}
-.tab b{position:absolute;top:1px;left:calc(50% + 7px);min-width:18px;height:18px;border-radius:9px;background:var(--pink);color:#fff;font-size:11px;display:none;align-items:center;justify-content:center;padding:0 5px}.tab b.show{display:flex}
-/* stats */
-.stats{display:flex;border-radius:22px;margin-bottom:18px;background:var(--s1);border:1px solid var(--line);position:relative;overflow:hidden}
-.stats::before{content:'';position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 4px 4px;background:var(--rb)}
-.stat{flex:1;padding:16px 8px 14px;text-align:center}.stat+.stat{border-left:1px solid var(--line)}
-.stat b{display:block;font-size:23px;font-weight:800;letter-spacing:-.02em}.stat span{font-size:12px;color:var(--t2)}
-.sh{font-size:13px;font-weight:700;color:var(--t2);margin:0 4px 8px}
-.alert{display:flex;align-items:center;gap:12px;background:rgba(255,200,87,.1);border:1px solid rgba(255,200,87,.25);border-radius:18px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--t2)}
-.alert b{display:block;color:var(--orange);font-size:15px}.alert button{margin-left:auto;background:var(--orange);color:#1a1200;font-weight:800;border-radius:12px;padding:9px 14px;flex-shrink:0}
-/* order card */
-.card{background:var(--s1);border:1px solid var(--line);border-radius:26px;margin-bottom:16px;overflow:hidden;position:relative;box-shadow:0 12px 34px rgba(0,0,0,.3);animation:up .55s both}
-.card::before{content:'';position:absolute;left:20px;right:20px;top:0;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,#ff5fa2,#ffc857)}.card.go::before{background:linear-gradient(90deg,#6cb8ff,#a78bfa)}
-.ch{display:flex;align-items:center;gap:8px;padding:16px 18px 0}
-.st{font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px}.st i{width:8px;height:8px;border-radius:50%;background:currentColor}
-.st.new{color:var(--pink)}.st.go{color:var(--blue)}
-.br{font-size:12px;color:var(--t2);background:var(--s2);padding:2px 8px;border-radius:8px}
-.age{margin-left:auto;font-size:13px;font-weight:700;color:var(--t2)}.age.late{color:var(--red)}
-.bar{height:4px;margin:12px 18px 0;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,#6cb8ff,#a78bfa);border-radius:3px;transition:width .9s var(--sp)}.bar i.warn{background:linear-gradient(90deg,#ffc857,#ff9ec4)}.bar i.late{background:var(--red)}
-.cb{padding:14px 18px}
-.addr{font-size:21px;font-weight:800;letter-spacing:-.015em;line-height:1.25}
-.who{display:flex;align-items:center;gap:12px;margin-top:14px}.who div{flex:1;min-width:0}.who b{display:block;font-size:16px}.who span{color:var(--orange);font-size:14px}
-.rnd{width:44px;height:44px;border-radius:50%;background:rgba(61,220,132,.16);color:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.rnd svg,.act svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.items{border-top:1px solid var(--line);margin-top:14px;padding-top:6px}
-.it{display:flex;gap:12px;padding:8px 0}.it em{font-style:normal;min-width:30px;height:26px;border-radius:8px;background:rgba(167,139,250,.18);color:#d4c4ff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
-.it div{flex:1;font-weight:600;line-height:1.3}.it small{display:block;font-weight:400;color:var(--t2);margin-top:2px}
-.pay{margin:0 18px;background:var(--s2);border-radius:18px;padding:6px 14px}
-.row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;color:var(--t2)}.row b{color:var(--t1);font-weight:700}
-.row.big{border-top:1px solid var(--line);align-items:baseline}.row.big span{color:var(--orange);font-weight:700}.row.big b{font-size:26px;font-weight:800;color:var(--orange);letter-spacing:-.02em}
-.row.ho span,.row.ho b{color:var(--blue)}
-.ca{padding:16px 18px 18px}
-.go-b{width:100%;height:56px;border-radius:18px;font-size:17px;font-weight:800;color:#fff}
-.go-b.start{background:linear-gradient(135deg,#6cb8ff,#a78bfa)}.go-b.done{background:linear-gradient(135deg,#3ddc84,#2dd4bf);color:#04130a}
-.acts{display:flex;gap:10px;margin-top:12px}
-.act{flex:1;height:54px;border-radius:16px;background:var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:700;color:var(--t2)}
-.act.wa{color:#25d366}.act.mp{color:var(--blue)}
-.lnk{display:block;width:100%;text-align:center;color:var(--red);font-size:14px;font-weight:700;padding:14px 0 0}
-.empty{text-align:center;padding:56px 24px;color:var(--t2)}.empty b{display:block;color:var(--t1);font-size:19px;margin-bottom:6px}
-.grp{background:var(--s1);border:1px solid var(--line);border-radius:20px;margin-bottom:16px;padding:0 16px}
-.gr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;min-height:50px}.gr+.gr{border-top:1px solid var(--line)}.gr span{color:var(--t2)}.gr b{font-weight:700}
-.hero{border-radius:20px;padding:16px 18px;margin-bottom:12px;animation:up .55s both}
-.hero small{display:block;font-size:13px;font-weight:700;margin-bottom:2px}.hero b{font-size:32px;font-weight:800;letter-spacing:-.025em}.hero p{font-size:13px;color:var(--t2);margin-top:2px}
-.h-o{background:rgba(255,200,87,.11);color:var(--orange)}.h-b{background:rgba(108,184,255,.11);color:var(--blue)}.h-r{background:rgba(255,107,122,.1);color:var(--red)}.h-g{background:rgba(61,220,132,.1);color:var(--green)}
-.btn2{width:100%;height:50px;border-radius:16px;background:var(--s2);font-weight:700;margin-bottom:16px}
-.seg{display:flex;background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:3px;margin-bottom:16px}
-.seg button{flex:1;height:36px;border-radius:11px;font-weight:700;color:var(--t2);transition:background .25s,color .25s}.seg button.on{color:#06130b;background:var(--rb)}
-.hc{background:var(--s1);border:1px solid var(--line);border-radius:22px;padding:14px 16px;margin-bottom:10px}
-.hc h4{font-size:16px;font-weight:700;line-height:1.3}.hc p{font-size:13px;color:var(--t2);margin-top:2px}
-.pm{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:10px;margin:8px 0 4px}
-.settle{width:100%;height:44px;border-radius:14px;font-weight:800;font-size:14px;margin-top:10px;background:rgba(255,200,87,.14);color:var(--orange)}.settle.ok{background:rgba(61,220,132,.14);color:var(--green)}
-.dng{width:100%;height:52px;border-radius:16px;background:rgba(255,107,122,.12);color:var(--red);font-weight:800;margin-top:8px}
-.lh{display:flex;align-items:flex-end;justify-content:space-between;margin:6px 0 16px}.lh .lt{margin:0}
-.rf{height:34px;padding:0 14px;border-radius:17px;background:var(--s1);border:1px solid var(--line);color:var(--t2);font-size:13px;font-weight:700;margin-bottom:4px}
-.audit{border:1px solid var(--line);background:var(--s1);border-radius:24px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
-.audit::before{content:'';position:absolute;left:20px;right:20px;top:0;height:3px;border-radius:0 0 4px 4px;background:var(--rb)}
-.audit h3{font-size:15px;font-weight:800;margin-bottom:12px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.g2 div{background:var(--s2);border-radius:14px;padding:12px 8px;text-align:center}.g2 b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em}.g2 span{font-size:12px;color:var(--t2)}
-.audit .hero{margin-bottom:10px}.audit .hero:last-child{margin-bottom:0}
-.eos{border:2px dashed rgba(255,95,162,.4);background:rgba(255,95,162,.07);border-radius:22px;padding:18px;text-align:center;margin-top:6px}
-.eos small{color:var(--pink);font-weight:800;font-size:13px}.eos b{display:block;font-size:34px;font-weight:800;color:var(--orange);letter-spacing:-.025em;margin:4px 0}.eos p{font-size:13px;color:var(--t2)}
-.hno{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.hno span{font-size:12px;font-weight:800;color:var(--green);background:rgba(61,220,132,.14);padding:3px 10px;border-radius:10px}.hno em{font-style:normal;font-size:12px;color:var(--t3)}
-.hit{background:var(--s2);border-radius:12px;padding:4px 12px;margin:10px 0}.hit .it{padding:6px 0}
-.times{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--t3);margin-bottom:4px}.times b{color:var(--t1);font-weight:700}.times b.g{color:var(--green)}
-.mini{background:var(--s2);border-radius:14px;padding:2px 12px;margin-top:10px}.mini .row{padding:7px 0;border-bottom:1px solid var(--line)}.mini .row:last-child{border:0}
-#slip{position:fixed;left:0;right:0;top:0;bottom:0;z-index:500;background:var(--bg);overflow-y:auto;padding:calc(16px + var(--sat)) 16px calc(30px + var(--sab));max-width:430px;margin:0 auto;display:none}
-.slip-card{background:var(--s1);border:1px solid var(--line);border-radius:24px;padding:18px}.slip-meta{text-align:center;font-size:13px;color:var(--t2);margin:6px 0 14px;line-height:1.6}
-.slip-box{border-radius:14px;padding:12px 14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center}.slip-box span{font-size:13px;font-weight:700}.slip-box b{font-size:24px;font-weight:800}
-.opt.chip2{display:inline-block;width:auto;padding:9px 14px;margin:0 6px 8px 0;font-size:14px;border-radius:18px}
-#bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s}#bd.on{opacity:1;pointer-events:auto}
-#sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:430px;z-index:310;background:rgba(22,23,31,.94);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border-radius:28px 28px 0 0;padding:8px 16px calc(16px + var(--sab));transform:translate(-50%,105%);transition:transform .45s var(--sp);max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,.4);border-top:1px solid var(--line)}
-#sheet.on{transform:translate(-50%,0)}#sheet.drag{transition:none}
-.grab{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 14px;touch-action:none;padding:0}
-.sheet-t{font-size:20px;font-weight:800;letter-spacing:-.01em;text-align:center}.sheet-s{text-align:center;color:var(--t2);font-size:14px;margin:4px 0 14px}
-.opt{display:block;width:100%;text-align:left;padding:15px 16px;border-radius:14px;background:rgba(255,255,255,.07);margin-bottom:8px;font-weight:700}.opt small{display:block;font-weight:400;color:var(--t2)}
-.opt.red{color:var(--red)}.opt.grn{background:var(--rb);color:#06130b;text-align:center}.opt.x{background:none;text-align:center;color:var(--t2)}
-.slip-r{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(255,255,255,.1);font-size:13px}.slip-r small{display:block;color:var(--t3)}
-.toast{position:fixed;top:calc(8px + var(--sat));left:50%;transform:translate(-50%,-120%);z-index:400;background:rgba(36,37,46,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:22px;padding:11px 18px;font-weight:700;font-size:14px;max-width:92vw;transition:transform .45s var(--sp);box-shadow:0 8px 30px rgba(0,0,0,.4)}
-.toast.show{transform:translate(-50%,0)}.toast.error{color:var(--red)}.toast.success{color:var(--green)}
-.banner{position:fixed;top:calc(8px + var(--sat));left:50%;transform:translate(-50%,-150%);width:min(94vw,410px);z-index:450;background:linear-gradient(135deg,#a78bfa,#ff5fa2);color:#fff;border-radius:22px;padding:14px 16px;transition:transform .5s var(--sp);box-shadow:0 14px 36px rgba(0,0,0,.5)}
-.banner.show{transform:translate(-50%,0)}.banner b{display:block;font-size:16px}.banner span{font-size:13px;opacity:.92}
-/* KPI + charts */
-.c2{background:var(--s1);border:1px solid var(--line);border-radius:24px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
-.c2::before{content:'';position:absolute;left:20px;right:20px;top:0;height:3px;border-radius:0 0 4px 4px;background:var(--a,var(--rb))}
-.c2 h3{font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px}
-.ringw{position:relative;width:104px;height:104px;flex-shrink:0}.ringw svg{transform:rotate(-90deg);width:100%;height:100%}.ringw circle{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dasharray 1.1s cubic-bezier(.2,.9,.2,1)}.ringw b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:800}
-.mk b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}.mk span{font-size:12px;color:var(--t2)}.mk+.mk{margin-top:8px}
-.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.kpi{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:12px 14px;position:relative;overflow:hidden;animation:up .55s both}
-.kpi b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}.kpi span{font-size:12px;color:var(--t2)}
-.kpi small{position:absolute;top:10px;right:12px;font-size:11px;font-weight:800;padding:2px 7px;border-radius:8px}
-.kpi-bar{height:4px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:8px;overflow:hidden}.kpi-bar i{display:block;height:100%;border-radius:3px;transition:width 1s cubic-bezier(.2,.9,.2,1)}
-.seg.mini{margin-bottom:12px}.seg.mini button{height:30px;font-size:13px}
-.dn{display:flex;gap:14px;align-items:center}.dn svg{width:128px;height:128px;transform:rotate(-90deg);flex-shrink:0}.dn circle{fill:none;stroke-width:13;transition:stroke-dasharray 1s cubic-bezier(.2,.9,.2,1)}
-.lg{flex:1;display:flex;flex-direction:column;gap:7px;font-size:12px}.lg div{display:flex;justify-content:space-between}.lg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px}
-.cols{display:flex;align-items:flex-end;gap:3px;height:170px}.cols div{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
-.cols i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#a78bfa,rgba(108,184,255,.3));transition:height .9s cubic-bezier(.2,.9,.2,1)}.cols .pk i{background:linear-gradient(180deg,#ff5fa2,rgba(255,200,87,.4))}
-.cols em{font-style:normal;font-size:10px;color:var(--t2)}.cols span{font-size:9px;color:var(--t3);height:11px;white-space:nowrap}
-.ar{width:100%;height:150px;display:block}.ar .ln{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.4s cubic-bezier(.3,.7,.2,1)}
-.axl{display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px}
-.rank{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.rank:first-child{border-top:0}
-.rank .pos{width:28px;height:28px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
-.rank .pos.g1{background:rgba(255,200,87,.2);color:var(--orange)}.rank .pos.g2{background:rgba(108,184,255,.2);color:var(--blue)}.rank .pos.g3{background:rgba(255,95,162,.2);color:var(--pink)}
-.rank .who{flex:1;min-width:0;margin:0}.rank .who b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank .who span{font-size:12px;color:var(--t2)}
-.rank .num-tag{text-align:right;flex-shrink:0}.rank .num-tag b{display:block;font-size:16px;font-weight:800;color:var(--green)}.rank .num-tag span{font-size:11px;color:var(--t3)}
-@media(prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation:none!important}}
-.pin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5)}
-.pin.r{background:#3ddc84}.pin.c{background:#ff5fa2}
-.act.dr{color:var(--green)}
+.c{background:var(--c);border:1px solid var(--line);border-radius:24px;padding:18px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:relative;overflow:hidden}
+.c h2{font-size:13px;font-weight:700;color:var(--t2);letter-spacing:.02em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.c h2 i{font-style:normal;font-weight:500;color:var(--t3);font-size:12px}
+.logo{font-weight:800;letter-spacing:-.03em}.logo span{background:var(--rb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#gate{min-height:100vh;display:grid;place-items:center;padding:24px}
+#gate .c{width:100%;max-width:360px;padding:30px;border-radius:30px;animation:up .6s both}
+#gate .logo{font-size:30px}#gate p{color:var(--t2);margin:6px 0 20px}
+.inp{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;outline:none}.inp:focus{border-color:var(--acc)}
+.cta{width:100%;height:48px;border-radius:14px;background:var(--rb);color:#04170c;font-weight:800;margin-top:10px;transition:transform .15s}.cta:active{transform:scale(.97)}
+#err{color:var(--red);margin-top:10px;min-height:18px;text-align:center}
+#app{display:none;width:100%;max-width:100%;margin:0 auto;padding:24px}#app.on{display:block}
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.top h1{font-size:20px;margin-right:auto}.top small{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--t2);letter-spacing:0}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(52,224,161,.6);animation:pl 2s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 8px rgba(52,224,161,0)}100%{box-shadow:0 0 0 0 rgba(52,224,161,0)}}
+.seg{display:flex;background:var(--c);border:1px solid var(--line);border-radius:999px;padding:3px;position:relative}
+.seg button{height:30px;padding:0 14px;border-radius:999px;font-weight:700;color:var(--t2);position:relative;z-index:1;transition:color .25s}.seg button.on{color:#04170c}
+.seg .pill{position:absolute;top:3px;bottom:3px;border-radius:999px;background:var(--rb);transition:left .35s cubic-bezier(.3,.9,.3,1),width .35s cubic-bezier(.3,.9,.3,1)}
+select.inp,.sr{width:auto;padding:8px 14px;font-size:13px;border-radius:999px}select.inp option{background:#15161c}.sr{width:150px}
+.btn{height:36px;padding:0 14px;border-radius:999px;background:var(--c);border:1px solid var(--line);font-weight:700;font-size:13px;transition:background .2s}.btn:hover{background:var(--c2)}
+.rf{width:36px;padding:0;display:grid;place-items:center;position:relative}.rf svg{position:absolute;inset:0;transform:rotate(-90deg)}.rf circle{fill:none;stroke-width:2}
+.alerts{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.al{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:16px;background:rgba(255,107,122,.10);border:1px solid rgba(255,107,122,.28);font-size:13px;animation:up .5s both}.al.w{background:rgba(255,200,87,.09);border-color:rgba(255,200,87,.28)}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-bottom:14px}
+.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+@media(max-width:980px){.s3,.s4,.s5,.s6,.s7,.s8{grid-column:span 6}}
+@media(max-width:620px){.s3,.s4,.s5,.s6,.s7,.s8{grid-column:span 12}.sr{width:100%}}
+.big{font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1.05}.lab{font-size:12px;color:var(--t2);margin-top:4px}
+.g{color:var(--mint)}.o{color:var(--amb)}.p{color:var(--pink)}.b{color:var(--sky)}.rd{color:var(--red)}.v{color:var(--vio)}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.mini div{background:var(--c);border-radius:14px;padding:9px 11px}.mini b{display:block;font-size:15px;font-weight:700}.mini span{font-size:11px;color:var(--t2)}
+.spark{position:absolute;left:0;right:0;bottom:0;height:56px;opacity:.9}
+.up{animation:up .6s both}@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.lb{display:flex;flex-direction:column;gap:9px}
+.lr{display:grid;grid-template-columns:22px 92px 1fr auto;gap:10px;align-items:center;cursor:pointer;padding:4px 6px;border-radius:12px;transition:background .2s}.lr:hover{background:var(--c2)}
+.lr .rk{color:var(--t3);font-weight:800;font-size:12px}.lr .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.tr{height:10px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden}.tr i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--acc),#9ff5c4);transition:width 1s cubic-bezier(.2,.9,.2,1)}
+.lr:first-child .tr i{background:linear-gradient(90deg,var(--sky),#b5dcff)}
+.lr small{color:var(--t2);font-size:12px;text-align:right;min-width:92px}
+.hrs{display:flex;align-items:flex-end;gap:4px;height:150px}.hrs div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:5px}
+.hrs i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--vio),rgba(108,184,255,.3));height:0;transition:height .9s cubic-bezier(.2,.9,.2,1)}.hrs div.pk i{background:linear-gradient(180deg,var(--pink),rgba(255,200,87,.4))}
+.hrs span{font-size:10px;color:var(--t3)}
+.dn{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.dn svg{width:128px;height:128px;transform:rotate(-90deg);flex-shrink:0}.dn circle{fill:none;stroke-width:12;transition:stroke-dasharray 1s cubic-bezier(.2,.9,.2,1)}
+.lg{display:flex;flex-direction:column;gap:6px;font-size:12px;flex:1;min-width:120px}.lg div{display:flex;justify-content:space-between;gap:8px}.lg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px}
+.ringw{position:relative;width:120px;height:120px;margin:0 auto}.ringw svg{transform:rotate(-90deg);width:100%;height:100%}.ringw circle{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dasharray 1.1s cubic-bezier(.2,.9,.2,1)}.ringw b{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:800}
+.live{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
+.lv{border-radius:14px;padding:10px 12px;background:var(--c);font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;border-left:3px solid var(--sky)}.lv.late{border-color:var(--red);animation:bl 2s infinite}.lv.as{border-color:var(--vio)}
+@keyframes bl{50%{background:rgba(255,107,122,.12)}}
+.lv span{color:var(--t2);font-size:12px;display:block}.lv em{font-style:normal;font-weight:800}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:900px}
+th{text-align:left;font-size:11px;color:var(--t2);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none;text-transform:uppercase;letter-spacing:.05em}
+td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap}
+tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var(--c2)}td.r,th.r{text-align:right}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.on-duty{background:var(--mint)}.on-break{background:var(--amb)}.off-duty{background:var(--t3)}
+.sub{display:block;font-size:12px;color:var(--t2)}.empty{text-align:center;color:var(--t2);padding:26px}
+#dr-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;z-index:100}#dr-bd.on{opacity:1;pointer-events:auto}
+#dr{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:rgba(16,17,23,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-left:1px solid var(--line);z-index:110;transform:translateX(105%);transition:transform .38s cubic-bezier(.3,.9,.3,1);overflow-y:auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}#dr.on{transform:none}
+.dh{display:flex;justify-content:space-between;gap:10px;margin-bottom:14px}.dh h2{font-size:22px}.dh p{color:var(--t2)}
+.x{width:34px;height:34px;border-radius:50%;background:var(--c2);flex-shrink:0}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.g3 div{background:var(--c);border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}.g3 b{display:block;font-size:17px;font-weight:800}.g3 span{font-size:11px;color:var(--t2)}
+.acts{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.acts .btn{flex:1;white-space:nowrap}
+.oc{border-radius:16px;padding:12px 14px;margin-bottom:8px;background:var(--c);border:1px solid var(--line)}.oc h4{font-size:14px}.oc p{font-size:12px;color:var(--t2);margin-top:2px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--c2);margin:6px 6px 0 0}
+.st{width:100%;height:34px;border-radius:12px;margin-top:10px;font-weight:700;background:rgba(61,220,132,.15);color:var(--acc)}.st.ok{background:rgba(52,224,161,.14);color:var(--mint)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,150%);background:#23242c;border:1px solid var(--line);padding:10px 18px;border-radius:20px;font-weight:700;z-index:200;transition:transform .4s cubic-bezier(.3,1.4,.5,1)}.toast.show{transform:translate(-50%,0)}
+.bento>.c::before{content:'';position:absolute;left:20px;right:20px;top:0;height:3px;border-radius:0 0 4px 4px;background:var(--a,transparent);opacity:.9}
+#hero>.c:nth-child(1){--a:linear-gradient(90deg,#3ddc84,#9ff5c4)}#hero>.c:nth-child(2){--a:linear-gradient(90deg,#ffc857,#ff5fa2)}#hero>.c:nth-child(3){--a:linear-gradient(90deg,#5db4f5,#a78bfa)}
+.bento:not(#hero)>.c:nth-child(1){--a:linear-gradient(90deg,#a78bfa,#ff5fa2)}.bento:not(#hero)>.c:nth-child(2){--a:linear-gradient(90deg,#5db4f5,#3ddc84)}.bento:not(#hero)>.c:nth-child(3){--a:linear-gradient(90deg,#ffc857,#3ddc84)}.bento:not(#hero)>.c:nth-child(4){--a:linear-gradient(90deg,#ff5fa2,#ffc857)}
+.lr:nth-child(1) .tr i{background:linear-gradient(90deg,#ffc857,#ff9ec4)}.lr:nth-child(2) .tr i{background:linear-gradient(90deg,#3ddc84,#9ff5c4)}.lr:nth-child(3) .tr i{background:linear-gradient(90deg,#a78bfa,#d4c4ff)}.lr:nth-child(4) .tr i{background:linear-gradient(90deg,#ff5fa2,#ffb0d0)}.lr:nth-child(5) .tr i{background:linear-gradient(90deg,#5db4f5,#b5dcff)}.lr:nth-child(6) .tr i{background:linear-gradient(90deg,#2dd4bf,#99f6e4)}.lr:nth-child(7) .tr i{background:linear-gradient(90deg,#ffc857,#fde7a8)}.lr:nth-child(8) .tr i{background:linear-gradient(90deg,#a78bfa,#5db4f5)}
+.tag:nth-of-type(4n+1){background:rgba(61,220,132,.16)}.tag:nth-of-type(4n+2){background:rgba(93,180,245,.16)}.tag:nth-of-type(4n+3){background:rgba(167,139,250,.18)}.tag:nth-of-type(4n){background:rgba(255,95,162,.16)}
+.btn:hover{border-color:rgba(167,139,250,.5)}th:nth-child(4n+1){color:#9ff5c4}th:nth-child(4n+2){color:#b5dcff}th:nth-child(4n+3){color:#d4c4ff}th:nth-child(4n){color:#ffb0d0}
+.pbtn{height:28px;padding:0 10px;font-size:12px}.fr td{cursor:pointer}.sb td{padding:7px 10px;font-size:12px;color:var(--t2);background:rgba(255,255,255,.025);border-bottom:1px solid rgba(255,255,255,.04);cursor:default}.sb td:first-child{padding-left:26px;border-left:3px solid var(--amb);white-space:normal;min-width:260px}.chev{display:inline-block;width:14px;color:var(--t3);transition:transform .2s}.chev.o{transform:rotate(90deg)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+#fmap{height:480px;border-radius:18px;overflow:hidden;z-index:0}
+.fp{position:relative;width:36px;height:36px;border-radius:50%;background:#3ddc84;border:3px solid #fff;display:grid;place-items:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.fp.first{background:#ffc857}.fp.stale{background:#6f6c68}.fp.idle:not(.stale){background:#6cb8ff}
+.fp.warn{background:#ff9f43}
+.fp.idle.warn:not(.stale){background:#ff9f43}
+.fp.stale{opacity:.75}
+.fp b{position:absolute;top:38px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,11,16,.88);color:#fff;font-size:11px;padding:2px 7px;border-radius:8px}
+.fd{width:28px;height:28px;border-radius:50%;background:#ff5fa2;border:3px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.mr{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--c);margin-top:8px;cursor:pointer;border-left:3px solid var(--sky)}
+.mr:first-child{border-color:var(--amb)}.mr .pos{width:26px;height:26px;border-radius:50%;background:var(--c2);display:grid;place-items:center;font-weight:800;font-size:12px}
+.mr small{display:block;color:var(--t2);font-size:12px}
+.fp.lt b{top:auto;bottom:38px}
+.ea{border-radius:16px;background:rgba(255,107,122,.10);border:1px solid rgba(255,107,122,.28);font-size:13px;animation:up .5s both}
+.ea summary{cursor:pointer;padding:10px 14px;list-style:none;display:flex;align-items:center;gap:6px}
+.ea summary::-webkit-details-marker{display:none}
+.ea summary::after{content:'›';margin-left:auto;color:var(--t3);font-size:18px;transition:transform .2s}
+.ea[open] summary::after{transform:rotate(90deg)}
+.ea summary span{color:var(--t2)}
+.eb{max-height:260px;overflow-y:auto;padding:0 14px 10px}
+.eg{border-top:1px solid rgba(255,255,255,.07);padding:8px 0}
+.en{font-weight:800;margin-bottom:4px}.en i{font-style:normal;background:rgba(255,107,122,.25);color:var(--red);border-radius:8px;padding:1px 8px;font-size:11px;margin-left:6px}
+.er{display:grid;grid-template-columns:64px 1fr auto;gap:8px;padding:3px 0;color:var(--t2);font-size:12px}
+.er b{color:var(--red)}.er em{font-style:normal;color:var(--t3)}
 </style>
 </head>
 <body>
-<div class="toast" id="toast"></div>
-<div class="banner" id="banner" onclick="this.classList.remove('show');tab(0)"></div>
-<div id="slip"></div>
-<div id="bd" onclick="closeSheet()"></div>
-<div id="sheet"><div class="grab" id="grab"></div><div id="sb"></div></div>
-
-<div id="splash">
-  <div class="logo">OVEN <span>X</span></div>
-  <div class="tag">Rider app for delivery partners</div>
-  <div class="badge">🛵 Delivery Partner Portal</div>
-  <label class="field"><small>Your name</small><input class="inp" id="rn" placeholder="Muhammad Ali" autocomplete="name"></label>
-  <label class="field"><small>Phone number</small><input class="inp" id="rp" type="tel" inputmode="tel" placeholder="03xx-xxxxxxx" autocomplete="tel"></label>
-  <label class="field"><small>Branch</small><select class="inp" id="rb"><option value="MULTAN">Multan</option><option value="BWP">Bahawalpur</option></select></label>
-  <button class="cta" onclick="riderLogin()">Start shift</button>
-  <div class="err" id="serr"></div>
-</div>
+<div id="gate"><div class="c"><div class="logo">OVEN <span>X</span> Fleet</div><p>Admin access only. Enter your PIN.</p>
+<input class="inp" id="pin" type="password" inputmode="numeric" placeholder="Admin PIN" aria-label="Admin PIN"><button class="cta" onclick="unlock()">Open dashboard</button><div id="err"></div></div></div>
 
 <div id="app">
-  <div class="nav" id="nav"><button class="exit" onclick="riderLogout()">Exit</button><div class="nav-t" id="nav-t">Orders</div><button class="chip" id="chip" onclick="toggleDuty()"><i></i><span id="chip-t">On duty</span></button></div>
-  <main>
-    <section class="view on" id="v0">
-      <div class="lh"><h1 class="lt">Orders</h1><button class="rf" onclick="loadOrders();showToast('Refreshed','info')">↻ Refresh</button></div>
-      <div id="alert-setup" class="alert" style="display:none"><div><b>Turn on order alerts</b>Sound and vibration, even when minimized</div><button onclick="enableAlerts()">Enable</button></div>
-      <div class="stats">
-        <div class="stat"><b class="num" id="stat-assigned" style="color:var(--vio)">0</b><span>Assigned</span></div>
-        <div class="stat"><b class="num" id="stat-completed" style="color:var(--green)">0</b><span>Done today</span></div>
-        <div class="stat"><b class="num" id="stat-earnings" style="color:var(--orange)">0</b><span>Delivery fees</span></div>
-      </div>
-      <div id="kpi-quick"></div>
-      <div id="orders-list"></div>
-    </section>
-    <section class="view" id="v1"><div class="lh"><h1 class="lt">History</h1><button class="rf" onclick="loadOrders();showToast('Refreshed','info')">↻ Refresh</button></div><div id="completed-list"></div></section>
-    <section class="view" id="v3">
-      <h1 class="lt">Performance</h1>
-      <div class="seg"><button id="kp-today" class="on" onclick="setKpiPeriod('today')">Today</button><button id="kp-week" onclick="setKpiPeriod('week')">7 days</button><button id="kp-month" onclick="setKpiPeriod('month')">This month</button></div>
-      <div id="kpi-summary"></div>
-      <div class="seg mini"><button id="ct-speed" class="on" onclick="switchChart('speed')">Speed</button><button id="ct-daily" onclick="switchChart('daily')">Daily</button><button id="ct-earn" onclick="switchChart('earn')">Earnings</button></div>
-      <div id="view-speed" class="c2" style="--a:linear-gradient(90deg,#3ddc84,#6cb8ff)"><h3>⏱ Delivery time distribution</h3><div id="ch-speed"></div></div>
-      <div id="view-daily" class="c2" style="display:none;--a:linear-gradient(90deg,#a78bfa,#ff5fa2)"><h3>📈 Deliveries per day</h3><div id="ch-daily"></div></div>
-      <div id="view-earn" class="c2" style="display:none;--a:linear-gradient(90deg,#ffc857,#3ddc84)"><h3>💰 Earnings per day</h3><div id="ch-earn"></div></div>
-      <div class="c2" style="--a:linear-gradient(90deg,#ffc857,#ff5fa2)"><h3>🏆 Rider leaderboard</h3><div id="kpi-leaderboard"></div></div>
-    </section>
-    <section class="view" id="v2">
-      <h1 class="lt">Shift</h1>
-      <div class="grp"><div class="gr"><span>Rider</span><b id="me-n"></b></div><div class="gr"><span>Phone</span><b id="me-p"></b></div><div class="gr"><span>Branch</span><b id="me-b"></b></div></div>
-      <div class="sh">Status</div>
-      <div class="seg"><button id="sg-on" onclick="setDuty('on-duty')">On duty</button><button id="sg-br" onclick="setDuty('on-break')">On break</button></div>
-      <div class="sh">Alerts</div>
-      <div class="grp"><div class="gr"><span>Order notifications</span><b id="me-al"></b></div></div>
-      <button class="dng" onclick="riderLogout()">End shift</button>
-    </section>
-  </main>
-  <nav class="tabbar">
-    <button class="tab on" data-t="0" onclick="tab(0)"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.5 12a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8L3 7zM8 7a4 4 0 0 1 8 0"/></svg>Orders<b id="tb-n"></b></button>
-    <button class="tab" data-t="1" onclick="tab(1)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
-    <button class="tab" data-t="3" onclick="tab(3)"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>KPI</button>
-    <button class="tab" data-t="2" onclick="tab(2)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Shift</button>
-  </nav>
+ <div class="top">
+  <h1 class="logo">OVEN <span>X</span> Fleet<small><i class="pulse"></i><span id="upd">Loading…</span></small></h1>
+  <div class="seg" id="per"><i class="pill"></i><button data-p="today" class="on">Today</button><button data-p="week">7 days</button><button data-p="month">Month</button></div>
+  <select class="inp" id="br" aria-label="Branch"><option value="">All branches</option><option value="MULTAN">Multan</option><option value="BWP">Bahawalpur</option></select>
+  <input class="inp sr" id="q" placeholder="Search rider" aria-label="Search rider">
+  <button class="btn rf" onclick="load(true)" aria-label="Refresh"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,.1)"/><circle id="cd" cx="18" cy="18" r="16" stroke="#3ddc84" stroke-dasharray="0 100.5" pathLength="100.5"/></svg>↻</button>
+  <button class="btn" onclick="exportCsv()">CSV</button><button class="btn" onclick="lock()">Lock</button>
+ </div>
+ <div class="alerts" id="alerts"></div>
+ <div class="bento" id="money"></div>
+ <div class="bento" id="hero"></div>
+ <div class="bento">
+  <div class="c s7"><h2>Top riders <i>deliveries · fees · tap for details</i></h2><div class="lb" id="lb"></div></div>
+  <div class="c s5"><h2>Live right now <i id="lc"></i></h2><div class="live" id="live"></div></div>
+  <div class="c s7"><h2>Peak hours <i>when orders get delivered</i></h2><div class="hrs" id="hrs"></div></div>
+  <div class="c s5"><h2>Payment mix <i>by orders</i></h2><div class="dn" id="dn"></div></div>
+ </div>
+ <div class="c" style="margin-bottom:14px"><h2>Live map <i id="mc">0 on the road</i></h2>
+ <div class="alerts" id="mapAlert" style="margin-bottom:10px"></div>
+ <div id="fmap"></div>
+ <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pbtn" onclick="fitMap()">Fit all riders</button></div>
+ <div id="mapList"></div></div>
+<div class="c"><h2>All riders <i>tap a row for full details</i></h2><div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div></div>
+ <div class="c" style="margin-top:14px"><h2>Delivery fees &amp; cash given from till <i id="plc">tap a rider to show / hide the bills paid from till</i></h2><div class="tw"><table style="min-width:640px"><thead><tr id="fhead"></tr></thead><tbody id="fbody"></tbody></table></div></div>
 </div>
+<div id="dr-bd" onclick="closeDr()"></div><aside id="dr" aria-label="Rider details"></aside><div class="toast" id="toast"></div>
 
 <script>
 const sb=supabase.createClient("https://frjcefugnvitexxcated.supabase.co","sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ");
+const ADMIN_PIN='9999'; // CHANGE THIS
+const CASH_ALERT=20000, LATE_MIN=45, REFRESH=30, EARLY_M=300;
+const HIST='kitchen_orders';              // live orders
+const ARCHIVE='kitchen_orders_history';   // archived orders (older days live here)
+const PK=5*36e5;                          // Pakistan time = UTC+5 (no DST); all periods are computed in PKT
+const TZ='Asia/Karachi';
 const $=id=>document.getElementById(id);
-const PM={cash:['💵 Cash','var(--green)','rgba(61,220,132,.15)'],jazzcash:['📱 JazzCash/EasyPaisa','var(--orange)','rgba(255,200,87,.15)'],card:['💳 Card','var(--blue)','rgba(108,184,255,.15)'],bank:['🏦 Bank transfer','var(--vio)','rgba(167,139,250,.15)'],credited:['📋 Credited','var(--red)','rgba(255,107,122,.15)']};
-const VAPID_PUBLIC_KEY='BOdmHMXuxddCoLIVccuCtVPZIH27zq-tubxLhdMDRu_VonBlHUcZeUSc-IvDoa6tM9EL0mrLYOjWEqY9WBgcNoQ';
-const MANAGER_PIN='1234';
-let riderId=null,riderName='',riderPhone='',riderBranch='MULTAN',dutyStatus='on-duty',_poll=null,_lastDone=[],_audio=null,_seen=new Set(),_seeded=false,_cur=0;
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=n=>'Rs '+Number(n||0).toLocaleString();
-const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true}):'—';
-const NONCASH=['jazzcash','card','bank','credited'];
-function distM(a,b,c,d){const x=Math.PI/180,R=6371000,dl=(c-a)*x,dg=(d-b)*x,h=Math.sin(dl/2)**2+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
-function normPhone(p){let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d}
-function bizDayStart(){const d=new Date();if(d.getHours()<6)d.setDate(d.getDate()-1);d.setHours(6,0,0,0);return d}
-const IC={call:'<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
-wa:'<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/></svg>',
-map:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'};
+const fmt=n=>'Rs '+Math.round(Number(n||0)).toLocaleString();
+const tm=d=>d?new Date(d).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:TZ}):'—';
+const dt=d=>d?new Date(d).toLocaleDateString('en-PK',{day:'numeric',month:'short',timeZone:TZ}):'—';
+const NONCASH=['jazzcash','card','bank','staff','credited'];
+const PMN={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank',staff:'Staff',credited:'Credited'};
+const PMC={cash:'#34e0a1',jazzcash:'#6cb8ff',card:'#a78bfa',bank:'#ffc857',staff:'#ff9ec4',credited:'#ff6b7a'};
+const CEN={MULTAN:[30.2197,71.4711],BWP:[29.3837,71.6709]};
+const normB=b=>{b=String(b||'').trim().toUpperCase();return b.startsWith('BAH')||b.startsWith('BWP')?'BWP':b.startsWith('MUL')?'MULTAN':b};
+const normPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('92'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);return d};
 
-/* ── animation helpers ── */
-const prevV={};
-function cu(id,to,f){const el=$(id),from=prevV[id]??0;prevV[id]=to;if(from===to){el.textContent=f(to);return}const t0=performance.now();(function s(t){const p=Math.min(1,(t-t0)/800),e=1-Math.pow(1-p,3);el.textContent=f(from+(to-from)*e);if(p<1)requestAnimationFrame(s)})(t0)}
-const FN=v=>Math.round(v).toLocaleString();
-function grow(root){root=root||document;
- root.querySelectorAll('[data-w]').forEach(e=>e.style.width='0');root.querySelectorAll('[data-h]').forEach(e=>e.style.height='0');
- root.querySelectorAll('.arc').forEach(a=>a.setAttribute('stroke-dasharray','0 999'));root.querySelectorAll('.ln').forEach(a=>a.style.strokeDashoffset=1);
- requestAnimationFrame(()=>requestAnimationFrame(()=>{root.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w);root.querySelectorAll('[data-h]').forEach(e=>e.style.height=e.dataset.h);
- root.querySelectorAll('.arc').forEach(a=>a.setAttribute('stroke-dasharray',a.dataset.d));root.querySelectorAll('.ln').forEach(a=>a.style.strokeDashoffset=0)}))}
+/* Business day = 6:00 AM → 6:00 AM Pakistan time. Today / 7 days / Month ALL start on a 6 AM boundary,
+   so an order delivered at 1 AM always counts toward the same business day in every view. */
+function bizDayStart(){const n=new Date(Date.now()+PK);if(n.getUTCHours()<6)n.setUTCDate(n.getUTCDate()-1);n.setUTCHours(6,0,0,0);return new Date(n.getTime()-PK)}
+function range(p){const d=bizDayStart();
+ if(p==='today')return d;
+ if(p==='week')return new Date(d.getTime()-6*864e5);            // today + previous 6 business days
+ const m=new Date(d.getTime()+PK);m.setUTCDate(1);m.setUTCHours(6,0,0,0);return new Date(m.getTime()-PK)} // 1st of month, 6 AM
 
-/* ── navigation ── */
-function tab(i){_cur=i;['v0','v1','v2','v3'].forEach(id=>$(id).classList.toggle('on',id==='v'+i));
-document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',Number(t.dataset.t)===i));
-$('nav-t').textContent=['Orders','History','Shift','KPI'][i];window.scrollTo(0,0);$('nav').classList.remove('sc');if(i===3)loadKpi()}
-addEventListener('scroll',()=>$('nav').classList.toggle('sc',scrollY>34),{passive:true});
+function minsOf(o){const c=o.completed_at&&new Date(o.completed_at).getTime();const s=o.delivery_started_at?new Date(o.delivery_started_at).getTime():(o.created_at?new Date(o.created_at).getTime():null);return c&&s?Math.max(0,Math.round((c-s)/60000)):null}
+function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
+let period='today',branch='',query='',riders=[],active=[],hours=new Array(24).fill(0),pay={},sortKey='count',sortDir=-1,timer=null,tick=null,left=REFRESH,anim=true,prev={},openKey=null,fails=0,seq=0,warn='',drawList=[],feeOpen={};
 
-/* ── sheets ── */
-let _ask=null,_opts=[],_dy=0;
-function openSheet(html){$('sb').innerHTML=html;$('bd').classList.add('on');$('sheet').style.transform='';$('sheet').classList.add('on')}
-function closeSheet(){clearInterval(_rtTimer);$('bd').classList.remove('on');$('sheet').classList.remove('on');$('sheet').style.transform='';if(_ask){const r=_ask;_ask=null;r(null)}}
-(function(){const g=$('grab'),s=$('sheet');let y0=0,drag=false,v=0,ly=0,lt=0;
-g.addEventListener('pointerdown',e=>{g.setPointerCapture(e.pointerId);drag=true;y0=e.clientY;ly=y0;lt=performance.now();s.classList.add('drag')});
-g.addEventListener('pointermove',e=>{if(!drag)return;const n=performance.now();_dy=Math.max(0,e.clientY-y0);v=(e.clientY-ly)/Math.max(1,n-lt);ly=e.clientY;lt=n;s.style.transform=`translate(-50%,${_dy}px)`});
-const end=()=>{if(!drag)return;drag=false;s.classList.remove('drag');if(_dy+v*250>140)closeSheet();else s.style.transform=''};
-g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)})();
-function ask({title,sub,opts=[],input,ph,mode}){return new Promise(res=>{_opts=opts;_ask=res;
-openSheet(`<div class="sheet-t">${esc(title)}</div>${sub?`<div class="sheet-s">${esc(sub)}</div>`:'<div style="height:12px"></div>'}
-${input?`<input class="inp" id="sh-in" type="${input}" inputmode="${mode||'text'}" placeholder="${esc(ph||'')}" style="margin-bottom:12px">`:''}
-<div>${opts.filter(o=>o.fill).map(o=>`<button class="opt chip2" onclick="pick(${opts.indexOf(o)})">${esc(o.label)}</button>`).join('')}</div>
-${opts.map((o,i)=>o.fill?'':`<button class="opt ${o.cls||''}" onclick="pick(${i})">${o.label}${o.sub?`<small>${esc(o.sub)}</small>`:''}</button>`).join('')}
-<button class="opt x" onclick="closeSheet()">Cancel</button>`);
-if(input)setTimeout(()=>$('sh-in')&&$('sh-in').focus(),350)})}
-function pick(i){const o=_opts[i];if(o.fill){const e=$('sh-in');e.value=o.val;e.focus();return}const r=_ask;_ask=null;const v=$('sh-in')?$('sh-in').value.trim():o.val;closeSheet();if(r)r(v)}
+/* gate */
+function unlock(){if(fails>=5){$('err').textContent='Too many attempts. Reload the page.';return}
+ if($('pin').value===ADMIN_PIN){try{sessionStorage.setItem('ovenx_admin','1')}catch(e){}start()}else{fails++;$('err').textContent='Wrong PIN';setTimeout(()=>$('err').textContent='',2500)}}
+$('pin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+function start(){$('gate').style.display='none';$('app').classList.add('on');movePill();load();timer=setInterval(()=>{left--;$('cd').setAttribute('stroke-dasharray',((REFRESH-left)/REFRESH*100.5)+' 100.5');if(left<=0)load()},1000);tick=setInterval(renderLive,30000)}
+function lock(){try{sessionStorage.removeItem('ovenx_admin')}catch(e){}location.reload()}
+try{if(sessionStorage.getItem('ovenx_admin')==='1')start()}catch(e){}
+function movePill(){const b=$('per').querySelector('.on'),p=$('per').querySelector('.pill');p.style.left=b.offsetLeft+'px';p.style.width=b.offsetWidth+'px'}
+$('per').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...$('per').querySelectorAll('button')].forEach(x=>x.classList.toggle('on',x===b));movePill();load(true)});
+$('br').addEventListener('change',e=>{branch=e.target.value;fFit=false;if(fmap)fmap.setView(CEN[branch]||CEN.MULTAN,12);load(true)});
+$('q').addEventListener('input',e=>{query=e.target.value.toLowerCase();renderTable()});
 
-/* ── toast / alerts ── */
-let _tt;function showToast(m,t='success'){const e=$('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(_tt);_tt=setTimeout(()=>e.classList.remove('show'),2800)}
-function unlockAudio(){try{_audio=_audio||new(window.AudioContext||window.webkitAudioContext)();if(_audio.state==='suspended')_audio.resume()}catch(e){}}
-document.addEventListener('click',unlockAudio);document.addEventListener('touchstart',unlockAudio,{passive:true});
-function ringAlarm(){unlockAudio();if(!_audio)return;const t0=_audio.currentTime;[0,.35,.7].forEach(t=>{const o=_audio.createOscillator(),g=_audio.createGain();o.type='square';o.frequency.value=880;g.gain.setValueAtTime(.001,t0+t);g.gain.exponentialRampToValueAtTime(.25,t0+t+.02);g.gain.exponentialRampToValueAtTime(.001,t0+t+.28);o.connect(g);g.connect(_audio.destination);o.start(t0+t);o.stop(t0+t+.3)})}
-async function showLocalNotification(o){if(!('Notification' in window)||Notification.permission!=='granted')return;
-const opts={body:o&&o.location?'📍 '+o.location:'A new order was assigned to you',icon:'icon-192.png',badge:'icon-192.png',tag:'new-order',renotify:true,requireInteraction:true,vibrate:[400,150,400,150,800]};
-try{const reg=await navigator.serviceWorker.getRegistration();if(reg)reg.showNotification('🔔 New delivery assigned',opts);else new Notification('🔔 New delivery assigned',opts)}catch(e){}}
-function alertNewOrder(o){if(o&&o.id!=null){if(_seen.has(o.id))return;_seen.add(o.id)}ringAlarm();if(navigator.vibrate)navigator.vibrate([400,150,400,150,800]);
-const b=$('banner');b.innerHTML=`<b>New delivery assigned</b><span>${esc((o&&o.location)||'Tap to view')}</span>`;b.classList.add('show');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('show'),8000);
-if(document.hidden)showLocalNotification(o)}
-function detectNewOrders(l){if(!_seeded){l.forEach(o=>_seen.add(o.id));_seeded=true;return}l.filter(o=>o.status==='ASSIGNED'&&!_seen.has(o.id)).forEach(alertNewOrder)}
-function urlB64ToUint8Array(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))}
-async function subscribePush(){if(!('serviceWorker' in navigator)||!('PushManager' in window)||VAPID_PUBLIC_KEY.startsWith('PASTE'))return;
-const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
-if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC_KEY)});
-await sb.from('push_subscriptions').upsert([{rider_id:String(riderId),rider_name:riderName,branch:riderBranch,subscription:sub.toJSON(),updated_at:new Date().toISOString()}],{onConflict:'rider_id'})}
+/* data */
+async function fetchAll(make){
+ let all=[],from=0;
+ while(true){
+  const {data,error}=await make().range(from,from+999);
+  if(error)throw error;
+  all=all.concat(data);
+  if(data.length<1000||from>50000)break;
+  from+=1000;
+ }
+ return all;
+}
+async function load(a){
+ const my=++seq;                       // ignore stale responses if the user switches period quickly
+ left=REFRESH;if(a)anim=true;
+ try{
+  const s=range(period),iso=s.toISOString(),since=new Date(s.getTime()-2*864e5).toISOString();
+  const ordQ=t=>fetchAll(()=>sb.from(t).select('*').or(`completed_at.gte.${iso},cancelled_at.gte.${iso}`).order('created_at',{ascending:false}).order('id'));
+  let archErr=null;
+  const [attD,ordLive,ordArch,act]=await Promise.all([
+   fetchAll(()=>sb.from('rider_attendance').select('*').gte('punched_in',since).order('punched_in',{ascending:false}).order('id')),
+   ordQ(HIST),
+   ordQ(ARCHIVE).catch(e=>{archErr=e;console.warn('History table unavailable',e);return[]}),
+   sb.from('kitchen_orders').select('*').in('status',['ASSIGNED','DELIVERING']).not('assigned_rider','is',null).order('created_at',{ascending:true})]);
+  if(act.error)throw act.error;
 
-async function saveNativeFCMToken(token){
-  if(!NATIVE||!riderId||String(riderId).startsWith('local-')||!riderPhone)return;
-  if(!token)return;
+  // Merge live + archived orders; an order present in both tables is counted once (live copy wins).
+  const seen=new Map();ordArch.forEach(o=>seen.set(String(o.id),o));ordLive.forEach(o=>seen.set(String(o.id),o));
+  const ordD=[...seen.values()];
 
-  const response=await fetch(
-    'https://frjcefugnvitexxcated.supabase.co/functions/v1/ovenx-fcm/register',
-    {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'apikey':'sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ'
-      },
-      body:JSON.stringify({
-        rider_id:String(riderId),
-        phone:riderPhone,
-        fcm_token:token
-      })
-    }
-  );
-
-  const result=await response.json();
-
-  if(!response.ok||!result.success){
-    throw new Error(result.error||'FCM token registration failed');
+  // Orders can be assigned to a shift that started before the attendance window; load those shifts too,
+  // otherwise the same rider shows up as a second "Rider 1234" row and their deliveries get split.
+  const have=new Set(attD.map(x=>String(x.id)));
+  const miss=[...new Set([...ordD,...(act.data||[])].map(o=>o.assigned_rider).filter(v=>v!=null&&!have.has(String(v))).map(String))];
+  let extra=[];
+  for(let i=0;i<miss.length;i+=100){
+   const {data,error}=await sb.from('rider_attendance').select('*').in('id',miss.slice(i,i+100));
+   if(error){console.warn('Could not resolve riders',error);break}
+   extra=extra.concat(data||[]);
   }
-
-  _nativePushToken=token;
-  _nativePushReady=true;
-  refreshAlertBanner();
-  console.log('OvenX native FCM token registered');
+  if(my!==seq)return;
+  warn=archErr?' · ⚠ order history not loaded, older days may be incomplete':'';
+  build(attD.concat(extra),ordD,act.data||[],s);
+  $('upd').textContent='Updated '+tm(new Date())+' · '+dt(s)+' '+tm(s)+' → now'+warn;
+ }catch(e){if(my!==seq)return;console.error(e);$('upd').textContent='Load failed: '+e.message}
+}
+function build(att,ord,act,s){
+ const idKey={},R={};hours=new Array(24).fill(0);pay={};
+ const get=(k,seed)=>R[k]||(R[k]={key:k,name:seed.name||'Rider',phone:seed.phone||'',branch:normB(seed.branch),status:'off-duty',lastIn:null,lastOut:null,shifts:[],ms:0,orders:[],cancelled:[],active:[],count:0,fees:0,mins:0,valid:0,fast:0,ontime:0,late:0,cash:0,owed:0,cred:0,collected:0,settled:0,unsettled:0,kept:0,drawer:0,drawerOrders:[],early:[]});
+ att.forEach(a=>{const k=normPhone(a.phone)||('id'+a.id);idKey[String(a.id)]=k;const r=get(k,a);
+  if(!r.lastIn||new Date(a.punched_in)>new Date(r.lastIn)){r.lastIn=a.punched_in;r.lastOut=a.punched_out;r.status=a.status;r.name=a.name||r.name;r.branch=normB(a.branch)||r.branch}
+  const end=a.punched_out?new Date(a.punched_out):new Date();
+  if(end>=s){r.shifts.push(a);r.ms+=Math.max(0,end-Math.max(new Date(a.punched_in),s))}});
+ const keyOf=o=>idKey[String(o.assigned_rider)]||get('id'+o.assigned_rider,{name:'Rider '+String(o.assigned_rider).slice(-4)}).key;
+ ord.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];if(!r.branch)r.branch=normB(o.branch);
+  if(o.status==='COMPLETED'&&o.completed_at&&new Date(o.completed_at)>=s){
+   const m=minsOf(o);o.mins=m;r.orders.push(o);if(o.deliver_dist_m!=null&&o.deliver_dist_m>EARLY_M)r.early.push(o);r.count++;r.fees+=o.delivery_fee||0;
+   if(m!=null){r.mins+=m;r.valid++;if(m<=20)r.fast++;if(m<=40)r.ontime++;else r.late++}
+   const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0,pm=o.payment_method;
+   const dr=['card','bank','jazzcash','staff'].includes(pm)?fee:0;r.drawer+=dr;r.kept+=fee-dr;if(dr)r.drawerOrders.push(o);
+   if(!branch||r.branch===branch){hours[new Date(+new Date(o.completed_at)+PK).getUTCHours()]++;pay[pm||'cash']=(pay[pm||'cash']||0)+1}
+   if(pm==='credited')r.cred+=food+fee;else r.collected+=food+fee;
+   if(o.settled)r.settled++;else{r.unsettled++;if(NONCASH.includes(pm))r.owed+=fee;else r.cash+=food}
+  }else if(o.status==='CANCELLED'){const ct=o.cancelled_at||o.completed_at;if(ct&&new Date(ct)>=s)r.cancelled.push(o)}});
+ act.forEach(o=>{if(!o.assigned_rider)return;const r=R[keyOf(o)];if(!r.branch)r.branch=normB(o.branch);r.active.push(o)});
+ riders=Object.values(R).filter(r=>!branch||r.branch===branch).filter(r=>r.count||r.cancelled.length||r.active.length||r.ms>0);
+ active=riders.flatMap(r=>r.active.map(o=>({o,r})));
+ drawList=riders.flatMap(r=>r.drawerOrders.map(o=>({o,r}))).sort((a,b)=>new Date(b.o.completed_at)-new Date(a.o.completed_at));
+ renderAlerts();renderMoney();renderHero();renderLb();renderLive();renderHours();renderPay();renderTable();renderFees();renderMap();
+ anim=false;if(openKey)openDr(openKey,true);
 }
 
-async function initNativePush(){
-  if(!NATIVE||!Push)return;
+/* helpers */
+function cu(el,to,f){const id=el.dataset.id,from=anim?0:(prev[id]??to);prev[id]=to;if(from===to){el.textContent=f(to);return}
+ const t0=performance.now(),d=900;(function st(t){const p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);el.textContent=f(from+(to-from)*e);if(p<1)requestAnimationFrame(st)})(t0)}
+const F={n:v=>Math.round(v).toLocaleString(),rs:fmt,min:v=>Math.round(v)+' min',pct:v=>Math.round(v)+'%'};
+function ring(c,p,r,col){const L=2*Math.PI*r;return `<circle cx="${c}" cy="${c}" r="${r}" stroke="rgba(255,255,255,.08)"/><circle class="arc" cx="${c}" cy="${c}" r="${r}" stroke="${col}" data-d="${L*p/100} ${L}" stroke-dasharray="${anim?'0 '+L:L*p/100+' '+L}"/>`}
+function grow(){requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.arc').forEach(a=>a.setAttribute('stroke-dasharray',a.dataset.d));document.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w);document.querySelectorAll('[data-h]').forEach(e=>e.style.height=e.dataset.h)}))}
+const T=k=>riders.reduce((a,r)=>a+(r[k]||0),0);
 
-  try{
-    if(!_nativePushListenersReady){
-      await Push.addListener('registration',async result=>{
-        try{
-          await saveNativeFCMToken(result.value);
-        }catch(e){
-          console.error('FCM token save:',e);
-          showToast('Could not register push token','error');
-        }
-      });
+let earlyOpen=false;
+function renderAlerts(){
+ const a=[];
+ active.filter(x=>(Date.now()-new Date(x.o.created_at))/6e4>LATE_MIN).forEach(({o,r})=>a.push(['',`⏰ <b>${esc(r.name)}</b> has had an order for ${Math.floor((Date.now()-new Date(o.created_at))/6e4)} min → ${esc(o.location||'no address')}`]));
+ riders.filter(r=>r.cash>=CASH_ALERT).forEach(r=>a.push(['w',`💰 <b>${esc(r.name)}</b> is holding ${fmt(r.cash)} unsettled cash`]));
+ riders.filter(r=>r.cancelled.length>=3).forEach(r=>a.push(['w',`⚠️ <b>${esc(r.name)}</b> cancelled ${r.cancelled.length} orders`]));
 
-      await Push.addListener('registrationError',error=>{
-        console.error('FCM registration error:',error);
-        showToast('Push registration failed','error');
-      });
+ let h=a.slice(0,8).map(x=>`<div class="al ${x[0]}">${x[1]}</div>`).join('');
 
-      await Push.addListener('pushNotificationReceived',notification=>{
-        console.log('Native push received:',notification);
-        showToast(notification.title||'New delivery order','info');
-        loadOrders();
-      });
+ const early=riders.filter(r=>r.early.length).sort((x,y)=>y.early.length-x.early.length);
+ const n=early.reduce((s,r)=>s+r.early.length,0);
+ if(n){
+  h+=`<details class="ea" ${earlyOpen?'open':''} ontoggle="earlyOpen=this.open">
+   <summary>🚩 <b>${n}</b> deliveries marked far from the address <span>· ${early.length} rider${early.length===1?'':'s'}</span></summary>
+   <div class="eb">${early.map(r=>`<div class="eg"><div class="en">${esc(r.name)} <i>${r.early.length}</i></div>`+
+    r.early.slice().sort((x,y)=>new Date(y.completed_at)-new Date(x.completed_at)).map(o=>
+     `<div class="er"><b>${Math.round(o.deliver_dist_m)} m</b><span>${esc(o.location||'address')}</span><em>${tm(o.completed_at)}</em></div>`).join('')+`</div>`).join('')}</div>
+  </details>`;
+ }
+ $('alerts').innerHTML=h;
+}
+function renderHero(){
+ const n=T('count'), valid=T('valid'), on=riders.filter(r=>r.status==='on-duty').length, brk=riders.filter(r=>r.status==='on-break').length, ot=valid?T('ontime')/valid*100:0, avg=valid?T('mins')/valid:0;
+ const activeCount = active.length;
+ const mx=Math.max(1,...hours),pts=hours.map((h,i)=>`${i*(300/23)},${56-h/mx*46}`);
+ $('hero').innerHTML=`
+ <div class="c s4 up" style="min-height:190px"><h2>Deliveries <i>${period==='today'?'business day':period==='week'?'last 7 days':'this month'}</i></h2><div class="big num" style="display:flex; align-items:baseline; gap:8px;">
+  <span class="g" data-id="n" data-to="${n}" data-f="n">0</span>
+  <span class="rd" data-id="active-n" data-to="${activeCount}" data-f="n" style="font-size:24px; opacity:${activeCount > 0 ? 1 : 0};">0</span>
+</div><div class="lab">${n} completed ${activeCount > 0 ? `· <span class="rd">${activeCount} active</span>` : ''} · ${riders.filter(r=>r.status!=='off-duty').length} of ${riders.length} riders working</div>
+ <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#34e0a1" stop-opacity=".4"/><stop offset="1" stop-color="#34e0a1" stop-opacity="0"/></linearGradient></defs><path d="M0,56 L${pts.join(' L')} L300,56Z" fill="url(#sg)"/><path d="M${pts.join(' L')}" fill="none" stroke="#34e0a1" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
+ <div class="c s4 up" style="animation-delay:.08s"><h2>Cash with riders <i>unsettled</i></h2><div class="big o num" data-id="cash" data-to="${T('cash')}" data-f="rs">0</div><div class="lab">to hand over</div>
+ <div class="mini"><div><b class="g num">${fmt(T('owed'))}</b><span>Shop owes riders</span></div><div><b class="num">${fmt(T('cash')-T('owed'))}</b><span>Net to collect</span></div><div><b class="rd num">${fmt(T('cred'))}</b><span>Credited</span></div><div><b class="num">${T('unsettled')}</b><span>Awaiting hisab</span></div></div></div>
+ <div class="c s4 up" style="animation-delay:.16s"><h2>On-time <i>≤ 40 min</i></h2><div style="display:flex;gap:16px;align-items:center"><div class="ringw" style="margin:0;width:104px;height:104px"><svg viewBox="0 0 104 104">${ring(52,ot,44,ot>=80?'#34e0a1':ot>=60?'#ffc857':'#ff6b7a')}</svg><b class="num" style="font-size:22px" data-id="ot" data-to="${ot}" data-f="pct">0</b></div>
+ <div class="mini" style="margin:0;flex:1"><div><b class="num" data-id="avg" data-to="${avg}" data-f="min">0</b><span>Average delivery</span></div><div><b class="b num">${on} · ${brk}</b><span>On duty · break</span></div><div><b class="o num">${fmt(T('fees'))}</b><span>Fees earned</span></div><div><b class="rd num">${riders.reduce((a,r)=>a+r.cancelled.length,0)}</b><span>Cancelled</span></div></div></div></div>`;
+ document.querySelectorAll('[data-to]').forEach(el=>cu(el,+el.dataset.to,F[el.dataset.f]));grow();
+}
+function renderLb(){
+ const top=[...riders].sort((a,b)=>b.count-a.count).slice(0,8),mx=Math.max(1,...top.map(r=>r.count));
+ $('lb').innerHTML=top.length?top.map((r,i)=>`<div class="lr" tabindex="0" onclick="openDr('${esc(r.key)}')" onkeydown="if(event.key==='Enter')openDr('${esc(r.key)}')"><span class="rk">${i===0?'🏆':i+1}</span><span class="nm">${esc(r.name)}</span><div class="tr"><i data-w="${r.count/mx*100}%" style="${anim?'':'width:'+r.count/mx*100+'%'}"></i></div><small class="num"><b>${r.count}</b> · ${fmt(r.fees)}</small></div>`).join(''):'<div class="empty">No deliveries in this period.</div>';
+}
+function renderLive(){
+ $('lc').textContent=active.length+' active';
+ $('live').innerHTML=active.length?active.map(({o,r})=>{const m=Math.floor((Date.now()-new Date(o.created_at))/6e4);
+  return `<div class="lv ${m>LATE_MIN?'late':o.status==='ASSIGNED'?'as':''}"><div><b>${esc(r.name)}</b><span>${esc(o.location||'No address')}</span></div><div style="text-align:right"><em class="num ${m>LATE_MIN?'rd':''}">${m}m</em><span>${o.status==='DELIVERING'?'On the way':'Assigned'}</span></div></div>`}).join(''):'<div class="empty">No active deliveries 🎉</div>';
+}
+function renderHours(){
+ const order=[...Array(18).keys()].map(i=>(i+9)%24),mx=Math.max(1,...order.map(h=>hours[h])),pk=Math.max(...hours);
+ $('hrs').innerHTML=order.map(h=>`<div class="${hours[h]===pk&&pk>0?'pk':''}" title="${hours[h]} orders"><i data-h="${Math.max(3,hours[h]/mx*100)}%" style="${anim?'':'height:'+Math.max(3,hours[h]/mx*100)+'%'}"></i><span>${h%12||12}${h<12?'a':'p'}</span></div>`).join('');
+}
+function renderPay(){
+ const ks=Object.keys(pay),tot=ks.reduce((a,k)=>a+pay[k],0),r=50,L=2*Math.PI*r;let off=0;
+ const segs=ks.map(k=>{const l=pay[k]/tot*L,s=`<circle cx="64" cy="64" r="${r}" stroke="${PMC[k]||'#888'}" data-d="${Math.max(0,l-3)} ${L}" stroke-dasharray="${anim?'0 '+L:Math.max(0,l-3)+' '+L}" stroke-dashoffset="${-off}" class="arc"/>`;off+=l;return s}).join('');
+ $('dn').innerHTML=tot?`<svg viewBox="0 0 128 128"><circle cx="64" cy="64" r="${r}" stroke="rgba(255,255,255,.06)"/>${segs}</svg><div class="lg">${ks.sort((a,b)=>pay[b]-pay[a]).map(k=>`<div><span><i style="background:${PMC[k]||'#888'}"></i>${PMN[k]||k}</span><b class="num">${Math.round(pay[k]/tot*100)}%</b></div>`).join('')}</div>`:'<div class="empty" style="width:100%">No data yet.</div>';
+}
+const COLS=[['name','Rider'],['status','Status'],['ms','Hours',1],['count','Deliveries',1],['avg','Avg min',1],['ontimePct','On time',1],['fees','Fees',1],['cash','Cash to hand over',1],['owed','Shop owes',1],['cred','Credited',1],['cx','Cancelled',1],['early','Marked early',1]];
+function val(r,k){if(k==='avg')return r.valid?r.mins/r.valid:9999;if(k==='ontimePct')return r.valid?r.ontime/r.valid:-1;if(k==='cx')return r.cancelled.length;if(k==='early')return r.early.length;return r[k]}
+function renderTable(){
+ $('thead').innerHTML=COLS.map(c=>`<th class="${c[2]?'r':''}" onclick="sortBy('${c[0]}')">${c[1]}${sortKey===c[0]?(sortDir<0?' ↓':' ↑'):''}</th>`).join('');
+ const rows=riders.filter(r=>!query||(r.name+r.phone).toLowerCase().includes(query)).sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return (x>y?1:x<y?-1:0)*sortDir});
+ $('tbody').innerHTML=rows.length?rows.map(r=>{const avg=r.valid?Math.round(r.mins/r.valid):null,ot=r.valid?Math.round(r.ontime/r.valid*100):null;
+  return `<tr tabindex="0" onclick="openDr('${esc(r.key)}')" onkeydown="if(event.key==='Enter')openDr('${esc(r.key)}')">
+  <td><b>${esc(r.name)}</b><span class="sub">${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'}</span></td>
+  <td><i class="dot ${r.status}"></i>${r.status==='on-duty'?'On duty':r.status==='on-break'?'On break':'Off duty'}<span class="sub">In ${tm(r.lastIn)}${r.lastOut?' · Out '+tm(r.lastOut):''}</span></td>
+  <td class="r num">${(r.ms/36e5).toFixed(1)}</td><td class="r num"><b>${r.count}</b>${r.active.length?`<span class="sub b">${r.active.length} active</span>`:''}</td>
+  <td class="r num">${avg??'—'}</td><td class="r num ${ot==null?'':ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</td>
+  <td class="r num g">${fmt(r.fees)}</td><td class="r num o">${fmt(r.cash)}</td><td class="r num g">${fmt(r.owed)}</td>
+  <td class="r num ${r.cred?'rd':''}">${fmt(r.cred)}</td><td class="r num ${r.cancelled.length?'rd':''}">${r.cancelled.length}</td><td class="r num ${r.early.length?'rd':''}">${r.early.length?'🚩 '+r.early.length:0}</td></tr>`}).join(''):`<tr><td colspan="12" class="empty">No rider activity found.</td></tr>`;
+}
+function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'||k==='avg'?1:-1}renderTable()}
 
-      await Push.addListener('pushNotificationActionPerformed',action=>{
-        console.log('Native notification opened:',action);
-        $('slip').style.display='none';tab(0);
-        loadOrders();
-      });
-
-      _nativePushListenersReady=true;
-    }
-
-    const permission=await Push.checkPermissions();
-
-    let receive=permission.receive;
-
-    if(receive!=='granted'){
-      const requested=await Push.requestPermissions();
-      receive=requested.receive;
-    }
-
-    if(receive!=='granted'){
-      showToast('Allow notifications in Android settings','error');
-      refreshAlertBanner();
-      return;
-    }
-
-    try{
-      await Push.createChannel({
-        id:'orders',
-        name:'Order alerts',
-        description:'New OvenX delivery orders',
-        importance:5,
-        vibration:true,
-        sound:'default'
-      });
-    }catch(e){
-      console.warn('Notification channel:',e);
-    }
-
-    await Push.register();
-
-  }catch(e){
-    console.error('Native push initialization:',e);
-    showToast('Could not initialize Android alerts','error');
-  }
-
-  refreshAlertBanner();
+/* money strip + delivery fee table (same rule as the POS: fee on card/bank/JazzCash bills is paid out of the drawer; on cash bills the rider keeps it) */
+function renderMoney(){
+ const earned=T('collected')+T('cred'),fees=T('fees'),drw=T('drawer'),kept=T('kept'),who=riders.filter(r=>r.drawer>0).length;
+ const lbl=period==='today'?'business day':period==='week'?'last 7 days':'this month';
+ $('money').innerHTML=`
+ <div class="c s3 up"><h2>Earned <i>${lbl}</i></h2><div class="big g num">${fmt(earned)}</div><div class="lab">${T('count')} delivered · food + tax + fees${T('cred')?' · incl. '+fmt(T('cred'))+' credited':''}</div></div>
+ <div class="c s3 up" style="animation-delay:.05s"><h2>Delivery fees <i>given to riders</i></h2><div class="big b num">${fmt(fees)}</div><div class="lab">across ${riders.filter(r=>r.count).length} riders</div></div>
+ <div class="c s3 up" style="animation-delay:.1s"><h2>Cash given from till <i>fees on non-cash bills</i></h2><div class="big o num">${fmt(drw)}</div><div class="lab">${drawList.length} bill${drawList.length===1?'':'s'} · ${who} rider${who===1?'':'s'}</div></div>
+ <div class="c s3 up" style="animation-delay:.15s"><h2>Kept by riders <i>from cash bills</i></h2><div class="big num">${fmt(kept)}</div><div class="lab">already out of cash sales</div></div>`;
+}
+function feeIsOpen(r){return r.key in feeOpen?feeOpen[r.key]:period==='today'}
+function toggleFee(k){const r=riders.find(x=>x.key===k);if(!r)return;feeOpen[k]=!feeIsOpen(r);renderFees()}
+function renderFees(){
+ const H=[['Rider',0],['Deliveries',1],['Fees earned',1],['Kept from cash bills',1],['Paid from till',1],['',1]];
+ $('fhead').innerHTML=H.map(x=>`<th class="${x[1]?'r':''}" style="cursor:default">${x[0]}</th>`).join('');
+ const rows=riders.filter(r=>r.count).sort((a,b)=>b.drawer-a.drawer||b.fees-a.fees);
+ const sm=k=>rows.reduce((a,r)=>a+r[k],0);
+ $('fbody').innerHTML=rows.length?rows.map(r=>{
+  const open=feeIsOpen(r),has=r.drawerOrders.length>0,k=esc(r.key);
+  const bills=[...r.drawerOrders].sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at));
+  return `<tr class="fr" ${has?`onclick="toggleFee('${k}')"`:''}><td><span class="chev ${open&&has?'o':''}">${has?'›':''}</span><b>${esc(r.name)}</b><span class="sub" style="padding-left:14px">${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'}</span></td><td class="r num">${r.count}</td><td class="r num g">${fmt(r.fees)}</td><td class="r num">${fmt(r.kept)}</td><td class="r num o"><b>${fmt(r.drawer)}</b>${has?`<span class="sub">${bills.length} bill${bills.length===1?'':'s'}</span>`:''}</td><td class="r"><button class="btn pbtn" onclick="event.stopPropagation();openDr('${k}')">Details</button></td></tr>`
+  +(open?bills.map(o=>`<tr class="sb"><td colspan="4">${dt(o.completed_at)} ${tm(o.completed_at)} · ${esc(o.customer_name||'')} · ${esc(o.location||'No address')}</td><td class="r num o">${fmt(o.delivery_fee)}<span class="sub">${PMN[o.payment_method]||''}</span></td><td></td></tr>`).join(''):'')}).join('')
+  +`<tr style="cursor:default"><td><b>Total</b></td><td class="r num"><b>${sm('count')}</b></td><td class="r num g"><b>${fmt(sm('fees'))}</b></td><td class="r num"><b>${fmt(sm('kept'))}</b></td><td class="r num o"><b>${fmt(sm('drawer'))}</b><span class="sub">${drawList.length} bills</span></td><td></td></tr>`
+  :'<tr><td colspan="6" class="empty">No deliveries in this period.</td></tr>';
 }
 
-function refreshAlertBanner(){
-  const ok=NATIVE?_nativePushReady:
-    ('Notification' in window&&Notification.permission==='granted');
-
-  $('alert-setup').style.display=ok?'none':'flex';
-  $('me-al').textContent=ok?'On':'Off';
-  $('me-al').style.color=ok?'var(--green)':'var(--orange)';
+/* drawer */
+const items=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).map(esc).join('<br>');
+function openDr(key,keep){const r=riders.find(x=>x.key===key);if(!r){if(keep)closeDr();return}openKey=key;
+ const avg=r.valid?Math.round(r.mins/r.valid):null,ot=r.valid?Math.round(r.ontime/r.valid*100):null,orders=[...r.orders].sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at));
+ $('dr').innerHTML=`<div class="dh"><div><h2>${esc(r.name)}</h2><p>${esc(r.phone)} · ${r.branch==='BWP'?'Bahawalpur':'Multan'} · <i class="dot ${r.status}"></i>${r.status}</p></div><button class="x" onclick="closeDr()" aria-label="Close">✕</button></div>
+ <div class="g3"><div><b class="g">${r.count}</b><span>Deliveries</span></div><div><b>${avg??'—'} min</b><span>Avg time</span></div><div><b class="${ot>=80?'g':'rd'}">${ot==null?'—':ot+'%'}</b><span>On time</span></div>
+ <div><b class="g">${fmt(r.fees)}</b><span>Fees earned</span></div><div><b class="o">${fmt(r.cash)}</b><span>Cash to hand over</span></div><div><b class="g">${fmt(r.owed)}</b><span>Shop owes rider</span></div>
+ <div><b>${(r.ms/36e5).toFixed(1)} h</b><span>Hours worked</span></div><div><b class="rd">${fmt(r.cred)}</b><span>Credited</span></div><div><b class="rd">${r.cancelled.length}</b><span>Cancelled</span></div></div>
+ <div class="g3"><div><b class="o">${fmt(r.drawer)}</b><span>Paid from till</span></div><div><b>${fmt(r.kept)}</b><span>Kept from cash bills</span></div><div><b>${r.drawerOrders.length}</b><span>Bills paid from till</span></div></div>
+ <div class="acts"><button class="btn" onclick="wa('${esc(r.key)}')">📲 Send hisab (WhatsApp)</button>${r.unsettled?`<button class="btn" onclick="settleAll('${esc(r.key)}')">✅ Settle all (${r.unsettled})</button>`:''}</div>
+ ${r.drawerOrders.length?`<h2 class="sub" style="margin:0 0 8px">Cash given from till</h2>${r.drawerOrders.map(x=>`<div class="oc" style="padding:8px 12px;margin-bottom:6px"><h4>${fmt(x.delivery_fee)} · ${PMN[x.payment_method]||""} bill · ${dt(x.completed_at)} ${tm(x.completed_at)}</h4><p>${esc(x.location||"")}</p></div>`).join("")}<div style="height:10px"></div>`:""}
+ <h2 class="sub" style="margin:0 0 8px">Shifts</h2>${r.shifts.length?r.shifts.map(a=>`<div class="oc" style="padding:8px 12px;margin-bottom:6px"><h4>${dt(a.punched_in)} · In ${tm(a.punched_in)} → ${a.punched_out?'Out '+tm(a.punched_out):'still on'}</h4></div>`).join(''):'<div class="empty">No shifts.</div>'}
+ ${r.active.length?`<h2 class="sub" style="margin:12px 0 8px">Active orders</h2>${r.active.map(o=>`<div class="oc"><h4>📍 ${esc(o.location||'')}</h4><p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${esc(o.status)}</p></div>`).join('')}`:''}
+ <h2 class="sub" style="margin:12px 0 8px">Completed orders (${orders.length})</h2>
+ ${orders.map(o=>{const food=(o.subtotal||0)+(o.tax||0),non=NONCASH.includes(o.payment_method);return `<div class="oc"><h4>📍 ${esc(o.location||'No address')}</h4>
+ <p>${esc(o.customer_name||'')} ${esc(o.phone||'')} · ${esc(o.branch||'')}</p><p style="margin-top:6px">${items(o.items)}</p>
+ <span class="tag">${PMN[o.payment_method]||'—'}</span><span class="tag">⏱ ${o.mins??'—'} min</span>${o.deliver_dist_m!=null?`<span class="tag" style="${o.deliver_dist_m>EARLY_M?'background:rgba(255,107,122,.25);color:#ff6b7a':''}">${o.deliver_dist_m>EARLY_M?'🚩 ':'📍 '}${Math.round(o.deliver_dist_m)} m from address at delivery</span>`:''}<span class="tag">Received ${tm(o.created_at)}</span><span class="tag">Started ${tm(o.delivery_started_at)}</span><span class="tag">Delivered ${tm(o.completed_at)}</span>
+ <p style="margin-top:6px">Food+tax ${fmt(food)} · Fee ${fmt(o.delivery_fee)}${o.discount?' · Discount −'+fmt(o.discount):''} · <b>${o.payment_method==='credited'?'Not collected':non?'Shop pays rider '+fmt(o.delivery_fee):'Rider hands over '+fmt(food)}</b></p>
+ <select class="inp" style="width:100%;margin-top:8px;border-radius:12px" onchange="setMethod('${esc(o.id)}',this.value)">${Object.keys(PMN).map(k=>`<option value="${k}" ${o.payment_method===k?'selected':''}>Paid by: ${PMN[k]}</option>`).join('')}</select>
+<button class="st ${o.settled?'ok':''}" onclick="settle('${esc(o.id)}',${!o.settled})">${o.settled?'✅ Hisab done '+tm(o.settled_at)+' (tap to undo)':'Mark hisab done'}</button></div>`}).join('')||'<div class="empty">No completed orders.</div>'}
+ ${r.cancelled.length?`<h2 class="sub" style="margin:14px 0 8px">Cancelled by rider</h2>${r.cancelled.map(o=>`<div class="oc" style="border-color:rgba(255,107,122,.4)"><h4>📍 ${esc(o.location||'')}</h4><p class="rd">${esc(o.cancel_reason||'No reason')} · ${tm(o.cancelled_at)}</p></div>`).join('')}`:''}`;
+ $('dr-bd').classList.add('on');$('dr').classList.add('on')}
+function closeDr(){openKey=null;$('dr-bd').classList.remove('on');$('dr').classList.remove('on')}
+async function updOrders(ids,patch){
+  const a=await sb.from('kitchen_orders').update(patch).in('id',ids);
+  const b=await sb.from(ARCHIVE).update(patch).in('id',ids);
+  return a.error||b.error;
 }
-
-async function enableAlerts(){
-  unlockAudio();
-
-  if(NATIVE){
-    await initNativePush();
-    return;
-  }
-
-  if(!('Notification' in window)){
-    showToast('Notifications are not supported in this browser','error');
-    return;
-  }
-
-  const p=await Notification.requestPermission();
-
-  if(p==='granted'){
-    try{
-      await subscribePush();
-      showToast('Alerts enabled');
-    }catch(e){
-      console.error(e);
-    }
-  }else{
-    showToast('Notifications are blocked in browser settings','error');
-  }
-
-  refreshAlertBanner();
+async function settle(id,done){
+ const error=await updOrders([id],{settled:done,settled_at:done?new Date().toISOString():null});
+ if(error){toast('Error: '+error.message);return}toast(done?'Marked settled':'Settlement undone');load()}
+async function setMethod(id,m){
+ const error=await updOrders([id],{payment_method:m});
+ if(error){toast('Error: '+error.message);return}toast('Payment method changed to '+(PMN[m]||m));load()}
+async function settleAll(key){const r=riders.find(x=>x.key===key);if(!r)return;const ids=r.orders.filter(o=>!o.settled).map(o=>o.id);
+ if(!ids.length||!confirm(`Mark ${ids.length} orders as settled for ${r.name}?\nHe hands over ${fmt(r.cash)}, shop pays ${fmt(r.owed)}.`))return;
+ const error=await updOrders(ids,{settled:true,settled_at:new Date().toISOString()});
+ if(error){toast('Error: '+error.message);return}toast('All settled ✅');load()}
+function wa(key){const r=riders.find(x=>x.key===key);if(!r)return;const net=r.cash-r.owed;
+ const txt=`*OvenX Hisab — ${r.name}*\n${new Date().toLocaleDateString('en-PK',{timeZone:TZ})}\nDeliveries: ${r.count}\nDelivery fees: ${fmt(r.fees)}\nCash with you: ${fmt(r.cash)}\nShop owes you: ${fmt(r.owed)}\n*${net>=0?'Please hand over: '+fmt(net):'Shop will pay you: '+fmt(-net)}*`;
+ const p=normPhone(r.phone);window.open('https://wa.me/'+(p?'92'+p:'')+'?text='+encodeURIComponent(txt),'_blank')}
+function exportCsv(){
+ const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""').replace(/\n/g,' | ')+'"';
+ const line=a=>a.map(q).join(',');
+ const dtm=d=>d?new Date(d).toLocaleString('en-PK',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:TZ}):'';
+ const out=[];
+ out.push(line(['OvenX Fleet — '+period+' (from '+dtm(range(period))+') — '+(branch||'All branches')+' — exported '+dtm(new Date())]));
+ out.push('');
+ out.push(line(['RIDER SUMMARY']));
+ out.push(line(['Rider','Phone','Branch','Status','Hours','Deliveries','Avg min','On time %','Fees','Cash to hand over','Shop owes rider','Credited','Cancelled','Fees kept (cash bills)','Fees paid from till']));
+ riders.forEach(r=>out.push(line([r.name,r.phone,r.branch,r.status,(r.ms/36e5).toFixed(1),r.count,r.valid?Math.round(r.mins/r.valid):'',r.valid?Math.round(r.ontime/r.valid*100):'',r.fees,r.cash,r.owed,r.cred,r.cancelled.length,r.kept,r.drawer])));
+ out.push('');
+ out.push(line(['CASH GIVEN FROM TILL ('+drawList.length+')']));out.push(line(['Delivered','Rider','Order code','Payment','Fee']));drawList.slice().reverse().forEach(({o,r})=>out.push(line([dtm(o.completed_at),r.name,'DLV-'+String(o.id).slice(0,8).toUpperCase(),PMN[o.payment_method]||o.payment_method,o.delivery_fee||0])));out.push('');
+ const all=riders.flatMap(r=>r.orders.map(o=>({o,r}))).sort((a,b)=>new Date(a.o.completed_at)-new Date(b.o.completed_at));
+ out.push(line(['ALL DELIVERED ORDERS ('+all.length+')']));
+ out.push(line(['Order code','Branch','Created','Delivered','Rider','Customer','Phone','Address','Items','Payment','Food+tax','Delivery fee','Discount','Customer total','Settled','Minutes']));
+ all.forEach(({o,r})=>{const food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0;
+  out.push(line(['DLV-'+String(o.id).slice(0,8).toUpperCase(),o.branch,dtm(o.created_at),dtm(o.completed_at),r.name,o.customer_name,o.phone,o.location,o.items,PMN[o.payment_method]||o.payment_method||'',food,fee,o.discount||0,food+fee,o.settled?'Yes':'No',o.mins==null?'':o.mins]))});
+ out.push(line(['','','','','','','','','TOTAL',all.length+' orders',all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0),0),all.reduce((s,x)=>s+(x.o.delivery_fee||0),0),all.reduce((s,x)=>s+(x.o.discount||0),0),all.reduce((s,x)=>s+(x.o.subtotal||0)+(x.o.tax||0)+(x.o.delivery_fee||0),0),'','']));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+out.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='ovenx-riders-orders-'+period+'.csv';a.click();
 }
-
-let _wl=null;
-
-async function requestWakeLock(){
-  try{
-    if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');
-  }catch(e){}
-}
-
-async function initAlerts(){
-  if(NATIVE){
-    await initNativePush();
-    requestWakeLock();
-    return;
-  }
-
-  if('serviceWorker' in navigator){
-    try{
-      await navigator.serviceWorker.register('./sw.js');
-    }catch(e){
-      console.error('SW',e);
-    }
-  }
-
-  refreshAlertBanner();
-
-  if('Notification' in window&&Notification.permission==='granted'){
-    subscribePush().catch(console.error);
-  }
-
-  requestWakeLock();
-}
-
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&riderId){requestWakeLock();if(!NATIVE)stopGPS();syncGPS();loadOrders()}});
-
-let _idsCache={t:0,ids:[]};
-async function getMyIds(){if(!riderId||String(riderId).startsWith('local-'))return[riderId];if(Date.now()-_idsCache.t<60000&&_idsCache.ids.length)return _idsCache.ids;
-const ids=new Set([String(riderId)]);try{const since=new Date(Date.now()-3*864e5).toISOString();const{data}=await sb.from('rider_attendance').select('id,phone').gte('punched_in',since);(data||[]).forEach(r=>{if(normPhone(r.phone)===normPhone(riderPhone))ids.add(String(r.id))})}catch(e){}
-_idsCache={t:Date.now(),ids:[...ids]};return _idsCache.ids}
-
-/* ── login ── */
-function serr(m){const e=$('serr');e.textContent=m;setTimeout(()=>e.textContent='',3000)}
-async function riderLogin(){const name=$('rn').value.trim(),phone=$('rp').value.trim(),branch=$('rb').value;
-if(!name)return serr('Enter your name');if(normPhone(phone).length!==10)return serr('Enter a valid phone: 03xx-xxxxxxx');
-riderName=name;riderPhone=phone;riderBranch=branch;
-try{const today=bizDayStart(),tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
-const{data:rows}=await sb.from('rider_attendance').select('*').gte('punched_in',today.toISOString()).lt('punched_in',tomorrow.toISOString());
-const ex=(rows||[]).filter(r=>normPhone(r.phone)===normPhone(phone)).sort((a,b)=>new Date(b.punched_in)-new Date(a.punched_in))[0];
-if(ex){const upd={branch};if(ex.status==='off-duty'){upd.status='on-duty';upd.punched_out=null}
-const{error}=await sb.from('rider_attendance').update(upd).eq('id',ex.id);if(error)throw error;
-riderId=ex.id;dutyStatus=upd.status||ex.status;showToast('Welcome back, '+name)}
-else{const{data,error}=await sb.from('rider_attendance').insert([{name,phone:'0'+normPhone(phone),branch,status:'on-duty',punched_in:new Date().toISOString(),punched_out:null}]).select().single();
-if(error)throw error;riderId=data.id;dutyStatus='on-duty';showToast('Shift started')}
-}catch(e){let sv=null;try{sv=(JSON.parse(localStorage.getItem('ovenx_rider_session')||'null')||{}).riderId}catch(_){}
-riderId=sv||('local-'+Date.now());showToast('Offline mode','error');console.error(e)}
-try{if(riderId&&!String(riderId).startsWith('local-'))localStorage.setItem('ovenx_rider_session',JSON.stringify({name,phone,branch,riderId:String(riderId),ts:Date.now()}))}catch(e){}
-$('splash').style.display='none';$('app').classList.add('on');
-$('me-n').textContent=name;$('me-p').textContent=phone;$('me-b').textContent=branch==='BWP'?'Bahawalpur':'Multan';
-initAlerts();updateDutyUI();loadOrders();startPolling();
-try{if(Tracker&&!localStorage.getItem('ovenx_batt')){localStorage.setItem('ovenx_batt','1');setTimeout(()=>Tracker.requestBatteryExemption().catch(()=>{}),5000)}}catch(e){}}
-async function riderLogout(){const v=await ask({title:'End your shift?',sub:'You will be marked off duty.',opts:[{label:'End shift',val:1,cls:'red'}]});if(!v)return;
-clearInterval(_poll);if(Tracker)Tracker.stop().catch(()=>{});if(riderId&&!String(riderId).startsWith('local-'))await sb.from('rider_attendance').update({status:'off-duty',punched_out:new Date().toISOString()}).eq('id',riderId);
-try{localStorage.removeItem('ovenx_rider_session')}catch(e){}location.reload()}
-
-/* ── duty ── */
-function toggleDuty(){setDuty(dutyStatus==='on-duty'?'on-break':'on-duty')}
-async function setDuty(s){if(s===dutyStatus)return;dutyStatus=s;if(riderId&&!String(riderId).startsWith('local-'))await sb.from('rider_attendance').update({status:s}).eq('id',riderId);updateDutyUI();showToast(s==='on-duty'?'Back on duty':'On break','info')}
-function updateDutyUI(){try{syncGPS()}catch(e){}const on=dutyStatus==='on-duty';$('chip').className='chip'+(on?'':' brk');$('chip-t').textContent=on?'On duty':'On break';$('sg-on').classList.toggle('on',on);$('sg-br').classList.toggle('on',!on)}
-
-/* ── orders ── */
-async function loadOrders(){try{const ids=await getMyIds();
-const{data:assigned,error:e1}=await sb.from('kitchen_orders').select('*').in('assigned_rider',ids).in('status',['ASSIGNED','DELIVERING']).order('created_at',{ascending:true});
-const iso=bizDayStart().toISOString();
-const{data:completed,error:e2}=await sb.from('kitchen_orders').select('*').in('assigned_rider',ids).eq('status','COMPLETED').or(`completed_at.gte.${iso},created_at.gte.${iso}`).order('completed_at',{ascending:false,nullsFirst:false});
-if(e2){console.error(e2);showToast('History failed to load','error')}if(e1)throw e1;
-const act=assigned||[],done=completed||[];_act=act;syncGPS();detectNewOrders(act);
-cu('stat-assigned',act.length,FN);cu('stat-completed',done.length,FN);cu('stat-earnings',[...act,...done].reduce((s,o)=>s+(o.delivery_fee||0),0),v=>fmt(v));
-const n=$('tb-n');n.textContent=act.length;n.classList.toggle('show',act.length>0);
-renderOrders(act,done);renderCompleted(done);
-try{const tot=done.length,fast=done.filter(o=>{const st=o.delivery_started_at?new Date(o.delivery_started_at).getTime():null,ct=o.completed_at?new Date(o.completed_at).getTime():null;
-const m=(st&&ct)?Math.round((ct-st)/60000):(o.created_at&&o.completed_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null);return m!=null&&m<30}).length;
-const q=$('kpi-quick');if(q)q.innerHTML=tot?`<div class="hero h-b" style="margin-bottom:16px"><small>⚡ On-time today (≤30 min)</small><b class="num">${Math.round(fast/tot*100)}%</b><p>${fast} of ${tot} deliveries within 30 minutes</p></div>`:''}catch(_){}}
-catch(e){console.error(e);$('orders-list').innerHTML=`<div class="empty"><b>Couldn't load orders</b>${esc(e.message)}<br>Check your connection and pull down to retry.</div>`}}
-function parseItems(text){const items=[];String(text||'').split('\n').forEach(raw=>{const l=raw.trim();if(!l)return;const m=l.match(/^(\d+)x\s+(.+?)\s+@\s+Rs\s+(\d+)\s*(?:\[(.*))?$/);
-if(m)items.push({qty:m[1],name:m[2],notes:m[4]?[m[4].replace(/\]$/,'').trim()]:[]});else if(items.length)items[items.length-1].notes.push(l.replace(/\]$/,'').trim());else items.push({qty:'•',name:l,notes:[]})});return items}
-function renderOrders(act){const list=$('orders-list');
-if(!act.length){list.innerHTML=`<div class="empty"><b>No orders right now</b>Stay on duty. You'll hear a sound and feel a vibration the moment one is assigned.</div>`;return}
-const now=new Date();
-list.innerHTML=act.map(o=>{const mins=Math.floor((now-new Date(o.created_at))/60000),go=o.status==='DELIVERING',ph=String(o.phone||'').replace(/[^\d+]/g,''),id=esc(o.id);
-const items=parseItems(o.items),shop=o.subtotal||0,tax=o.tax||0,fee=o.delivery_fee||0,pct=Math.min(100,Math.round(mins/45*100)),bc=mins>45?'late':mins>30?'warn':'';
-return `<article class="card ${go?'go':''}">
-<div class="ch"><span class="st ${go?'go':'new'}"><i></i>${go?'On the way':'New order'}</span><span class="br">${esc(o.branch||'MULTAN')}</span><span class="age num ${mins>45?'late':''}">${mins} of 45 min</span></div>
-<div class="bar"><i class="${bc}" style="width:${pct}%"></i></div>
-<div class="cb"><div class="addr">${esc(o.location||'No address')}</div>
-<div class="who"><div><b>${esc(o.customer_name||'Customer')}</b>${ph?`<span>${esc(o.phone)}</span>`:''}</div>${ph?`<button class="rnd" aria-label="Call" onclick="directCall('${ph}')">${IC.call}</button>`:''}</div>
-<div class="items">${items.map(it=>`<div class="it"><em>${esc(it.qty)}${it.qty!=='•'?'×':''}</em><div>${esc(it.name)}${it.notes.filter(n=>n&&n!=='Smart Add-on'&&n!=='Add-on').map(n=>`<small>${esc(n)}</small>`).join('')}</div></div>`).join('')}</div></div>
-<div class="pay"><div class="row"><span>Food bill</span><b class="num">${fmt(shop)}</b></div>${tax>0?`<div class="row"><span>Tax</span><b class="num">${fmt(tax)}</b></div>`:''}
-<div class="row"><span>Delivery fee</span><b class="num" style="color:var(--green)">${fmt(fee)}</b></div>
-<div class="row big"><span>Collect</span><b class="num">${fmt(shop+tax+fee)}</b></div>
-<div class="row ho" style="border-top:1px solid var(--line)"><span>Hand over to shop</span><b class="num">${fmt(shop+tax)}</b></div></div>
-<div class="ca">${go?`<button class="go-b done" onclick="markComplete('${id}')">Mark delivered</button>`:`<button class="go-b start" onclick="startDelivery('${id}')">Start delivery</button>`}
-<div class="acts">${ph?`<button class="act" onclick="directCall('${ph}')">${IC.call}Call</button><button class="act wa" onclick="openWhatsApp('${ph}')">${IC.wa}WhatsApp</button>`:''}${o.location?`<button class="act mp" onclick="openMaps('${id}')">${IC.map}Maps</button><button class="act dr" onclick="showRoute('${id}')">${IC.map}Route</button>`:''}</div>
-
-<button class="lnk" onclick="cancelOrder('${id}')">Can't deliver</button></div></article>`}).join('')}
-
-/* ── history ── */
-function renderCompleted(done){_lastDone=done;const el=$('completed-list');
-if(!done.length){el.innerHTML=`<div class="empty"><b>Nothing delivered yet</b>Completed orders and your settlement will show here.</div>`;return}
-const fees=done.reduce((s,o)=>s+(o.delivery_fee||0),0),
-collected=done.reduce((s,o)=>o.payment_method==='credited'?s:s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0),0),
-shopAmt=done.reduce((s,o)=>o.payment_method==='credited'?s:s+(o.subtotal||0)+(o.tax||0),0),
-pending=done.filter(o=>!o.settled&&!NONCASH.includes(o.payment_method)).reduce((s,o)=>s+(o.subtotal||0)+(o.tax||0),0),
-payRider=done.filter(o=>!o.settled&&NONCASH.includes(o.payment_method)).reduce((s,o)=>s+(o.delivery_fee||0),0),
-cred=done.filter(o=>o.payment_method==='credited').reduce((s,o)=>s+(o.subtotal||0)+(o.tax||0)+(o.delivery_fee||0),0);
-el.innerHTML=`
-<div class="audit"><h3>📋 End of day audit summary</h3>
-<div class="g2"><div><b class="num" style="color:var(--green)">${done.length}</b><span>Deliveries done</span></div><div><b class="num" style="color:var(--orange)">${fmt(collected)}</b><span>Total collected</span></div>
-<div><b class="num" style="color:var(--blue)">${fmt(shopAmt)}</b><span>Shop amount</span></div><div><b class="num" style="color:var(--pink)">${fmt(fees)}</b><span>My delivery fees</span></div></div>
-<div class="hero h-o"><small>💰 Hand over to manager</small><b class="num">${fmt(pending)}</b><p>Food bill + tax of cash orders only. You keep the delivery fees.</p></div>
-<div class="hero h-b"><small>💵 Shop pays you</small><b class="num">${fmt(payRider)}</b><p>Delivery fees for bank / JazzCash / card / credited orders.</p></div>
-<div class="hero h-g"><small>🛵 My earnings today</small><b class="num">${fmt(fees)}</b><p>Delivery fee from ${done.length} order${done.length!==1?'s':''}</p></div>
-${cred>0?`<div class="hero h-r"><small>📋 Credited (not collected)</small><b class="num">${fmt(cred)}</b><p>These orders were not paid — inform manager.</p></div>`:''}</div>
-<button class="btn2" style="background:linear-gradient(135deg,#6cb8ff,#a78bfa);color:#fff" onclick="showSlip()">📸 Settlement slip (for screenshot)</button>
-<div class="sh">Order by order</div>
-${done.map((o,i)=>{const shop=o.subtotal||0,fee=o.delivery_fee||0,tax=o.tax||0,disc=o.discount||0,total=shop+tax+fee,cr=o.payment_method==='credited',non=NONCASH.includes(o.payment_method),pm=PM[o.payment_method],
-taken=o.completed_at&&o.created_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null,items=parseItems(o.items);
-return `<div class="hc" ${cr?'style="box-shadow:inset 0 0 0 1px rgba(255,107,122,.35)"':''}>
-<div class="hno"><span>✅ #${done.length-i}</span>${taken!==null?`<em>⏱ ${taken} min</em>`:''}</div>
-<h4>📍 ${esc(o.location||'No address')}</h4>
-${o.customer_name?`<p>👤 ${esc(o.customer_name)}</p>`:''}${o.phone?`<p style="color:var(--orange)">📞 ${esc(o.phone)}</p>`:''}
-${pm?`<span class="pm" style="background:${pm[2]};color:${pm[1]}">${pm[0]}</span>${cr?'<span style="font-size:12px;color:var(--red);margin-left:8px;font-weight:700">— not collected</span>':''}`:''}
-<div class="hit">${items.map(it=>`<div class="it"><em>${esc(it.qty)}${it.qty!=='•'?'×':''}</em><div>${esc(it.name)}${it.notes.filter(n=>n&&n!=='Smart Add-on'&&n!=='Add-on').map(n=>`<small>${esc(n)}</small>`).join('')}</div></div>`).join('')||'<p>—</p>'}</div>
-<div class="times"><span>🕐 Received <b>${tm(o.created_at)}</b></span><span>✅ Delivered <b class="g">${tm(o.completed_at)}</b></span></div>
-<button class="settle ${o.settled?'ok':''}" onclick="settleOrder('${esc(o.id)}',${!o.settled})">${o.settled?'✅ HISAB DONE'+(o.settled_at?' · '+tm(o.settled_at):''):'💰 MARK HISAB DONE (Manager)'}</button>
-<div class="mini"><div class="row"><span>Shop amount</span><b class="num">${fmt(shop)}</b></div><div class="row"><span>Delivery fee</span><b class="num" style="color:var(--green)">${fmt(fee)}</b></div>
-${disc>0?`<div class="row"><span>Discount applied</span><b class="num" style="color:var(--red)">−${fmt(disc)}</b></div>`:''}
-<div class="row">${non?`<span style="color:var(--green);font-weight:700">💵 Pay to rider (delivery fee)</span><b class="num" style="color:var(--green)">${fmt(fee)}</b>`:`<span style="color:var(--blue);font-weight:700">Hand over to shop (food + tax)</span><b class="num" style="color:var(--blue)">${fmt(shop+tax)}</b>`}</div>
-<div class="row"><span style="color:var(--t1);font-weight:700">${cr?'Not collected — credited':'Collected from customer'}</span><b class="num" style="font-size:16px;color:${cr?'var(--red)':'var(--orange)'}">${cr?'Rs 0':fmt(total)}</b></div></div></div>`}).join('')}
-<div class="eos"><small>🔴 End of shift — hand over</small><b class="num">${fmt(pending)}</b><p>to the manager or cashier</p>
-${payRider>0?`<p style="color:var(--blue);font-weight:700;margin-top:8px">Shop pays you: ${fmt(payRider)}</p>`:''}<p style="margin-top:8px">Your delivery fees (you keep): <span style="color:var(--green);font-weight:700">${fmt(fees)}</span></p></div>`}
-
-async function settleOrder(id,done){const pin=await ask({title:'Manager PIN',sub:done?'Confirm the money was received.':'Confirm to undo this settlement.',input:'password',mode:'numeric',ph:'PIN',opts:[{label:'Confirm',val:1,cls:'grn'}]});
-if(pin===null)return;if(pin!==MANAGER_PIN){showToast('Wrong PIN','error');return}
-try{const{error}=await sb.from('kitchen_orders').update({settled:done,settled_at:done?new Date().toISOString():null}).eq('id',id);if(error)throw error;showToast(done?'Marked settled':'Settlement undone',done?'success':'info');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
-
-function showSlip(){const LABEL={cash:'Cash',jazzcash:'JazzCash/EasyPaisa',card:'Card',bank:'Bank Transfer',credited:'Credited'};let hand=0,pay=0,fees=0;
-const rows=_lastDone.slice().reverse().map((o,i)=>{const non=NONCASH.includes(o.payment_method),food=(o.subtotal||0)+(o.tax||0),fee=o.delivery_fee||0;fees+=fee;if(!o.settled){if(non)pay+=fee;else hand+=food}
-return `<div class="slip-r"><div>#${i+1} · ${esc(LABEL[o.payment_method]||'—')}${o.settled?' · ✅ settled':''}<small>${esc(o.location||'')}<br>Delivered ${tm(o.completed_at)}</small></div><b class="num" style="color:${non?'var(--green)':'var(--blue)'};white-space:nowrap">${non?'Shop pays '+fmt(fee):'Hand over '+fmt(food)}</b></div>`}).join('');
-const net=hand-pay,now=new Date();
-$('slip').innerHTML=`<div class="slip-card"><div class="sheet-t" style="font-size:24px">OVEN <span class="gx">X</span> · Settlement</div>
-<div class="slip-meta"><b style="color:var(--t1);font-size:15px">${esc(riderName)}</b> · ${esc(riderPhone)} · ${esc(riderBranch)}<br>${now.toLocaleDateString('en-PK',{day:'numeric',month:'short',year:'numeric'})} · ${tm(now)}<br>${_lastDone.length} deliveries · Delivery fees earned ${fmt(fees)}</div>
-${rows||'<div class="slip-r">No completed orders</div>'}
-<div class="slip-box" style="background:rgba(108,184,255,.12)"><span style="color:var(--blue)">Rider hands over</span><b class="num" style="color:var(--blue)">${fmt(hand)}</b></div>
-<div class="slip-box" style="background:rgba(61,220,132,.12)"><span style="color:var(--green)">Shop pays rider</span><b class="num" style="color:var(--green)">${fmt(pay)}</b></div>
-<div class="slip-box" style="background:rgba(255,200,87,.12)"><span style="color:var(--orange)">${net>=0?'Net: rider gives shop':'Net: shop gives rider'}</span><b class="num" style="color:var(--orange)">${fmt(Math.abs(net))}</b></div></div>
-<button class="btn2" style="margin-top:16px" onclick="$('slip').style.display='none'">✕ Close</button>`;
-$('slip').style.display='block';$('slip').scrollTop=0}
-
-/* ── order actions ── */
-async function startDelivery(id){try{const{error}=await sb.from('kitchen_orders').update({status:'DELIVERING',delivery_started_at:new Date().toISOString()}).eq('id',id);if(error)throw error;showToast('Delivery started');startGPS();loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
-async function markComplete(id){
- if(!await ask({title:'Confirm delivery completed?',sub:'Next you will choose how it was paid.',opts:[{label:'Yes, delivered',val:1,cls:'grn'}]}))return;
- const m=await ask({title:'How was this order paid?',opts:[{label:'💵 Cash',val:'cash'},{label:'📱 JazzCash / EasyPaisa',val:'jazzcash'},{label:'💳 Card',val:'card'},{label:'🏦 Bank transfer',val:'bank'},{label:'📋 Credited',sub:'Not collected from customer',val:'credited'}]});
- if(!m)return;
- try{const{data:cur}=await sb.from('kitchen_orders').select('delivery_started_at,created_at').eq('id',id).single();const now=new Date().toISOString();
-  const patch={status:'COMPLETED',completed_at:now,payment_method:m};
-  try{const o=_act.find(x=>String(x.id)===String(id));let p=_pos?{latitude:_pos.latitude,longitude:_pos.longitude}:null;
-   try{const g=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:5000,maximumAge:10000}));p={latitude:g.coords.latitude,longitude:g.coords.longitude}}catch(e){}
-   const d=o?((o.latitude&&o.longitude)?[+o.latitude,+o.longitude]:await geocode(o.location||'')):null;
-   if(p){patch.deliver_lat=p.latitude;patch.deliver_lng=p.longitude;if(d)patch.deliver_dist_m=Math.round(distM(p.latitude,p.longitude,d[0],d[1]))}}catch(e){console.error(e)}if(cur&&!cur.delivery_started_at)patch.delivery_started_at=cur.created_at||now;
-  const{error}=await sb.from('kitchen_orders').update(patch).eq('id',id);if(error)throw error;
-  showToast('Delivered · '+PM[m][0].replace(/^\S+\s/,'')+' recorded');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
-async function cancelOrder(id){const r=await ask({title:'Why is this order being cancelled?',sub:'Tap a reason or type your own.',input:'text',ph:'Reason',
-opts:[...['Customer not available','Customer refused order','Wrong address','Customer called to cancel'].map(l=>({label:l,val:l,fill:true})),{label:'Continue',val:1,cls:'red'}]});
-if(!r||r===''||r==='1')return;
-if(!await ask({title:'Report this order as cancelled?',sub:'Reason: '+r+'. This will notify the office.',opts:[{label:'Yes, report cancellation',val:1,cls:'red'}]}))return;
-try{await sb.from('kitchen_orders').update({status:'CANCELLED',cancel_reason:r,cancelled_at:new Date().toISOString(),cancelled_by:riderName}).eq('id',id);showToast('Order reported as cancelled','error');loadOrders()}catch(e){showToast('Error: '+e.message,'error')}}
-function directCall(p){window.open('tel:'+p,'_self')}
-function openWhatsApp(p){let w=p.replace(/\D/g,'');if(w.startsWith('0'))w='92'+w.slice(1);if(w.startsWith('3')&&w.length===10)w='92'+w;if(!w.startsWith('92')&&!w.startsWith('9'))w='92'+w;window.open('https://wa.me/'+w,'_blank')}
-function openMaps(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
-const dest=(o.latitude&&o.longitude)?`${o.latitude},${o.longitude}`:encodeURIComponent(o.location||'');
-window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,'_blank')}
-function startPolling(){sb.channel('rider-orders-'+riderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_orders',filter:`assigned_rider=eq.${riderId}`},p=>{if(p.new.status==='ASSIGNED')alertNewOrder(p.new);loadOrders()}).subscribe();_poll=setInterval(loadOrders,45000)}
-
-/* ── KPI (custom SVG/CSS charts, no Chart.js) ── */
-let _kpiPeriod='today',_chartTab='speed';
-function switchChart(t){_chartTab=t;['speed','daily','earn'].forEach(x=>{$('ct-'+x).classList.toggle('on',x===t);$('view-'+x).style.display=x===t?'block':'none'});grow($('view-'+t))}
-function setKpiPeriod(p){_kpiPeriod=p;['today','week','month'].forEach(x=>$('kp-'+x).classList.toggle('on',x===p));loadKpi()}
-function kpiRange(p){const start=new Date();if(p==='today'){const s=bizDayStart();return{s,e:new Date(s.getTime()+86400000)}}
-if(p==='week'){start.setDate(start.getDate()-6);start.setHours(0,0,0,0);return{s:start,e:new Date()}}start.setDate(1);start.setHours(0,0,0,0);return{s:start,e:new Date()}}
-function bucket(min){if(min==null)return null;if(min<20)return'under20';if(min<30)return'under30';if(min<40)return'under40';return'late'}
-function minsOf(o){const st=o.delivery_started_at?new Date(o.delivery_started_at).getTime():null,ct=o.completed_at?new Date(o.completed_at).getTime():null;return(st&&ct)?Math.round((ct-st)/60000):(o.created_at&&o.completed_at?Math.round((new Date(o.completed_at)-new Date(o.created_at))/60000):null)}
-async function loadKpi(){try{const ids=await getMyIds();const{s,e}=kpiRange(_kpiPeriod);
-const{data:done}=await sb.from('kitchen_orders').select('*').in('assigned_rider',ids).eq('status','COMPLETED').gte('completed_at',s.toISOString()).lte('completed_at',e.toISOString());
-const rows=(done||[]).map(o=>{const mins=minsOf(o);return{...o,mins,bucket:bucket(mins)}});
-renderKpiSummary(rows);renderSpeedChart(rows);renderDailyCharts(rows,s,e);loadLeaderboard(s,e);grow($('v3'))}
-catch(err){console.error(err);$('kpi-summary').innerHTML='<div class="empty"><b>Could not load KPI</b>'+esc(err.message)+'</div>'}}
-function ringSvg(p,col){const L=2*Math.PI*44;return `<svg viewBox="0 0 104 104"><circle cx="52" cy="52" r="44" stroke="rgba(255,255,255,.08)"/><circle class="arc" cx="52" cy="52" r="44" stroke="${col}" data-d="${L*p/100} ${L}" stroke-dasharray="${L*p/100} ${L}"/></svg>`}
-function renderKpiSummary(rows){const total=rows.length,valid=rows.filter(r=>r.mins!=null),c=b=>rows.filter(r=>r.bucket===b).length;
-const avg=valid.length?Math.round(valid.reduce((a,r)=>a+r.mins,0)/valid.length):0,onTime=total?Math.round((c('under20')+c('under30')+c('under40'))/total*100):0,pct=n=>total?Math.round(n/total*100):0;
-const kc=(cls,lab,key,txt,col,d)=>`<div class="kpi" style="animation-delay:${d}s"><small style="background:${col}26;color:${col}">${lab}</small><b class="num" style="color:${col}">${c(key)}</b><span>${txt}</span><div class="kpi-bar"><i data-w="${pct(c(key))}%" style="background:${col}"></i></div></div>`;
-$('kpi-summary').innerHTML=`<div class="c2" style="display:flex;gap:18px;align-items:center;--a:linear-gradient(90deg,#3ddc84,#a78bfa)"><div class="ringw">${ringSvg(onTime,onTime>=80?'#3ddc84':onTime>=60?'#ffc857':'#ff6b7a')}<b class="num">${onTime}%</b></div>
-<div style="flex:1"><div class="mk"><b class="num">${total}</b><span>Deliveries · on time ≤40 min</span></div><div class="mk"><b class="num" style="color:var(--blue)">${avg} min</b><span>Average delivery time</span></div></div></div>
-<div class="kpi-grid">${kc('','≤20m','under20','Fast deliveries','#3ddc84',0)}${kc('','20-30m','under30','On time','#6cb8ff',.06)}${kc('','30-40m','under40','Slightly late','#ffc857',.12)}${kc('','>40m','late','Late','#ff6b7a',.18)}</div>`}
-function renderSpeedChart(rows){const c={under20:0,under30:0,under40:0,late:0};rows.forEach(r=>{if(r.bucket)c[r.bucket]++});
-const defs=[['≤20 min','under20','#3ddc84'],['20-30 min','under30','#6cb8ff'],['30-40 min','under40','#ffc857'],['>40 min','late','#ff6b7a']],tot=rows.filter(r=>r.bucket).length,R=50,L=2*Math.PI*R;let off=0;
-if(!tot){$('ch-speed').innerHTML='<div class="empty" style="padding:24px">No deliveries in this period.</div>';return}
-const segs=defs.map(d=>{const l=c[d[1]]/tot*L,s=c[d[1]]?`<circle class="arc" cx="64" cy="64" r="${R}" stroke="${d[2]}" data-d="${Math.max(0,l-3)} ${L}" stroke-dasharray="${Math.max(0,l-3)} ${L}" stroke-dashoffset="${-off}"/>`:'';off+=l;return s}).join('');
-$('ch-speed').innerHTML=`<div class="dn"><svg viewBox="0 0 128 128"><circle cx="64" cy="64" r="${R}" stroke="rgba(255,255,255,.06)"/>${segs}</svg><div class="lg">${defs.map(d=>`<div><span><i style="background:${d[2]}"></i>${d[0]}</span><b class="num">${c[d[1]]}</b></div>`).join('')}</div></div>`}
-function renderDailyCharts(rows,s,e){const days={},d=new Date(s);d.setHours(0,0,0,0);
-while(d<=e){const k=d.toISOString().slice(0,10);days[k]={count:0,fees:0};d.setDate(d.getDate()+1)}
-rows.forEach(r=>{const k=(r.completed_at||r.created_at||'').slice(0,10);if(days[k]){days[k].count++;days[k].fees+=r.delivery_fee||0}});
-const keys=Object.keys(days),labels=keys.map(k=>new Date(k+'T00:00:00').toLocaleDateString('en-PK',{day:'numeric',month:'short'})),vals=keys.map(k=>days[k].count),fees=keys.map(k=>days[k].fees),
-mx=Math.max(1,...vals),pk=Math.max(...vals),step=Math.ceil(keys.length/6);
-$('ch-daily').innerHTML=`<div class="cols">${vals.map((v,i)=>`<div class="${v===pk&&pk>0?'pk':''}" title="${labels[i]}: ${v}"><em>${keys.length<=10&&v?v:''}</em><i data-h="${Math.max(2,v/mx*100)}%"></i><span>${i%step===0?labels[i].split(' ')[0]:''}</span></div>`).join('')}</div>`;
-const fm=Math.max(1,...fees),n=fees.length,W=300,H=130,pts=fees.map((v,i)=>[n>1?i*(W/(n-1)):W/2,H-8-v/fm*(H-24)]),line=pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
-$('ch-earn').innerHTML=`<div style="font-size:12px;color:var(--t2);margin-bottom:6px">Best day <b class="num" style="color:var(--orange)">${fmt(fm===1&&!fees.some(v=>v)?0:fm)}</b></div><svg class="ar" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ag" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffc857" stop-opacity=".4"/><stop offset="1" stop-color="#ffc857" stop-opacity="0"/></linearGradient><linearGradient id="lg2" x1="0" x2="1"><stop offset="0" stop-color="#3ddc84"/><stop offset=".5" stop-color="#ffc857"/><stop offset="1" stop-color="#ff5fa2"/></linearGradient></defs>
-<path d="M${pts[0][0]},${H} L${line} L${pts[n-1][0]},${H}Z" fill="url(#ag)"/><path class="ln" pathLength="1" d="M${line}" fill="none" stroke="url(#lg2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg><div class="axl"><span>${labels[0]}</span><span>${labels[n-1]}</span></div>`}
-async function loadLeaderboard(s,e){const el=$('kpi-leaderboard');
-try{const{data}=await sb.from('kitchen_orders').select('assigned_rider,delivery_fee,delivery_started_at,completed_at,created_at').eq('status','COMPLETED').gte('completed_at',s.toISOString()).lte('completed_at',e.toISOString());
-const{data:riders}=await sb.from('rider_attendance').select('id,name,phone,branch');const rmap={};(riders||[]).forEach(r=>rmap[String(r.id)]=r);const agg={};
-(data||[]).forEach(o=>{const id=String(o.assigned_rider);if(!agg[id])agg[id]={count:0,fees:0,totalMins:0,valid:0};agg[id].count++;agg[id].fees+=o.delivery_fee||0;const m=minsOf(o);if(m!=null){agg[id].totalMins+=m;agg[id].valid++}});
-const list=Object.entries(agg).map(([id,a])=>({id,name:(rmap[id]&&rmap[id].name)||('Rider '+id.slice(-4)),count:a.count,fees:a.fees,avg:a.valid?Math.round(a.totalMins/a.valid):null})).sort((a,b)=>b.count-a.count).slice(0,15);
-if(!list.length){el.innerHTML='<div class="empty" style="padding:24px 12px"><b>No deliveries yet</b>Leaderboard fills up as riders complete orders.</div>';return}
-el.innerHTML=list.map((r,i)=>`<div class="rank"><div class="pos ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i===0?'🏆':i+1}</div>
-<div class="who"><b>${esc(r.name)}${String(r.id)===String(riderId)?' <span style="color:var(--green);font-size:11px">· you</span>':''}</b><span>${r.count} deliveries${r.avg!=null?' · avg '+r.avg+' min':''}</span></div>
-<div class="num-tag"><b class="num">${fmt(r.fees)}</b><span>fees</span></div></div>`).join('')}
-catch(err){console.error(err);el.innerHTML='<div class="empty" style="padding:24px">Could not load leaderboard</div>'}}
-
-/* ── live GPS + in-app directions ── */
-let _act=[],_geo=null,_pos=null,_posT=0,_lastPush=0,_rmap=null,_rm=null,_cm=null,_rl=null,_rtTimer=null;
-const dot=(c,h)=>L.divIcon({className:'',html:`<div class="pin ${c}">${h}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
-
-
-const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
-const plug=n=>NATIVE?((Capacitor.Plugins&&Capacitor.Plugins[n])||(Capacitor.registerPlugin?Capacitor.registerPlugin(n):null)):null;
-const BG=plug('BackgroundGeolocation');
-const Push=plug('PushNotifications');
-const Tracker=plug('OvenxTracker');
-function nativeSync(){
-  if(!Tracker||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
-  Tracker.start({
-    url:'https://frjcefugnvitexxcated.supabase.co',
-    key:'sb_publishable_iymHBHXzWCXmXI4yUfQ_XQ__5EW47HJ',
-    riderId:String(riderId),
-    orderIds:_act.filter(o=>o.status==='DELIVERING').map(o=>String(o.id))
-  }).catch(e=>console.error('tracker',e));
-}
-let _bgOk=false;
-let _nativePushReady=false;
-let _nativePushToken='';
-let _nativePushListenersReady=false;
-
-let _bgAttempt=0;
-
-function removeBGWatcher(id){
-  try{if(id!=null)BG.removeWatcher({id}).catch(()=>{})}catch(e){}
-}
-
-let _lastGood=0;
-function goodFix(acc){
- if(!Number.isFinite(acc))return true;
- if(acc<=75){_lastGood=Date.now();return true}
- return acc<=300&&Date.now()-_lastGood>60000; // accept a rough fix only if no good one for 60s
-}
-
-function startGPS(){
-  if(_geo!==null)return;
-
-  if(NATIVE&&BG){
-    const attempt=++_bgAttempt;
-    let watcherId=null;
-    let failed=false;
-    _geo='pending';
-
-    Promise.resolve(BG.addWatcher({
-      backgroundTitle:'OvenX delivery in progress',
-      backgroundMessage:'Sharing your location with the shop',
-      requestPermissions:true,
-      stale:false,
-      distanceFilter:5
-    },(l,err)=>{
-      if(attempt!==_bgAttempt)return;
-
-      if(err){
-        failed=true;
-        _bgOk=false;
-        if(_geo==='pending'||_geo===watcherId)_geo=null;
-        if(watcherId!==null)removeBGWatcher(watcherId);
-
-        if(err.code==='NOT_AUTHORIZED'){
-          showToast('Allow location permission in Android settings','error');
-        }else{
-          console.error('Background GPS watcher:',err);
-          showToast('Background GPS failed. It will retry.','error');
-        }
-        return;
-      }
-
-      const acc=Number.isFinite(Number(l.accuracy))
-        ?Number(l.accuracy):null;
-
-      if(!goodFix(acc))return;
-
-      _posT=l.time?new Date(l.time).getTime():Date.now();
-      _pos={
-        latitude:l.latitude,
-        longitude:l.longitude,
-        heading:l.bearing,
-        speed:l.speed,
-        accuracy:acc
-      };
-
-      pushLoc();
-      moveRider();
-    })).then(id=>{
-      watcherId=id;
-
-      if(failed||attempt!==_bgAttempt){
-        removeBGWatcher(id);
-        return;
-      }
-
-      _geo=id;
-      _bgOk=true;
-      nativeSync();
-    }).catch(err=>{
-      if(attempt!==_bgAttempt)return;
-
-      console.error('Background GPS registration failed:',err);
-      _geo=null;
-      _bgOk=false;
-      showToast('GPS registration failed. It will retry.','error');
-    });
-
-    return;
-  }
-
-  startWebGPS();
-}
-function startWebGPS(){
-  if(!navigator.geolocation)return;
-  _geo=navigator.geolocation.watchPosition(p=>{
-    if(_sim||!goodFix(p.coords.accuracy))return;
-    _pos=p.coords;_posT=p.timestamp;
-    pushLoc();moveRider();
-  },()=>showToast('Turn on location so customers can track you','error'),
-  {enableHighAccuracy:true,maximumAge:0,timeout:20000});
-}
-
-function stopGPS(){
-  if(_geo===null)return;
-
-  const old=_geo;
-  ++_bgAttempt;
-  _geo=null;
-  _bgOk=false;
-
-  if(NATIVE&&BG){
-    if(old!=='pending')removeBGWatcher(old);
-    return;
-  }
-
-  if(old!=='pending'&&navigator.geolocation){
-    navigator.geolocation.clearWatch(old);
-  }
-}
-let _hi=false,_lastSent=null;
-const busyNow=()=>_act.some(o=>o.status==='DELIVERING');
-function syncGPS(){
- if(dutyStatus!=='on-duty'){stopGPS();if(Tracker)Tracker.stop().catch(()=>{});return}
- if(_geo==null)startGPS();
- if(_bgOk)nativeSync();
-}
-setInterval(()=>pushLoc(),10000); // self-throttling
-async function pushLoc(){
- if(!_pos||!riderId||String(riderId).startsWith('local-')||dutyStatus!=='on-duty')return;
- if(!NATIVE && Date.now()-_posT>300000)return; // GPS frozen for 5+ min: stop sending
- const busy=busyNow(),now=Date.now(),gap=now-_lastPush;
- const minGap=busy?5000:8000;
-const maxGap=busy?10000:20000;
-const minMove=busy?5:10;
- const moved=_lastSent?distM(_lastSent.lat,_lastSent.lng,_pos.latitude,_pos.longitude):1e9;
- if(gap<minGap)return;
- if(moved<minMove&&gap<maxGap)return;
- 
- const mk=oid=>({order_id:oid,rider_id:String(riderId),lat:_pos.latitude,lng:_pos.longitude,heading:_pos.heading,speed:_pos.speed});
- let rows=_act.filter(o=>o.status==='DELIVERING').map(o=>mk(String(o.id)));
- if(!rows.length)rows=[mk('idle-'+riderId)];
- try {
-    const { error } = await sb.rpc('push_location', {
-        p_rows: rows
-    });
-
-    if (error) {
-        console.error('GPS upload failed:', error);
-        return;
-    }
-
-    // Update only after Supabase confirms success
-    _lastPush = Date.now();
-
-    _lastSent = {
-        lat: _pos.latitude,
-        lng: _pos.longitude
-    };
-
-} catch (e) {
-    console.error('GPS upload exception:', e);
-}}
-
-let _dest=null,_follow=true,_lastRoute=0,_nav=false,_sim=null,_steps=[],_lastSay='';
-async function geocode(addr){const city=riderBranch==='BWP'?'Bahawalpur':'Multan';
- for(const q of [addr+', '+city+', Pakistan',addr]){try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q='+encodeURIComponent(q))).json();if(r&&r[0])return[+r[0].lat,+r[0].lon]}catch(e){}}
+/* ───────── LIVE FLEET MAP ───────── */
+const LOC_TABLE='rider_locations';
+let fmap=null,fMk={},fDm={},fRt={},fGeo={},fEta={},fBusy=false,fFit=false,fPts=[];
+const hav=(a,b,c,d)=>{const R=6371,x=Math.PI/180,dl=(c-a)*x,dg=(d-b)*x,h=Math.sin(dl/2)**2+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+async function fGeocode(o){
+ if(o.latitude&&o.longitude)return[+o.latitude,+o.longitude];
+ const k=String(o.id);if(k in fGeo)return fGeo[k];fGeo[k]=null;
+ const city=normB(o.branch)==='BWP'?'Bahawalpur':'Multan';
+ for(const q of[(o.location||'')+', '+city+', Pakistan',o.location||'']){
+  if(!q.trim())continue;
+  try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q='+encodeURIComponent(q))).json();if(r&&r[0]){fGeo[k]=[+r[0].lat,+r[0].lon];return fGeo[k]}}catch(e){}
+ }
  return null}
-function moveRider(){if(!_pos||!_rmap||!_dest||!document.getElementById('rmap')||!$('sheet').classList.contains('on'))return;
- const p=[_pos.latitude,_pos.longitude];
- if(!_rm)_rm=L.marker(p,{icon:dot('r','🛵')}).addTo(_rmap);else _rm.setLatLng(p);
- if(_follow)_rmap.panTo(p,{animate:true});
- if(Date.now()-_lastRoute>(_nav?4000:8000))fetchRoute(false)}
-function stepText(s){const m=s.maneuver,t=m.type,d=m.modifier||'';
- if(t==='arrive')return'🏁 Arrive at destination';if(t==='roundabout'||t==='rotary')return'⭕ Take the roundabout';
- const dir=d==='uturn'?'↩ U-turn':d.includes('left')?'⬅ Turn left':d.includes('right')?'➡ Turn right':'⬆ Continue straight';
- return dir+(s.name?' onto '+s.name:'')}
-async function fetchRoute(fit){if(!_pos||!_dest||!_rmap)return;_lastRoute=Date.now();
- const p=[_pos.latitude,_pos.longitude],c=_dest;
- try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${p[1]},${p[0]};${c[1]},${c[0]}?overview=full&geometries=geojson&steps=true`)).json(),x=r.routes&&r.routes[0];if(!x)throw new Error('no route');
-  const pts=x.geometry.coordinates.map(q=>[q[1],q[0]]);_steps=(x.legs&&x.legs[0]&&x.legs[0].steps)||[];
-  if(_rl)_rl.setLatLngs(pts);else _rl=L.polyline(pts,{color:'#1a73e8',weight:7,opacity:.9}).addTo(_rmap);
-  const mins=Math.max(1,Math.round(x.duration/60)),km=(x.distance/1000).toFixed(1);
-  if(x.distance>30000)$('rt-info').innerHTML=`<b style="color:var(--red)">Bad GPS Pin</b> · Location is ${(x.distance/1000).toFixed(0)} km away. Check the address.`;
-  else if(_nav&&_steps.length>1){const txt=stepText(_steps[1]),dm=Math.round(_steps[0].distance);
-   $('rt-info').innerHTML=`<b style="color:var(--green);font-size:17px">${esc(txt)}</b><br>in ${dm>=1000?(dm/1000).toFixed(1)+' km':dm+' m'} · ${mins} min · ${km} km left`;
-   if(dm<200&&txt!==_lastSay){_lastSay=txt;try{if(window.speechSynthesis){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(txt.replace(/[^\w\s]/g,'')+' in '+dm+' meters'))}}catch(e){}}}
-  else $('rt-info').innerHTML=`<b style="color:var(--green)">${mins} min</b> · ${km} km${_dest.approx?' · approx. from address':''}`;
-  if(_nav&&x.distance<40){navStop();showToast('You have arrived')}
-  if(fit)_rmap.fitBounds(_rl.getBounds(),{padding:[30,30]})}
- catch(e){$('rt-info').textContent='Could not load route'}}
+async function fEtaFor(id,loc,dest){
+ const c=fEta[id];if(c&&Date.now()-c.t<20000)return c;
+ let mins=null,km=hav(loc.lat,loc.lng,dest[0],dest[1]);
+ try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${dest[1]},${dest[0]}?overview=false`)).json();
+  if(r.routes&&r.routes[0]){mins=Math.max(1,Math.round(r.routes[0].duration/60));km=r.routes[0].distance/1000}}catch(e){}
+ if(mins==null)mins=Math.max(1,Math.round(km/25*60)); // fallback: straight line at 25 km/h
+ return fEta[id]={t:Date.now(),mins,km}}
+function fitMap(){if(fmap&&fPts.length)fmap.fitBounds(fPts,{padding:[40,40],maxZoom:16})}
+let fIdle={};
+const FRESH_MS=45000, OFFLINE_MS=120000, LOC_WINDOW_MS=12*36e5;
+const lvlOf=l=>{if(!l)return'none';const a=Date.now()-new Date(l.updated_at);return a>OFFLINE_MS?'off':a>FRESH_MS?'warn':'ok'};
+const ageS=l=>l?Math.max(0,Math.round((Date.now()-new Date(l.updated_at))/1000)):null;
+const fmtAge=s=>s<60?s+'s':s<3600?Math.round(s/60)+'m':Math.round(s/3600)+'h';
 
-async function showRoute(id){const o=_act.find(x=>String(x.id)===String(id));if(!o)return;
- openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" id="rt-info">Finding address…</div><div id="rmap" style="height:50vh;border-radius:18px;overflow:hidden;margin-bottom:10px"></div><button class="opt grn" id="nav-btn" onclick="navGo()">▶ Start navigation</button><div style="display:flex;gap:8px"><button class="opt" style="text-align:center" onclick="recenter()">📍 Re-center</button><button class="opt" style="text-align:center" onclick="retryLoc()">🔄 Retry location</button></div><button class="opt x" onclick="closeSheet()">Close</button>`);
- startGPS();
- let c=(o.latitude&&o.longitude)?[+o.latitude,+o.longitude]:null,approx=false;
- if(!c){c=await geocode(o.location||'');approx=true}
- if(!$('sheet').classList.contains('on'))return;
- if(!c){openSheet(`<div class="sheet-t">Directions</div><div class="sheet-s" style="color:var(--red)">Could not find this address on the map.</div><button class="opt grn" onclick="openMaps('${esc(o.id)}','${encodeURIComponent(o.location||'')}')">Open in Google Maps</button><button class="opt x" onclick="closeSheet()">Cancel</button>`);return}
- await new Promise(r=>setTimeout(r,450));
- if(!document.getElementById('rmap'))return;
- if(_rmap){_rmap.remove();_rmap=null}
- navStop();_rm=null;_rl=null;_follow=true;_dest=c;_dest.approx=approx;
- _rmap=L.map('rmap',{zoomControl:false}).setView(c,14);
- L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_rmap);
- setTimeout(()=>_rmap&&_rmap.invalidateSize(),100);
- _cm=L.marker(c,{icon:dot('c','🏠')}).addTo(_rmap);
- _rmap.on('dragstart',()=>{_follow=false});
- if(!_pos)await new Promise(r=>navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;_posT=g.timestamp;r()},()=>r(),{enableHighAccuracy:true,timeout:10000}));
- if(!_pos){$('rt-info').textContent='Turn on location to see your route';return}
- _lastRoute=Date.now();moveRider();await fetchRoute(true)}
+async function renderMap(){
+ if(fBusy||!$('fmap'))return;fBusy=true;
+ try{
+  if(!fmap){fmap=L.map('fmap').setView(CEN[branch]||CEN.MULTAN,12);
+   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(fmap);
+   setTimeout(()=>fmap.invalidateSize(),200)}
+  const go=active.filter(x=>x.o.status==='DELIVERING');
+  const keep=new Set(go.map(x=>String(x.o.id)));
+  Object.keys(fMk).forEach(k=>{if(!keep.has(k)){fmap.removeLayer(fMk[k]);delete fMk[k];if(fDm[k]){fmap.removeLayer(fDm[k]);delete fDm[k]}if(fRt[k]){fmap.removeLayer(fRt[k]);delete fRt[k]}}});
 
-function navGo(){if(_nav)return navStop();
- if(!_dest)return showToast('Route not ready','error');
- if(!_pos)return showToast('No location yet. Tap Retry location, or Test drive','error');
- _nav=true;_follow=true;_lastSay='';$('nav-btn').textContent='■ Stop navigation';
- _rmap.setView([_pos.latitude,_pos.longitude],18);fetchRoute(false)}
-function navStop(){_nav=false;if(_sim){clearInterval(_sim);_sim=null}
- const b=$('nav-btn');if(b)b.textContent='▶ Start navigation';try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}}
-async function testDrive(){if(!_dest||!_rmap)return;navStop();
- const s=_pos?[_pos.latitude,_pos.longitude]:[_dest[0]+.012,_dest[1]+.008];
- try{const r=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${s[1]},${s[0]};${_dest[1]},${_dest[0]}?overview=full&geometries=geojson`)).json();
-  const pts=r.routes[0].geometry.coordinates.map(q=>[q[1],q[0]]);let i=0;
-  _pos={latitude:pts[0][0],longitude:pts[0][1]};
-  _sim=setInterval(()=>{if(!document.getElementById('rmap')||i>=pts.length){navStop();return}
-   _pos={latitude:pts[i][0],longitude:pts[i][1]};i+=2;moveRider()},1000);
-  navGo()}catch(e){showToast('Test drive failed','error')}}
-function recenter(){if(!_rmap)return;_follow=true;
- if(_pos)_rmap.setView([_pos.latitude,_pos.longitude],17,{animate:true});else if(_dest)_rmap.setView(_dest,16)}
-function retryLoc(){if(!navigator.geolocation)return showToast('Location not supported','error');
- $('rt-info').textContent='Getting your location…';
- navigator.geolocation.getCurrentPosition(g=>{_pos=g.coords;_posT=g.timestamp;startGPS();moveRider();fetchRoute(true)},
-  ()=>{$('rt-info').textContent='Turn on location to see your route';showToast('Location blocked. Allow it in browser settings','error')},{enableHighAccuracy:true,timeout:15000})}
+  // last known position: 12 hours window instead of 3 minutes
+  const{data,error}=await sb.from(LOC_TABLE).select('*').gte('updated_at',new Date(Date.now()-LOC_WINDOW_MS).toISOString());
+  if(error){$('mapList').innerHTML='<div class="empty">Could not read '+esc(LOC_TABLE)+': '+esc(error.message)+'</div>';return}
+  const idMap={};riders.forEach(r=>{r.shifts.forEach(a=>idMap[String(a.id)]=r);r.active.forEach(o=>idMap[String(o.assigned_rider)]=r)});
+  const by={},lastBy={};
+  (data||[]).forEach(l=>{const k=String(l.order_id);if(!by[k]||new Date(l.updated_at)>new Date(by[k].updated_at))by[k]=l;
+   const r=idMap[String(l.rider_id)];if(r&&(!lastBy[r.key]||new Date(l.updated_at)>new Date(lastBy[r.key].updated_at)))lastBy[r.key]=l});
 
-function shareTrack(id){const o=_act.find(x=>String(x.id)===String(id));if(!o||!o.tracking_token)return showToast('No tracking link for this order','error');
- const url=location.href.replace(/[^/]*([?#].*)?$/,'')+'track.html?t='+o.tracking_token;
- let w=String(o.phone||'').replace(/\D/g,'');if(w.startsWith('0'))w='92'+w.slice(1);
- window.open('https://wa.me/'+w+'?text='+encodeURIComponent('Hi! Your OvenX order is on the way. Track your rider live here:\n'+url),'_blank')}
- 
-/* pull to refresh */
-(function(){let y0=0,on=false;document.addEventListener('touchstart',e=>{on=scrollY<=0&&_cur===0&&!$('sheet').classList.contains('on');y0=e.touches[0].clientY},{passive:true});
-document.addEventListener('touchend',e=>{if(on&&e.changedTouches[0].clientY-y0>90){loadOrders();showToast('Refreshed','info')}on=false},{passive:true})})();
-function autoResume(){try{const s=JSON.parse(localStorage.getItem('ovenx_rider_session')||'null');if(!s||!s.name||!s.phone)return;
-if(Date.now()-(s.ts||0)>16*3600*1000||(s.ts||0)<bizDayStart().getTime()){localStorage.removeItem('ovenx_rider_session');return}
-$('rn').value=s.name;$('rp').value=s.phone;$('rb').value=s.branch||'MULTAN';riderLogin()}catch(e){console.error('autoResume',e)}}
-addEventListener('load',autoResume);
+  const rows=await Promise.all(go.map(async({o,r})=>{
+   const id=String(o.id),loc=by[id]||lastBy[r.key]||null,dest=await fGeocode(o),lv=lvlOf(loc);
+   let e=null;if(loc&&dest&&lv!=='off')e=await fEtaFor(id,loc,dest);
+   return{o,r,id,loc,dest,lv,mins:e?e.mins:null,km:e?e.km:null}}));
+  rows.sort((a,b)=>(a.mins==null)-(b.mins==null)||a.mins-b.mins);
+
+  const busy=new Set(go.map(x=>x.r.key));
+  const idle=riders.filter(r=>r.status!=='off-duty'&&!busy.has(r.key)&&lastBy[r.key])
+   .map(r=>({r,loc:lastBy[r.key],lv:lvlOf(lastBy[r.key])}));
+
+  $('mc').textContent=go.length+' on the road · '+idle.length+' idle';
+
+  // alert: rider is delivering but GPS lost
+  $('mapAlert').innerHTML=rows.filter(x=>x.lv==='off'||x.lv==='none').map(x=>
+   `<div class="al">📡 <b>${esc(x.r.name)}</b> is delivering but ${x.loc?'GPS lost '+fmtAge(ageS(x.loc))+' ago':'no GPS received yet'} → call ${esc(x.r.phone)}</div>`).join('');
+
+  fPts=[];
+  rows.forEach((x,i)=>{
+   if(x.dest){fPts.push(x.dest);const ic=L.divIcon({className:'',html:'<div class="fd">🏠</div>',iconSize:[28,28],iconAnchor:[14,14]});
+    if(fDm[x.id])fDm[x.id].setLatLng(x.dest);else fDm[x.id]=L.marker(x.dest,{icon:ic,zIndexOffset:-100}).bindTooltip(esc(x.o.location||'')).addTo(fmap)}
+   if(x.loc){const p=[x.loc.lat,x.loc.lng];fPts.push(p);
+    const cls=x.lv==='off'?'stale':x.lv==='warn'?'warn':i===0?'first':'';
+    const label=x.lv==='off'?esc(x.r.name)+' · last seen '+fmtAge(ageS(x.loc))+' ago':esc(x.r.name)+(x.mins!=null?' · '+x.mins+'m':'');
+    const ic=L.divIcon({className:'',html:`<div class="fp ${cls} ${i%2?'lt':''}">🛵<b>${label}</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+    if(fMk[x.id]){fMk[x.id].setLatLng(p);fMk[x.id].setIcon(ic)}else fMk[x.id]=L.marker(p,{icon:ic,zIndexOffset:500}).addTo(fmap);
+    if(x.dest){const ln=[p,x.dest];if(fRt[x.id])fRt[x.id].setLatLngs(ln);else fRt[x.id]=L.polyline(ln,{color:'#6cb8ff',weight:3,opacity:.7,dashArray:'6 8'}).addTo(fmap)}}
+  });
+
+  const idleKeep=new Set(idle.map(x=>x.r.key));
+  Object.keys(fIdle).forEach(k=>{if(!idleKeep.has(k)){fmap.removeLayer(fIdle[k]);delete fIdle[k]}});
+  idle.forEach(x=>{const p=[x.loc.lat,x.loc.lng];fPts.push(p);
+   const cls=x.lv==='off'?'stale':x.lv==='warn'?'warn':'';
+   const label=esc(x.r.name)+(x.lv==='off'?' · last seen '+fmtAge(ageS(x.loc))+' ago':' · idle');
+   const ic=L.divIcon({className:'',html:`<div class="fp idle ${cls} lt">🛵<b>${label}</b></div>`,iconSize:[36,36],iconAnchor:[18,18]});
+   if(fIdle[x.r.key]){fIdle[x.r.key].setLatLng(p);fIdle[x.r.key].setIcon(ic)}else fIdle[x.r.key]=L.marker(p,{icon:ic,zIndexOffset:300}).addTo(fmap)});
+
+  if(!fFit){if(fPts.length){fFit=true;fitMap()}else fmap.setView(CEN[branch]||CEN.MULTAN,12)}
+
+  const sub=x=>!x.loc?' · no GPS received yet':x.lv==='off'?' · last seen '+fmtAge(ageS(x.loc))+' ago':x.lv==='warn'?' · GPS '+fmtAge(ageS(x.loc))+' old':'';
+  const html=rows.map((x,i)=>
+   `<div class="mr" onclick="focusRider('${esc(x.id)}')"><div class="pos">${i===0&&x.mins!=null?'🥇':i+1}</div>
+   <div><b>${esc(x.r.name)}</b><small>${esc(x.o.location||'No address')}</small></div>
+   <div style="text-align:right"><b class="num ${x.lv==='ok'?'g':x.lv==='warn'?'o':'rd'}">${x.mins!=null?x.mins+' min':'—'}</b><small>${x.km!=null?x.km.toFixed(1)+' km':''}${sub(x)}</small></div></div>`).join('')
+  +idle.map(x=>`<div class="mr" style="border-color:var(--t3)" onclick="if(fmap)fmap.setView([${x.loc.lat},${x.loc.lng}],16)"><div class="pos">🛵</div><div><b>${esc(x.r.name)}</b><small>Idle · no active delivery</small></div><div style="text-align:right"><small>${x.lv==='off'?'Last seen '+fmtAge(ageS(x.loc))+' ago':'Updated '+fmtAge(ageS(x.loc))+' ago'}</small></div></div>`).join('');
+  $('mapList').innerHTML=html||'<div class="empty">No rider location available right now.</div>';
+ }catch(e){console.error(e)}finally{fBusy=false}}
+function focusRider(id){if(fmap&&fMk[id])fmap.setView(fMk[id].getLatLng(),16,{animate:true})}
+
+setInterval(()=>{
+    if($('app').classList.contains('on'))renderMap();
+},5000); // refresh every 5 seconds
+
+addEventListener('resize',()=>{if($('app').classList.contains('on'))movePill()});
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
