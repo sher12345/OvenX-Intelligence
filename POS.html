@@ -1526,6 +1526,27 @@ img,canvas,video{max-width:100%}
         </div>
   </div>
 </div>
+<!-- ADMIN: EDIT POS EXPENSE -->
+<div class="modal-backdrop" id="pxe-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-title">✏️ Edit POS Expense</div>
+    <div class="modal-sub" id="pxe-sub"></div>
+    <div class="of-label">Type</div>
+    <select id="pxe-type" class="of-input" style="font-size:15px;">
+      <option value="slip">Till (paid from drawer)</option>
+      <option value="finance">Finance (owner / bank)</option>
+    </select>
+    <div class="of-label">What for</div>
+    <div id="pxe-desc-wrap" style="margin-bottom:10px;"></div>
+    <div class="of-label">Amount (Rs)</div>
+    <input class="of-input" type="number" id="pxe-amt" min="0" placeholder="0">
+    <div class="modal-actions" style="margin-top:6px;">
+      <button class="modal-cancel" style="background:rgba(192,57,43,0.15);color:var(--red);" onclick="deletePxe()">🗑️ Delete</button>
+      <button class="modal-cancel" onclick="closeModal('pxe-modal')">Cancel</button>
+      <button class="modal-confirm" id="pxe-save-btn" onclick="savePxe()">Save</button>
+    </div>
+  </div>
+</div>
 <!-- FOODPANDA FLAVOUR MODAL -->
 <div class="modal-backdrop" id="fp-flavor-modal">
   <div class="modal-box">
@@ -2103,6 +2124,16 @@ async function doLogin() {
       showLoginErr('🔒 Branch closed by Admin after last shift. Reopens at ' + gate.reopenTime + '.');
       return;
     }
+    try {
+      const { data: _done } = await sb.from('cashier_declarations')
+        .select('attempt_no,has_mismatch')
+        .eq('branch', activeBranch).eq('staff', staffRecord.name)
+        .gte('shift_end', _dtLocalToISO(bizDayFrom()));
+      if ((_done || []).some(r => r.has_mismatch === false || (r.attempt_no || 1) >= 2)) {
+        showLoginErr('🔒 Your shift is already closed for today. You can log in again after the Admin closes the day.');
+        return;
+      }
+    } catch (e) { console.warn('shift lock check failed — allowing login:', e.message); }
   }
 
   currentStaff = staffRecord.name;
@@ -2113,8 +2144,9 @@ currentStaffPermissions = staffRecord.permissions || {};
   const _ssKey = 'ovenx_shift_start_' + activeBranch + '_' + currentStaff;
   const _saved = localStorage.getItem(_ssKey);
   const _d = _saved ? new Date(_saved) : null;
-  shiftStart = (_d && !isNaN(_d)) ? _d : new Date();
-  if (!_d || isNaN(_d)) localStorage.setItem(_ssKey, shiftStart.toISOString());
+  const _stale = !_d || isNaN(_d) || _d < new Date(_dtLocalToISO(bizDayFrom()));
+  shiftStart = _stale ? new Date() : _d;
+  if (_stale) localStorage.setItem(_ssKey, shiftStart.toISOString());
 }
 ensureDeviceCode();
 _loadSharedDateRange();
@@ -7803,10 +7835,34 @@ async function exportClosingStatement() {
   const cashInHand = computeCashInHand(txs, opening);
   const sessions = {};
   decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
-  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]).sort((a, b) => new Date(a.shift_end) - new Date(b.shift_end)).slice(-1);
+  const finals = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1))[l.length - 1]);
   const hasDecl = finals.length > 0;
   const submitted = sum(finals, d => d.cash_amount);
-  const difference = Math.round(submitted - (cashInHand - opening));
+
+  const _bizStartMs = iso => {
+    const pk = new Date(new Date(iso).getTime() + 5 * 3600000);
+    if (pk.getUTCHours() < BIZ_DAY_START_HOUR) pk.setUTCDate(pk.getUTCDate() - 1);
+    return new Date(_dtLocalToISO(pk.toISOString().slice(0, 10) + 'T' + String(BIZ_DAY_START_HOUR).padStart(2, '0') + ':00')).getTime();
+  };
+  const _sessEnd = {};
+  decls.forEach(d => {
+    const k = d.session_id || d.id, t = new Date(d.shift_end).getTime();
+    if (!_sessEnd[k] || t > _sessEnd[k]) _sessEnd[k] = t;
+  });
+  const _ends = Object.entries(_sessEnd);
+  const shiftRows = finals.map(d => {
+    const k = d.session_id || d.id, endMs = _sessEnd[k];
+    let startMs = _bizStartMs(d.shift_end);
+    _ends.forEach(([k2, t2]) => { if (k2 !== k && t2 < endMs && t2 > startMs) startMs = t2; });
+    const p = _xcCalc(txs.filter(t => { const ms = new Date(t.created_at).getTime(); return ms >= startMs && ms <= endMs; }));
+    const net = p.cash - p.exp;
+    return {
+      staff: d.staff, startMs, endMs, attempts: (sessions[k] || []).length,
+      says: { cash: Number(d.cash_amount) || 0, online: Number(d.online_amount) || 0, exp: Number(d.expenses_amount) || 0 },
+      pos:  { cash: Math.round(net < 0 ? p.cash : net), online: Math.round(p.online), exp: Math.round(p.exp) }
+    };
+  }).sort((a, b) => a.endMs - b.endMs);
+  const difference = Math.round(submitted - sum(shiftRows, s => s.pos.cash));
   const feeFromDrawer = sum(deliv.filter(t => ['card','bank','jazzcash','staff'].includes(t.method)), t => t.rider_fee);
   const feeInCash = sum(deliv, t => t.rider_fee) - feeFromDrawer;
   const cnt = m => bills.filter(t => t.method === m).length;
@@ -7828,7 +7884,7 @@ async function exportClosingStatement() {
   const ws = wb.addWorksheet('Closing Statement', { views: [{ showGridLines: false }] });
   // A | P1: B C D | E | P2: F G H | I | P3: J K L | M
   ws.columns = [{width:2},{width:34},{width:8},{width:15},{width:2},{width:34},{width:8},{width:15},{width:2},{width:34},{width:8},{width:15},{width:2}];
-  for (let rr = 1; rr <= 45; rr++) for (let cc = 1; cc <= 30; cc++) ws.getCell(rr, cc).fill = solid(C.bg);
+  for (let rr = 1; rr <= 45 + shiftRows.length * 5 + 8; rr++) for (let cc = 1; cc <= 30; cc++) ws.getCell(rr, cc).fill = solid(C.bg);
 
   const P = [2, 6, 10];                 // first column of each panel
   const START = 6;
@@ -7948,12 +8004,47 @@ async function exportClosingStatement() {
   line(2, 'Items Removed After KOT', by('item-void').length, sum(by('item-void'), t => Math.abs(t.total)), { color: C.red });
   line(2, 'Discarded Orders', by('discarded').length, sum(by('discarded'), t => Math.abs(t.total)), { color: C.red });
 
+  // ---------- SHIFT-WISE: cashier report vs POS ----------
+  if (shiftRows.length) {
+    const fmtT = ms => new Date(ms).toLocaleString('en-PK', { ...tz, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+    const bandRow = (row, text, fill, size, color, h) => {
+      ws.mergeCells(row, 2, row, 12);
+      const c = ws.getCell(row, 2);
+      c.value = text; c.fill = fill;
+      c.font = { name: FONT, bold: true, size, color: { argb: color } };
+      c.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(row).height = h;
+    };
+    const t0 = Math.max(...cur) + 1;
+    bandRow(t0, 'SHIFT-WISE — CASHIER REPORT vs POS', solid('FF141B34'), 12, C.violet, 26);
+    cur[0] = cur[1] = cur[2] = t0 + 1;
+
+    shiftRows.forEach(s => {
+      const hr = Math.max(...cur);
+      bandRow(hr, '👤 ' + s.staff + '   ·   ' + fmtT(s.startMs) + '  →  ' + fmtT(s.endMs) + (s.attempts > 1 ? '   ·   ' + s.attempts + ' attempts (final shown)' : ''),
+        grad('FF2A3768', 'FF18213D'), 11, C.text, 24);
+      cur[0] = cur[1] = cur[2] = hr + 1;
+      alt[0] = alt[1] = alt[2] = false;
+
+      const trio = (pi, title, says, pos) => {
+        const d = Math.round(says - pos);
+        line(pi, title + ' — cashier says', '', says, { color: C.text });
+        line(pi, title + ' — POS actual', '', pos, { color: C.green });
+        line(pi, d === 0 ? title + ' — ✓ MATCH' : title + ' — DIFFERENCE', '', d,
+          { fill: d === 0 ? grad('FF1B7F4C', 'FF14A39A') : grad('FFA8324A', 'FF6B1F5A'), bold: true, color: 'FFFFFFFF' });
+      };
+      trio(0, 'Cash', s.says.cash, s.pos.cash);
+      trio(1, 'Online', s.says.online, s.pos.online);
+      trio(2, 'Expenses', s.says.exp, s.pos.exp);
+    });
+  }
+
   // ---------- footer ----------
   const last = Math.max(...cur) + 1;
   ws.getRow(last - 1).height = Math.max(ws.getRow(last - 1).height || 0, 22);
   ws.mergeCells(last, 2, last, 12);
   const f = ws.getCell(last, 2);
-  f.value = 'Printed by ' + currentStaff + ' — ' + new Date().toLocaleString('en-PK', tz) + '   |   ' + bills.length + ' bills   |   Difference = Submitted Cash − (Cash In Hand − Opening Balance)';
+  f.value = 'Printed by ' + currentStaff + ' — ' + new Date().toLocaleString('en-PK', tz) + '   |   ' + bills.length + ' bills   |   Difference = Submitted Cash − POS cash per shift (same as Cross-Check)';
   f.font = { name: FONT, size: 9, color: { argb: C.mute } };
   f.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(last).height = 20;
@@ -9182,7 +9273,7 @@ function askCashierDeclaration() {
 
 function renderDeclForm() {
   document.getElementById('decl-sub').textContent = _declAttempt === 1
-    ? 'Enter the TOTAL figures for the whole day (all cashiers combined) before logging out. Use 0 if none.'
+    ? 'Enter the figures for YOUR shift only (your own bills and expenses) before logging out. Use 0 if none.'
     : 'Please re-check and enter the correct figures.';
   document.getElementById('decl-body').innerHTML = `
     <div class="of-label">Cash amount collected (Rs)</div>
@@ -9301,9 +9392,17 @@ async function submitDeclaration() {
   btn.disabled = true;
 let sys;
 try {
-  // Fetch the whole business day (no staff filter)
-  const rows = await _xcFetchAll(_dtLocalToISO(bizDayFrom()), new Date().toISOString());
+  // Window = previous cashier's logout (or day start) → now
+  let _startISO = _dtLocalToISO(bizDayFrom());
+  const { data: _prev } = await sb.from('cashier_declarations').select('shift_end')
+    .eq('branch', activeBranch).gte('shift_end', _startISO).neq('session_id', _declSession)
+    .order('shift_end', { ascending: false }).limit(1);
+  if (_prev && _prev.length) _startISO = _prev[0].shift_end;
+  const rows = await _xcFetchAll(_startISO, new Date().toISOString());
   sys = _xcCalc(rows);
+  const _allExp = _xcCalc(rows);
+  sys.exp = _allExp.exp;
+  sys.expRows = _allExp.expRows;
 } catch (e) { btn.disabled = false; showToast('Could not load system figures — check internet', 'error'); return; }
 
   const sc = Math.round(sys.cash), so = Math.round(sys.online), se = Math.round(sys.exp);
@@ -9429,6 +9528,114 @@ async function saveXcEdit() {
 }
 
 let _xcRows = [], _xcOpening = 0, _xcDecls = [], _xcStaffRows = [];
+function _xcPosExpDetail(d) {
+  const rows = (d._pos && d._pos.expRows) || [];
+  const addBtn = currentStaffRole === 'Admin'
+    ? `<div><button onclick="openExpAdd('${d.id}')" style="margin-top:5px;padding:2px 9px;border-radius:5px;background:rgba(39,174,96,0.12);border:1px dashed rgba(39,174,96,0.4);color:var(--green);font-size:10px;font-weight:700;cursor:pointer;">+ Add POS expense</button></div>`
+    : '';
+  if (!rows.length) return '<div style="font-size:11px;color:var(--text3);margin-top:4px;">POS: no expenses recorded</div>' + addBtn;
+  return '<div style="font-size:11px;color:var(--green);margin-top:6px;line-height:1.9;"><b>POS expenses:</b><br>' +
+    rows.map(t => _xcEsc((t.items_text || '').replace(/^\s*\[FINANCE\]\s*/i, '')) + ' — Rs ' + Math.abs(t.total).toLocaleString('en-PK') +
+      (currentStaffRole === 'Admin' ? ` <button onclick="openExpEdit('${t.id}')" style="padding:1px 7px;border-radius:5px;background:rgba(142,68,173,0.15);border:1px solid rgba(142,68,173,0.4);color:#bb77ff;font-size:10px;font-weight:700;cursor:pointer;">✏️</button>` : '')
+    ).join('<br>') + '</div>' + addBtn;
+}
+
+let _pxeId = null, _pxeNewDecl = null;
+
+function openExpAdd(declId) {
+  if (currentStaffRole !== 'Admin') { showToast('Admin only', 'error'); return; }
+  const d = _xcDecls.find(x => String(x.id) === String(declId));
+  if (!d) { showToast('Report not found — click Load and retry', 'error'); return; }
+  _pxeId = null; _pxeNewDecl = d;
+  document.getElementById('pxe-sub').textContent = 'New expense for ' + d.staff + ' — shift ending ' + new Date(d.shift_end).toLocaleString('en-PK');
+  document.getElementById('pxe-type').value = 'slip';
+  const wrap = document.getElementById('pxe-desc-wrap');
+  wrap.innerHTML = expDescFieldHTML('pxe');
+  expSetDesc(wrap, 'pxe', '');
+  document.getElementById('pxe-amt').value = '';
+  document.getElementById('pxe-modal').classList.add('open');
+}
+function openExpEdit(id) {
+  if (currentStaffRole !== 'Admin') { showToast('Admin only', 'error'); return; }
+  const t = _xcRows.find(x => String(x.id) === String(id));
+  if (!t) { showToast('Expense not found — click Load and retry', 'error'); return; }
+  _pxeId = t.id; _pxeNewDecl = null;
+  const raw = t.items_text || '';
+  const isFin = /^\s*\[FINANCE\]/i.test(raw);
+  const clean = raw.replace(/^\s*\[FINANCE\]\s*/i, '').trim();
+  document.getElementById('pxe-sub').textContent = (t.staff || '—') + ' — ' + new Date(t.created_at).toLocaleString('en-PK');
+  document.getElementById('pxe-type').value = isFin ? 'finance' : 'slip';
+  const wrap = document.getElementById('pxe-desc-wrap');
+  wrap.innerHTML = expDescFieldHTML('pxe');
+  expSetDesc(wrap, 'pxe', clean);
+  document.getElementById('pxe-amt').value = Math.abs(t.total || 0);
+  document.getElementById('pxe-modal').classList.add('open');
+}
+
+async function savePxe() {
+  if (currentStaffRole !== 'Admin' || (!_pxeId && !_pxeNewDecl)) return;
+  if (!isOnline) { showToast('No internet connection', 'error'); return; }
+  if (!_pxeId) {
+    const nd = expGetDesc(document.getElementById('pxe-desc-wrap'), 'pxe');
+    const na = Math.round(Number(document.getElementById('pxe-amt').value));
+    if (!nd) { showToast('Pick or type what the expense was for', 'error'); return; }
+    if (!na || na <= 0) { showToast('Amount must be above 0', 'error'); return; }
+    const fin = document.getElementById('pxe-type').value === 'finance';
+    const txt = (fin ? '[FINANCE] ' : '') + nd;
+    const when = new Date(new Date(_pxeNewDecl.shift_end).getTime() - 60000);
+    const pk = new Date(when.getTime() + 5 * 3600000);
+    if (pk.getUTCHours() < BIZ_DAY_START_HOUR) pk.setUTCDate(pk.getUTCDate() - 1);
+    const bizDate = pk.toISOString().slice(0, 10);
+    const b = document.getElementById('pxe-save-btn'); b.disabled = true;
+    const r = await sbWrite('shift_transactions', 'insert', [{
+      id: genId(), branch: activeBranch, date: bizDate, created_at: when.toISOString(),
+      bill_no: 'EXP-X' + genId().slice(0, 6).toUpperCase(), type: 'Expense', table_loc: '',
+      items_text: txt, subtotal: na, total: -na, method: 'expense',
+      staff: _pxeNewDecl.staff, return_reason: nd
+    }]);
+    b.disabled = false;
+    if (r && r.error) { showToast('Could not add expense: ' + r.error, 'error'); return; }
+    _pxeNewDecl = null;
+    closeModal('pxe-modal');
+    showToast('Expense added ✅', 'success');
+    loadCrossCheck();
+    return;
+  }
+  const desc = expGetDesc(document.getElementById('pxe-desc-wrap'), 'pxe');
+  const amt = Math.round(Number(document.getElementById('pxe-amt').value));
+  if (!desc) { showToast('Pick or type what the expense was for', 'error'); return; }
+  if (!amt || amt <= 0) { showToast('Amount must be above 0', 'error'); return; }
+  const isFin = document.getElementById('pxe-type').value === 'finance';
+  const text = (isFin ? '[FINANCE] ' : '') + desc;
+  const btn = document.getElementById('pxe-save-btn');
+  btn.disabled = true;
+  const { data, error } = await sb.from('shift_transactions').update({
+    items_text: text, return_reason: desc, subtotal: amt, total: -amt
+  }).eq('id', _pxeId).select();
+  btn.disabled = false;
+  if (error || !data || !data.length) { showToast('Save failed — check connection / permissions', 'error'); console.error(error); return; }
+  const live = completedOrders.find(o => o.id === _pxeId);
+  if (live) {
+    live.total = -amt; live.itemsText = text; live.expenseDesc = text;
+    live.items = [{ name: text, price: amt, qty: 1, note: '' }];
+    _recalcAllTotals();
+  }
+  closeModal('pxe-modal');
+  showToast('Expense updated ✅', 'success');
+  loadCrossCheck();
+}
+
+async function deletePxe() {
+  if (currentStaffRole !== 'Admin' || !_pxeId) return;
+  if (!confirm('Delete this expense? Cash in drawer will go back up by this amount.')) return;
+  const { error } = await sb.from('shift_transactions').delete().eq('id', _pxeId);
+  if (error) { showToast('Delete failed', 'error'); return; }
+  completedOrders = completedOrders.filter(o => o.id !== _pxeId);
+  _recalcAllTotals();
+  closeModal('pxe-modal');
+  showToast('Expense deleted ✅', 'success');
+  loadCrossCheck();
+}
 function _xcExpDetail(d) {
   const items = Array.isArray(d.expense_items) ? d.expense_items : [];
   if (!items.length) return '';
@@ -9530,10 +9737,20 @@ async function loadCrossCheck() {
       return `${yyyy}-${mm}-${dd}T10:00`;
     };
 
-    // Recalculate _pos for ALL declarations (including old ones) based on the WHOLE day
+    // Shift-wise window: previous cashier's logout -> this cashier's logout
+    const _sessEnd = {};
+    _xcDecls.forEach(d => {
+      const k = d.session_id || d.id, t = new Date(d.shift_end).getTime();
+      if (!_sessEnd[k] || t > _sessEnd[k]) _sessEnd[k] = t;
+    });
+    const _ends = Object.entries(_sessEnd);
     await Promise.all(_xcDecls.map(async d => {
-      const start = getBizDayFromForDate(d.shift_end);
-      d._pos = _xcCalc(await _xcFetchAll(_dtLocalToISO(start), toISO)); // whole day, up to end of selected range
+      const k = d.session_id || d.id, endMs = _sessEnd[k];
+      let startMs = new Date(_dtLocalToISO(getBizDayFromForDate(d.shift_end))).getTime();
+      _ends.forEach(([k2, t2]) => { if (k2 !== k && t2 < endMs && t2 > startMs) startMs = t2; });
+      d._winStart = new Date(startMs).toISOString();
+      const _winRows = await _xcFetchAll(d._winStart, new Date(endMs).toISOString());
+      d._pos = _xcCalc(_winRows);
     }));
   } catch (e) {
     content.innerHTML = '<div style="text-align:center;padding:36px;color:var(--red);">Could not load: ' + _xcEsc(e.message) + '</div>';
@@ -9574,7 +9791,8 @@ function renderCrossCheck() {
     // Always use the dynamically calculated whole-day totals, overriding old DB values
   const posOf = d => {
     if (!d._pos) return { cash: 0, online: 0, exp: 0 }; // Fallback safety
-    return { cash: d._pos.cash - d._pos.exp, online: d._pos.online, exp: d._pos.exp };
+    const _net = d._pos.cash - d._pos.exp;
+    return { cash: _net < 0 ? d._pos.cash : _net, online: d._pos.online, exp: d._pos.exp };
   };
   const isWrong = d => { const p = posOf(d);
     return Math.round(Number(d.cash_amount) - p.cash) !== 0 || Math.round(Number(d.online_amount) - p.online) !== 0 || Math.round(Number(d.expenses_amount) - p.exp) !== 0; };
@@ -9582,7 +9800,7 @@ function renderCrossCheck() {
   const sessions = {};
   decls.forEach(d => { const k = d.session_id || d.id; (sessions[k] = sessions[k] || []).push(d); });
   const sessList = Object.values(sessions).map(l => l.sort((a, b) => (a.attempt_no || 1) - (b.attempt_no || 1)));
-  const finals = sessList.map(l => l[l.length - 1]).sort((a, b) => new Date(a.shift_end) - new Date(b.shift_end)).slice(-1);
+  const finals = sessList.map(l => l[l.length - 1]);
 
   const sessHtml = sessList.map(list => {
     const first = list[0], last = list[list.length - 1];
@@ -9592,7 +9810,7 @@ function renderCrossCheck() {
       const items = [['Cash', d.cash_amount, p.cash], ['Online', d.online_amount, p.online], ['Expenses', d.expenses_amount, p.exp]];
       return items.map((it, i) => `<tr${i === 0 ? ' style="border-top:2px solid var(--border);"' : ''}>
         ${i === 0 ? `<td rowspan="3" style="font-weight:800;vertical-align:top;white-space:nowrap;">Attempt ${d.attempt_no || 1}<br><span style="font-size:11px;color:var(--text3);font-weight:600;">${fmtT(d.created_at || d.shift_end)}</span>${currentStaffRole === 'Admin' ? `<br><button onclick="openXcEdit('${d.id}')" style="margin-top:6px;padding:4px 10px;border-radius:6px;background:rgba(142,68,173,0.15);border:1px solid rgba(142,68,173,0.4);color:#bb77ff;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">✏️ Edit</button>` : ''}</td>` : ''}
-        <td style="font-weight:600;">${it[0]}${it[0] === 'Expenses' ? _xcExpDetail(d) : ''}</td>
+        <td style="font-weight:600;">${it[0]}${it[0] === 'Expenses' ? _xcExpDetail(d) + _xcPosExpDetail(d) : ''}</td>
         <td style="text-align:right;font-weight:700;color:var(--gold);">${R(it[1])}</td>
         <td style="text-align:right;font-weight:700;color:var(--green);">${R(it[2])}</td>
         <td>${diffCell(it[1], it[2])}</td></tr>`).join('')
@@ -9600,7 +9818,7 @@ function renderCrossCheck() {
     }).join('');
     return `<div class="cb-section" style="margin-bottom:12px;">
       <div class="cb-head" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>👤 ${_xcEsc(first.staff)} · shift ${first.shift_start ? fmtT(first.shift_start) : '?'} → ${fmtT(first.shift_end)}</span>
+        <span>👤 ${_xcEsc(first.staff)} · shift ${fmtT(first._winStart || first.shift_start)} → ${fmtT(first.shift_end)}</span>
         <span style="background:${chip[1]};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">${chip[0]}</span>
       </div>
       <table class="transactions-table"><thead><tr><th></th><th>Item</th><th style="text-align:right;">Cashier says</th><th style="text-align:right;">POS actual</th><th>Difference</th></tr></thead><tbody>${body}</tbody></table>
@@ -9632,7 +9850,7 @@ const missing = [...new Set(rows.map(t => t.staff).filter(Boolean))].filter(n =>
           <td style="color:var(--text2);font-size:12px;">${_xcEsc([t.items_text, (t.return_reason && t.return_reason !== t.items_text) ? '— ' + t.return_reason : ''].filter(Boolean).join(' '))}</td>
           <td style="text-align:right;font-weight:700;">${R(Math.abs(t.total))}</td>
           ${currentStaffRole === 'Admin' ? `<td style="text-align:center;">
-            <button onclick="openAdminTxModal('${t.bill_no}', ${t.date === todayKey()}, '${t.date}', '${t.branch || activeBranch}', '${t.id}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;font-weight:bold;cursor:pointer;" title="Edit / Delete">✏️ Edit</button>
+            <button onclick="${t.method === 'expense' ? `openExpEdit('${t.id}')` : `openAdminTxModal('${t.bill_no}', ${t.date === todayKey()}, '${t.date}', '${t.branch || activeBranch}', '${t.id}')`}" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);color:#bb77ff;font-size:11px;font-weight:bold;cursor:pointer;" title="Edit / Delete">✏️ Edit</button>
           </td>` : ''}
         </tr>`).join('')}</tbody>
       </table>
@@ -11903,6 +12121,7 @@ const startVal = prevD + 'T' + String(BIZ_DAY_START_HOUR).padStart(2, '0') + ':0
   }
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"80b7337066234d5c97e6656da5a7fef3","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
